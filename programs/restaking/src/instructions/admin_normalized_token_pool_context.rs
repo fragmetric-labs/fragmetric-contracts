@@ -49,7 +49,6 @@ pub struct AdminNormalizedTokenPoolUpdateContext<'info> {
 
     pub normalized_token_program: Program<'info, Token>,
 
-    #[account(mint::token_program = normalized_token_program)]
     pub normalized_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(

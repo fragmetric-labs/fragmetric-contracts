@@ -55,7 +55,6 @@ export function getAdminSetAddressLookupTableAccountDiscriminatorBytes() {
 
 export type AdminSetAddressLookupTableAccountInstruction<
   TProgram extends string = typeof RESTAKING_PROGRAM_ADDRESS,
-  TAccountPayer extends string | IAccountMeta<string> = string,
   TAccountAdmin extends
     | string
     | IAccountMeta<string> = '9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL',
@@ -68,10 +67,6 @@ export type AdminSetAddressLookupTableAccountInstruction<
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
-      TAccountPayer extends string
-        ? ReadonlySignerAccount<TAccountPayer> &
-            IAccountSignerMeta<TAccountPayer>
-        : TAccountPayer,
       TAccountAdmin extends string
         ? ReadonlySignerAccount<TAccountAdmin> &
             IAccountSignerMeta<TAccountAdmin>
@@ -132,14 +127,12 @@ export function getAdminSetAddressLookupTableAccountInstructionDataCodec(): Code
 }
 
 export type AdminSetAddressLookupTableAccountAsyncInput<
-  TAccountPayer extends string = string,
   TAccountAdmin extends string = string,
   TAccountFundAccount extends string = string,
   TAccountReceiptTokenMint extends string = string,
   TAccountEventAuthority extends string = string,
   TAccountProgram extends string = string,
 > = {
-  payer: TransactionSigner<TAccountPayer>;
   admin?: TransactionSigner<TAccountAdmin>;
   fundAccount?: Address<TAccountFundAccount>;
   receiptTokenMint: Address<TAccountReceiptTokenMint>;
@@ -149,7 +142,6 @@ export type AdminSetAddressLookupTableAccountAsyncInput<
 };
 
 export async function getAdminSetAddressLookupTableAccountInstructionAsync<
-  TAccountPayer extends string,
   TAccountAdmin extends string,
   TAccountFundAccount extends string,
   TAccountReceiptTokenMint extends string,
@@ -158,7 +150,6 @@ export async function getAdminSetAddressLookupTableAccountInstructionAsync<
   TProgramAddress extends Address = typeof RESTAKING_PROGRAM_ADDRESS,
 >(
   input: AdminSetAddressLookupTableAccountAsyncInput<
-    TAccountPayer,
     TAccountAdmin,
     TAccountFundAccount,
     TAccountReceiptTokenMint,
@@ -169,7 +160,6 @@ export async function getAdminSetAddressLookupTableAccountInstructionAsync<
 ): Promise<
   AdminSetAddressLookupTableAccountInstruction<
     TProgramAddress,
-    TAccountPayer,
     TAccountAdmin,
     TAccountFundAccount,
     TAccountReceiptTokenMint,
@@ -182,7 +172,6 @@ export async function getAdminSetAddressLookupTableAccountInstructionAsync<
 
   // Original accounts.
   const originalAccounts = {
-    payer: { value: input.payer ?? null, isWritable: false },
     admin: { value: input.admin ?? null, isWritable: false },
     fundAccount: { value: input.fundAccount ?? null, isWritable: true },
     receiptTokenMint: {
@@ -233,7 +222,6 @@ export async function getAdminSetAddressLookupTableAccountInstructionAsync<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
-      getAccountMeta(accounts.payer),
       getAccountMeta(accounts.admin),
       getAccountMeta(accounts.fundAccount),
       getAccountMeta(accounts.receiptTokenMint),
@@ -246,7 +234,6 @@ export async function getAdminSetAddressLookupTableAccountInstructionAsync<
     ),
   } as AdminSetAddressLookupTableAccountInstruction<
     TProgramAddress,
-    TAccountPayer,
     TAccountAdmin,
     TAccountFundAccount,
     TAccountReceiptTokenMint,
@@ -258,14 +245,12 @@ export async function getAdminSetAddressLookupTableAccountInstructionAsync<
 }
 
 export type AdminSetAddressLookupTableAccountInput<
-  TAccountPayer extends string = string,
   TAccountAdmin extends string = string,
   TAccountFundAccount extends string = string,
   TAccountReceiptTokenMint extends string = string,
   TAccountEventAuthority extends string = string,
   TAccountProgram extends string = string,
 > = {
-  payer: TransactionSigner<TAccountPayer>;
   admin?: TransactionSigner<TAccountAdmin>;
   fundAccount: Address<TAccountFundAccount>;
   receiptTokenMint: Address<TAccountReceiptTokenMint>;
@@ -275,7 +260,6 @@ export type AdminSetAddressLookupTableAccountInput<
 };
 
 export function getAdminSetAddressLookupTableAccountInstruction<
-  TAccountPayer extends string,
   TAccountAdmin extends string,
   TAccountFundAccount extends string,
   TAccountReceiptTokenMint extends string,
@@ -284,7 +268,6 @@ export function getAdminSetAddressLookupTableAccountInstruction<
   TProgramAddress extends Address = typeof RESTAKING_PROGRAM_ADDRESS,
 >(
   input: AdminSetAddressLookupTableAccountInput<
-    TAccountPayer,
     TAccountAdmin,
     TAccountFundAccount,
     TAccountReceiptTokenMint,
@@ -294,7 +277,6 @@ export function getAdminSetAddressLookupTableAccountInstruction<
   config?: { programAddress?: TProgramAddress }
 ): AdminSetAddressLookupTableAccountInstruction<
   TProgramAddress,
-  TAccountPayer,
   TAccountAdmin,
   TAccountFundAccount,
   TAccountReceiptTokenMint,
@@ -306,7 +288,6 @@ export function getAdminSetAddressLookupTableAccountInstruction<
 
   // Original accounts.
   const originalAccounts = {
-    payer: { value: input.payer ?? null, isWritable: false },
     admin: { value: input.admin ?? null, isWritable: false },
     fundAccount: { value: input.fundAccount ?? null, isWritable: true },
     receiptTokenMint: {
@@ -333,7 +314,6 @@ export function getAdminSetAddressLookupTableAccountInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
-      getAccountMeta(accounts.payer),
       getAccountMeta(accounts.admin),
       getAccountMeta(accounts.fundAccount),
       getAccountMeta(accounts.receiptTokenMint),
@@ -346,7 +326,6 @@ export function getAdminSetAddressLookupTableAccountInstruction<
     ),
   } as AdminSetAddressLookupTableAccountInstruction<
     TProgramAddress,
-    TAccountPayer,
     TAccountAdmin,
     TAccountFundAccount,
     TAccountReceiptTokenMint,
@@ -363,12 +342,11 @@ export type ParsedAdminSetAddressLookupTableAccountInstruction<
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    payer: TAccountMetas[0];
-    admin: TAccountMetas[1];
-    fundAccount: TAccountMetas[2];
-    receiptTokenMint: TAccountMetas[3];
-    eventAuthority: TAccountMetas[4];
-    program: TAccountMetas[5];
+    admin: TAccountMetas[0];
+    fundAccount: TAccountMetas[1];
+    receiptTokenMint: TAccountMetas[2];
+    eventAuthority: TAccountMetas[3];
+    program: TAccountMetas[4];
   };
   data: AdminSetAddressLookupTableAccountInstructionData;
 };
@@ -381,7 +359,7 @@ export function parseAdminSetAddressLookupTableAccountInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedAdminSetAddressLookupTableAccountInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 6) {
+  if (instruction.accounts.length < 5) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -394,7 +372,6 @@ export function parseAdminSetAddressLookupTableAccountInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
-      payer: getNextAccount(),
       admin: getNextAccount(),
       fundAccount: getNextAccount(),
       receiptTokenMint: getNextAccount(),

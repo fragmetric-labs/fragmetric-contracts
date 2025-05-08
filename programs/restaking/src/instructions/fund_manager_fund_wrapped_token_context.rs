@@ -137,7 +137,7 @@ pub struct FundManagerDelegateFundWrapAccountRewardAccount<'info> {
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
-        seeds = [crate::modules::fund::FundAccount::WRAP_SEED, receipt_token_mint.key().as_ref()],
+        seeds = [FundAccount::WRAP_SEED, receipt_token_mint.key().as_ref()],
         bump,
     )]
     pub fund_wrap_account: SystemAccount<'info>,

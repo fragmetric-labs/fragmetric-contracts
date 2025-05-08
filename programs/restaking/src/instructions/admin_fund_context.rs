@@ -23,7 +23,10 @@ pub struct AdminFundAccountInitialContext<'info> {
     /// Mint authority must be admin or fund account,
     /// otherwise `set_authority` CPI will fail.
     /// Therefore, no extra constraint is needed.
-    #[account(mut)]
+    #[account(
+        mut,
+        constraint = receipt_token_mint.supply == 0,
+    )]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     pub receipt_token_program: Program<'info, Token2022>,
@@ -86,8 +89,6 @@ pub struct AdminFundAccountUpdateContext<'info> {
 #[event_cpi]
 #[derive(Accounts)]
 pub struct AdminFundContext<'info> {
-    pub payer: Signer<'info>,
-
     #[account(address = ADMIN_PUBKEY)]
     pub admin: Signer<'info>,
 

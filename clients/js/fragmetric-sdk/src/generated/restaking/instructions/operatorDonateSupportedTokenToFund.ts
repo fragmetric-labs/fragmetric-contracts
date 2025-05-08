@@ -31,10 +31,10 @@ import {
   type IInstructionWithAccounts,
   type IInstructionWithData,
   type ReadonlyAccount,
+  type ReadonlySignerAccount,
   type ReadonlyUint8Array,
   type TransactionSigner,
   type WritableAccount,
-  type WritableSignerAccount,
 } from '@solana/kit';
 import { RESTAKING_PROGRAM_ADDRESS } from '../programs';
 import {
@@ -74,7 +74,7 @@ export type OperatorDonateSupportedTokenToFundInstruction<
   IInstructionWithAccounts<
     [
       TAccountOperator extends string
-        ? WritableSignerAccount<TAccountOperator> &
+        ? ReadonlySignerAccount<TAccountOperator> &
             IAccountSignerMeta<TAccountOperator>
         : TAccountOperator,
       TAccountSupportedTokenProgram extends string
@@ -223,7 +223,7 @@ export async function getOperatorDonateSupportedTokenToFundInstructionAsync<
 
   // Original accounts.
   const originalAccounts = {
-    operator: { value: input.operator ?? null, isWritable: true },
+    operator: { value: input.operator ?? null, isWritable: false },
     supportedTokenProgram: {
       value: input.supportedTokenProgram ?? null,
       isWritable: false,
@@ -424,7 +424,7 @@ export function getOperatorDonateSupportedTokenToFundInstruction<
 
   // Original accounts.
   const originalAccounts = {
-    operator: { value: input.operator ?? null, isWritable: true },
+    operator: { value: input.operator ?? null, isWritable: false },
     supportedTokenProgram: {
       value: input.supportedTokenProgram ?? null,
       isWritable: false,

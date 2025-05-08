@@ -50,7 +50,6 @@ export function getAdminUpdateExtraAccountMetaListIfNeededDiscriminatorBytes() {
 
 export type AdminUpdateExtraAccountMetaListIfNeededInstruction<
   TProgram extends string = typeof RESTAKING_PROGRAM_ADDRESS,
-  TAccountPayer extends string | IAccountMeta<string> = string,
   TAccountAdmin extends
     | string
     | IAccountMeta<string> = '9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL',
@@ -63,10 +62,6 @@ export type AdminUpdateExtraAccountMetaListIfNeededInstruction<
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
-      TAccountPayer extends string
-        ? ReadonlySignerAccount<TAccountPayer> &
-            IAccountSignerMeta<TAccountPayer>
-        : TAccountPayer,
       TAccountAdmin extends string
         ? ReadonlySignerAccount<TAccountAdmin> &
             IAccountSignerMeta<TAccountAdmin>
@@ -121,14 +116,12 @@ export function getAdminUpdateExtraAccountMetaListIfNeededInstructionDataCodec()
 }
 
 export type AdminUpdateExtraAccountMetaListIfNeededAsyncInput<
-  TAccountPayer extends string = string,
   TAccountAdmin extends string = string,
   TAccountReceiptTokenMint extends string = string,
   TAccountExtraAccountMetaList extends string = string,
   TAccountEventAuthority extends string = string,
   TAccountProgram extends string = string,
 > = {
-  payer: TransactionSigner<TAccountPayer>;
   admin?: TransactionSigner<TAccountAdmin>;
   receiptTokenMint: Address<TAccountReceiptTokenMint>;
   extraAccountMetaList?: Address<TAccountExtraAccountMetaList>;
@@ -137,7 +130,6 @@ export type AdminUpdateExtraAccountMetaListIfNeededAsyncInput<
 };
 
 export async function getAdminUpdateExtraAccountMetaListIfNeededInstructionAsync<
-  TAccountPayer extends string,
   TAccountAdmin extends string,
   TAccountReceiptTokenMint extends string,
   TAccountExtraAccountMetaList extends string,
@@ -146,7 +138,6 @@ export async function getAdminUpdateExtraAccountMetaListIfNeededInstructionAsync
   TProgramAddress extends Address = typeof RESTAKING_PROGRAM_ADDRESS,
 >(
   input: AdminUpdateExtraAccountMetaListIfNeededAsyncInput<
-    TAccountPayer,
     TAccountAdmin,
     TAccountReceiptTokenMint,
     TAccountExtraAccountMetaList,
@@ -157,7 +148,6 @@ export async function getAdminUpdateExtraAccountMetaListIfNeededInstructionAsync
 ): Promise<
   AdminUpdateExtraAccountMetaListIfNeededInstruction<
     TProgramAddress,
-    TAccountPayer,
     TAccountAdmin,
     TAccountReceiptTokenMint,
     TAccountExtraAccountMetaList,
@@ -170,7 +160,6 @@ export async function getAdminUpdateExtraAccountMetaListIfNeededInstructionAsync
 
   // Original accounts.
   const originalAccounts = {
-    payer: { value: input.payer ?? null, isWritable: false },
     admin: { value: input.admin ?? null, isWritable: false },
     receiptTokenMint: {
       value: input.receiptTokenMint ?? null,
@@ -226,7 +215,6 @@ export async function getAdminUpdateExtraAccountMetaListIfNeededInstructionAsync
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
-      getAccountMeta(accounts.payer),
       getAccountMeta(accounts.admin),
       getAccountMeta(accounts.receiptTokenMint),
       getAccountMeta(accounts.extraAccountMetaList),
@@ -239,7 +227,6 @@ export async function getAdminUpdateExtraAccountMetaListIfNeededInstructionAsync
     ),
   } as AdminUpdateExtraAccountMetaListIfNeededInstruction<
     TProgramAddress,
-    TAccountPayer,
     TAccountAdmin,
     TAccountReceiptTokenMint,
     TAccountExtraAccountMetaList,
@@ -251,14 +238,12 @@ export async function getAdminUpdateExtraAccountMetaListIfNeededInstructionAsync
 }
 
 export type AdminUpdateExtraAccountMetaListIfNeededInput<
-  TAccountPayer extends string = string,
   TAccountAdmin extends string = string,
   TAccountReceiptTokenMint extends string = string,
   TAccountExtraAccountMetaList extends string = string,
   TAccountEventAuthority extends string = string,
   TAccountProgram extends string = string,
 > = {
-  payer: TransactionSigner<TAccountPayer>;
   admin?: TransactionSigner<TAccountAdmin>;
   receiptTokenMint: Address<TAccountReceiptTokenMint>;
   extraAccountMetaList: Address<TAccountExtraAccountMetaList>;
@@ -267,7 +252,6 @@ export type AdminUpdateExtraAccountMetaListIfNeededInput<
 };
 
 export function getAdminUpdateExtraAccountMetaListIfNeededInstruction<
-  TAccountPayer extends string,
   TAccountAdmin extends string,
   TAccountReceiptTokenMint extends string,
   TAccountExtraAccountMetaList extends string,
@@ -276,7 +260,6 @@ export function getAdminUpdateExtraAccountMetaListIfNeededInstruction<
   TProgramAddress extends Address = typeof RESTAKING_PROGRAM_ADDRESS,
 >(
   input: AdminUpdateExtraAccountMetaListIfNeededInput<
-    TAccountPayer,
     TAccountAdmin,
     TAccountReceiptTokenMint,
     TAccountExtraAccountMetaList,
@@ -286,7 +269,6 @@ export function getAdminUpdateExtraAccountMetaListIfNeededInstruction<
   config?: { programAddress?: TProgramAddress }
 ): AdminUpdateExtraAccountMetaListIfNeededInstruction<
   TProgramAddress,
-  TAccountPayer,
   TAccountAdmin,
   TAccountReceiptTokenMint,
   TAccountExtraAccountMetaList,
@@ -298,7 +280,6 @@ export function getAdminUpdateExtraAccountMetaListIfNeededInstruction<
 
   // Original accounts.
   const originalAccounts = {
-    payer: { value: input.payer ?? null, isWritable: false },
     admin: { value: input.admin ?? null, isWritable: false },
     receiptTokenMint: {
       value: input.receiptTokenMint ?? null,
@@ -325,7 +306,6 @@ export function getAdminUpdateExtraAccountMetaListIfNeededInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
-      getAccountMeta(accounts.payer),
       getAccountMeta(accounts.admin),
       getAccountMeta(accounts.receiptTokenMint),
       getAccountMeta(accounts.extraAccountMetaList),
@@ -338,7 +318,6 @@ export function getAdminUpdateExtraAccountMetaListIfNeededInstruction<
     ),
   } as AdminUpdateExtraAccountMetaListIfNeededInstruction<
     TProgramAddress,
-    TAccountPayer,
     TAccountAdmin,
     TAccountReceiptTokenMint,
     TAccountExtraAccountMetaList,
@@ -355,12 +334,11 @@ export type ParsedAdminUpdateExtraAccountMetaListIfNeededInstruction<
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    payer: TAccountMetas[0];
-    admin: TAccountMetas[1];
-    receiptTokenMint: TAccountMetas[2];
-    extraAccountMetaList: TAccountMetas[3];
-    eventAuthority: TAccountMetas[4];
-    program: TAccountMetas[5];
+    admin: TAccountMetas[0];
+    receiptTokenMint: TAccountMetas[1];
+    extraAccountMetaList: TAccountMetas[2];
+    eventAuthority: TAccountMetas[3];
+    program: TAccountMetas[4];
   };
   data: AdminUpdateExtraAccountMetaListIfNeededInstructionData;
 };
@@ -376,7 +354,7 @@ export function parseAdminUpdateExtraAccountMetaListIfNeededInstruction<
   TProgram,
   TAccountMetas
 > {
-  if (instruction.accounts.length < 6) {
+  if (instruction.accounts.length < 5) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -389,7 +367,6 @@ export function parseAdminUpdateExtraAccountMetaListIfNeededInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
-      payer: getNextAccount(),
       admin: getNextAccount(),
       receiptTokenMint: getNextAccount(),
       extraAccountMetaList: getNextAccount(),

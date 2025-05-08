@@ -29,10 +29,10 @@ import {
   type IInstructionWithAccounts,
   type IInstructionWithData,
   type ReadonlyAccount,
+  type ReadonlySignerAccount,
   type ReadonlyUint8Array,
   type TransactionSigner,
   type WritableAccount,
-  type WritableSignerAccount,
 } from '@solana/kit';
 import { RESTAKING_PROGRAM_ADDRESS } from '../programs';
 import {
@@ -82,9 +82,6 @@ export type UserWithdrawSupportedTokenInstruction<
   TAccountUserFundAccount extends string | IAccountMeta<string> = string,
   TAccountRewardAccount extends string | IAccountMeta<string> = string,
   TAccountUserRewardAccount extends string | IAccountMeta<string> = string,
-  TAccountInstructionsSysvar extends
-    | string
-    | IAccountMeta<string> = 'Sysvar1nstructions1111111111111111111111111',
   TAccountEventAuthority extends string | IAccountMeta<string> = string,
   TAccountProgram extends string | IAccountMeta<string> = string,
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
@@ -93,7 +90,7 @@ export type UserWithdrawSupportedTokenInstruction<
   IInstructionWithAccounts<
     [
       TAccountUser extends string
-        ? WritableSignerAccount<TAccountUser> & IAccountSignerMeta<TAccountUser>
+        ? ReadonlySignerAccount<TAccountUser> & IAccountSignerMeta<TAccountUser>
         : TAccountUser,
       TAccountSystemProgram extends string
         ? ReadonlyAccount<TAccountSystemProgram>
@@ -105,10 +102,10 @@ export type UserWithdrawSupportedTokenInstruction<
         ? ReadonlyAccount<TAccountSupportedTokenProgram>
         : TAccountSupportedTokenProgram,
       TAccountReceiptTokenMint extends string
-        ? WritableAccount<TAccountReceiptTokenMint>
+        ? ReadonlyAccount<TAccountReceiptTokenMint>
         : TAccountReceiptTokenMint,
       TAccountUserReceiptTokenAccount extends string
-        ? WritableAccount<TAccountUserReceiptTokenAccount>
+        ? ReadonlyAccount<TAccountUserReceiptTokenAccount>
         : TAccountUserReceiptTokenAccount,
       TAccountSupportedTokenMint extends string
         ? ReadonlyAccount<TAccountSupportedTokenMint>
@@ -135,14 +132,11 @@ export type UserWithdrawSupportedTokenInstruction<
         ? WritableAccount<TAccountUserFundAccount>
         : TAccountUserFundAccount,
       TAccountRewardAccount extends string
-        ? WritableAccount<TAccountRewardAccount>
+        ? ReadonlyAccount<TAccountRewardAccount>
         : TAccountRewardAccount,
       TAccountUserRewardAccount extends string
-        ? WritableAccount<TAccountUserRewardAccount>
+        ? ReadonlyAccount<TAccountUserRewardAccount>
         : TAccountUserRewardAccount,
-      TAccountInstructionsSysvar extends string
-        ? ReadonlyAccount<TAccountInstructionsSysvar>
-        : TAccountInstructionsSysvar,
       TAccountEventAuthority extends string
         ? ReadonlyAccount<TAccountEventAuthority>
         : TAccountEventAuthority,
@@ -213,7 +207,6 @@ export type UserWithdrawSupportedTokenAsyncInput<
   TAccountUserFundAccount extends string = string,
   TAccountRewardAccount extends string = string,
   TAccountUserRewardAccount extends string = string,
-  TAccountInstructionsSysvar extends string = string,
   TAccountEventAuthority extends string = string,
   TAccountProgram extends string = string,
 > = {
@@ -237,7 +230,6 @@ export type UserWithdrawSupportedTokenAsyncInput<
   userFundAccount?: Address<TAccountUserFundAccount>;
   rewardAccount?: Address<TAccountRewardAccount>;
   userRewardAccount?: Address<TAccountUserRewardAccount>;
-  instructionsSysvar?: Address<TAccountInstructionsSysvar>;
   eventAuthority?: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
   batchId: UserWithdrawSupportedTokenInstructionDataArgs['batchId'];
@@ -261,7 +253,6 @@ export async function getUserWithdrawSupportedTokenInstructionAsync<
   TAccountUserFundAccount extends string,
   TAccountRewardAccount extends string,
   TAccountUserRewardAccount extends string,
-  TAccountInstructionsSysvar extends string,
   TAccountEventAuthority extends string,
   TAccountProgram extends string,
   TProgramAddress extends Address = typeof RESTAKING_PROGRAM_ADDRESS,
@@ -283,7 +274,6 @@ export async function getUserWithdrawSupportedTokenInstructionAsync<
     TAccountUserFundAccount,
     TAccountRewardAccount,
     TAccountUserRewardAccount,
-    TAccountInstructionsSysvar,
     TAccountEventAuthority,
     TAccountProgram
   >,
@@ -307,7 +297,6 @@ export async function getUserWithdrawSupportedTokenInstructionAsync<
     TAccountUserFundAccount,
     TAccountRewardAccount,
     TAccountUserRewardAccount,
-    TAccountInstructionsSysvar,
     TAccountEventAuthority,
     TAccountProgram
   >
@@ -317,7 +306,7 @@ export async function getUserWithdrawSupportedTokenInstructionAsync<
 
   // Original accounts.
   const originalAccounts = {
-    user: { value: input.user ?? null, isWritable: true },
+    user: { value: input.user ?? null, isWritable: false },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
     receiptTokenProgram: {
       value: input.receiptTokenProgram ?? null,
@@ -329,11 +318,11 @@ export async function getUserWithdrawSupportedTokenInstructionAsync<
     },
     receiptTokenMint: {
       value: input.receiptTokenMint ?? null,
-      isWritable: true,
+      isWritable: false,
     },
     userReceiptTokenAccount: {
       value: input.userReceiptTokenAccount ?? null,
-      isWritable: true,
+      isWritable: false,
     },
     supportedTokenMint: {
       value: input.supportedTokenMint ?? null,
@@ -361,13 +350,9 @@ export async function getUserWithdrawSupportedTokenInstructionAsync<
       isWritable: true,
     },
     userFundAccount: { value: input.userFundAccount ?? null, isWritable: true },
-    rewardAccount: { value: input.rewardAccount ?? null, isWritable: true },
+    rewardAccount: { value: input.rewardAccount ?? null, isWritable: false },
     userRewardAccount: {
       value: input.userRewardAccount ?? null,
-      isWritable: true,
-    },
-    instructionsSysvar: {
-      value: input.instructionsSysvar ?? null,
       isWritable: false,
     },
     eventAuthority: { value: input.eventAuthority ?? null, isWritable: false },
@@ -523,10 +508,6 @@ export async function getUserWithdrawSupportedTokenInstructionAsync<
       ],
     });
   }
-  if (!accounts.instructionsSysvar.value) {
-    accounts.instructionsSysvar.value =
-      'Sysvar1nstructions1111111111111111111111111' as Address<'Sysvar1nstructions1111111111111111111111111'>;
-  }
   if (!accounts.eventAuthority.value) {
     accounts.eventAuthority.value = await getProgramDerivedAddress({
       programAddress,
@@ -560,7 +541,6 @@ export async function getUserWithdrawSupportedTokenInstructionAsync<
       getAccountMeta(accounts.userFundAccount),
       getAccountMeta(accounts.rewardAccount),
       getAccountMeta(accounts.userRewardAccount),
-      getAccountMeta(accounts.instructionsSysvar),
       getAccountMeta(accounts.eventAuthority),
       getAccountMeta(accounts.program),
     ],
@@ -586,7 +566,6 @@ export async function getUserWithdrawSupportedTokenInstructionAsync<
     TAccountUserFundAccount,
     TAccountRewardAccount,
     TAccountUserRewardAccount,
-    TAccountInstructionsSysvar,
     TAccountEventAuthority,
     TAccountProgram
   >;
@@ -611,7 +590,6 @@ export type UserWithdrawSupportedTokenInput<
   TAccountUserFundAccount extends string = string,
   TAccountRewardAccount extends string = string,
   TAccountUserRewardAccount extends string = string,
-  TAccountInstructionsSysvar extends string = string,
   TAccountEventAuthority extends string = string,
   TAccountProgram extends string = string,
 > = {
@@ -635,7 +613,6 @@ export type UserWithdrawSupportedTokenInput<
   userFundAccount: Address<TAccountUserFundAccount>;
   rewardAccount: Address<TAccountRewardAccount>;
   userRewardAccount: Address<TAccountUserRewardAccount>;
-  instructionsSysvar?: Address<TAccountInstructionsSysvar>;
   eventAuthority: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
   batchId: UserWithdrawSupportedTokenInstructionDataArgs['batchId'];
@@ -659,7 +636,6 @@ export function getUserWithdrawSupportedTokenInstruction<
   TAccountUserFundAccount extends string,
   TAccountRewardAccount extends string,
   TAccountUserRewardAccount extends string,
-  TAccountInstructionsSysvar extends string,
   TAccountEventAuthority extends string,
   TAccountProgram extends string,
   TProgramAddress extends Address = typeof RESTAKING_PROGRAM_ADDRESS,
@@ -681,7 +657,6 @@ export function getUserWithdrawSupportedTokenInstruction<
     TAccountUserFundAccount,
     TAccountRewardAccount,
     TAccountUserRewardAccount,
-    TAccountInstructionsSysvar,
     TAccountEventAuthority,
     TAccountProgram
   >,
@@ -704,7 +679,6 @@ export function getUserWithdrawSupportedTokenInstruction<
   TAccountUserFundAccount,
   TAccountRewardAccount,
   TAccountUserRewardAccount,
-  TAccountInstructionsSysvar,
   TAccountEventAuthority,
   TAccountProgram
 > {
@@ -713,7 +687,7 @@ export function getUserWithdrawSupportedTokenInstruction<
 
   // Original accounts.
   const originalAccounts = {
-    user: { value: input.user ?? null, isWritable: true },
+    user: { value: input.user ?? null, isWritable: false },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
     receiptTokenProgram: {
       value: input.receiptTokenProgram ?? null,
@@ -725,11 +699,11 @@ export function getUserWithdrawSupportedTokenInstruction<
     },
     receiptTokenMint: {
       value: input.receiptTokenMint ?? null,
-      isWritable: true,
+      isWritable: false,
     },
     userReceiptTokenAccount: {
       value: input.userReceiptTokenAccount ?? null,
-      isWritable: true,
+      isWritable: false,
     },
     supportedTokenMint: {
       value: input.supportedTokenMint ?? null,
@@ -757,13 +731,9 @@ export function getUserWithdrawSupportedTokenInstruction<
       isWritable: true,
     },
     userFundAccount: { value: input.userFundAccount ?? null, isWritable: true },
-    rewardAccount: { value: input.rewardAccount ?? null, isWritable: true },
+    rewardAccount: { value: input.rewardAccount ?? null, isWritable: false },
     userRewardAccount: {
       value: input.userRewardAccount ?? null,
-      isWritable: true,
-    },
-    instructionsSysvar: {
-      value: input.instructionsSysvar ?? null,
       isWritable: false,
     },
     eventAuthority: { value: input.eventAuthority ?? null, isWritable: false },
@@ -786,10 +756,6 @@ export function getUserWithdrawSupportedTokenInstruction<
     accounts.receiptTokenProgram.value =
       'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb' as Address<'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb'>;
   }
-  if (!accounts.instructionsSysvar.value) {
-    accounts.instructionsSysvar.value =
-      'Sysvar1nstructions1111111111111111111111111' as Address<'Sysvar1nstructions1111111111111111111111111'>;
-  }
 
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
@@ -810,7 +776,6 @@ export function getUserWithdrawSupportedTokenInstruction<
       getAccountMeta(accounts.userFundAccount),
       getAccountMeta(accounts.rewardAccount),
       getAccountMeta(accounts.userRewardAccount),
-      getAccountMeta(accounts.instructionsSysvar),
       getAccountMeta(accounts.eventAuthority),
       getAccountMeta(accounts.program),
     ],
@@ -836,7 +801,6 @@ export function getUserWithdrawSupportedTokenInstruction<
     TAccountUserFundAccount,
     TAccountRewardAccount,
     TAccountUserRewardAccount,
-    TAccountInstructionsSysvar,
     TAccountEventAuthority,
     TAccountProgram
   >;
@@ -871,9 +835,8 @@ export type ParsedUserWithdrawSupportedTokenInstruction<
     userFundAccount: TAccountMetas[13];
     rewardAccount: TAccountMetas[14];
     userRewardAccount: TAccountMetas[15];
-    instructionsSysvar: TAccountMetas[16];
-    eventAuthority: TAccountMetas[17];
-    program: TAccountMetas[18];
+    eventAuthority: TAccountMetas[16];
+    program: TAccountMetas[17];
   };
   data: UserWithdrawSupportedTokenInstructionData;
 };
@@ -886,7 +849,7 @@ export function parseUserWithdrawSupportedTokenInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedUserWithdrawSupportedTokenInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 19) {
+  if (instruction.accounts.length < 18) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -915,7 +878,6 @@ export function parseUserWithdrawSupportedTokenInstruction<
       userFundAccount: getNextAccount(),
       rewardAccount: getNextAccount(),
       userRewardAccount: getNextAccount(),
-      instructionsSysvar: getNextAccount(),
       eventAuthority: getNextAccount(),
       program: getNextAccount(),
     },

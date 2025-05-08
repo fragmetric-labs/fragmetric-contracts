@@ -35,8 +35,6 @@ pub struct AdminReceiptTokenMintExtraAccountMetaListInitialContext<'info> {
 #[event_cpi]
 #[derive(Accounts)]
 pub struct AdminReceiptTokenMintExtraAccountMetaListUpdateContext<'info> {
-    pub payer: Signer<'info>,
-
     #[account(address = ADMIN_PUBKEY)]
     pub admin: Signer<'info>,
 
