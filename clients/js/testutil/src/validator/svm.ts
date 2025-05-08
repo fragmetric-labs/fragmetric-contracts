@@ -22,6 +22,7 @@ import {
   TestValidator,
   TestValidatorOptions,
   TestValidatorRuntime,
+  GetSlotOptions,
 } from './validator';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
@@ -78,8 +79,8 @@ export class SVMValidator extends TestValidator<'svm'> {
             ? ['--slots-per-epoch', options.slotsPerEpoch.toString()]
             : [],
           options.ticksPerSlot && !options.warpSlot
-            ? ['--ticks-per-slot', 16] // TODO: verify whether manipulating ticks-per-slot is appropriate
-            : ['--ticks-per-slot', 16],
+            ? ['--ticks-per-slot', options.ticksPerSlot.toString()] // TODO: verify whether manipulating ticks-per-slot is appropriate
+            : [],
           options.warpSlot
             ? ['--warp-slot', options.warpSlot.toString()]
             : ['--reset'],
@@ -223,7 +224,6 @@ export class SVMValidator extends TestValidator<'svm'> {
   private static instanceNo = 0;
   private rpc: Rpc<SolanaRpcApi>;
   private rpcSubscriptions: RpcSubscriptions<SolanaRpcSubscriptionsApi>;
-  private initialSlot = 0n;
 
   protected static createLogger(options: TestValidatorOptions<'svm'>) {
     if (options.debug) {
@@ -307,23 +307,19 @@ export class SVMValidator extends TestValidator<'svm'> {
     return res.value;
   }
 
-
-  async getSlot(): Promise<bigint> {
-    return this.rpc.getSlot({ commitment: 'finalized' }).send();
-  }
-
-  async getProcessedSlot(): Promise<bigint> {
-    return this.rpc.getSlot({ commitment: 'processed' }).send();
+  async getSlot(opts: GetSlotOptions = {}): Promise<bigint> {
+    const commitment = opts.commitment ?? 'finalized';
+    return this.rpc.getSlot({ commitment }).send();
   }
 
   async warpToSlot(slot: bigint): Promise<void> {
     this.logger(`PREPARE WARP TO SLOT ${slot}`);
-    const fullSnapshotReadySlot = await this.getProcessedSlot() + 100n;
+    const fullSnapshotReadySlot = await this.getSlot({ commitment: 'processed'}) + 100n;
 
     while (true) {
       await new Promise((resolve) => setTimeout(resolve, 1000));
-      const currentProcessedSlot = await this.getProcessedSlot();
-      const currentFinalizedSlot = await this.getSlot();
+      const currentProcessedSlot = await this.getSlot({ commitment: 'processed'});
+      const currentFinalizedSlot = await this.getSlot({ commitment: 'finalized'});
 
       if (currentProcessedSlot >= slot) {
         this.logger(`NO NEED TO WARP TO SLOT ${slot}`);
@@ -347,7 +343,7 @@ export class SVMValidator extends TestValidator<'svm'> {
       ...this.options,
       warpSlot: slot,
     });
-    this.initialSlot = slot;
+    
     this.process = newInstance.process;
   }
 }
