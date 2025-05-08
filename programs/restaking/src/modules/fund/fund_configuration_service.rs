@@ -207,90 +207,17 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         self.create_fund_manager_updated_fund_event()
     }
 
-    // TODO/v0.7.0: merge with process_add_jito_restaking_vault
-    pub fn process_add_solv_btc_vault(
+    pub fn process_add_restaking_vault(
         &mut self,
-        fund_vault_supported_token_account: &InterfaceAccount<TokenAccount>,
         fund_vault_receipt_token_account: &InterfaceAccount<TokenAccount>,
 
-        vault_supported_token_mint: &InterfaceAccount<Mint>,
-
         vault: &UncheckedAccount,
-        vault_program: &UncheckedAccount,
+        vault_supported_token_mint: &InterfaceAccount<Mint>,
         vault_receipt_token_mint: &InterfaceAccount<Mint>,
 
         pricing_sources: &'info [AccountInfo<'info>],
     ) -> Result<events::FundManagerUpdatedFund> {
-        require_keys_eq!(
-            fund_vault_supported_token_account.owner,
-            self.fund_account.load()?.get_reserve_account_address()?,
-        );
-        require_keys_eq!(
-            fund_vault_supported_token_account.mint,
-            vault_supported_token_mint.key()
-        );
-
-        require_keys_eq!(
-            fund_vault_receipt_token_account.owner,
-            self.fund_account.load()?.get_reserve_account_address()?,
-        );
-        require_keys_eq!(
-            fund_vault_receipt_token_account.mint,
-            vault_receipt_token_mint.key()
-        );
-
-        self.fund_account.load_mut()?.add_restaking_vault(
-            vault.key(),
-            vault_program.key(),
-            vault_supported_token_mint.key(),
-            vault_receipt_token_mint.key(),
-            *AsRef::<AccountInfo>::as_ref(vault_receipt_token_mint).owner,
-            vault_receipt_token_mint.decimals,
-            TokenPricingSource::SolvBTCVault {
-                address: vault.key(),
-            },
-            fund_vault_receipt_token_account.amount,
-        )?;
-
-        // validate pricing source
-        FundService::new(self.receipt_token_mint, self.fund_account)?
-            .new_pricing_service(pricing_sources)?;
-
-        self.create_fund_manager_updated_fund_event()
-    }
-
-    pub fn process_add_jito_restaking_vault(
-        &mut self,
-        fund_vault_supported_token_account: &InterfaceAccount<TokenAccount>,
-        fund_vault_receipt_token_account: &InterfaceAccount<TokenAccount>,
-
-        vault_supported_token_mint: &InterfaceAccount<Mint>,
-
-        vault: &UncheckedAccount,
-        vault_program: &UncheckedAccount,
-        vault_receipt_token_mint: &InterfaceAccount<Mint>,
-
-        pricing_sources: &'info [AccountInfo<'info>],
-    ) -> Result<events::FundManagerUpdatedFund> {
-        require_keys_eq!(
-            fund_vault_supported_token_account.owner,
-            self.fund_account.load()?.get_reserve_account_address()?,
-        );
-        require_keys_eq!(
-            fund_vault_supported_token_account.mint,
-            vault_supported_token_mint.key()
-        );
-
-        require_keys_eq!(
-            fund_vault_receipt_token_account.owner,
-            self.fund_account.load()?.get_reserve_account_address()?,
-        );
-        require_keys_eq!(
-            fund_vault_receipt_token_account.mint,
-            vault_receipt_token_mint.key()
-        );
-
-        restaking::JitoRestakingVaultService::validate_vault(
+        let receipt_token_pricing_source = restaking::validate_vault(
             vault,
             vault_supported_token_mint.as_ref(),
             vault_receipt_token_mint.as_ref(),
@@ -298,14 +225,12 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
 
         self.fund_account.load_mut()?.add_restaking_vault(
             vault.key(),
-            vault_program.key(),
+            *vault.owner,
             vault_supported_token_mint.key(),
             vault_receipt_token_mint.key(),
             *AsRef::<AccountInfo>::as_ref(vault_receipt_token_mint).owner,
             vault_receipt_token_mint.decimals,
-            TokenPricingSource::JitoRestakingVault {
-                address: vault.key(),
-            },
+            receipt_token_pricing_source,
             fund_vault_receipt_token_account.amount,
         )?;
 
@@ -316,33 +241,27 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         self.create_fund_manager_updated_fund_event()
     }
 
-    pub fn process_add_jito_restaking_vault_delegation(
+    pub fn process_add_restaking_vault_delegation(
         &mut self,
         vault_operator_delegation: &UncheckedAccount,
         vault: &UncheckedAccount,
         operator: &UncheckedAccount,
     ) -> Result<events::FundManagerUpdatedFund> {
-        let (
-            delegation_index,
-            delegated_amount,
-            undelegation_requested_amount,
-            undelegating_amount,
-        ) = restaking::JitoRestakingVaultService::validate_vault_operator_delegation(
-            vault_operator_delegation,
-            vault,
-            operator,
-        )?;
-
-        require_gte!(u8::MAX as u64, delegation_index);
+        let (delegation_index, delegated_amount, undelegating_amount) =
+            restaking::validate_vault_operator_delegation(
+                vault_operator_delegation,
+                vault,
+                operator,
+            )?;
 
         self.fund_account
             .load_mut()?
             .get_restaking_vault_mut(vault.key)?
             .add_delegation(
                 operator.key(),
-                delegation_index as u8,
+                delegation_index,
                 delegated_amount,
-                undelegation_requested_amount + undelegating_amount,
+                undelegating_amount,
             )?;
 
         self.create_fund_manager_updated_fund_event()

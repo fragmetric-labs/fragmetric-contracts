@@ -7,10 +7,9 @@ use crate::errors::ErrorCode;
 use crate::modules::fund::FundAccount;
 use crate::utils::{AccountLoaderExt, PDASeeds};
 
-/// TODO/v0.7.0 merge with jito restaking vault context
 #[event_cpi]
 #[derive(Accounts)]
-pub struct FundManagerFundSolvBTCVaultInitialContext<'info> {
+pub struct FundManagerFundRestakingVaultInitialContext<'info> {
     #[account(address = FUND_MANAGER_PUBKEY)]
     pub fund_manager: Signer<'info>,
 
@@ -33,10 +32,7 @@ pub struct FundManagerFundSolvBTCVaultInitialContext<'info> {
 
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
-    /// CHECK: TODO
-    pub vault_program: UncheckedAccount<'info>,
-
-    /// CHECK: TODO
+    /// CHECK: will be validated by vault service
     pub vault_account: UncheckedAccount<'info>,
 
     pub vault_receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
@@ -63,4 +59,31 @@ pub struct FundManagerFundSolvBTCVaultInitialContext<'info> {
         associated_token::token_program = Token::id(),
     )]
     pub vault_vault_supported_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
+}
+
+#[event_cpi]
+#[derive(Accounts)]
+pub struct FundManagerFundRestakingVaultDelegationInitialContext<'info> {
+    #[account(address = FUND_MANAGER_PUBKEY)]
+    pub fund_manager: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
+        bump = fund_account.get_bump()?,
+        has_one = receipt_token_mint,
+        constraint = fund_account.load()?.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
+    )]
+    pub fund_account: AccountLoader<'info, FundAccount>,
+
+    pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    /// CHECK: will be validated by vault service
+    pub vault_account: UncheckedAccount<'info>,
+
+    /// CHECK: will be validated by vault service
+    pub operator_account: UncheckedAccount<'info>,
+
+    /// CHECK: will be validated by vault service
+    pub vault_operator_delegation: UncheckedAccount<'info>,
 }

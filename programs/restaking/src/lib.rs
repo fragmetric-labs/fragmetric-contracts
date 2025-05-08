@@ -328,7 +328,6 @@ pub mod restaking {
         Ok(())
     }
 
-    // TODO: use `FundManagerFundRestakingVaultRewardContext` to check reward_token_mint
     pub fn fund_manager_add_restaking_vault_compounding_reward_token(
         ctx: Context<FundManagerFundContext>,
         vault: Pubkey,
@@ -363,7 +362,6 @@ pub mod restaking {
         Ok(())
     }
 
-    // TODO: use `FundManagerFundRestakingVaultRewardContext` to check reward_token_mint
     pub fn fund_manager_add_restaking_vault_distributing_reward_token(
         ctx: Context<FundManagerFundContext>,
         vault: Pubkey,
@@ -526,22 +524,20 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
-    // FundManagerFundJitoRestakingVaultInitialContext
+    // FundManagerFundRestakingVaultInitialContext
     ////////////////////////////////////////////
 
-    pub fn fund_manager_initialize_fund_jito_restaking_vault<'info>(
-        ctx: Context<'_, '_, 'info, 'info, FundManagerFundJitoRestakingVaultInitialContext<'info>>,
+    pub fn fund_manager_initialize_fund_restaking_vault<'info>(
+        ctx: Context<'_, '_, 'info, 'info, FundManagerFundRestakingVaultInitialContext<'info>>,
     ) -> Result<()> {
         emit_cpi!(modules::fund::FundConfigurationService::new(
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
         )?
-        .process_add_jito_restaking_vault(
-            &ctx.accounts.fund_vault_supported_token_account,
+        .process_add_restaking_vault(
             &ctx.accounts.fund_vault_receipt_token_account,
-            &ctx.accounts.vault_supported_token_mint,
             &ctx.accounts.vault_account,
-            &ctx.accounts.vault_program,
+            &ctx.accounts.vault_supported_token_mint,
             &ctx.accounts.vault_receipt_token_mint,
             ctx.remaining_accounts,
         )?);
@@ -550,44 +546,20 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
-    // FundManagerFundJitoRestakingVaultOperatorInitialContext
+    // FundManagerFundRestakingVaultDelegationInitialContext
     ////////////////////////////////////////////
 
-    pub fn fund_manager_initialize_fund_jito_restaking_vault_delegation(
-        ctx: Context<FundManagerFundJitoRestakingVaultDelegationInitialContext>,
+    pub fn fund_manager_initialize_fund_restaking_vault_delegation(
+        ctx: Context<FundManagerFundRestakingVaultDelegationInitialContext>,
     ) -> Result<()> {
         emit_cpi!(modules::fund::FundConfigurationService::new(
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account
         )?
-        .process_add_jito_restaking_vault_delegation(
+        .process_add_restaking_vault_delegation(
             &ctx.accounts.vault_operator_delegation,
             &ctx.accounts.vault_account,
             &ctx.accounts.operator_account,
-        )?);
-
-        Ok(())
-    }
-
-    ////////////////////////////////////////////
-    // FundManagerFundJitoRestakingVaultInitialContext
-    ////////////////////////////////////////////
-    // TODO/v0.7.0: merge with jito restaking vault related ix
-    pub fn fund_manager_initialize_fund_solv_btc_vault<'info>(
-        ctx: Context<'_, '_, 'info, 'info, FundManagerFundSolvBTCVaultInitialContext<'info>>,
-    ) -> Result<()> {
-        emit_cpi!(modules::fund::FundConfigurationService::new(
-            &mut ctx.accounts.receipt_token_mint,
-            &mut ctx.accounts.fund_account,
-        )?
-        .process_add_solv_btc_vault(
-            &ctx.accounts.fund_vault_supported_token_account,
-            &ctx.accounts.fund_vault_receipt_token_account,
-            &ctx.accounts.vault_supported_token_mint,
-            &ctx.accounts.vault_account,
-            &ctx.accounts.vault_program,
-            &ctx.accounts.vault_receipt_token_mint,
-            ctx.remaining_accounts,
         )?);
 
         Ok(())

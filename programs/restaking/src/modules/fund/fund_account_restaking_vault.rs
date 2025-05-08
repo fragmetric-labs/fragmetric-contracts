@@ -46,9 +46,19 @@ pub(super) struct RestakingVault {
     /// reward to distribute
     _padding4: [u8; 7],
     num_distributing_reward_tokens: u8,
+    // distributing_reward_tokens: [
+    //     {
+    //         mint: Pubkey,
+    //         threshold_min_amount: u64,
+    //         threshold_max_amount: u64,
+    //         threshold_interval_seconds: u64,
+    //         last_settled_at: u64
+    //     }; FUND_ACCOUNT_MAX_RESTAKING_VAULT_DISTRIBUTING_REWARD_TOKENS
+    // ],
     distributing_reward_token_mints:
         [Pubkey; FUND_ACCOUNT_MAX_RESTAKING_VAULT_DISTRIBUTING_REWARD_TOKENS],
 
+    // _reserved: [u8; 1336],
     _reserved: [u8; 2296],
 }
 
@@ -230,20 +240,14 @@ impl RestakingVault {
     pub fn add_delegation(
         &mut self,
         operator: Pubkey,
-        index: u8,
+        index: Option<u8>,
         delegated_amount: u64,
         undelegating_amount: u64,
     ) -> Result<()> {
-        require_eq!(self.num_delegations, index);
-        self.add_delegation_unchecked(operator, delegated_amount, undelegating_amount)
-    }
+        if let Some(index) = index {
+            require_eq!(self.num_delegations, index);
+        }
 
-    pub fn add_delegation_unchecked(
-        &mut self,
-        operator: Pubkey,
-        delegated_amount: u64,
-        undelegating_amount: u64,
-    ) -> Result<()> {
         if self
             .get_delegations_iter()
             .any(|delegation| delegation.operator == operator)

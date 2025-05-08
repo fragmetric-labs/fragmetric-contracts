@@ -30,12 +30,7 @@ pub const JITO_VAULT_CONFIG_ADDRESS: Pubkey =
     pubkey!("UwuSgAq4zByffCGCrWH87DsjfsewYjuqHfJEpzw1Jq3");
 
 #[constant]
-pub const JITO_RESTAKING_PROGRAM_ID: Pubkey =
-    pubkey!("RestkWeAVL8fRGgzhfeoqFhsqKRchg6aa1XrcH96z4Q");
-
-#[constant]
-pub const JITO_RESTAKING_CONFIG_ADDRESS: Pubkey =
-    pubkey!("4vvKh3Ws4vGzgXRVdo8SdL4jePXDvCqKVmi21BCBGwvn");
+pub const SOLV_PROGRAM_ID: Pubkey = pubkey!("9beGuWXNoKPKCApT6xJUm5435Fz8EMGzoTTXgkcf3zAz");
 
 ////////////////////////////////////////////
 // receipt token: fragSOL

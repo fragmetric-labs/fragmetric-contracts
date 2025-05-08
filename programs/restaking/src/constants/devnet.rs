@@ -33,6 +33,9 @@ pub const JITO_RESTAKING_PROGRAM_ID: Pubkey =
 pub const JITO_RESTAKING_CONFIG_ADDRESS: Pubkey =
     pubkey!("4vvKh3Ws4vGzgXRVdo8SdL4jePXDvCqKVmi21BCBGwvn");
 
+#[constant]
+pub const SOLV_PROGRAM_ID: Pubkey = pubkey!("FsoLVPaSSXfsfZHYaxtQSZs6npFFUeRCyXB6dcC8ckn");
+
 ////////////////////////////////////////////
 // receipt token: fragSOL
 ////////////////////////////////////////////

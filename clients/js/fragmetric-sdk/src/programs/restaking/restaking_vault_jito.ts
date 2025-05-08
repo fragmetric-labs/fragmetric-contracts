@@ -171,9 +171,20 @@ export class JitoVaultAccountContext extends AccountContext<
 
       return (await Promise.all(
         vaultStrategy.delegations.map(async (delegation) => {
+          const [vaultOperatorDelegation] = await getProgramDerivedAddress({
+            programAddress: jitoVault.JITO_VAULT_PROGRAM_ADDRESS,
+            seeds: [
+              getBytesEncoder().encode(
+                Buffer.from('vault_operator_delegation')
+              ),
+              getAddressEncoder().encode(vault),
+              getAddressEncoder().encode(delegation.operator),
+            ],
+          });
           const ix =
-            await restaking.getFundManagerInitializeFundJitoRestakingVaultDelegationInstructionAsync(
+            await restaking.getFundManagerInitializeFundRestakingVaultDelegationInstructionAsync(
               {
+                vaultOperatorDelegation,
                 receiptTokenMint: vault,
                 vaultAccount: vault,
                 operatorAccount: delegation.operator,
