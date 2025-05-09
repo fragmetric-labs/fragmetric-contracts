@@ -52,6 +52,7 @@ impl SupportedToken {
             TokenPricingSource::SPLStakePool { .. }
             | TokenPricingSource::MarinadeStakePool { .. }
             | TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. }
+            | TokenPricingSource::SanctumMultiValidatorSPLStakePool { .. }
             | TokenPricingSource::OrcaDEXLiquidityPool { .. }
             | TokenPricingSource::PeggedToken { .. } => {}
             // otherwise fails

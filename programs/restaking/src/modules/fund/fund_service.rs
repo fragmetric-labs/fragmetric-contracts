@@ -109,6 +109,7 @@ impl<'a, 'info> FundService<'a, 'info> {
                 Some(TokenPricingSource::SPLStakePool { address })
                 | Some(TokenPricingSource::MarinadeStakePool { address })
                 | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { address })
+                | Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { address })
                 | Some(TokenPricingSource::OrcaDEXLiquidityPool { address })
                 | Some(TokenPricingSource::JitoRestakingVault { address })
                 | Some(TokenPricingSource::FragmetricNormalizedTokenPool { address })
@@ -223,6 +224,7 @@ impl<'a, 'info> FundService<'a, 'info> {
                                     | TokenPricingSource::SanctumSingleValidatorSPLStakePool {
                                         ..
                                     }
+                                    | TokenPricingSource::SanctumMultiValidatorSPLStakePool { .. }
                                     | TokenPricingSource::OrcaDEXLiquidityPool { .. }
                                     | TokenPricingSource::PeggedToken { .. } => {
                                         let asset =
