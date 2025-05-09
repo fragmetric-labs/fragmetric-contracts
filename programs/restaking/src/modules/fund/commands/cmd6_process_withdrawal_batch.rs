@@ -7,7 +7,7 @@ use crate::modules::fund::commands::OperationCommand::UnrestakeVRT;
 use crate::modules::pricing::{Asset, TokenPricingSource};
 use crate::modules::restaking::JitoRestakingVaultService;
 use crate::modules::staking::{
-    MarinadeStakePoolService, SPLStakePoolService, SanctumSingleValidatorSPLStakePoolService,
+    MarinadeStakePoolService, SPLStakePoolService, SanctumMultiValidatorSPLStakePoolService, SanctumSingleValidatorSPLStakePoolService
 };
 use crate::utils::AccountInfoExt;
 
@@ -121,6 +121,9 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         }) => {
                             required_accounts.push((*address, false));
                         }
+                        Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { address }) => {
+                            required_accounts.push((*address, false));
+                        }
                         Some(TokenPricingSource::OrcaDEXLiquidityPool { address }) => {
                             required_accounts.push((*address, false));
                         }
@@ -156,6 +159,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         Some(TokenPricingSource::SPLStakePool { .. })
                         | Some(TokenPricingSource::MarinadeStakePool { .. })
                         | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. })
+                        | Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { .. })
                         | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
                         | Some(TokenPricingSource::FragmetricRestakingFund { .. })
                         | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
@@ -206,6 +210,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                             | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool {
                                 ..
                             })
+                            | Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { .. })
                             | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. }) => {
                                 Ok(count + 1)
                             }
@@ -239,6 +244,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                             | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool {
                                 ..
                             })
+                            | Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { .. })
                             | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
                             | Some(TokenPricingSource::FragmetricRestakingFund { .. })
                             | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
@@ -294,6 +300,11 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                             require_keys_eq!(account.key(), *address);
                             SanctumSingleValidatorSPLStakePoolService::get_max_cycle_fee(account)?
                         }
+                        Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { address }) => {
+                            let account = supported_token_pricing_sources[i];
+                            require_keys_eq!(account.key(), *address);
+                            SanctumMultiValidatorSPLStakePoolService::get_max_cycle_fee(account)?
+                        }
                         Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
                         | Some(TokenPricingSource::PeggedToken { .. }) => (0, 0),
                         // otherwise fails
@@ -343,6 +354,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         Some(TokenPricingSource::SPLStakePool { .. })
                         | Some(TokenPricingSource::MarinadeStakePool { .. })
                         | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. })
+                        | Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { .. })
                         | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
                         | Some(TokenPricingSource::FragmetricRestakingFund { .. })
                         | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })

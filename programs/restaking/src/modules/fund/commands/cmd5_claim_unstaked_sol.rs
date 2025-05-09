@@ -195,7 +195,8 @@ impl ClaimUnstakedSOLCommand {
         let pool_account = match pricing_source {
             Some(TokenPricingSource::SPLStakePool { address })
             | Some(TokenPricingSource::MarinadeStakePool { address })
-            | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { address }) => *accounts
+            | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { address })
+            | Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { address }) => *accounts
                 .iter()
                 .find(|account| account.key() == address)
                 .ok_or_else(|| error!(ErrorCode::FundOperationCommandExecutionFailedException))?,
@@ -251,6 +252,13 @@ impl ClaimUnstakedSOLCommand {
             }
             Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. }) => {
                 self.spl_stake_pool_prepare_get_claimable_stake_accounts::<SanctumSingleValidatorSPLStakePool>(
+                    ctx,
+                    pool_account,
+                    pool_token_mints,
+                )?
+            }
+            Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { .. }) => {
+                self.spl_stake_pool_prepare_get_claimable_stake_accounts::<SanctumMultiValidatorSPLStakePool>(
                     ctx,
                     pool_account,
                     pool_token_mints,
@@ -327,6 +335,11 @@ impl ClaimUnstakedSOLCommand {
                 ),
             Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { address }) => {
                 self.spl_stake_pool_get_claimable_stake_accounts::<SanctumSingleValidatorSPLStakePool>(
+                    ctx, accounts, pool_token_mints, address,
+                )
+            }
+            Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { address }) => {
+                self.spl_stake_pool_get_claimable_stake_accounts::<SanctumMultiValidatorSPLStakePool>(
                     ctx, accounts, pool_token_mints, address,
                 )
             }
@@ -457,6 +470,15 @@ impl ClaimUnstakedSOLCommand {
             }
             Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { address }) => {
                 self.spl_stake_pool_claim_sol::<SanctumSingleValidatorSPLStakePool>(
+                    ctx,
+                    accounts,
+                    claimable_stake_account_indices,
+                    pool_token_mint,
+                    address,
+                )?
+            }
+            Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { address }) => {
+                self.spl_stake_pool_claim_sol::<SanctumMultiValidatorSPLStakePool>(
                     ctx,
                     accounts,
                     claimable_stake_account_indices,

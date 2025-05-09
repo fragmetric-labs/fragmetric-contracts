@@ -194,7 +194,9 @@ impl UnstakeLSTCommand {
                             | Some(TokenPricingSource::MarinadeStakePool { .. })
                             | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool {
                                 ..
-                            }) => Some(WeightedAllocationParticipant::new(
+                            })
+                            | Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { .. })
+                            => Some(WeightedAllocationParticipant::new(
                                 supported_token.sol_allocation_weight,
                                 pricing_service.get_token_amount_as_sol(
                                     &supported_token.mint,
@@ -280,7 +282,8 @@ impl UnstakeLSTCommand {
         let pool_account = match token_pricing_source {
             Some(TokenPricingSource::SPLStakePool { address })
             | Some(TokenPricingSource::MarinadeStakePool { address })
-            | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { address }) => *accounts
+            | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { address })
+            | Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { address }) => *accounts
                 .iter()
                 .find(|account| account.key() == address)
                 .ok_or_else(|| error!(ErrorCode::FundOperationCommandExecutionFailedException))?,
@@ -344,6 +347,13 @@ impl UnstakeLSTCommand {
             }
             Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. }) => {
                 self.spl_stake_pool_prepare_get_withdraw_stake_items::<SanctumSingleValidatorSPLStakePool>(
+                    ctx,
+                    pool_account,
+                    items,
+                )?
+            }
+            Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { .. }) => {
+                self.spl_stake_pool_prepare_get_withdraw_stake_items::<SanctumMultiValidatorSPLStakePool>(
                     ctx,
                     pool_account,
                     items,
@@ -423,6 +433,11 @@ impl UnstakeLSTCommand {
             Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { address }) => {
                 self.spl_stake_pool_get_withdraw_stake_items::<SanctumSingleValidatorSPLStakePool>(
                     ctx, accounts, items, item, address,
+                )
+            }
+            Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { address }) => {
+                self.spl_stake_pool_get_withdraw_stake_items::<SanctumMultiValidatorSPLStakePool>(
+                    ctx, accounts, items, item, address
                 )
             }
             // otherwise fails
@@ -587,6 +602,17 @@ impl UnstakeLSTCommand {
             }
             Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { address }) => {
                 self.spl_stake_pool_withdraw_sol_or_stake::<SanctumSingleValidatorSPLStakePool>(
+                    ctx,
+                    accounts,
+                    unstake_command_items,
+                    withdraw_sol,
+                    withdraw_stake_items,
+                    address,
+                    &mut resume_execution_command,
+                )?
+            }
+            Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { address }) => {
+                self.spl_stake_pool_withdraw_sol_or_stake::<SanctumMultiValidatorSPLStakePool>(
                     ctx,
                     accounts,
                     unstake_command_items,
