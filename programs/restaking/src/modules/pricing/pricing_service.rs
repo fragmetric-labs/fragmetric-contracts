@@ -99,7 +99,9 @@ impl<'info> PricingService<'info> {
 
         // resolve underlying assets for each pricing source' value provider adapter
         match token_pricing_source {
-            TokenPricingSource::SPLStakePool { address } => {
+            TokenPricingSource::SPLStakePool { address }
+            | TokenPricingSource::SanctumSingleValidatorSPLStakePool { address }
+            | TokenPricingSource::SanctumMultiValidatorSPLStakePool { address } => {
                 let pricing_source_accounts =
                     [self.get_token_pricing_source_account_info(address)?];
                 SPLStakePoolValueProvider.resolve_underlying_assets(
@@ -148,15 +150,6 @@ impl<'info> PricingService<'info> {
                 let pricing_source_accounts =
                     [self.get_token_pricing_source_account_info(address)?];
                 OrcaDEXLiquidityPoolValueProvider.resolve_underlying_assets(
-                    token_mint,
-                    &pricing_source_accounts,
-                    &mut self.token_values[token_index],
-                )?
-            }
-            TokenPricingSource::SanctumSingleValidatorSPLStakePool { address } => {
-                let pricing_source_accounts =
-                    [self.get_token_pricing_source_account_info(address)?];
-                SPLStakePoolValueProvider.resolve_underlying_assets(
                     token_mint,
                     &pricing_source_accounts,
                     &mut self.token_values[token_index],
