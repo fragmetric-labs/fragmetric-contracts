@@ -258,7 +258,6 @@ export const connectCommand = new Command()
     if (expression) {
       server.eval(expression, server.context, '', async (err, res) => {
         server.close();
-        logger.restoreConsole();
 
         if (err) {
           if (!isAlreadyReportedError(err)) {
@@ -275,6 +274,7 @@ export const connectCommand = new Command()
         }
       });
     } else {
+      logger.wrapConsole();
       server.displayPrompt();
     }
   });

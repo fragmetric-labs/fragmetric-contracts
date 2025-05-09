@@ -45,6 +45,6 @@ export function setLogger(options?: { format?: 'pretty' | 'json' }) {
           },
         }
   );
-  logger.wrapConsole();
+  // logger.wrapConsole();
   return logger;
 }
