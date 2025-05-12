@@ -1589,11 +1589,20 @@ describe('restaking.fragBTC test', async () => {
     ).resolves.toEqual([undefined, claimedRewardAmount]);
 
     const user1RewardTokenAccounts = await user1.rewardTokens.resolve(true);
+    const user1ZeusRewardTokenAccount = user1RewardTokenAccounts.filter(
+      (tokenAccount) =>
+        tokenAccount !== null &&
+        tokenAccount.mint.toString() ==
+          'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq'
+    )[0];
+    expect(user1ZeusRewardTokenAccount.amount, 't9_3').toEqual(
+      claimedRewardAmount
+    );
 
     const globalReward_2 = await ctx.reward.resolve(true);
     expect(
       globalReward_2?.basePool.settlements[0].claimedAmount,
-      't9_3'
+      't9_4'
     ).toEqual(user1Reward_4?.basePool.settlements[0].claimedAmount);
   });
 
@@ -1684,9 +1693,9 @@ describe('restaking.fragBTC test', async () => {
       }
     );
     expect(user1SettledAmountDeltas!, 't10_3').toEqual([
-      rewardAmount *
+      (rewardAmount *
         (user1Reward_6?.basePool.settlements[0].settledContribution! -
-          user1Reward_4?.basePool.settlements[0].settledContribution!) /
+          user1Reward_4?.basePool.settlements[0].settledContribution!)) /
         globalSettledContribution_1,
     ]);
 
@@ -1710,9 +1719,9 @@ describe('restaking.fragBTC test', async () => {
       }
     );
     expect(user2SettledAmountDeltas!, ' t10_4').toEqual([
-      rewardAmount *
+      (rewardAmount *
         (user2Reward_3?.basePool.settlements[0].settledContribution! -
-          user2Reward_2?.basePool.settlements[0].settledContribution!) /
+          user2Reward_2?.basePool.settlements[0].settledContribution!)) /
         globalSettledContribution_1,
     ]);
 
