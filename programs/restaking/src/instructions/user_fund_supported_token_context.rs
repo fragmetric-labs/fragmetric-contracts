@@ -190,4 +190,8 @@ pub struct UserFundWithdrawSupportedTokenContext<'info> {
         constraint = user_reward_account.load()?.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
     )]
     pub user_reward_account: AccountLoader<'info, UserRewardAccount>,
+
+    /// CHECK: deprecated
+    #[account(address = instructions_sysvar::ID)]
+    pub instructions_sysvar: UncheckedAccount<'info>,
 }
