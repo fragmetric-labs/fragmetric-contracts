@@ -31,10 +31,9 @@ import {
   type ParsedFundManagerAddSupportedTokenInstruction,
   type ParsedFundManagerAddTokenSwapStrategyInstruction,
   type ParsedFundManagerAddWrappedTokenHolderInstruction,
-  type ParsedFundManagerInitializeFundJitoRestakingVaultDelegationInstruction,
-  type ParsedFundManagerInitializeFundJitoRestakingVaultInstruction,
   type ParsedFundManagerInitializeFundNormalizedTokenInstruction,
-  type ParsedFundManagerInitializeFundSolvBtcVaultInstruction,
+  type ParsedFundManagerInitializeFundRestakingVaultDelegationInstruction,
+  type ParsedFundManagerInitializeFundRestakingVaultInstruction,
   type ParsedFundManagerInitializeFundWrappedTokenInstruction,
   type ParsedFundManagerRemoveRestakingVaultCompoundingRewardTokenInstruction,
   type ParsedFundManagerRemoveRestakingVaultDistributingRewardTokenInstruction,
@@ -419,10 +418,9 @@ export enum RestakingInstruction {
   FundManagerAddSupportedToken,
   FundManagerAddTokenSwapStrategy,
   FundManagerAddWrappedTokenHolder,
-  FundManagerInitializeFundJitoRestakingVault,
-  FundManagerInitializeFundJitoRestakingVaultDelegation,
   FundManagerInitializeFundNormalizedToken,
-  FundManagerInitializeFundSolvBtcVault,
+  FundManagerInitializeFundRestakingVault,
+  FundManagerInitializeFundRestakingVaultDelegation,
   FundManagerInitializeFundWrappedToken,
   FundManagerRemoveRestakingVaultCompoundingRewardToken,
   FundManagerRemoveRestakingVaultDistributingRewardToken,
@@ -657,28 +655,6 @@ export function identifyRestakingInstruction(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([94, 33, 145, 222, 177, 170, 211, 74])
-      ),
-      0
-    )
-  ) {
-    return RestakingInstruction.FundManagerInitializeFundJitoRestakingVault;
-  }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([163, 134, 58, 94, 165, 249, 166, 82])
-      ),
-      0
-    )
-  ) {
-    return RestakingInstruction.FundManagerInitializeFundJitoRestakingVaultDelegation;
-  }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
         new Uint8Array([210, 163, 184, 165, 127, 40, 122, 23])
       ),
       0
@@ -690,12 +666,23 @@ export function identifyRestakingInstruction(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([98, 98, 53, 208, 226, 109, 32, 198])
+        new Uint8Array([197, 78, 171, 122, 189, 150, 117, 182])
       ),
       0
     )
   ) {
-    return RestakingInstruction.FundManagerInitializeFundSolvBtcVault;
+    return RestakingInstruction.FundManagerInitializeFundRestakingVault;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([107, 151, 170, 88, 44, 135, 209, 207])
+      ),
+      0
+    )
+  ) {
+    return RestakingInstruction.FundManagerInitializeFundRestakingVaultDelegation;
   }
   if (
     containsBytes(
@@ -1164,17 +1151,14 @@ export type ParsedRestakingInstruction<
       instructionType: RestakingInstruction.FundManagerAddWrappedTokenHolder;
     } & ParsedFundManagerAddWrappedTokenHolderInstruction<TProgram>)
   | ({
-      instructionType: RestakingInstruction.FundManagerInitializeFundJitoRestakingVault;
-    } & ParsedFundManagerInitializeFundJitoRestakingVaultInstruction<TProgram>)
-  | ({
-      instructionType: RestakingInstruction.FundManagerInitializeFundJitoRestakingVaultDelegation;
-    } & ParsedFundManagerInitializeFundJitoRestakingVaultDelegationInstruction<TProgram>)
-  | ({
       instructionType: RestakingInstruction.FundManagerInitializeFundNormalizedToken;
     } & ParsedFundManagerInitializeFundNormalizedTokenInstruction<TProgram>)
   | ({
-      instructionType: RestakingInstruction.FundManagerInitializeFundSolvBtcVault;
-    } & ParsedFundManagerInitializeFundSolvBtcVaultInstruction<TProgram>)
+      instructionType: RestakingInstruction.FundManagerInitializeFundRestakingVault;
+    } & ParsedFundManagerInitializeFundRestakingVaultInstruction<TProgram>)
+  | ({
+      instructionType: RestakingInstruction.FundManagerInitializeFundRestakingVaultDelegation;
+    } & ParsedFundManagerInitializeFundRestakingVaultDelegationInstruction<TProgram>)
   | ({
       instructionType: RestakingInstruction.FundManagerInitializeFundWrappedToken;
     } & ParsedFundManagerInitializeFundWrappedTokenInstruction<TProgram>)

@@ -29,10 +29,10 @@ import {
   type IInstructionWithAccounts,
   type IInstructionWithData,
   type ReadonlyAccount,
+  type ReadonlySignerAccount,
   type ReadonlyUint8Array,
   type TransactionSigner,
   type WritableAccount,
-  type WritableSignerAccount,
 } from '@solana/kit';
 import { RESTAKING_PROGRAM_ADDRESS } from '../programs';
 import {
@@ -93,7 +93,7 @@ export type UserWithdrawSupportedTokenInstruction<
   IInstructionWithAccounts<
     [
       TAccountUser extends string
-        ? WritableSignerAccount<TAccountUser> & IAccountSignerMeta<TAccountUser>
+        ? ReadonlySignerAccount<TAccountUser> & IAccountSignerMeta<TAccountUser>
         : TAccountUser,
       TAccountSystemProgram extends string
         ? ReadonlyAccount<TAccountSystemProgram>
@@ -105,10 +105,10 @@ export type UserWithdrawSupportedTokenInstruction<
         ? ReadonlyAccount<TAccountSupportedTokenProgram>
         : TAccountSupportedTokenProgram,
       TAccountReceiptTokenMint extends string
-        ? WritableAccount<TAccountReceiptTokenMint>
+        ? ReadonlyAccount<TAccountReceiptTokenMint>
         : TAccountReceiptTokenMint,
       TAccountUserReceiptTokenAccount extends string
-        ? WritableAccount<TAccountUserReceiptTokenAccount>
+        ? ReadonlyAccount<TAccountUserReceiptTokenAccount>
         : TAccountUserReceiptTokenAccount,
       TAccountSupportedTokenMint extends string
         ? ReadonlyAccount<TAccountSupportedTokenMint>
@@ -135,10 +135,10 @@ export type UserWithdrawSupportedTokenInstruction<
         ? WritableAccount<TAccountUserFundAccount>
         : TAccountUserFundAccount,
       TAccountRewardAccount extends string
-        ? WritableAccount<TAccountRewardAccount>
+        ? ReadonlyAccount<TAccountRewardAccount>
         : TAccountRewardAccount,
       TAccountUserRewardAccount extends string
-        ? WritableAccount<TAccountUserRewardAccount>
+        ? ReadonlyAccount<TAccountUserRewardAccount>
         : TAccountUserRewardAccount,
       TAccountInstructionsSysvar extends string
         ? ReadonlyAccount<TAccountInstructionsSysvar>
@@ -317,7 +317,7 @@ export async function getUserWithdrawSupportedTokenInstructionAsync<
 
   // Original accounts.
   const originalAccounts = {
-    user: { value: input.user ?? null, isWritable: true },
+    user: { value: input.user ?? null, isWritable: false },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
     receiptTokenProgram: {
       value: input.receiptTokenProgram ?? null,
@@ -329,11 +329,11 @@ export async function getUserWithdrawSupportedTokenInstructionAsync<
     },
     receiptTokenMint: {
       value: input.receiptTokenMint ?? null,
-      isWritable: true,
+      isWritable: false,
     },
     userReceiptTokenAccount: {
       value: input.userReceiptTokenAccount ?? null,
-      isWritable: true,
+      isWritable: false,
     },
     supportedTokenMint: {
       value: input.supportedTokenMint ?? null,
@@ -361,10 +361,10 @@ export async function getUserWithdrawSupportedTokenInstructionAsync<
       isWritable: true,
     },
     userFundAccount: { value: input.userFundAccount ?? null, isWritable: true },
-    rewardAccount: { value: input.rewardAccount ?? null, isWritable: true },
+    rewardAccount: { value: input.rewardAccount ?? null, isWritable: false },
     userRewardAccount: {
       value: input.userRewardAccount ?? null,
-      isWritable: true,
+      isWritable: false,
     },
     instructionsSysvar: {
       value: input.instructionsSysvar ?? null,
@@ -713,7 +713,7 @@ export function getUserWithdrawSupportedTokenInstruction<
 
   // Original accounts.
   const originalAccounts = {
-    user: { value: input.user ?? null, isWritable: true },
+    user: { value: input.user ?? null, isWritable: false },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
     receiptTokenProgram: {
       value: input.receiptTokenProgram ?? null,
@@ -725,11 +725,11 @@ export function getUserWithdrawSupportedTokenInstruction<
     },
     receiptTokenMint: {
       value: input.receiptTokenMint ?? null,
-      isWritable: true,
+      isWritable: false,
     },
     userReceiptTokenAccount: {
       value: input.userReceiptTokenAccount ?? null,
-      isWritable: true,
+      isWritable: false,
     },
     supportedTokenMint: {
       value: input.supportedTokenMint ?? null,
@@ -757,10 +757,10 @@ export function getUserWithdrawSupportedTokenInstruction<
       isWritable: true,
     },
     userFundAccount: { value: input.userFundAccount ?? null, isWritable: true },
-    rewardAccount: { value: input.rewardAccount ?? null, isWritable: true },
+    rewardAccount: { value: input.rewardAccount ?? null, isWritable: false },
     userRewardAccount: {
       value: input.userRewardAccount ?? null,
-      isWritable: true,
+      isWritable: false,
     },
     instructionsSysvar: {
       value: input.instructionsSysvar ?? null,

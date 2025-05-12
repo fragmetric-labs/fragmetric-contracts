@@ -1,5 +1,4 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token_2022::Token2022;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::errors::ErrorCode;
@@ -35,7 +34,6 @@ pub struct OperatorFundDonationContext<'info> {
 
     pub system_program: Program<'info, System>,
 
-    #[account(mint::token_program = Token2022::id())]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
@@ -58,12 +56,10 @@ pub struct OperatorFundDonationContext<'info> {
 #[event_cpi]
 #[derive(Accounts)]
 pub struct OperatorFundSupportedTokenDonationContext<'info> {
-    #[account(mut)]
     pub operator: Signer<'info>,
 
     pub supported_token_program: Interface<'info, TokenInterface>,
 
-    #[account(mint::token_program = Token2022::id())]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     pub supported_token_mint: Box<InterfaceAccount<'info, Mint>>,

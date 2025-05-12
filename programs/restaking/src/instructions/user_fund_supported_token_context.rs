@@ -9,7 +9,6 @@ use crate::utils::{AccountLoaderExt, PDASeeds};
 #[event_cpi]
 #[derive(Accounts)]
 pub struct UserFundSupportedTokenContext<'info> {
-    #[account(mut)]
     pub user: Signer<'info>,
 
     pub receipt_token_program: Program<'info, Token2022>,
@@ -98,7 +97,6 @@ pub struct UserFundSupportedTokenContext<'info> {
 #[derive(Accounts)]
 #[instruction(batch_id: u64)]
 pub struct UserFundWithdrawSupportedTokenContext<'info> {
-    #[account(mut)]
     pub user: Signer<'info>,
 
     pub system_program: Program<'info, System>,
@@ -107,11 +105,9 @@ pub struct UserFundWithdrawSupportedTokenContext<'info> {
 
     pub supported_token_program: Interface<'info, TokenInterface>,
 
-    #[account(mut)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
-        mut,
         associated_token::mint = receipt_token_mint,
         associated_token::token_program = receipt_token_program,
         associated_token::authority = user,
@@ -179,7 +175,6 @@ pub struct UserFundWithdrawSupportedTokenContext<'info> {
     pub user_fund_account: Box<Account<'info, UserFundAccount>>,
 
     #[account(
-        mut,
         seeds = [RewardAccount::SEED, receipt_token_mint.key().as_ref()],
         bump = reward_account.get_bump()?,
         has_one = receipt_token_mint,
@@ -188,7 +183,6 @@ pub struct UserFundWithdrawSupportedTokenContext<'info> {
     pub reward_account: AccountLoader<'info, RewardAccount>,
 
     #[account(
-        mut,
         seeds = [UserRewardAccount::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
         bump = user_reward_account.get_bump()?,
         has_one = receipt_token_mint,
@@ -197,7 +191,7 @@ pub struct UserFundWithdrawSupportedTokenContext<'info> {
     )]
     pub user_reward_account: AccountLoader<'info, UserRewardAccount>,
 
-    /// CHECK: This is safe that checks it's ID
+    /// CHECK: deprecated
     #[account(address = instructions_sysvar::ID)]
     pub instructions_sysvar: UncheckedAccount<'info>,
 }

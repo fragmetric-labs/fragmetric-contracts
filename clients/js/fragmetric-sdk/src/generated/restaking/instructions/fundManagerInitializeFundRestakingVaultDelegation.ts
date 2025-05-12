@@ -39,16 +39,16 @@ import {
   type ResolvedAccount,
 } from '../shared';
 
-export const FUND_MANAGER_INITIALIZE_FUND_JITO_RESTAKING_VAULT_DELEGATION_DISCRIMINATOR =
-  new Uint8Array([163, 134, 58, 94, 165, 249, 166, 82]);
+export const FUND_MANAGER_INITIALIZE_FUND_RESTAKING_VAULT_DELEGATION_DISCRIMINATOR =
+  new Uint8Array([107, 151, 170, 88, 44, 135, 209, 207]);
 
-export function getFundManagerInitializeFundJitoRestakingVaultDelegationDiscriminatorBytes() {
+export function getFundManagerInitializeFundRestakingVaultDelegationDiscriminatorBytes() {
   return fixEncoderSize(getBytesEncoder(), 8).encode(
-    FUND_MANAGER_INITIALIZE_FUND_JITO_RESTAKING_VAULT_DELEGATION_DISCRIMINATOR
+    FUND_MANAGER_INITIALIZE_FUND_RESTAKING_VAULT_DELEGATION_DISCRIMINATOR
   );
 }
 
-export type FundManagerInitializeFundJitoRestakingVaultDelegationInstruction<
+export type FundManagerInitializeFundRestakingVaultDelegationInstruction<
   TProgram extends string = typeof RESTAKING_PROGRAM_ADDRESS,
   TAccountFundManager extends
     | string
@@ -96,40 +96,41 @@ export type FundManagerInitializeFundJitoRestakingVaultDelegationInstruction<
     ]
   >;
 
-export type FundManagerInitializeFundJitoRestakingVaultDelegationInstructionData =
-  { discriminator: ReadonlyUint8Array };
+export type FundManagerInitializeFundRestakingVaultDelegationInstructionData = {
+  discriminator: ReadonlyUint8Array;
+};
 
-export type FundManagerInitializeFundJitoRestakingVaultDelegationInstructionDataArgs =
+export type FundManagerInitializeFundRestakingVaultDelegationInstructionDataArgs =
   {};
 
-export function getFundManagerInitializeFundJitoRestakingVaultDelegationInstructionDataEncoder(): Encoder<FundManagerInitializeFundJitoRestakingVaultDelegationInstructionDataArgs> {
+export function getFundManagerInitializeFundRestakingVaultDelegationInstructionDataEncoder(): Encoder<FundManagerInitializeFundRestakingVaultDelegationInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([['discriminator', fixEncoderSize(getBytesEncoder(), 8)]]),
     (value) => ({
       ...value,
       discriminator:
-        FUND_MANAGER_INITIALIZE_FUND_JITO_RESTAKING_VAULT_DELEGATION_DISCRIMINATOR,
+        FUND_MANAGER_INITIALIZE_FUND_RESTAKING_VAULT_DELEGATION_DISCRIMINATOR,
     })
   );
 }
 
-export function getFundManagerInitializeFundJitoRestakingVaultDelegationInstructionDataDecoder(): Decoder<FundManagerInitializeFundJitoRestakingVaultDelegationInstructionData> {
+export function getFundManagerInitializeFundRestakingVaultDelegationInstructionDataDecoder(): Decoder<FundManagerInitializeFundRestakingVaultDelegationInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
   ]);
 }
 
-export function getFundManagerInitializeFundJitoRestakingVaultDelegationInstructionDataCodec(): Codec<
-  FundManagerInitializeFundJitoRestakingVaultDelegationInstructionDataArgs,
-  FundManagerInitializeFundJitoRestakingVaultDelegationInstructionData
+export function getFundManagerInitializeFundRestakingVaultDelegationInstructionDataCodec(): Codec<
+  FundManagerInitializeFundRestakingVaultDelegationInstructionDataArgs,
+  FundManagerInitializeFundRestakingVaultDelegationInstructionData
 > {
   return combineCodec(
-    getFundManagerInitializeFundJitoRestakingVaultDelegationInstructionDataEncoder(),
-    getFundManagerInitializeFundJitoRestakingVaultDelegationInstructionDataDecoder()
+    getFundManagerInitializeFundRestakingVaultDelegationInstructionDataEncoder(),
+    getFundManagerInitializeFundRestakingVaultDelegationInstructionDataDecoder()
   );
 }
 
-export type FundManagerInitializeFundJitoRestakingVaultDelegationAsyncInput<
+export type FundManagerInitializeFundRestakingVaultDelegationAsyncInput<
   TAccountFundManager extends string = string,
   TAccountFundAccount extends string = string,
   TAccountReceiptTokenMint extends string = string,
@@ -144,12 +145,12 @@ export type FundManagerInitializeFundJitoRestakingVaultDelegationAsyncInput<
   receiptTokenMint: Address<TAccountReceiptTokenMint>;
   vaultAccount: Address<TAccountVaultAccount>;
   operatorAccount: Address<TAccountOperatorAccount>;
-  vaultOperatorDelegation?: Address<TAccountVaultOperatorDelegation>;
+  vaultOperatorDelegation: Address<TAccountVaultOperatorDelegation>;
   eventAuthority?: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
 };
 
-export async function getFundManagerInitializeFundJitoRestakingVaultDelegationInstructionAsync<
+export async function getFundManagerInitializeFundRestakingVaultDelegationInstructionAsync<
   TAccountFundManager extends string,
   TAccountFundAccount extends string,
   TAccountReceiptTokenMint extends string,
@@ -160,7 +161,7 @@ export async function getFundManagerInitializeFundJitoRestakingVaultDelegationIn
   TAccountProgram extends string,
   TProgramAddress extends Address = typeof RESTAKING_PROGRAM_ADDRESS,
 >(
-  input: FundManagerInitializeFundJitoRestakingVaultDelegationAsyncInput<
+  input: FundManagerInitializeFundRestakingVaultDelegationAsyncInput<
     TAccountFundManager,
     TAccountFundAccount,
     TAccountReceiptTokenMint,
@@ -172,7 +173,7 @@ export async function getFundManagerInitializeFundJitoRestakingVaultDelegationIn
   >,
   config?: { programAddress?: TProgramAddress }
 ): Promise<
-  FundManagerInitializeFundJitoRestakingVaultDelegationInstruction<
+  FundManagerInitializeFundRestakingVaultDelegationInstruction<
     TProgramAddress,
     TAccountFundManager,
     TAccountFundAccount,
@@ -228,24 +229,6 @@ export async function getFundManagerInitializeFundJitoRestakingVaultDelegationIn
       ],
     });
   }
-  if (!accounts.vaultOperatorDelegation.value) {
-    accounts.vaultOperatorDelegation.value = await getProgramDerivedAddress({
-      programAddress:
-        'Vau1t6sLNxnzB7ZDsef8TLbPLfyZMYXH8WTNqUdm9g8' as Address<'Vau1t6sLNxnzB7ZDsef8TLbPLfyZMYXH8WTNqUdm9g8'>,
-      seeds: [
-        getBytesEncoder().encode(
-          new Uint8Array([
-            118, 97, 117, 108, 116, 95, 111, 112, 101, 114, 97, 116, 111, 114,
-            95, 100, 101, 108, 101, 103, 97, 116, 105, 111, 110,
-          ])
-        ),
-        getAddressEncoder().encode(expectAddress(accounts.vaultAccount.value)),
-        getAddressEncoder().encode(
-          expectAddress(accounts.operatorAccount.value)
-        ),
-      ],
-    });
-  }
   if (!accounts.eventAuthority.value) {
     accounts.eventAuthority.value = await getProgramDerivedAddress({
       programAddress,
@@ -273,10 +256,10 @@ export async function getFundManagerInitializeFundJitoRestakingVaultDelegationIn
       getAccountMeta(accounts.program),
     ],
     programAddress,
-    data: getFundManagerInitializeFundJitoRestakingVaultDelegationInstructionDataEncoder().encode(
+    data: getFundManagerInitializeFundRestakingVaultDelegationInstructionDataEncoder().encode(
       {}
     ),
-  } as FundManagerInitializeFundJitoRestakingVaultDelegationInstruction<
+  } as FundManagerInitializeFundRestakingVaultDelegationInstruction<
     TProgramAddress,
     TAccountFundManager,
     TAccountFundAccount,
@@ -291,7 +274,7 @@ export async function getFundManagerInitializeFundJitoRestakingVaultDelegationIn
   return instruction;
 }
 
-export type FundManagerInitializeFundJitoRestakingVaultDelegationInput<
+export type FundManagerInitializeFundRestakingVaultDelegationInput<
   TAccountFundManager extends string = string,
   TAccountFundAccount extends string = string,
   TAccountReceiptTokenMint extends string = string,
@@ -311,7 +294,7 @@ export type FundManagerInitializeFundJitoRestakingVaultDelegationInput<
   program: Address<TAccountProgram>;
 };
 
-export function getFundManagerInitializeFundJitoRestakingVaultDelegationInstruction<
+export function getFundManagerInitializeFundRestakingVaultDelegationInstruction<
   TAccountFundManager extends string,
   TAccountFundAccount extends string,
   TAccountReceiptTokenMint extends string,
@@ -322,7 +305,7 @@ export function getFundManagerInitializeFundJitoRestakingVaultDelegationInstruct
   TAccountProgram extends string,
   TProgramAddress extends Address = typeof RESTAKING_PROGRAM_ADDRESS,
 >(
-  input: FundManagerInitializeFundJitoRestakingVaultDelegationInput<
+  input: FundManagerInitializeFundRestakingVaultDelegationInput<
     TAccountFundManager,
     TAccountFundAccount,
     TAccountReceiptTokenMint,
@@ -333,7 +316,7 @@ export function getFundManagerInitializeFundJitoRestakingVaultDelegationInstruct
     TAccountProgram
   >,
   config?: { programAddress?: TProgramAddress }
-): FundManagerInitializeFundJitoRestakingVaultDelegationInstruction<
+): FundManagerInitializeFundRestakingVaultDelegationInstruction<
   TProgramAddress,
   TAccountFundManager,
   TAccountFundAccount,
@@ -391,10 +374,10 @@ export function getFundManagerInitializeFundJitoRestakingVaultDelegationInstruct
       getAccountMeta(accounts.program),
     ],
     programAddress,
-    data: getFundManagerInitializeFundJitoRestakingVaultDelegationInstructionDataEncoder().encode(
+    data: getFundManagerInitializeFundRestakingVaultDelegationInstructionDataEncoder().encode(
       {}
     ),
-  } as FundManagerInitializeFundJitoRestakingVaultDelegationInstruction<
+  } as FundManagerInitializeFundRestakingVaultDelegationInstruction<
     TProgramAddress,
     TAccountFundManager,
     TAccountFundAccount,
@@ -409,7 +392,7 @@ export function getFundManagerInitializeFundJitoRestakingVaultDelegationInstruct
   return instruction;
 }
 
-export type ParsedFundManagerInitializeFundJitoRestakingVaultDelegationInstruction<
+export type ParsedFundManagerInitializeFundRestakingVaultDelegationInstruction<
   TProgram extends string = typeof RESTAKING_PROGRAM_ADDRESS,
   TAccountMetas extends readonly IAccountMeta[] = readonly IAccountMeta[],
 > = {
@@ -424,17 +407,17 @@ export type ParsedFundManagerInitializeFundJitoRestakingVaultDelegationInstructi
     eventAuthority: TAccountMetas[6];
     program: TAccountMetas[7];
   };
-  data: FundManagerInitializeFundJitoRestakingVaultDelegationInstructionData;
+  data: FundManagerInitializeFundRestakingVaultDelegationInstructionData;
 };
 
-export function parseFundManagerInitializeFundJitoRestakingVaultDelegationInstruction<
+export function parseFundManagerInitializeFundRestakingVaultDelegationInstruction<
   TProgram extends string,
   TAccountMetas extends readonly IAccountMeta[],
 >(
   instruction: IInstruction<TProgram> &
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
-): ParsedFundManagerInitializeFundJitoRestakingVaultDelegationInstruction<
+): ParsedFundManagerInitializeFundRestakingVaultDelegationInstruction<
   TProgram,
   TAccountMetas
 > {
@@ -460,7 +443,7 @@ export function parseFundManagerInitializeFundJitoRestakingVaultDelegationInstru
       eventAuthority: getNextAccount(),
       program: getNextAccount(),
     },
-    data: getFundManagerInitializeFundJitoRestakingVaultDelegationInstructionDataDecoder().decode(
+    data: getFundManagerInitializeFundRestakingVaultDelegationInstructionDataDecoder().decode(
       instruction.data
     ),
   };

@@ -39,16 +39,16 @@ import {
   type ResolvedAccount,
 } from '../shared';
 
-export const FUND_MANAGER_INITIALIZE_FUND_JITO_RESTAKING_VAULT_DISCRIMINATOR =
-  new Uint8Array([94, 33, 145, 222, 177, 170, 211, 74]);
+export const FUND_MANAGER_INITIALIZE_FUND_RESTAKING_VAULT_DISCRIMINATOR =
+  new Uint8Array([197, 78, 171, 122, 189, 150, 117, 182]);
 
-export function getFundManagerInitializeFundJitoRestakingVaultDiscriminatorBytes() {
+export function getFundManagerInitializeFundRestakingVaultDiscriminatorBytes() {
   return fixEncoderSize(getBytesEncoder(), 8).encode(
-    FUND_MANAGER_INITIALIZE_FUND_JITO_RESTAKING_VAULT_DISCRIMINATOR
+    FUND_MANAGER_INITIALIZE_FUND_RESTAKING_VAULT_DISCRIMINATOR
   );
 }
 
-export type FundManagerInitializeFundJitoRestakingVaultInstruction<
+export type FundManagerInitializeFundRestakingVaultInstruction<
   TProgram extends string = typeof RESTAKING_PROGRAM_ADDRESS,
   TAccountFundManager extends
     | string
@@ -59,9 +59,6 @@ export type FundManagerInitializeFundJitoRestakingVaultInstruction<
   TAccountFundAccount extends string | IAccountMeta<string> = string,
   TAccountFundReserveAccount extends string | IAccountMeta<string> = string,
   TAccountReceiptTokenMint extends string | IAccountMeta<string> = string,
-  TAccountVaultProgram extends
-    | string
-    | IAccountMeta<string> = 'Vau1t6sLNxnzB7ZDsef8TLbPLfyZMYXH8WTNqUdm9g8',
   TAccountVaultAccount extends string | IAccountMeta<string> = string,
   TAccountVaultReceiptTokenMint extends string | IAccountMeta<string> = string,
   TAccountVaultSupportedTokenMint extends
@@ -99,9 +96,6 @@ export type FundManagerInitializeFundJitoRestakingVaultInstruction<
       TAccountReceiptTokenMint extends string
         ? ReadonlyAccount<TAccountReceiptTokenMint>
         : TAccountReceiptTokenMint,
-      TAccountVaultProgram extends string
-        ? ReadonlyAccount<TAccountVaultProgram>
-        : TAccountVaultProgram,
       TAccountVaultAccount extends string
         ? ReadonlyAccount<TAccountVaultAccount>
         : TAccountVaultAccount,
@@ -130,46 +124,44 @@ export type FundManagerInitializeFundJitoRestakingVaultInstruction<
     ]
   >;
 
-export type FundManagerInitializeFundJitoRestakingVaultInstructionData = {
+export type FundManagerInitializeFundRestakingVaultInstructionData = {
   discriminator: ReadonlyUint8Array;
 };
 
-export type FundManagerInitializeFundJitoRestakingVaultInstructionDataArgs = {};
+export type FundManagerInitializeFundRestakingVaultInstructionDataArgs = {};
 
-export function getFundManagerInitializeFundJitoRestakingVaultInstructionDataEncoder(): Encoder<FundManagerInitializeFundJitoRestakingVaultInstructionDataArgs> {
+export function getFundManagerInitializeFundRestakingVaultInstructionDataEncoder(): Encoder<FundManagerInitializeFundRestakingVaultInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([['discriminator', fixEncoderSize(getBytesEncoder(), 8)]]),
     (value) => ({
       ...value,
-      discriminator:
-        FUND_MANAGER_INITIALIZE_FUND_JITO_RESTAKING_VAULT_DISCRIMINATOR,
+      discriminator: FUND_MANAGER_INITIALIZE_FUND_RESTAKING_VAULT_DISCRIMINATOR,
     })
   );
 }
 
-export function getFundManagerInitializeFundJitoRestakingVaultInstructionDataDecoder(): Decoder<FundManagerInitializeFundJitoRestakingVaultInstructionData> {
+export function getFundManagerInitializeFundRestakingVaultInstructionDataDecoder(): Decoder<FundManagerInitializeFundRestakingVaultInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
   ]);
 }
 
-export function getFundManagerInitializeFundJitoRestakingVaultInstructionDataCodec(): Codec<
-  FundManagerInitializeFundJitoRestakingVaultInstructionDataArgs,
-  FundManagerInitializeFundJitoRestakingVaultInstructionData
+export function getFundManagerInitializeFundRestakingVaultInstructionDataCodec(): Codec<
+  FundManagerInitializeFundRestakingVaultInstructionDataArgs,
+  FundManagerInitializeFundRestakingVaultInstructionData
 > {
   return combineCodec(
-    getFundManagerInitializeFundJitoRestakingVaultInstructionDataEncoder(),
-    getFundManagerInitializeFundJitoRestakingVaultInstructionDataDecoder()
+    getFundManagerInitializeFundRestakingVaultInstructionDataEncoder(),
+    getFundManagerInitializeFundRestakingVaultInstructionDataDecoder()
   );
 }
 
-export type FundManagerInitializeFundJitoRestakingVaultAsyncInput<
+export type FundManagerInitializeFundRestakingVaultAsyncInput<
   TAccountFundManager extends string = string,
   TAccountSystemProgram extends string = string,
   TAccountFundAccount extends string = string,
   TAccountFundReserveAccount extends string = string,
   TAccountReceiptTokenMint extends string = string,
-  TAccountVaultProgram extends string = string,
   TAccountVaultAccount extends string = string,
   TAccountVaultReceiptTokenMint extends string = string,
   TAccountVaultSupportedTokenMint extends string = string,
@@ -184,7 +176,6 @@ export type FundManagerInitializeFundJitoRestakingVaultAsyncInput<
   fundAccount?: Address<TAccountFundAccount>;
   fundReserveAccount?: Address<TAccountFundReserveAccount>;
   receiptTokenMint: Address<TAccountReceiptTokenMint>;
-  vaultProgram?: Address<TAccountVaultProgram>;
   vaultAccount: Address<TAccountVaultAccount>;
   vaultReceiptTokenMint: Address<TAccountVaultReceiptTokenMint>;
   vaultSupportedTokenMint: Address<TAccountVaultSupportedTokenMint>;
@@ -195,13 +186,12 @@ export type FundManagerInitializeFundJitoRestakingVaultAsyncInput<
   program: Address<TAccountProgram>;
 };
 
-export async function getFundManagerInitializeFundJitoRestakingVaultInstructionAsync<
+export async function getFundManagerInitializeFundRestakingVaultInstructionAsync<
   TAccountFundManager extends string,
   TAccountSystemProgram extends string,
   TAccountFundAccount extends string,
   TAccountFundReserveAccount extends string,
   TAccountReceiptTokenMint extends string,
-  TAccountVaultProgram extends string,
   TAccountVaultAccount extends string,
   TAccountVaultReceiptTokenMint extends string,
   TAccountVaultSupportedTokenMint extends string,
@@ -212,13 +202,12 @@ export async function getFundManagerInitializeFundJitoRestakingVaultInstructionA
   TAccountProgram extends string,
   TProgramAddress extends Address = typeof RESTAKING_PROGRAM_ADDRESS,
 >(
-  input: FundManagerInitializeFundJitoRestakingVaultAsyncInput<
+  input: FundManagerInitializeFundRestakingVaultAsyncInput<
     TAccountFundManager,
     TAccountSystemProgram,
     TAccountFundAccount,
     TAccountFundReserveAccount,
     TAccountReceiptTokenMint,
-    TAccountVaultProgram,
     TAccountVaultAccount,
     TAccountVaultReceiptTokenMint,
     TAccountVaultSupportedTokenMint,
@@ -230,14 +219,13 @@ export async function getFundManagerInitializeFundJitoRestakingVaultInstructionA
   >,
   config?: { programAddress?: TProgramAddress }
 ): Promise<
-  FundManagerInitializeFundJitoRestakingVaultInstruction<
+  FundManagerInitializeFundRestakingVaultInstruction<
     TProgramAddress,
     TAccountFundManager,
     TAccountSystemProgram,
     TAccountFundAccount,
     TAccountFundReserveAccount,
     TAccountReceiptTokenMint,
-    TAccountVaultProgram,
     TAccountVaultAccount,
     TAccountVaultReceiptTokenMint,
     TAccountVaultSupportedTokenMint,
@@ -264,7 +252,6 @@ export async function getFundManagerInitializeFundJitoRestakingVaultInstructionA
       value: input.receiptTokenMint ?? null,
       isWritable: false,
     },
-    vaultProgram: { value: input.vaultProgram ?? null, isWritable: false },
     vaultAccount: { value: input.vaultAccount ?? null, isWritable: false },
     vaultReceiptTokenMint: {
       value: input.vaultReceiptTokenMint ?? null,
@@ -328,10 +315,6 @@ export async function getFundManagerInitializeFundJitoRestakingVaultInstructionA
         ),
       ],
     });
-  }
-  if (!accounts.vaultProgram.value) {
-    accounts.vaultProgram.value =
-      'Vau1t6sLNxnzB7ZDsef8TLbPLfyZMYXH8WTNqUdm9g8' as Address<'Vau1t6sLNxnzB7ZDsef8TLbPLfyZMYXH8WTNqUdm9g8'>;
   }
   if (!accounts.fundVaultReceiptTokenAccount.value) {
     accounts.fundVaultReceiptTokenAccount.value =
@@ -421,7 +404,6 @@ export async function getFundManagerInitializeFundJitoRestakingVaultInstructionA
       getAccountMeta(accounts.fundAccount),
       getAccountMeta(accounts.fundReserveAccount),
       getAccountMeta(accounts.receiptTokenMint),
-      getAccountMeta(accounts.vaultProgram),
       getAccountMeta(accounts.vaultAccount),
       getAccountMeta(accounts.vaultReceiptTokenMint),
       getAccountMeta(accounts.vaultSupportedTokenMint),
@@ -432,17 +414,16 @@ export async function getFundManagerInitializeFundJitoRestakingVaultInstructionA
       getAccountMeta(accounts.program),
     ],
     programAddress,
-    data: getFundManagerInitializeFundJitoRestakingVaultInstructionDataEncoder().encode(
+    data: getFundManagerInitializeFundRestakingVaultInstructionDataEncoder().encode(
       {}
     ),
-  } as FundManagerInitializeFundJitoRestakingVaultInstruction<
+  } as FundManagerInitializeFundRestakingVaultInstruction<
     TProgramAddress,
     TAccountFundManager,
     TAccountSystemProgram,
     TAccountFundAccount,
     TAccountFundReserveAccount,
     TAccountReceiptTokenMint,
-    TAccountVaultProgram,
     TAccountVaultAccount,
     TAccountVaultReceiptTokenMint,
     TAccountVaultSupportedTokenMint,
@@ -456,13 +437,12 @@ export async function getFundManagerInitializeFundJitoRestakingVaultInstructionA
   return instruction;
 }
 
-export type FundManagerInitializeFundJitoRestakingVaultInput<
+export type FundManagerInitializeFundRestakingVaultInput<
   TAccountFundManager extends string = string,
   TAccountSystemProgram extends string = string,
   TAccountFundAccount extends string = string,
   TAccountFundReserveAccount extends string = string,
   TAccountReceiptTokenMint extends string = string,
-  TAccountVaultProgram extends string = string,
   TAccountVaultAccount extends string = string,
   TAccountVaultReceiptTokenMint extends string = string,
   TAccountVaultSupportedTokenMint extends string = string,
@@ -477,7 +457,6 @@ export type FundManagerInitializeFundJitoRestakingVaultInput<
   fundAccount: Address<TAccountFundAccount>;
   fundReserveAccount: Address<TAccountFundReserveAccount>;
   receiptTokenMint: Address<TAccountReceiptTokenMint>;
-  vaultProgram?: Address<TAccountVaultProgram>;
   vaultAccount: Address<TAccountVaultAccount>;
   vaultReceiptTokenMint: Address<TAccountVaultReceiptTokenMint>;
   vaultSupportedTokenMint: Address<TAccountVaultSupportedTokenMint>;
@@ -488,13 +467,12 @@ export type FundManagerInitializeFundJitoRestakingVaultInput<
   program: Address<TAccountProgram>;
 };
 
-export function getFundManagerInitializeFundJitoRestakingVaultInstruction<
+export function getFundManagerInitializeFundRestakingVaultInstruction<
   TAccountFundManager extends string,
   TAccountSystemProgram extends string,
   TAccountFundAccount extends string,
   TAccountFundReserveAccount extends string,
   TAccountReceiptTokenMint extends string,
-  TAccountVaultProgram extends string,
   TAccountVaultAccount extends string,
   TAccountVaultReceiptTokenMint extends string,
   TAccountVaultSupportedTokenMint extends string,
@@ -505,13 +483,12 @@ export function getFundManagerInitializeFundJitoRestakingVaultInstruction<
   TAccountProgram extends string,
   TProgramAddress extends Address = typeof RESTAKING_PROGRAM_ADDRESS,
 >(
-  input: FundManagerInitializeFundJitoRestakingVaultInput<
+  input: FundManagerInitializeFundRestakingVaultInput<
     TAccountFundManager,
     TAccountSystemProgram,
     TAccountFundAccount,
     TAccountFundReserveAccount,
     TAccountReceiptTokenMint,
-    TAccountVaultProgram,
     TAccountVaultAccount,
     TAccountVaultReceiptTokenMint,
     TAccountVaultSupportedTokenMint,
@@ -522,14 +499,13 @@ export function getFundManagerInitializeFundJitoRestakingVaultInstruction<
     TAccountProgram
   >,
   config?: { programAddress?: TProgramAddress }
-): FundManagerInitializeFundJitoRestakingVaultInstruction<
+): FundManagerInitializeFundRestakingVaultInstruction<
   TProgramAddress,
   TAccountFundManager,
   TAccountSystemProgram,
   TAccountFundAccount,
   TAccountFundReserveAccount,
   TAccountReceiptTokenMint,
-  TAccountVaultProgram,
   TAccountVaultAccount,
   TAccountVaultReceiptTokenMint,
   TAccountVaultSupportedTokenMint,
@@ -555,7 +531,6 @@ export function getFundManagerInitializeFundJitoRestakingVaultInstruction<
       value: input.receiptTokenMint ?? null,
       isWritable: false,
     },
-    vaultProgram: { value: input.vaultProgram ?? null, isWritable: false },
     vaultAccount: { value: input.vaultAccount ?? null, isWritable: false },
     vaultReceiptTokenMint: {
       value: input.vaultReceiptTokenMint ?? null,
@@ -594,10 +569,6 @@ export function getFundManagerInitializeFundJitoRestakingVaultInstruction<
     accounts.systemProgram.value =
       '11111111111111111111111111111111' as Address<'11111111111111111111111111111111'>;
   }
-  if (!accounts.vaultProgram.value) {
-    accounts.vaultProgram.value =
-      'Vau1t6sLNxnzB7ZDsef8TLbPLfyZMYXH8WTNqUdm9g8' as Address<'Vau1t6sLNxnzB7ZDsef8TLbPLfyZMYXH8WTNqUdm9g8'>;
-  }
 
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
@@ -607,7 +578,6 @@ export function getFundManagerInitializeFundJitoRestakingVaultInstruction<
       getAccountMeta(accounts.fundAccount),
       getAccountMeta(accounts.fundReserveAccount),
       getAccountMeta(accounts.receiptTokenMint),
-      getAccountMeta(accounts.vaultProgram),
       getAccountMeta(accounts.vaultAccount),
       getAccountMeta(accounts.vaultReceiptTokenMint),
       getAccountMeta(accounts.vaultSupportedTokenMint),
@@ -618,17 +588,16 @@ export function getFundManagerInitializeFundJitoRestakingVaultInstruction<
       getAccountMeta(accounts.program),
     ],
     programAddress,
-    data: getFundManagerInitializeFundJitoRestakingVaultInstructionDataEncoder().encode(
+    data: getFundManagerInitializeFundRestakingVaultInstructionDataEncoder().encode(
       {}
     ),
-  } as FundManagerInitializeFundJitoRestakingVaultInstruction<
+  } as FundManagerInitializeFundRestakingVaultInstruction<
     TProgramAddress,
     TAccountFundManager,
     TAccountSystemProgram,
     TAccountFundAccount,
     TAccountFundReserveAccount,
     TAccountReceiptTokenMint,
-    TAccountVaultProgram,
     TAccountVaultAccount,
     TAccountVaultReceiptTokenMint,
     TAccountVaultSupportedTokenMint,
@@ -642,7 +611,7 @@ export function getFundManagerInitializeFundJitoRestakingVaultInstruction<
   return instruction;
 }
 
-export type ParsedFundManagerInitializeFundJitoRestakingVaultInstruction<
+export type ParsedFundManagerInitializeFundRestakingVaultInstruction<
   TProgram extends string = typeof RESTAKING_PROGRAM_ADDRESS,
   TAccountMetas extends readonly IAccountMeta[] = readonly IAccountMeta[],
 > = {
@@ -653,31 +622,30 @@ export type ParsedFundManagerInitializeFundJitoRestakingVaultInstruction<
     fundAccount: TAccountMetas[2];
     fundReserveAccount: TAccountMetas[3];
     receiptTokenMint: TAccountMetas[4];
-    vaultProgram: TAccountMetas[5];
-    vaultAccount: TAccountMetas[6];
-    vaultReceiptTokenMint: TAccountMetas[7];
-    vaultSupportedTokenMint: TAccountMetas[8];
-    fundVaultReceiptTokenAccount: TAccountMetas[9];
-    fundVaultSupportedTokenAccount: TAccountMetas[10];
-    vaultVaultSupportedTokenAccount: TAccountMetas[11];
-    eventAuthority: TAccountMetas[12];
-    program: TAccountMetas[13];
+    vaultAccount: TAccountMetas[5];
+    vaultReceiptTokenMint: TAccountMetas[6];
+    vaultSupportedTokenMint: TAccountMetas[7];
+    fundVaultReceiptTokenAccount: TAccountMetas[8];
+    fundVaultSupportedTokenAccount: TAccountMetas[9];
+    vaultVaultSupportedTokenAccount: TAccountMetas[10];
+    eventAuthority: TAccountMetas[11];
+    program: TAccountMetas[12];
   };
-  data: FundManagerInitializeFundJitoRestakingVaultInstructionData;
+  data: FundManagerInitializeFundRestakingVaultInstructionData;
 };
 
-export function parseFundManagerInitializeFundJitoRestakingVaultInstruction<
+export function parseFundManagerInitializeFundRestakingVaultInstruction<
   TProgram extends string,
   TAccountMetas extends readonly IAccountMeta[],
 >(
   instruction: IInstruction<TProgram> &
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
-): ParsedFundManagerInitializeFundJitoRestakingVaultInstruction<
+): ParsedFundManagerInitializeFundRestakingVaultInstruction<
   TProgram,
   TAccountMetas
 > {
-  if (instruction.accounts.length < 14) {
+  if (instruction.accounts.length < 13) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -695,7 +663,6 @@ export function parseFundManagerInitializeFundJitoRestakingVaultInstruction<
       fundAccount: getNextAccount(),
       fundReserveAccount: getNextAccount(),
       receiptTokenMint: getNextAccount(),
-      vaultProgram: getNextAccount(),
       vaultAccount: getNextAccount(),
       vaultReceiptTokenMint: getNextAccount(),
       vaultSupportedTokenMint: getNextAccount(),
@@ -705,7 +672,7 @@ export function parseFundManagerInitializeFundJitoRestakingVaultInstruction<
       eventAuthority: getNextAccount(),
       program: getNextAccount(),
     },
-    data: getFundManagerInitializeFundJitoRestakingVaultInstructionDataDecoder().decode(
+    data: getFundManagerInitializeFundRestakingVaultInstructionDataDecoder().decode(
       instruction.data
     ),
   };

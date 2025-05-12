@@ -33,10 +33,10 @@ import {
   type Option,
   type OptionOrNullable,
   type ReadonlyAccount,
+  type ReadonlySignerAccount,
   type ReadonlyUint8Array,
   type TransactionSigner,
   type WritableAccount,
-  type WritableSignerAccount,
 } from '@solana/kit';
 import { RESTAKING_PROGRAM_ADDRESS } from '../programs';
 import {
@@ -95,7 +95,7 @@ export type UserDepositSupportedTokenInstruction<
   IInstructionWithAccounts<
     [
       TAccountUser extends string
-        ? WritableSignerAccount<TAccountUser> & IAccountSignerMeta<TAccountUser>
+        ? ReadonlySignerAccount<TAccountUser> & IAccountSignerMeta<TAccountUser>
         : TAccountUser,
       TAccountReceiptTokenProgram extends string
         ? ReadonlyAccount<TAccountReceiptTokenProgram>
@@ -291,7 +291,7 @@ export async function getUserDepositSupportedTokenInstructionAsync<
 
   // Original accounts.
   const originalAccounts = {
-    user: { value: input.user ?? null, isWritable: true },
+    user: { value: input.user ?? null, isWritable: false },
     receiptTokenProgram: {
       value: input.receiptTokenProgram ?? null,
       isWritable: false,
@@ -614,7 +614,7 @@ export function getUserDepositSupportedTokenInstruction<
 
   // Original accounts.
   const originalAccounts = {
-    user: { value: input.user ?? null, isWritable: true },
+    user: { value: input.user ?? null, isWritable: false },
     receiptTokenProgram: {
       value: input.receiptTokenProgram ?? null,
       isWritable: false,

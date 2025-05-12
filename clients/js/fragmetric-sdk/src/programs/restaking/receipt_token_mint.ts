@@ -327,7 +327,6 @@ export class RestakingReceiptTokenMintAccountContext extends TokenMintAccountCon
             extraAccountMetaListAccount
               ? await restaking.getAdminUpdateExtraAccountMetaListIfNeededInstructionAsync(
                   {
-                    payer: createNoopSigner(payer! as Address),
                     admin: createNoopSigner(admin),
                     receiptTokenMint,
                     program: this.program.address,

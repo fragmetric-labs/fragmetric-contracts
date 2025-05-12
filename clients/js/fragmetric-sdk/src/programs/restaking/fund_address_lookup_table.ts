@@ -95,7 +95,6 @@ export class RestakingFundAddressLookupTableAccountContext extends AddressLookup
                       ix,
                       await restaking.getAdminSetAddressLookupTableAccountInstructionAsync(
                         {
-                          payer: createNoopSigner(payer! as Address),
                           admin: createNoopSigner(admin),
                           receiptTokenMint,
                           program: this.program.address,

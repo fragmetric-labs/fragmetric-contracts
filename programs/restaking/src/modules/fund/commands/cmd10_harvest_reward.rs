@@ -128,7 +128,7 @@ enum HarvestType {
 }
 
 impl SelfExecutable for HarvestRewardCommand {
-    fn execute<'a, 'info: 'a>(
+    fn execute<'a, 'info>(
         &self,
         ctx: &mut OperationCommandContext<'info, 'a>,
         accounts: &[&'info AccountInfo<'info>],

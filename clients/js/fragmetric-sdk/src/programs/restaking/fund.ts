@@ -1217,10 +1217,9 @@ export class RestakingFundAccountContext extends AccountContext<
             }
 
             const ix =
-              await restaking.getFundManagerInitializeFundJitoRestakingVaultInstructionAsync(
+              await restaking.getFundManagerInitializeFundRestakingVaultInstructionAsync(
                 {
                   vaultAccount: vaultAccount.address,
-                  vaultProgram: jitoVault.JITO_VAULT_PROGRAM_ADDRESS,
                   vaultReceiptTokenMint: vaultAccount.data.vrtMint,
                   vaultSupportedTokenMint: vaultAccount.data.supportedMint,
                   fundManager: createNoopSigner(fundManager),
@@ -1294,10 +1293,9 @@ export class RestakingFundAccountContext extends AccountContext<
             }
 
             const ix =
-              await restaking.getFundManagerInitializeFundSolvBtcVaultInstructionAsync(
+              await restaking.getFundManagerInitializeFundRestakingVaultInstructionAsync(
                 {
                   vaultAccount: vaultAccount.address,
-                  vaultProgram: this.__solvBTCVaultProgram.address,
                   vaultReceiptTokenMint: vaultAccount.data.receiptTokenMint,
                   vaultSupportedTokenMint: vaultAccount.data.supportedTokenMint,
                   fundManager: createNoopSigner(fundManager),
@@ -1414,8 +1412,9 @@ export class RestakingFundAccountContext extends AccountContext<
                 vaultOperatorDelegation,
               }),
               restaking
-                .getFundManagerInitializeFundJitoRestakingVaultDelegationInstructionAsync(
+                .getFundManagerInitializeFundRestakingVaultDelegationInstructionAsync(
                   {
+                    vaultOperatorDelegation,
                     vaultAccount: args.vault as Address,
                     operatorAccount: args.operator as Address,
                     fundManager: createNoopSigner(fundManager),
