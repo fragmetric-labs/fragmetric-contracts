@@ -4,6 +4,37 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { createTestSuiteContext, expectMasked } from '../../testutil';
 import { initializeFragBTC } from './fragbtc.init';
 
+/** Scenario Flow
+ * 1. user1 deposit 1 zBTC
+ * 2. user1 deposit 1 cbBTC
+ * 3. user2 deposit 1 wBTC (+1 slot)
+ * 4. airdrop 1000 ZEUS reward to Solv vault
+ * 5. run operator cycle -> do settle
+ *  5-1. check user1 reward account status
+ * 6. user1 updateRewardPools
+ *  6-1. check user1 reward account status
+ *  6-2. check user2 reward account status
+ * 7. user2 updateRewardPools
+ *  7-1. check user2 reward account status
+ * 8. user1 claim total 1
+ * 9. airdrop 1000 ZEUS reward to reward_reserve_account
+ *  9-1. check global reward account status
+ *  9-2. check user1 reward account status
+ * 10. global reward settle
+ *  10-1. check global reward account status
+ * 11. user1 claim total 2
+ *  11-1. check user1 reward account status
+ * 12. user2 claim total 1
+ *  12-1. check user2 reward account status
+ * 13. user1 deposit each 1.23456789 * 3 zBTC, cbBTC, wBTC
+ * 14. user1 requestWithdrawal each 0.23456789 * 2 zBTC, cbBTC
+ * 15. run enqueuWithdrawalBatch, processWithdrawalBatch command
+ * 16. user1 withdraw from 1,2 requestIds
+ * 17. user1 deposit 1~5 zBTC, cbBTC each
+ * 18. delegate user2 reward account -> user1
+ * 19. delegate user2 reward account -> user2
+ */
+
 describe('restaking.fragBTC test', async () => {
   const testCtx = initializeFragBTC(await createTestSuiteContext());
 
@@ -548,6 +579,75 @@ describe('restaking.fragBTC test', async () => {
         "wrappedTokenMint": "9mCDpsmPeozJKhdpYvNTJxi9i2Eaav3iwT5gzjN7VbaN",
       }
     `);
+
+    await expectMasked(user1.reward.resolve(true)).resolves
+      .toMatchInlineSnapshot(`
+      {
+        "basePool": {
+          "contribution": "MASKED(/[.*C|c]ontribution?$/)",
+          "settlements": [
+            {
+              "claimedAmount": 0n,
+              "reward": {
+                "claimable": true,
+                "decimals": 6,
+                "description": "ZEUS incentive",
+                "id": 1,
+                "mint": "ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq",
+                "name": "ZEUS",
+                "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+              },
+              "settledAmount": 0n,
+              "settledContribution": "MASKED(/[.*C|c]ontribution?$/)",
+              "settledSlot": "MASKED(/[.*S|s]lots?$/)",
+            },
+          ],
+          "tokenAllocatedAmount": {
+            "records": [
+              {
+                "amount": 100000000n,
+                "contributionAccrualRate": 1,
+              },
+            ],
+            "totalAmount": 100000000n,
+          },
+          "updatedSlot": "MASKED(/[.*S|s]lots?$/)",
+        },
+        "bonusPool": {
+          "contribution": "MASKED(/[.*C|c]ontribution?$/)",
+          "settlements": [
+            {
+              "claimedAmount": 0n,
+              "reward": {
+                "claimable": false,
+                "decimals": 4,
+                "description": "Airdrop point for fToken",
+                "id": 0,
+                "mint": "11111111111111111111111111111111",
+                "name": "fPoint",
+                "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+              },
+              "settledAmount": 0n,
+              "settledContribution": "MASKED(/[.*C|c]ontribution?$/)",
+              "settledSlot": "MASKED(/[.*S|s]lots?$/)",
+            },
+          ],
+          "tokenAllocatedAmount": {
+            "records": [
+              {
+                "amount": 100000000n,
+                "contributionAccrualRate": 1,
+              },
+            ],
+            "totalAmount": 100000000n,
+          },
+          "updatedSlot": "MASKED(/[.*S|s]lots?$/)",
+        },
+        "delegate": null,
+        "receiptTokenMint": "ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz",
+        "user": "AWb2qUvuFzbVN5Eu7tZY8gM745pus5DhTGgo8U8Bd8X2",
+      }
+    `);
   });
 
   test('user can deposit token with PeggedToken pricing source', async () => {
@@ -645,6 +745,76 @@ describe('restaking.fragBTC test', async () => {
       }
     `);
 
+    await expectMasked(user1.reward.resolve(true)).resolves
+      .toMatchInlineSnapshot(`
+      {
+        "basePool": {
+          "contribution": "MASKED(/[.*C|c]ontribution?$/)",
+          "settlements": [
+            {
+              "claimedAmount": 0n,
+              "reward": {
+                "claimable": true,
+                "decimals": 6,
+                "description": "ZEUS incentive",
+                "id": 1,
+                "mint": "ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq",
+                "name": "ZEUS",
+                "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+              },
+              "settledAmount": 0n,
+              "settledContribution": "MASKED(/[.*C|c]ontribution?$/)",
+              "settledSlot": "MASKED(/[.*S|s]lots?$/)",
+            },
+          ],
+          "tokenAllocatedAmount": {
+            "records": [
+              {
+                "amount": 200000000n,
+                "contributionAccrualRate": 1,
+              },
+            ],
+            "totalAmount": 200000000n,
+          },
+          "updatedSlot": "MASKED(/[.*S|s]lots?$/)",
+        },
+        "bonusPool": {
+          "contribution": "MASKED(/[.*C|c]ontribution?$/)",
+          "settlements": [
+            {
+              "claimedAmount": 0n,
+              "reward": {
+                "claimable": false,
+                "decimals": 4,
+                "description": "Airdrop point for fToken",
+                "id": 0,
+                "mint": "11111111111111111111111111111111",
+                "name": "fPoint",
+                "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+              },
+              "settledAmount": 0n,
+              "settledContribution": "MASKED(/[.*C|c]ontribution?$/)",
+              "settledSlot": "MASKED(/[.*S|s]lots?$/)",
+            },
+          ],
+          "tokenAllocatedAmount": {
+            "records": [
+              {
+                "amount": 200000000n,
+                "contributionAccrualRate": 1,
+              },
+            ],
+            "totalAmount": 200000000n,
+          },
+          "updatedSlot": "MASKED(/[.*S|s]lots?$/)",
+        },
+        "delegate": null,
+        "receiptTokenMint": "ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz",
+        "user": "AWb2qUvuFzbVN5Eu7tZY8gM745pus5DhTGgo8U8Bd8X2",
+      }
+    `);
+
+    await validator.skipSlots(1n);
     await expectMasked(
       user2.deposit.execute(
         {
@@ -713,6 +883,75 @@ describe('restaking.fragBTC test', async () => {
     await expect(
       user2.receiptToken.resolve(true).then((res) => res?.amount)
     ).resolves.toEqual(100_000_000n);
+
+    await expectMasked(user2.reward.resolve(true)).resolves
+      .toMatchInlineSnapshot(`
+      {
+        "basePool": {
+          "contribution": "MASKED(/[.*C|c]ontribution?$/)",
+          "settlements": [
+            {
+              "claimedAmount": 0n,
+              "reward": {
+                "claimable": true,
+                "decimals": 6,
+                "description": "ZEUS incentive",
+                "id": 1,
+                "mint": "ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq",
+                "name": "ZEUS",
+                "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+              },
+              "settledAmount": 0n,
+              "settledContribution": "MASKED(/[.*C|c]ontribution?$/)",
+              "settledSlot": "MASKED(/[.*S|s]lots?$/)",
+            },
+          ],
+          "tokenAllocatedAmount": {
+            "records": [
+              {
+                "amount": 100000000n,
+                "contributionAccrualRate": 1,
+              },
+            ],
+            "totalAmount": 100000000n,
+          },
+          "updatedSlot": "MASKED(/[.*S|s]lots?$/)",
+        },
+        "bonusPool": {
+          "contribution": "MASKED(/[.*C|c]ontribution?$/)",
+          "settlements": [
+            {
+              "claimedAmount": 0n,
+              "reward": {
+                "claimable": false,
+                "decimals": 4,
+                "description": "Airdrop point for fToken",
+                "id": 0,
+                "mint": "11111111111111111111111111111111",
+                "name": "fPoint",
+                "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+              },
+              "settledAmount": 0n,
+              "settledContribution": "MASKED(/[.*C|c]ontribution?$/)",
+              "settledSlot": "MASKED(/[.*S|s]lots?$/)",
+            },
+          ],
+          "tokenAllocatedAmount": {
+            "records": [
+              {
+                "amount": 100000000n,
+                "contributionAccrualRate": 1,
+              },
+            ],
+            "totalAmount": 100000000n,
+          },
+          "updatedSlot": "MASKED(/[.*S|s]lots?$/)",
+        },
+        "delegate": null,
+        "receiptTokenMint": "ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz",
+        "user": "CCgWk6XBuLqZTcDuJa4ZKGUM22cLXUFAxJSHiZdm3T3b",
+      }
+    `);
 
     await expect(ctx.resolve(true)).resolves.toMatchInlineSnapshot(`
       {
@@ -792,7 +1031,36 @@ describe('restaking.fragBTC test', async () => {
     `);
   });
 
-  /** 3. opeartion and reward **/
+  test('user can update reward pools and sync with global reward account anytime', async () => {
+    const user1Reward_1 = await user1.reward.resolve(true);
+
+    // user1 updateRewardPools
+    await user1.reward.updatePools.execute(null);
+
+    const user1Reward_2 = await user1.reward.resolve(true);
+
+    const elapsedSlots =
+      user1Reward_2?.basePool.updatedSlot! -
+      user1Reward_1?.basePool.updatedSlot!;
+    const increasedContribution =
+      user1Reward_2?.basePool.contribution! -
+      user1Reward_1?.basePool.contribution!;
+    expect(increasedContribution, 't7_1').toEqual(
+      elapsedSlots *
+        user1Reward_2?.basePool.tokenAllocatedAmount.records[0].amount! *
+        BigInt(
+          user1Reward_2?.basePool.tokenAllocatedAmount.records[0]
+            .contributionAccrualRate!
+        ) *
+        100n
+    );
+    expect(
+      user1Reward_2?.basePool.settlements[0].settledAmount,
+      't7_2'
+    ).toEqual(0n);
+  });
+
+  /** 3. operation and reward **/
   test('fund can settle distributing rewards by operation', async () => {
     // drop distribution token to the vault
     await validator.airdropToken(
@@ -957,18 +1225,511 @@ describe('restaking.fragBTC test', async () => {
       }
     `);
 
+    const globalReward_1 = await ctx.reward.resolve(true);
+    await expectMasked(globalReward_1).resolves.toMatchInlineSnapshot(`
+      {
+        "basePool": {
+          "contribution": "MASKED(/[.*C|c]ontribution?$/)",
+          "customContributionAccrualRateEnabled": false,
+          "initialSlot": "MASKED(/[.*S|s]lots?$/)",
+          "settlements": [
+            {
+              "blocks": [
+                {
+                  "amount": 100000000000n,
+                  "endingContribution": "MASKED(/[.*C|c]ontribution?$/)",
+                  "endingSlot": "MASKED(/[.*S|s]lots?$/)",
+                  "settledContribution": "MASKED(/[.*C|c]ontribution?$/)",
+                  "settledSlots": "MASKED(/[.*S|s]lots?$/)",
+                  "startingContribution": "MASKED(/[.*C|c]ontribution?$/)",
+                  "startingSlot": "MASKED(/[.*S|s]lots?$/)",
+                  "userSettledAmount": 0n,
+                  "userSettledContribution": "MASKED(/[.*C|c]ontribution?$/)",
+                },
+              ],
+              "claimedAmount": 0n,
+              "claimedAmountUpdatedSlot": "MASKED(/[.*S|s]lots?$/)",
+              "remainingAmount": 0n,
+              "reward": {
+                "claimable": true,
+                "decimals": 6,
+                "description": "ZEUS incentive",
+                "id": 1,
+                "mint": "ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq",
+                "name": "ZEUS",
+                "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+              },
+              "settledAmount": 100000000000n,
+              "settlementBlocksLastRewardPoolContribution": "MASKED(/[.*C|c]ontribution?$/)",
+              "settlementBlocksLastSlot": "MASKED(/[.*S|s]lots?$/)",
+            },
+          ],
+          "tokenAllocatedAmount": {
+            "records": [
+              {
+                "amount": 300000000n,
+                "contributionAccrualRate": 1,
+              },
+            ],
+            "totalAmount": 300000000n,
+          },
+          "updatedSlot": "MASKED(/[.*S|s]lots?$/)",
+        },
+        "bonusPool": {
+          "contribution": "MASKED(/[.*C|c]ontribution?$/)",
+          "customContributionAccrualRateEnabled": true,
+          "initialSlot": "MASKED(/[.*S|s]lots?$/)",
+          "settlements": [
+            {
+              "blocks": [
+                {
+                  "amount": 0n,
+                  "endingContribution": "MASKED(/[.*C|c]ontribution?$/)",
+                  "endingSlot": "MASKED(/[.*S|s]lots?$/)",
+                  "settledContribution": "MASKED(/[.*C|c]ontribution?$/)",
+                  "settledSlots": "MASKED(/[.*S|s]lots?$/)",
+                  "startingContribution": "MASKED(/[.*C|c]ontribution?$/)",
+                  "startingSlot": "MASKED(/[.*S|s]lots?$/)",
+                  "userSettledAmount": 0n,
+                  "userSettledContribution": "MASKED(/[.*C|c]ontribution?$/)",
+                },
+              ],
+              "claimedAmount": 0n,
+              "claimedAmountUpdatedSlot": "MASKED(/[.*S|s]lots?$/)",
+              "remainingAmount": 0n,
+              "reward": {
+                "claimable": false,
+                "decimals": 4,
+                "description": "Airdrop point for fToken",
+                "id": 0,
+                "mint": "11111111111111111111111111111111",
+                "name": "fPoint",
+                "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+              },
+              "settledAmount": 0n,
+              "settlementBlocksLastRewardPoolContribution": "MASKED(/[.*C|c]ontribution?$/)",
+              "settlementBlocksLastSlot": "MASKED(/[.*S|s]lots?$/)",
+            },
+          ],
+          "tokenAllocatedAmount": {
+            "records": [
+              {
+                "amount": 300000000n,
+                "contributionAccrualRate": 1,
+              },
+            ],
+            "totalAmount": 300000000n,
+          },
+          "updatedSlot": "MASKED(/[.*S|s]lots?$/)",
+        },
+        "receiptTokenMint": "ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz",
+        "rewards": [
+          {
+            "claimable": false,
+            "decimals": 4,
+            "description": "Airdrop point for fToken",
+            "id": 0,
+            "mint": "11111111111111111111111111111111",
+            "name": "fPoint",
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          },
+          {
+            "claimable": true,
+            "decimals": 6,
+            "description": "ZEUS incentive",
+            "id": 1,
+            "mint": "ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq",
+            "name": "ZEUS",
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          },
+        ],
+      }
+    `);
+    const globalSettledSlot_1 =
+      globalReward_1?.basePool.settlements[0].blocks[0].endingSlot!;
+
+    const settlementBlockContributions = globalReward_1?.basePool.settlements
+      .map((settlement, i) =>
+        settlement.blocks.map((block, j) => {
+          const blockContribution =
+            block.endingContribution - block.startingContribution;
+          return blockContribution;
+        })
+      )
+      .flat();
+
     // check user reward accounts
+    const user1Reward_2 = await user1.reward.resolve(true);
+    await expectMasked(user1Reward_2).resolves.toMatchInlineSnapshot(`
+      {
+        "basePool": {
+          "contribution": "MASKED(/[.*C|c]ontribution?$/)",
+          "settlements": [
+            {
+              "claimedAmount": 0n,
+              "reward": {
+                "claimable": true,
+                "decimals": 6,
+                "description": "ZEUS incentive",
+                "id": 1,
+                "mint": "ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq",
+                "name": "ZEUS",
+                "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+              },
+              "settledAmount": 0n,
+              "settledContribution": "MASKED(/[.*C|c]ontribution?$/)",
+              "settledSlot": "MASKED(/[.*S|s]lots?$/)",
+            },
+          ],
+          "tokenAllocatedAmount": {
+            "records": [
+              {
+                "amount": 200000000n,
+                "contributionAccrualRate": 1,
+              },
+            ],
+            "totalAmount": 200000000n,
+          },
+          "updatedSlot": "MASKED(/[.*S|s]lots?$/)",
+        },
+        "bonusPool": {
+          "contribution": "MASKED(/[.*C|c]ontribution?$/)",
+          "settlements": [
+            {
+              "claimedAmount": 0n,
+              "reward": {
+                "claimable": false,
+                "decimals": 4,
+                "description": "Airdrop point for fToken",
+                "id": 0,
+                "mint": "11111111111111111111111111111111",
+                "name": "fPoint",
+                "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+              },
+              "settledAmount": 0n,
+              "settledContribution": "MASKED(/[.*C|c]ontribution?$/)",
+              "settledSlot": "MASKED(/[.*S|s]lots?$/)",
+            },
+          ],
+          "tokenAllocatedAmount": {
+            "records": [
+              {
+                "amount": 200000000n,
+                "contributionAccrualRate": 1,
+              },
+            ],
+            "totalAmount": 200000000n,
+          },
+          "updatedSlot": "MASKED(/[.*S|s]lots?$/)",
+        },
+        "delegate": null,
+        "receiptTokenMint": "ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz",
+        "user": "AWb2qUvuFzbVN5Eu7tZY8gM745pus5DhTGgo8U8Bd8X2",
+      }
+    `);
+
     await user1.reward.updatePools.execute(null);
-    const user1Reward1 = await user1.reward.resolve(true);
-    expect(user1Reward1?.basePool.settlements[0].settledAmount).toBeGreaterThan(
-      0n
-    );
-    expect(user1Reward1?.basePool.settlements[0].reward.mint).toEqual(
+    const user1Reward_3 = await user1.reward.resolve(true);
+
+    expect(
+      user1Reward_3?.basePool.settlements[0].settledAmount,
+      't8_1'
+    ).toBeGreaterThan(0n);
+    expect(user1Reward_3?.basePool.settlements[0].reward.mint, 't8_2').toEqual(
       'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq'
+    );
+
+    const user1ElapsedSettledSlots_1 =
+      globalSettledSlot_1 - user1Reward_2?.basePool.updatedSlot!;
+    const user1SettledContribution_1 =
+      user1ElapsedSettledSlots_1 *
+        user1Reward_2?.basePool.tokenAllocatedAmount.records[0].amount! *
+        BigInt(
+          user1Reward_2?.basePool.tokenAllocatedAmount.records[0]
+            .contributionAccrualRate!
+        ) *
+        100n +
+      user1Reward_2?.basePool.contribution!;
+    expect(
+      user1Reward_3?.basePool.settlements[0].settledContribution,
+      't8_3'
+    ).toEqual(user1SettledContribution_1);
+
+    // this is real formula at onchain
+    // const maxSlot_1 =
+    //   user1Reward_2?.basePool.settlements[0].settledSlot! <
+    //   user1Reward_2?.basePool.updatedSlot!
+    //     ? user1Reward_2?.basePool.updatedSlot
+    //     : user1Reward_2?.basePool.settlements[0].settledSlot;
+    // const user1SettledContribution_1 =
+    //   user1Reward_2?.basePool.contribution! -
+    //   user1Reward_2?.basePool.settlements[0]
+    //     .settledContribution! +
+    //   (globalReward_1?.basePool.settlements[0].blocks[0].endingSlot! - maxSlot_1!) *
+    //     user1Reward_2?.basePool.tokenAllocatedAmount
+    //       .records[0].amount! *
+    //     BigInt(user1Reward_2?.basePool.tokenAllocatedAmount.records[0].contributionAccrualRate!) *
+    //     100n;
+    // console.log(
+    //   `[user1] maxSlot: ${maxSlot_1}, last settled slot: ${user1Reward_2?.basePool.settlements[0].settledSlot}, last updated slot: ${user1Reward_2?.basePool.updatedSlot}, calculated settled contribution: ${user1SettledContribution_1}, real settled contribution: ${user1Reward_3?.basePool.settlements[0].settledContribution}`
+    // );
+
+    const user1SettledAmount =
+      (user1SettledContribution_1 *
+        globalReward_1?.basePool.settlements[0].settledAmount!) /
+      settlementBlockContributions![0];
+
+    expect(
+      user1Reward_3?.basePool.settlements[0].settledAmount,
+      't8_4'
+    ).toEqual(user1SettledAmount);
+
+    const user2Reward_1 = await user2.reward.resolve(true);
+    await expectMasked(user2Reward_1).resolves.toMatchInlineSnapshot(`
+      {
+        "basePool": {
+          "contribution": "MASKED(/[.*C|c]ontribution?$/)",
+          "settlements": [
+            {
+              "claimedAmount": 0n,
+              "reward": {
+                "claimable": true,
+                "decimals": 6,
+                "description": "ZEUS incentive",
+                "id": 1,
+                "mint": "ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq",
+                "name": "ZEUS",
+                "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+              },
+              "settledAmount": 0n,
+              "settledContribution": "MASKED(/[.*C|c]ontribution?$/)",
+              "settledSlot": "MASKED(/[.*S|s]lots?$/)",
+            },
+          ],
+          "tokenAllocatedAmount": {
+            "records": [
+              {
+                "amount": 100000000n,
+                "contributionAccrualRate": 1,
+              },
+            ],
+            "totalAmount": 100000000n,
+          },
+          "updatedSlot": "MASKED(/[.*S|s]lots?$/)",
+        },
+        "bonusPool": {
+          "contribution": "MASKED(/[.*C|c]ontribution?$/)",
+          "settlements": [
+            {
+              "claimedAmount": 0n,
+              "reward": {
+                "claimable": false,
+                "decimals": 4,
+                "description": "Airdrop point for fToken",
+                "id": 0,
+                "mint": "11111111111111111111111111111111",
+                "name": "fPoint",
+                "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+              },
+              "settledAmount": 0n,
+              "settledContribution": "MASKED(/[.*C|c]ontribution?$/)",
+              "settledSlot": "MASKED(/[.*S|s]lots?$/)",
+            },
+          ],
+          "tokenAllocatedAmount": {
+            "records": [
+              {
+                "amount": 100000000n,
+                "contributionAccrualRate": 1,
+              },
+            ],
+            "totalAmount": 100000000n,
+          },
+          "updatedSlot": "MASKED(/[.*S|s]lots?$/)",
+        },
+        "delegate": null,
+        "receiptTokenMint": "ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz",
+        "user": "CCgWk6XBuLqZTcDuJa4ZKGUM22cLXUFAxJSHiZdm3T3b",
+      }
+    `);
+
+    await user2.reward.updatePools.execute(null);
+    const user2Reward_2 = await user2.reward.resolve(true);
+  });
+
+  /** 4. claim */
+  test('user can claim reward token after settlement', async () => {
+    const claimRes = await user1.reward.claim.execute(
+      {
+        mint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
+        amount: null,
+        recipient: null,
+      },
+      { signers: [signer1] }
+    );
+
+    const claimedRewardAmount =
+      claimRes.events?.userClaimedReward?.claimedRewardTokenAmount;
+
+    // check claimed amount at settlement equals to real claimed amount from claim event
+    const user1Reward_4 = await user1.reward.resolve(true);
+    expect(
+      user1Reward_4?.basePool.settlements.map(
+        (settlement) => settlement.claimedAmount
+      ),
+      't9_1'
+    ).toEqual([claimedRewardAmount]);
+
+    // check claimed amount has moved to user1's reward token account
+    await expect(
+      user1.rewardTokens
+        .resolve(true)
+        .then((tokens) => tokens.map((token) => token?.amount)),
+      't9_2'
+    ).resolves.toEqual([undefined, claimedRewardAmount]);
+
+    const user1RewardTokenAccounts = await user1.rewardTokens.resolve(true);
+
+    const globalReward_2 = await ctx.reward.resolve(true);
+    expect(
+      globalReward_2?.basePool.settlements[0].claimedAmount,
+      't9_3'
+    ).toEqual(user1Reward_4?.basePool.settlements[0].claimedAmount);
+  });
+
+  test('settle -> everyone claim -> update reward pool -> check the remaining amount', async () => {
+    // drop distribution token to the vault
+    const rewardAmount = 100_000_000_000n;
+    await validator.airdropToken(
+      // reward_reserve_account to only test about settle
+      (await ctx.reward.reserve.resolveAddress())!, // directly drop reward at fragBTC reward reserve account
+      'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
+      rewardAmount
+    );
+
+    const globalReward_2 = await ctx.reward.resolve(true);
+    const user1Reward_4 = await user1.reward.resolve(true);
+    const user2Reward_2 = await user2.reward.resolve(true);
+
+    // settle global reward
+    const settleRewardRes = await ctx.reward.settleReward.execute({
+      mint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
+      amount: rewardAmount,
+    });
+    await expectMasked(settleRewardRes).resolves.toMatchInlineSnapshot(`
+      {
+        "args": {
+          "amount": 100000000000n,
+          "isBonus": false,
+          "mint": "ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq",
+        },
+        "events": {
+          "fundManagerUpdatedRewardPool": {
+            "receiptTokenMint": "ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz",
+            "rewardAccount": "DL2iRqSqzP4jDdvoZNd2kqvKF17EyKoKXHaeUCGtLKoE",
+          },
+          "unknown": [],
+        },
+        "signature": "MASKED(signature)",
+        "slot": "MASKED(/[.*S|s]lots?$/)",
+        "succeeded": true,
+      }
+    `);
+
+    // check global reward pool settlement amount delta
+    const globalReward_3 = await ctx.reward.resolve(true);
+
+    const settledAmountDeltas = globalReward_3?.basePool.settlements.map(
+      (afterSettlement, i) => {
+        const beforeSettlement = globalReward_2?.basePool.settlements[i];
+        const beforeSettledAmount = beforeSettlement?.settledAmount ?? 0n;
+        return afterSettlement.settledAmount - beforeSettledAmount;
+      }
+    );
+    expect(settledAmountDeltas, 't10_1').toEqual([rewardAmount]);
+
+    await user1.reward.updatePools.execute(null); // just did updatedPools to check abount claimedRewardTokenAmount at the event is correct
+    const user1Reward_5 = await user1.reward.resolve(true);
+
+    // user1 claim total
+    const user1ClaimRes = await user1.reward.claim.execute(
+      {
+        mint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
+        amount: null,
+        recipient: null,
+      },
+      { signers: [signer1] }
+    );
+
+    // check user1 reward pool settlement amount delta
+    const user1Reward_6 = await user1.reward.resolve(true);
+
+    const globalSettledContribution_1 =
+      globalReward_3?.basePool.settlements[0].blocks[0].endingContribution! -
+      globalReward_3?.basePool.settlements[0].blocks[0].startingContribution!;
+
+    expect(
+      user1ClaimRes.events?.userClaimedReward?.claimedRewardTokenAmount,
+      't10_2'
+    ).toEqual(
+      user1Reward_5?.basePool.settlements[0].settledAmount! -
+        user1Reward_5?.basePool.settlements[0].claimedAmount!
+    );
+
+    const user1SettledAmountDeltas = user1Reward_6?.basePool.settlements.map(
+      (afterSettlement, i) => {
+        const beforeSettlement = user1Reward_4?.basePool.settlements[i];
+        const beforeSettledAmount = beforeSettlement?.settledAmount ?? 0n;
+        return afterSettlement.settledAmount - beforeSettledAmount;
+      }
+    );
+    expect(user1SettledAmountDeltas!, 't10_3').toEqual([
+      rewardAmount *
+        (user1Reward_6?.basePool.settlements[0].settledContribution! -
+          user1Reward_4?.basePool.settlements[0].settledContribution!) /
+        globalSettledContribution_1,
+    ]);
+
+    // user2 claim total
+    await user2.reward.claim.execute(
+      {
+        mint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
+        amount: null,
+        recipient: null,
+      },
+      { signers: [signer2] }
+    );
+
+    const user2Reward_3 = await user2.reward.resolve(true);
+
+    const user2SettledAmountDeltas = user2Reward_3?.basePool.settlements.map(
+      (afterSettlement, i) => {
+        const beforeSettlement = user2Reward_2?.basePool.settlements[i];
+        const beforeSettledAmount = beforeSettlement?.settledAmount ?? 0n;
+        return afterSettlement.settledAmount - beforeSettledAmount;
+      }
+    );
+    expect(user2SettledAmountDeltas!, ' t10_4').toEqual([
+      rewardAmount *
+        (user2Reward_3?.basePool.settlements[0].settledContribution! -
+          user2Reward_2?.basePool.settlements[0].settledContribution!) /
+        globalSettledContribution_1,
+    ]);
+
+    // update global reward
+    await validator.skipSlots(2n);
+    await ctx.reward.updatePools.execute(null);
+
+    // check remaing amount == 1
+    const globalReward_4 = await ctx.reward.resolve(true);
+
+    expect(globalReward_4?.basePool.settlements[0].claimedAmount).toEqual(
+      user1Reward_6?.basePool.settlements[0].claimedAmount! +
+        user2Reward_3?.basePool.settlements[0].claimedAmount!
     );
   });
 
-  /** 4. withdraw and pegging **/
+  /** 5. withdraw and pegging **/
   test('funds supporting only a single token and tokens pegged to it must issue receipt tokens at a 1:1 ratio until additional yield is compounded', async () => {
     let expectedReceiptTokenSupply = await ctx
       .resolve(true)
@@ -1136,5 +1897,52 @@ describe('restaking.fragBTC test', async () => {
     await expect(ctx.resolve(true)).resolves.toMatchObject({
       receiptTokenSupply: expectedReceiptTokenSupply,
     });
+  });
+
+  /** 6. delegate */
+  test('delegate reward account from user2 to user1', async () => {
+    const user2DelegateRes = await user2.reward.delegate.execute(
+      { newDelegate: signer1.address },
+      { signers: [signer2] }
+    );
+    await expectMasked(user2DelegateRes).resolves.toMatchInlineSnapshot(`
+      {
+        "args": {
+          "delegate": null,
+          "newDelegate": "AWb2qUvuFzbVN5Eu7tZY8gM745pus5DhTGgo8U8Bd8X2",
+        },
+        "events": {
+          "unknown": [],
+          "userDelegatedRewardAccount": {
+            "delegate": {
+              "__option": "Some",
+              "value": "AWb2qUvuFzbVN5Eu7tZY8gM745pus5DhTGgo8U8Bd8X2",
+            },
+            "receiptTokenMint": "ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz",
+            "user": "CCgWk6XBuLqZTcDuJa4ZKGUM22cLXUFAxJSHiZdm3T3b",
+            "userRewardAccount": "5vjNrtqwKRB68nTfwN3gZayEADap2947MuZp43bCdLo1",
+          },
+        },
+        "signature": "MASKED(signature)",
+        "slot": "MASKED(/[.*S|s]lots?$/)",
+        "succeeded": true,
+      }
+    `);
+    await expect(
+      user2.reward.resolve(true).then((res) => res?.delegate)
+    ).resolves.toEqual(signer1.address);
+
+    await user2.reward.delegate.execute(
+      { delegate: signer1.address, newDelegate: signer2.address },
+      { signers: [signer1] }
+    );
+
+    // fails to delegate
+    await expect(
+      user2.reward.delegate.execute(
+        { delegate: signer1.address, newDelegate: signer2.address },
+        { signers: [signer1] }
+      )
+    ).rejects.toThrowError('Transaction simulation failed'); // reward: user reward account authority must be either user or delegate
   });
 });
