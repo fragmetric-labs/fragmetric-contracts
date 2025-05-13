@@ -60,6 +60,10 @@ describe('restaking.fragSOL test', async () => {
             "role": 0,
           },
           {
+            "address": "8VpRhuxa7sUUepdY3kQiTmX9rS5vx4WgaXiAnXq4KCtr",
+            "role": 0,
+          },
+          {
             "address": "HR1ANmDHjaEhknvsTaK48M5xZtbBiwNdXM5NTiWhAb4S",
             "role": 0,
           },
@@ -177,6 +181,18 @@ describe('restaking.fragSOL test', async () => {
             "tokenAccumulatedDepositCapacityAmount": 18446744073709551615n,
             "tokenDepositable": false,
             "tokenMint": "Bybit2vBJGhPF52GBdNaQfUJ6ZpThSgHBobjWZpLPb4B",
+            "tokenRebalancingAmount": 0n,
+            "tokenWithdrawable": false,
+            "tokenWithdrawalNormalReserveMaxAmount": 18446744073709551615n,
+            "tokenWithdrawalNormalReserveRateBps": 0,
+          },
+          {
+            "solAllocationCapacityAmount": 18446744073709551615n,
+            "solAllocationWeight": 0n,
+            "tokenAccumulatedDepositAmount": 0n,
+            "tokenAccumulatedDepositCapacityAmount": 18446744073709551615n,
+            "tokenDepositable": false,
+            "tokenMint": "jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v",
             "tokenRebalancingAmount": 0n,
             "tokenWithdrawable": false,
             "tokenWithdrawalNormalReserveMaxAmount": 18446744073709551615n,
@@ -613,6 +629,10 @@ describe('restaking.fragSOL test', async () => {
           },
           {
             "address": "2aMLkB5p5gVvCwKkdSo5eZAL1WwhZbxezQr1wxiynRhq",
+            "role": 0,
+          },
+          {
+            "address": "8VpRhuxa7sUUepdY3kQiTmX9rS5vx4WgaXiAnXq4KCtr",
             "role": 0,
           },
           {

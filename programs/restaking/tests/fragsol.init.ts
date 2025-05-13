@@ -148,6 +148,27 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
         solAllocationWeight: 0n,
         solAllocationCapacityAmount: MAX_U64,
       }),
+    () =>
+      ctx.fund.addSupportedToken.execute({
+        mint: 'jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v',
+        pricingSource: {
+          __kind: 'SanctumMultiValidatorSPLStakePool',
+          address: '8VpRhuxa7sUUepdY3kQiTmX9rS5vx4WgaXiAnXq4KCtr',
+        }
+      }),
+    () =>
+      ctx.fund.updateAssetStrategy.execute({
+        tokenMint: 'jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v',
+        tokenDepositable: false,
+        tokenAccumulatedDepositAmount: null,
+        tokenAccumulatedDepositCapacityAmount: MAX_U64,
+        tokenWithdrawable: false,
+        tokenWithdrawalNormalReserveRateBps: 0,
+        tokenWithdrawalNormalReserveMaxAmount: MAX_U64,
+        tokenRebalancingAmount: 0n,
+        solAllocationWeight: 0n,
+        solAllocationCapacityAmount: MAX_U64,
+      }),
 
     // initialize reward account and configuration
     () =>
