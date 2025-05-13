@@ -140,7 +140,8 @@ impl StakeSOLCommand {
                         // stakable tokens
                         Some(TokenPricingSource::SPLStakePool { .. })
                         | Some(TokenPricingSource::MarinadeStakePool { .. })
-                        | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. }) => {
+                        | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. })
+                        | Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { .. }) => {
                             Some(WeightedAllocationParticipant::new(
                                 supported_token.sol_allocation_weight,
                                 fund_account.get_asset_total_amount_as_sol(
@@ -216,7 +217,8 @@ impl StakeSOLCommand {
         let pool_account = match token_pricing_source {
             Some(TokenPricingSource::SPLStakePool { address })
             | Some(TokenPricingSource::MarinadeStakePool { address })
-            | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { address }) => *accounts
+            | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { address })
+            | Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { address }) => *accounts
                 .iter()
                 .find(|account| account.key() == address)
                 .ok_or_else(|| error!(ErrorCode::FundOperationCommandExecutionFailedException))?,
@@ -262,6 +264,12 @@ impl StakeSOLCommand {
             Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. }) => command
                 .with_required_accounts(required_accounts.chain(
                     SanctumSingleValidatorSPLStakePoolService::find_accounts_to_deposit_sol(
+                        pool_account,
+                    )?,
+                )),
+            Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { .. }) => command
+                .with_required_accounts(required_accounts.chain(
+                    SanctumMultiValidatorSPLStakePoolService::find_accounts_to_deposit_sol(
                         pool_account,
                     )?,
                 )),
@@ -313,6 +321,11 @@ impl StakeSOLCommand {
             }
             Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { address }) => Some(
                 self.spl_stake_pool_deposit_sol::<SanctumSingleValidatorSPLStakePool>(
+                    ctx, accounts, item, &address,
+                )?,
+            ),
+            Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { address }) => Some(
+                self.spl_stake_pool_deposit_sol::<SanctumMultiValidatorSPLStakePool>(
                     ctx, accounts, item, &address,
                 )?,
             ),

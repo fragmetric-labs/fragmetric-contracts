@@ -60,6 +60,10 @@ describe('restaking.fragSOL test', async () => {
             "role": 0,
           },
           {
+            "address": "8VpRhuxa7sUUepdY3kQiTmX9rS5vx4WgaXiAnXq4KCtr",
+            "role": 0,
+          },
+          {
             "address": "HR1ANmDHjaEhknvsTaK48M5xZtbBiwNdXM5NTiWhAb4S",
             "role": 0,
           },
@@ -177,6 +181,18 @@ describe('restaking.fragSOL test', async () => {
             "tokenAccumulatedDepositCapacityAmount": 18446744073709551615n,
             "tokenDepositable": false,
             "tokenMint": "Bybit2vBJGhPF52GBdNaQfUJ6ZpThSgHBobjWZpLPb4B",
+            "tokenRebalancingAmount": 0n,
+            "tokenWithdrawable": false,
+            "tokenWithdrawalNormalReserveMaxAmount": 18446744073709551615n,
+            "tokenWithdrawalNormalReserveRateBps": 0,
+          },
+          {
+            "solAllocationCapacityAmount": 18446744073709551615n,
+            "solAllocationWeight": 0n,
+            "tokenAccumulatedDepositAmount": 0n,
+            "tokenAccumulatedDepositCapacityAmount": 18446744073709551615n,
+            "tokenDepositable": false,
+            "tokenMint": "jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v",
             "tokenRebalancingAmount": 0n,
             "tokenWithdrawable": false,
             "tokenWithdrawalNormalReserveMaxAmount": 18446744073709551615n,
@@ -616,6 +632,10 @@ describe('restaking.fragSOL test', async () => {
             "role": 0,
           },
           {
+            "address": "8VpRhuxa7sUUepdY3kQiTmX9rS5vx4WgaXiAnXq4KCtr",
+            "role": 0,
+          },
+          {
             "address": "HR1ANmDHjaEhknvsTaK48M5xZtbBiwNdXM5NTiWhAb4S",
             "role": 0,
           },
@@ -850,4 +870,432 @@ describe('restaking.fragSOL test', async () => {
     await expect(fundWrapReward.resolve(true).then(res => res!.basePool.tokenAllocatedAmount.totalAmount)).resolves.toEqual(5_000_000_000n);
     await expect(holderReward.resolve(true).then(res => res?.basePool.tokenAllocatedAmount.totalAmount)).resolves.toEqual(5_000_000_000n);
   })
+
+  /** Jupsol & sanctum-multi-validator test **/
+  test('new supported token with new pricing source deposits & withdraws without any issue', async () => {
+      const [signer3] = await Promise.all([
+      validator
+        .newSigner('fragSOLDepositTestSigner3', 100_000_000_000n)
+        .then(async (signer) => {
+          await Promise.all([
+            validator.airdropToken(
+              signer.address,
+              'jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v',
+              100_000_000_000n
+            ),
+          ]);
+          return signer;
+        }),
+    ]);
+    const user3 = ctx.user(signer3);
+
+    await validator.airdrop(
+      restaking.knownAddresses.fundManager,
+      100_000_000_000n,
+    );
+
+
+    // 1) unstake test from jupSOL stake pool validators    
+    // 1-0) make jupSOL depositable & only weighted
+    await ctx.fund.updateAssetStrategy.execute({
+      tokenMint: 'jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v',
+      tokenDepositable: true,
+      solAllocationWeight: 1n,
+    });
+    await ctx.fund.updateAssetStrategy.execute({
+      tokenMint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+      solAllocationWeight: 0n,
+    });
+
+    // 1-1) user deposits 90 jupSOL
+    await user3.deposit.execute({
+        assetMint: 'jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v',
+        assetAmount: 90_000_000_000n
+      },
+      { signers: [signer3] }
+    );
+
+    // 1-2) user request withdraw 90 fragSOL
+    const executionResult = await user3.requestWithdrawal.execute({
+        receiptTokenAmount: 90_000_000_000n,
+      },
+      { signers: [signer3] }
+    );
+    const requestId = executionResult.events!.userRequestedWithdrawalFromFund!.requestId;
+
+
+    // 1-3) run commands
+    /*
+    -> EnqueueWithdrawalRequest
+    -> UnstakeLST(JupSol)
+    -> (skip epoch: waiting for validator to unstake SOL)
+    -> ClaimUnstakedSOL
+    -> ProcessWithdrawalBatch
+    */
+    await expectMasked(ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'EnqueueWithdrawalBatch',
+      operator: restaking.knownAddresses.fundManager,
+    })).resolves.toMatchInlineSnapshot(`
+      {
+        "args": {
+          "forceResetCommand": "EnqueueWithdrawalBatch",
+          "operator": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx",
+        },
+        "events": {
+          "operatorRanFundCommand": {
+            "command": {
+              "__kind": "EnqueueWithdrawalBatch",
+              "fields": [
+                {
+                  "forced": true,
+                  "state": {
+                    "__kind": "New",
+                  },
+                },
+              ],
+            },
+            "fundAccount": "7xraTDZ4QWgvgJ5SCZp4hyJN2XEfyGRySQjdG49iZfU8",
+            "nextSequence": 0,
+            "numOperated": 21n,
+            "receiptTokenMint": "Cs29UiPhAkM2v8fZW7qCJ1UjhF1UAhgrsKj61yGGYizD",
+            "result": {
+              "__option": "Some",
+              "value": {
+                "__kind": "EnqueueWithdrawalBatch",
+                "fields": [
+                  {
+                    "enqueuedReceiptTokenAmount": 90000000000n,
+                    "totalQueuedReceiptTokenAmount": 90000000000n,
+                  },
+                ],
+              },
+            },
+          },
+          "unknown": [],
+        },
+        "signature": "MASKED(signature)",
+        "slot": "MASKED(/[.*S|s]lots?$/)",
+        "succeeded": true,
+      }
+    `);
+
+    // *** since there is not enough sol in jupSOL reserve stake account, validator needs to unstake sol ***
+    await expectMasked(ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'UnstakeLST',
+      operator: restaking.knownAddresses.fundManager,
+    })).resolves.toMatchInlineSnapshot(`
+      {
+        "args": {
+          "forceResetCommand": null,
+          "operator": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx",
+        },
+        "events": {
+          "operatorRanFundCommand": {
+            "command": {
+              "__kind": "UnstakeLST",
+              "fields": [
+                {
+                  "state": {
+                    "__kind": "Execute",
+                    "items": [
+                      {
+                        "allocatedTokenAmount": 63881120590n,
+                        "tokenMint": "jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v",
+                      },
+                    ],
+                    "withdrawSol": true,
+                    "withdrawStakeItems": [
+                      {
+                        "fundStakeAccount": "FLhN5pBMowDVsUdHgeGvRmXUU33rQsYyDEpfQrVLnme4",
+                        "fundStakeAccountIndex": 0,
+                        "validatorStakeAccount": "EmutJdbKJ55hUyth15bar8ZxDCchR44udAXWYg9eLLDL",
+                      },
+                      {
+                        "fundStakeAccount": "w9kjgBJeTeTnoLEPLXo4Zi9wtj3F2FMwnHb7UrCtPF4",
+                        "fundStakeAccountIndex": 1,
+                        "validatorStakeAccount": "AjQ5c1GCQkJcg6uukAYhjxY2wSKfX3Lb27FeXUdh8xe4",
+                      },
+                      {
+                        "fundStakeAccount": "53ysYB98VupmR7XPKm5mf86qYt6nK6edgWJKEPQtuk7X",
+                        "fundStakeAccountIndex": 2,
+                        "validatorStakeAccount": "Cwx3iMVjmJWTG5156eMGyNRQhBrGiyvnUnjqXVxXYEmL",
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+            "fundAccount": "7xraTDZ4QWgvgJ5SCZp4hyJN2XEfyGRySQjdG49iZfU8",
+            "nextSequence": 0,
+            "numOperated": 25n,
+            "receiptTokenMint": "Cs29UiPhAkM2v8fZW7qCJ1UjhF1UAhgrsKj61yGGYizD",
+            "result": {
+              "__option": "Some",
+              "value": {
+                "__kind": "UnstakeLST",
+                "fields": [
+                  {
+                    "burntTokenAmount": 63881120590n,
+                    "deductedSolFeeAmount": 70803581n,
+                    "operationReceivableSolAmount": 70802489112n,
+                    "operationReservedSolAmount": 19197510886n,
+                    "operationReservedTokenAmount": 26118879410n,
+                    "tokenMint": "jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v",
+                    "totalUnstakingSolAmount": 70731685531n,
+                    "unstakedSolAmount": 1090656n,
+                    "unstakingSolAmount": 70731685531n,
+                  },
+                ],
+              },
+            },
+          },
+          "unknown": [],
+        },
+        "signature": "MASKED(signature)",
+        "slot": "MASKED(/[.*S|s]lots?$/)",
+        "succeeded": true,
+      }
+    `);
+    await validator.skipEpoch();
+
+    await expectMasked(
+      ctx.fund.runCommand.executeChained({
+        forceResetCommand: 'ClaimUnstakedSOL',
+        operator: restaking.knownAddresses.fundManager,
+      })
+    ).resolves.toMatchInlineSnapshot(`
+      {
+        "args": {
+          "forceResetCommand": null,
+          "operator": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx",
+        },
+        "events": {
+          "operatorRanFundCommand": {
+            "command": {
+              "__kind": "ClaimUnstakedSOL",
+              "fields": [
+                {
+                  "state": {
+                    "__kind": "Execute",
+                    "claimableStakeAccountIndices": {
+                      "0": 0,
+                    },
+                    "poolTokenMints": [
+                      "jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v",
+                    ],
+                  },
+                },
+              ],
+            },
+            "fundAccount": "7xraTDZ4QWgvgJ5SCZp4hyJN2XEfyGRySQjdG49iZfU8",
+            "nextSequence": 0,
+            "numOperated": 29n,
+            "receiptTokenMint": "Cs29UiPhAkM2v8fZW7qCJ1UjhF1UAhgrsKj61yGGYizD",
+            "result": {
+              "__option": "Some",
+              "value": {
+                "__kind": "ClaimUnstakedSOL",
+                "fields": [
+                  {
+                    "claimedSolAmount": 70731685531n,
+                    "offsettedAssetReceivables": [
+                      {
+                        "assetAmount": 70731685531n,
+                        "assetTokenMint": {
+                          "__option": "None",
+                        },
+                      },
+                    ],
+                    "offsettedSolReceivableAmount": 70731685531n,
+                    "operationReceivableSolAmount": 70803581n,
+                    "operationReservedSolAmount": 89929196417n,
+                    "tokenMint": "jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v",
+                    "totalUnstakingSolAmount": 0n,
+                    "transferredSolRevenueAmount": 0n,
+                  },
+                ],
+              },
+            },
+          },
+          "unknown": [],
+        },
+        "signature": "MASKED(signature)",
+        "slot": "MASKED(/[.*S|s]lots?$/)",
+        "succeeded": true,
+      }
+    `);
+
+    await expectMasked(ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'ProcessWithdrawalBatch',
+      operator: restaking.knownAddresses.fundManager,
+    })).resolves.toMatchInlineSnapshot(`
+      {
+        "args": {
+          "forceResetCommand": null,
+          "operator": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx",
+        },
+        "events": {
+          "operatorRanFundCommand": {
+            "command": {
+              "__kind": "ProcessWithdrawalBatch",
+              "fields": [
+                {
+                  "forced": true,
+                  "state": {
+                    "__kind": "Execute",
+                    "assetTokenMint": {
+                      "__option": "None",
+                    },
+                    "numProcessingBatches": 1,
+                    "receiptTokenAmount": 90000000000n,
+                  },
+                },
+              ],
+            },
+            "fundAccount": "7xraTDZ4QWgvgJ5SCZp4hyJN2XEfyGRySQjdG49iZfU8",
+            "nextSequence": 0,
+            "numOperated": 32n,
+            "receiptTokenMint": "Cs29UiPhAkM2v8fZW7qCJ1UjhF1UAhgrsKj61yGGYizD",
+            "result": {
+              "__option": "Some",
+              "value": {
+                "__kind": "ProcessWithdrawalBatch",
+                "fields": [
+                  {
+                    "assetTokenMint": {
+                      "__option": "None",
+                    },
+                    "deductedAssetFeeAmount": 179999999n,
+                    "offsettedAssetReceivables": [
+                      {
+                        "assetAmount": 70803581n,
+                        "assetTokenMint": {
+                          "__option": "None",
+                        },
+                      },
+                    ],
+                    "processedReceiptTokenAmount": 90000000000n,
+                    "requestedReceiptTokenAmount": 90000000000n,
+                    "requiredAssetAmount": 0n,
+                    "reservedAssetUserAmount": 89819999999n,
+                    "transferredAssetRevenueAmount": 114321793n,
+                    "withdrawalFeeRateBps": 20,
+                  },
+                ],
+              },
+            },
+          },
+          "unknown": [],
+        },
+        "signature": "MASKED(signature)",
+        "slot": "MASKED(/[.*S|s]lots?$/)",
+        "succeeded": true,
+      }
+    `);
+
+    // 1-4) user withdraws sol
+    await expectMasked(user3.withdraw.execute(
+      {requestId: requestId}, {signers: [signer3]}
+    )).resolves.toMatchInlineSnapshot(`
+      {
+        "args": {
+          "assetMint": null,
+          "requestId": 5n,
+        },
+        "events": {
+          "unknown": [],
+          "userWithdrewFromFund": {
+            "batchId": 2n,
+            "burntReceiptTokenAmount": 90000000000n,
+            "deductedFeeAmount": 179999999n,
+            "fundAccount": "7xraTDZ4QWgvgJ5SCZp4hyJN2XEfyGRySQjdG49iZfU8",
+            "fundWithdrawalBatchAccount": "J1cPTrKYvp3v1BvfeQ8iRnvTjkbygBZNfepV72uVpRf1",
+            "receiptTokenMint": "Cs29UiPhAkM2v8fZW7qCJ1UjhF1UAhgrsKj61yGGYizD",
+            "requestId": 5n,
+            "returnedReceiptTokenAmount": 0n,
+            "supportedTokenMint": {
+              "__option": "None",
+            },
+            "user": "FZPz1bd26HAMxSRQ5uM69wnW5ATws2ZYyp9B47Lrv6Yj",
+            "userFundAccount": "4ZcNhSQEEKwJy1JqGCAc71nUnV1qyb8yGFNJhHdxLLev",
+            "userReceiptTokenAccount": "HkfGcLacktLYF1bGksFDoN8PK9oFu8a6sseXE8riQzj9",
+            "userSupportedTokenAccount": {
+              "__option": "None",
+            },
+            "withdrawnAmount": 89819999999n,
+          },
+        },
+        "signature": "MASKED(signature)",
+        "slot": "MASKED(/[.*S|s]lots?$/)",
+        "succeeded": true,
+      }
+    `);;
+
+    
+    // 2) stake test
+    // 2-1) user deposits more sol to trigger staking
+    await user3.deposit.execute({
+        assetAmount: 50_000_000_000n,
+      },
+      { signers: [signer3] }
+    );
+
+    // 2-2) run 'StakeSOL'command to stake SOL & get jupSOL
+    await expectMasked(ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'StakeSOL',
+      operator: restaking.knownAddresses.fundManager,
+    })).resolves.toMatchInlineSnapshot(`
+      {
+        "args": {
+          "forceResetCommand": null,
+          "operator": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx",
+        },
+        "events": {
+          "operatorRanFundCommand": {
+            "command": {
+              "__kind": "StakeSOL",
+              "fields": [
+                {
+                  "state": {
+                    "__kind": "Execute",
+                    "items": [
+                      {
+                        "allocatedSolAmount": 50000000000n,
+                        "tokenMint": "jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v",
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+            "fundAccount": "7xraTDZ4QWgvgJ5SCZp4hyJN2XEfyGRySQjdG49iZfU8",
+            "nextSequence": 0,
+            "numOperated": 35n,
+            "receiptTokenMint": "Cs29UiPhAkM2v8fZW7qCJ1UjhF1UAhgrsKj61yGGYizD",
+            "result": {
+              "__option": "Some",
+              "value": {
+                "__kind": "StakeSOL",
+                "fields": [
+                  {
+                    "deductedSolFeeAmount": 0n,
+                    "mintedTokenAmount": 45111504812n,
+                    "operationReceivableSolAmount": 0n,
+                    "operationReservedSolAmount": 0n,
+                    "operationReservedTokenAmount": 71230384222n,
+                    "stakedSolAmount": 50000000000n,
+                    "tokenMint": "jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v",
+                  },
+                ],
+              },
+            },
+          },
+          "unknown": [],
+        },
+        "signature": "MASKED(signature)",
+        "slot": "MASKED(/[.*S|s]lots?$/)",
+        "succeeded": true,
+      }
+    `);
+  });
 });

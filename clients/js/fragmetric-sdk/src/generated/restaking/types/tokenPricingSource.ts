@@ -31,7 +31,8 @@ export type TokenPricingSource =
   | { __kind: 'OrcaDEXLiquidityPool'; address: Address }
   | { __kind: 'SanctumSingleValidatorSPLStakePool'; address: Address }
   | { __kind: 'PeggedToken'; address: Address }
-  | { __kind: 'SolvBTCVault'; address: Address };
+  | { __kind: 'SolvBTCVault'; address: Address }
+  | { __kind: 'SanctumMultiValidatorSPLStakePool'; address: Address };
 
 export type TokenPricingSourceArgs = TokenPricingSource;
 
@@ -61,6 +62,10 @@ export function getTokenPricingSourceEncoder(): Encoder<TokenPricingSourceArgs> 
     ],
     ['PeggedToken', getStructEncoder([['address', getAddressEncoder()]])],
     ['SolvBTCVault', getStructEncoder([['address', getAddressEncoder()]])],
+    [
+      'SanctumMultiValidatorSPLStakePool',
+      getStructEncoder([['address', getAddressEncoder()]]),
+    ],
   ]);
 }
 
@@ -90,6 +95,10 @@ export function getTokenPricingSourceDecoder(): Decoder<TokenPricingSource> {
     ],
     ['PeggedToken', getStructDecoder([['address', getAddressDecoder()]])],
     ['SolvBTCVault', getStructDecoder([['address', getAddressDecoder()]])],
+    [
+      'SanctumMultiValidatorSPLStakePool',
+      getStructDecoder([['address', getAddressDecoder()]]),
+    ],
   ]);
 }
 
@@ -211,6 +220,18 @@ export function tokenPricingSource(
   TokenPricingSourceArgs,
   '__kind',
   'SolvBTCVault'
+>;
+export function tokenPricingSource(
+  kind: 'SanctumMultiValidatorSPLStakePool',
+  data: GetDiscriminatedUnionVariantContent<
+    TokenPricingSourceArgs,
+    '__kind',
+    'SanctumMultiValidatorSPLStakePool'
+  >
+): GetDiscriminatedUnionVariant<
+  TokenPricingSourceArgs,
+  '__kind',
+  'SanctumMultiValidatorSPLStakePool'
 >;
 export function tokenPricingSource<
   K extends TokenPricingSourceArgs['__kind'],

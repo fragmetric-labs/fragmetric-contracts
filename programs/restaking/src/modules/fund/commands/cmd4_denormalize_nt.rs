@@ -394,6 +394,7 @@ impl DenormalizeNTCommand {
             Some(TokenPricingSource::SPLStakePool { .. })
             | Some(TokenPricingSource::MarinadeStakePool { .. })
             | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. })
+            | Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { .. })
             | Some(TokenPricingSource::JitoRestakingVault { .. })
             | Some(TokenPricingSource::FragmetricRestakingFund { .. })
             | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })

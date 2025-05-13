@@ -169,6 +169,15 @@ impl<'info> PricingService<'info> {
             TokenPricingSource::SolvBTCVault { .. } => {
                 self.token_values[token_index] = TokenValue::default();
             }
+            TokenPricingSource::SanctumMultiValidatorSPLStakePool { address } => {
+                let pricing_source_accounts =
+                    [self.get_token_pricing_source_account_info(address)?];
+                SPLStakePoolValueProvider.resolve_underlying_assets(
+                    token_mint,
+                    &pricing_source_accounts,
+                    &mut self.token_values[token_index],
+                )?
+            }
             #[cfg(all(test, not(feature = "idl-build")))]
             TokenPricingSource::Mock {
                 numerator,

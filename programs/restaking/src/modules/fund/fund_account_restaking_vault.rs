@@ -88,6 +88,7 @@ impl RestakingVault {
             | TokenPricingSource::FragmetricRestakingFund { .. }
             | TokenPricingSource::OrcaDEXLiquidityPool { .. }
             | TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. }
+            | TokenPricingSource::SanctumMultiValidatorSPLStakePool { .. }
             | TokenPricingSource::PeggedToken { .. } => {
                 err!(ErrorCode::FundRestakingNotSupportedVaultError)?
             }

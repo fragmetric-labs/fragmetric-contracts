@@ -109,6 +109,7 @@ impl<'a, 'info> FundService<'a, 'info> {
                 Some(TokenPricingSource::SPLStakePool { address })
                 | Some(TokenPricingSource::MarinadeStakePool { address })
                 | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { address })
+                | Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { address })
                 | Some(TokenPricingSource::OrcaDEXLiquidityPool { address })
                 | Some(TokenPricingSource::JitoRestakingVault { address })
                 | Some(TokenPricingSource::FragmetricNormalizedTokenPool { address })
@@ -221,6 +222,9 @@ impl<'a, 'info> FundService<'a, 'info> {
                                     TokenPricingSource::SPLStakePool { .. }
                                     | TokenPricingSource::MarinadeStakePool { .. }
                                     | TokenPricingSource::SanctumSingleValidatorSPLStakePool {
+                                        ..
+                                    }
+                                    | TokenPricingSource::SanctumMultiValidatorSPLStakePool {
                                         ..
                                     }
                                     | TokenPricingSource::OrcaDEXLiquidityPool { .. }

@@ -34,6 +34,9 @@ pub enum TokenPricingSource {
     SolvBTCVault {
         address: Pubkey,
     },
+    SanctumMultiValidatorSPLStakePool {
+        address: Pubkey,
+    },
     #[cfg(all(test, not(feature = "idl-build")))]
     Mock {
         #[max_len(0)]
@@ -65,6 +68,9 @@ impl std::fmt::Display for TokenPricingSource {
             }
             Self::SolvBTCVault { address } => {
                 write!(f, "SolvBTCVault({})", address)
+            }
+            Self::SanctumMultiValidatorSPLStakePool { address } => {
+                write!(f, "SanctumMultiValidatorSPLStakePool({})", address)
             }
             #[cfg(all(test, not(feature = "idl-build")))]
             Self::Mock { .. } => write!(f, "Mock(...)"),
@@ -109,6 +115,10 @@ impl TokenPricingSource {
             }
             TokenPricingSource::SolvBTCVault { address } => {
                 pod.discriminant = 9;
+                pod.address = *address;
+            }
+            TokenPricingSource::SanctumMultiValidatorSPLStakePool { address } => {
+                pod.discriminant = 10;
                 pod.address = *address;
             }
             #[cfg(all(test, not(feature = "idl-build")))]
@@ -167,6 +177,9 @@ impl TokenPricingSourcePod {
                 address: self.address,
             },
             9 => TokenPricingSource::SolvBTCVault {
+                address: self.address,
+            },
+            10 => TokenPricingSource::SanctumMultiValidatorSPLStakePool {
                 address: self.address,
             },
             #[cfg(all(test, not(feature = "idl-build")))]
