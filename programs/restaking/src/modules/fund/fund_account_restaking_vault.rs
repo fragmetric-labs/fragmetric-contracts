@@ -46,20 +46,10 @@ pub(super) struct RestakingVault {
     /// reward to distribute
     _padding4: [u8; 7],
     num_distributing_reward_tokens: u8,
-    // distributing_reward_tokens: [
-    //     {
-    //         mint: Pubkey,
-    //         threshold_min_amount: u64,
-    //         threshold_max_amount: u64,
-    //         threshold_interval_seconds: u64,
-    //         last_settled_at: u64
-    //     }; FUND_ACCOUNT_MAX_RESTAKING_VAULT_DISTRIBUTING_REWARD_TOKENS
-    // ],
-    distributing_reward_token_mints:
-        [Pubkey; FUND_ACCOUNT_MAX_RESTAKING_VAULT_DISTRIBUTING_REWARD_TOKENS],
+    distributing_reward_tokens:
+        [DistributingRewardToken; FUND_ACCOUNT_MAX_RESTAKING_VAULT_DISTRIBUTING_REWARD_TOKENS],
 
-    // _reserved: [u8; 1336],
-    _reserved: [u8; 2296],
+    _reserved: [u8; 1336],
 }
 
 impl RestakingVault {
@@ -188,6 +178,9 @@ impl RestakingVault {
     pub fn add_distributing_reward_token(
         &mut self,
         distributing_reward_token_mint: Pubkey,
+        threshold_min_amount: u64,
+        threshold_max_amount: u64,
+        threshold_interval_seconds: u64,
     ) -> Result<()> {
         if self
             .get_distributing_reward_tokens_iter()
@@ -209,9 +202,34 @@ impl RestakingVault {
             ErrorCode::FundExceededMaxRestakingVaultDistributingRewardTokensError,
         );
 
-        self.distributing_reward_token_mints[self.num_distributing_reward_tokens as usize] =
-            distributing_reward_token_mint;
+        self.distributing_reward_tokens[self.num_compounding_reward_tokens as usize].initialize(
+            distributing_reward_token_mint,
+            threshold_min_amount,
+            threshold_max_amount,
+            threshold_interval_seconds,
+        );
         self.num_distributing_reward_tokens += 1;
+
+        Ok(())
+    }
+
+    pub fn update_distributing_reward_token_threshold(
+        &mut self,
+        distributing_reward_token_mint: Pubkey,
+        threshold_min_amount: u64,
+        threshold_max_amount: u64,
+        threshold_interval_seconds: u64,
+    ) -> Result<()> {
+        let matched_idx = self
+            .get_distributing_reward_tokens_iter()
+            .position(|reward_token| *reward_token == distributing_reward_token_mint)
+            .ok_or(ErrorCode::FundRestakingVaultDistributingRewardTokenNotRegisteredError)?;
+
+        self.distributing_reward_tokens[matched_idx].update_threshold(
+            threshold_min_amount,
+            threshold_max_amount,
+            threshold_interval_seconds,
+        );
 
         Ok(())
     }
@@ -226,16 +244,18 @@ impl RestakingVault {
             .ok_or(ErrorCode::FundRestakingVaultDistributingRewardTokenNotRegisteredError)?;
 
         self.num_distributing_reward_tokens -= 1;
-        self.distributing_reward_token_mints
+        self.distributing_reward_tokens
             .swap(matched_idx, self.num_distributing_reward_tokens as usize);
-        self.distributing_reward_token_mints[self.num_distributing_reward_tokens as usize] =
-            Pubkey::default();
+        self.distributing_reward_tokens[self.num_compounding_reward_tokens as usize] =
+            Zeroable::zeroed();
 
         Ok(())
     }
 
     pub fn get_distributing_reward_tokens_iter(&self) -> impl Iterator<Item = &Pubkey> {
-        self.distributing_reward_token_mints[..self.num_distributing_reward_tokens as usize].iter()
+        self.distributing_reward_tokens[..self.num_compounding_reward_tokens as usize]
+            .iter()
+            .map(|reward_token| &reward_token.mint)
     }
 
     pub fn add_delegation(
@@ -345,6 +365,52 @@ impl RestakingVaultDelegation {
         );
 
         self.supported_token_redelegating_amount = token_amount;
+
+        Ok(())
+    }
+}
+
+#[zero_copy]
+#[repr(C)]
+pub(super) struct DistributingRewardToken {
+    pub mint: Pubkey,
+    pub threshold_min_amount: u64,
+    pub threshold_max_amount: u64,
+    pub threshold_interval_seconds: u64,
+    pub last_settled_at: u64,
+}
+
+impl DistributingRewardToken {
+    fn initialize(
+        &mut self,
+        mint: Pubkey,
+        threshold_min_amount: u64,
+        threshold_max_amount: u64,
+        threshold_interval_seconds: u64,
+    ) {
+        *self = Zeroable::zeroed();
+
+        self.mint = mint;
+        self.threshold_min_amount = threshold_min_amount;
+        self.threshold_max_amount = threshold_max_amount;
+        self.threshold_interval_seconds = threshold_interval_seconds;
+    }
+
+    fn update_threshold(
+        &mut self,
+        threshold_min_amount: u64,
+        threshold_max_amount: u64,
+        threshold_interval_seconds: u64,
+    ) {
+        self.threshold_min_amount = threshold_min_amount;
+        self.threshold_max_amount = threshold_max_amount;
+        self.threshold_interval_seconds = threshold_interval_seconds;
+    }
+
+    fn update_last_settled_at(&mut self, last_settled_at: u64) -> Result<()> {
+        require_gt!(last_settled_at, self.last_settled_at);
+
+        self.last_settled_at = last_settled_at;
 
         Ok(())
     }

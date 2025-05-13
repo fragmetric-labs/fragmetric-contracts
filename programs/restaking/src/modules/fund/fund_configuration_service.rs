@@ -548,11 +548,40 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         &mut self,
         vault: &Pubkey,
         distributing_reward_token_mint: Pubkey,
+        threshold_min_amount: u64,
+        threshold_max_amount: u64,
+        threshold_interval_seconds: u64,
     ) -> Result<events::FundManagerUpdatedFund> {
         self.fund_account
             .load_mut()?
             .get_restaking_vault_mut(vault)?
-            .add_distributing_reward_token(distributing_reward_token_mint)?;
+            .add_distributing_reward_token(
+                distributing_reward_token_mint,
+                threshold_min_amount,
+                threshold_max_amount,
+                threshold_interval_seconds,
+            )?;
+
+        self.create_fund_manager_updated_fund_event()
+    }
+
+    pub fn process_update_restaking_vault_distributing_reward_token_threshold(
+        &mut self,
+        vault: &Pubkey,
+        distributing_reward_token_mint: Pubkey,
+        threshold_min_amount: u64,
+        threshold_max_amount: u64,
+        threshold_interval_seconds: u64,
+    ) -> Result<events::FundManagerUpdatedFund> {
+        self.fund_account
+            .load_mut()?
+            .get_restaking_vault_mut(vault)?
+            .update_distributing_reward_token_threshold(
+                distributing_reward_token_mint,
+                threshold_min_amount,
+                threshold_max_amount,
+                threshold_interval_seconds,
+            )?;
 
         self.create_fund_manager_updated_fund_event()
     }
