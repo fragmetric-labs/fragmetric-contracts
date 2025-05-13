@@ -7,7 +7,8 @@ use crate::modules::fund::commands::OperationCommand::UnrestakeVRT;
 use crate::modules::pricing::{Asset, TokenPricingSource};
 use crate::modules::restaking::JitoRestakingVaultService;
 use crate::modules::staking::{
-    MarinadeStakePoolService, SPLStakePoolService, SanctumMultiValidatorSPLStakePoolService, SanctumSingleValidatorSPLStakePoolService
+    MarinadeStakePoolService, SPLStakePoolService, SanctumMultiValidatorSPLStakePoolService,
+    SanctumSingleValidatorSPLStakePoolService,
 };
 use crate::utils::AccountInfoExt;
 
@@ -210,7 +211,9 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                             | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool {
                                 ..
                             })
-                            | Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { .. })
+                            | Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool {
+                                ..
+                            })
                             | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. }) => {
                                 Ok(count + 1)
                             }
@@ -244,7 +247,9 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                             | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool {
                                 ..
                             })
-                            | Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { .. })
+                            | Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool {
+                                ..
+                            })
                             | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
                             | Some(TokenPricingSource::FragmetricRestakingFund { .. })
                             | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })

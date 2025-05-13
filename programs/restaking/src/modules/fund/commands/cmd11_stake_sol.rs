@@ -141,7 +141,7 @@ impl StakeSOLCommand {
                         Some(TokenPricingSource::SPLStakePool { .. })
                         | Some(TokenPricingSource::MarinadeStakePool { .. })
                         | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. })
-                        | Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { .. })=> {
+                        | Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { .. }) => {
                             Some(WeightedAllocationParticipant::new(
                                 supported_token.sol_allocation_weight,
                                 fund_account.get_asset_total_amount_as_sol(
@@ -327,7 +327,7 @@ impl StakeSOLCommand {
             Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { address }) => Some(
                 self.spl_stake_pool_deposit_sol::<SanctumMultiValidatorSPLStakePool>(
                     ctx, accounts, item, &address,
-                )?
+                )?,
             ),
             // fail when supported token is not stakable
             Some(TokenPricingSource::JitoRestakingVault { .. })

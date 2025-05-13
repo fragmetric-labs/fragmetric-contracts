@@ -224,7 +224,9 @@ impl<'a, 'info> FundService<'a, 'info> {
                                     | TokenPricingSource::SanctumSingleValidatorSPLStakePool {
                                         ..
                                     }
-                                    | TokenPricingSource::SanctumMultiValidatorSPLStakePool { .. }
+                                    | TokenPricingSource::SanctumMultiValidatorSPLStakePool {
+                                        ..
+                                    }
                                     | TokenPricingSource::OrcaDEXLiquidityPool { .. }
                                     | TokenPricingSource::PeggedToken { .. } => {
                                         let asset =

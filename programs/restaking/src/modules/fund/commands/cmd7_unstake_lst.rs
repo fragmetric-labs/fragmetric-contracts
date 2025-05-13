@@ -195,8 +195,9 @@ impl UnstakeLSTCommand {
                             | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool {
                                 ..
                             })
-                            | Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { .. })
-                            => Some(WeightedAllocationParticipant::new(
+                            | Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool {
+                                ..
+                            }) => Some(WeightedAllocationParticipant::new(
                                 supported_token.sol_allocation_weight,
                                 pricing_service.get_token_amount_as_sol(
                                     &supported_token.mint,
@@ -437,7 +438,7 @@ impl UnstakeLSTCommand {
             }
             Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { address }) => {
                 self.spl_stake_pool_get_withdraw_stake_items::<SanctumMultiValidatorSPLStakePool>(
-                    ctx, accounts, items, item, address
+                    ctx, accounts, items, item, address,
                 )
             }
             // otherwise fails
