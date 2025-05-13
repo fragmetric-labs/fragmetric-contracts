@@ -152,6 +152,7 @@ export class RestakingNormalizedTokenPoolAccountContext extends AccountContext<
             'MarinadeStakePool',
             'OrcaDEXLiquidityPool',
             'SanctumSingleValidatorSPLStakePool',
+            'SanctumMultiValidatorSPLStakePool',
             'PeggedToken',
           ]),
           address: v.string(),

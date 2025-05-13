@@ -1,3 +1,4 @@
+import { C } from 'vitest/dist/chunks/reporters.d.CfRkRKN2';
 import type { TestSuiteContext } from '../../testutil';
 
 export function initializeFragSOL(testCtx: TestSuiteContext) {
@@ -262,7 +263,14 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
           address: '2aMLkB5p5gVvCwKkdSo5eZAL1WwhZbxezQr1wxiynRhq',
         },
       }),
-
+    () =>
+      ctx.normalizedTokenPool.addSupportedToken.execute({
+        mint: 'jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v',
+        pricingSource: {
+          __kind: 'SanctumMultiValidatorSPLStakePool',
+          address: '8VpRhuxa7sUUepdY3kQiTmX9rS5vx4WgaXiAnXq4KCtr',
+        },
+      }),
     // initialize wrapped token mint and configuration
     () =>
       ctx.wrappedTokenMint.initializeMint.execute({
