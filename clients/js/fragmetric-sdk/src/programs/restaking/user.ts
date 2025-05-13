@@ -220,6 +220,31 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
     }
   );
 
+  readonly rewardTokens = new IterativeAccountContext(
+    this,
+    async (parent) => {
+      const [self, globalReward] = await Promise.all([
+        parent.resolveAddress(),
+        parent.parent.reward.resolve(),
+      ]);
+      if (!self || !globalReward) return null;
+      return (
+        await Promise.all(
+          globalReward.rewards.map(reward => {
+            return TokenAccountContext.findAssociatedTokenAccountAddress({
+              owner: self,
+              mint: reward.mint,
+              tokenProgram: reward.program,
+            });
+          })
+        )
+      ).filter((address) => !!address) as Address[];
+    },
+    async (parent, address) => {
+      return new TokenAccountContext(parent, address);
+    }
+  );
+
   private __resolveAddressLookupTable = (parent: this) =>
     parent.parent
       .resolve(true)

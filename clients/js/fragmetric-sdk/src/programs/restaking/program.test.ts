@@ -167,6 +167,7 @@ test('can traverse context graph', async () => {
       │   │   ├── receiptToken                              TokenAccount address=undefined, amount=undefined, mint=undefined
       │   │   ├── wrappedToken                              TokenAccount address=undefined, amount=undefined, mint=undefined
       │   │   ├── supportedTokens                           IterativeAccount length=undefined, types=undefined
+      │   │   ├── rewardTokens                              IterativeAccount length=undefined, types=undefined
       │   │   ├── deposit                                   TransactionTemplate args=assetMint,assetAmount,metadata,applyPresetComputeUnitLimit, events=userDepositedToFund,userCreatedOrUpdatedFundAccount,us
       │   │   ├── requestWithdrawal                         TransactionTemplate args=assetMint,receiptTokenAmount, events=userRequestedWithdrawalFromFund,userCreatedOrUpdatedFundAccount,userCreatedOrUpdated
       │   │   ├── cancelWithdrawalRequest                   TransactionTemplate args=assetMint,requestId, events=userCanceledWithdrawalRequestFromFund,userCreatedOrUpdatedFundAccount,userCreatedOrUpdatedRew
@@ -247,6 +248,7 @@ test('can traverse context graph', async () => {
       │   │   ├── receiptToken                              TokenAccount address=undefined, amount=undefined, mint=undefined
       │   │   ├── wrappedToken                              TokenAccount address=undefined, amount=undefined, mint=undefined
       │   │   ├── supportedTokens                           IterativeAccount length=undefined, types=undefined
+      │   │   ├── rewardTokens                              IterativeAccount length=undefined, types=undefined
       │   │   ├── deposit                                   TransactionTemplate args=assetMint,assetAmount,metadata,applyPresetComputeUnitLimit, events=userDepositedToFund,userCreatedOrUpdatedFundAccount,us
       │   │   ├── requestWithdrawal                         TransactionTemplate args=assetMint,receiptTokenAmount, events=userRequestedWithdrawalFromFund,userCreatedOrUpdatedFundAccount,userCreatedOrUpdated
       │   │   ├── cancelWithdrawalRequest                   TransactionTemplate args=assetMint,requestId, events=userCanceledWithdrawalRequestFromFund,userCreatedOrUpdatedFundAccount,userCreatedOrUpdatedRew
@@ -327,6 +329,7 @@ test('can traverse context graph', async () => {
       │   │   ├── receiptToken                              TokenAccount address=undefined, amount=undefined, mint=undefined
       │   │   ├── wrappedToken                              TokenAccount address=undefined, amount=undefined, mint=undefined
       │   │   ├── supportedTokens                           IterativeAccount length=undefined, types=undefined
+      │   │   ├── rewardTokens                              IterativeAccount length=undefined, types=undefined
       │   │   ├── deposit                                   TransactionTemplate args=assetMint,assetAmount,metadata,applyPresetComputeUnitLimit, events=userDepositedToFund,userCreatedOrUpdatedFundAccount,us
       │   │   ├── requestWithdrawal                         TransactionTemplate args=assetMint,receiptTokenAmount, events=userRequestedWithdrawalFromFund,userCreatedOrUpdatedFundAccount,userCreatedOrUpdated
       │   │   ├── cancelWithdrawalRequest                   TransactionTemplate args=assetMint,requestId, events=userCanceledWithdrawalRequestFromFund,userCreatedOrUpdatedFundAccount,userCreatedOrUpdatedRew
