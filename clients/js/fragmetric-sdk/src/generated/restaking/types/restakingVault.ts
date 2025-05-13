@@ -31,10 +31,14 @@ import {
   type ReadonlyUint8Array,
 } from '@solana/kit';
 import {
+  getDistributingRewardTokenDecoder,
+  getDistributingRewardTokenEncoder,
   getRestakingVaultDelegationDecoder,
   getRestakingVaultDelegationEncoder,
   getTokenPricingSourcePodDecoder,
   getTokenPricingSourcePodEncoder,
+  type DistributingRewardToken,
+  type DistributingRewardTokenArgs,
   type RestakingVaultDelegation,
   type RestakingVaultDelegationArgs,
   type TokenPricingSourcePod,
@@ -69,7 +73,7 @@ export type RestakingVault = {
   /** reward to distribute */
   padding4: ReadonlyUint8Array;
   numDistributingRewardTokens: number;
-  distributingRewardTokenMints: Array<Address>;
+  distributingRewardTokens: Array<DistributingRewardToken>;
   reserved: ReadonlyUint8Array;
 };
 
@@ -101,7 +105,7 @@ export type RestakingVaultArgs = {
   /** reward to distribute */
   padding4: ReadonlyUint8Array;
   numDistributingRewardTokens: number;
-  distributingRewardTokenMints: Array<Address>;
+  distributingRewardTokens: Array<DistributingRewardTokenArgs>;
   reserved: ReadonlyUint8Array;
 };
 
@@ -136,10 +140,10 @@ export function getRestakingVaultEncoder(): Encoder<RestakingVaultArgs> {
     ['padding4', fixEncoderSize(getBytesEncoder(), 7)],
     ['numDistributingRewardTokens', getU8Encoder()],
     [
-      'distributingRewardTokenMints',
-      getArrayEncoder(getAddressEncoder(), { size: 30 }),
+      'distributingRewardTokens',
+      getArrayEncoder(getDistributingRewardTokenEncoder(), { size: 30 }),
     ],
-    ['reserved', fixEncoderSize(getBytesEncoder(), 2296)],
+    ['reserved', fixEncoderSize(getBytesEncoder(), 1336)],
   ]);
 }
 
@@ -174,10 +178,10 @@ export function getRestakingVaultDecoder(): Decoder<RestakingVault> {
     ['padding4', fixDecoderSize(getBytesDecoder(), 7)],
     ['numDistributingRewardTokens', getU8Decoder()],
     [
-      'distributingRewardTokenMints',
-      getArrayDecoder(getAddressDecoder(), { size: 30 }),
+      'distributingRewardTokens',
+      getArrayDecoder(getDistributingRewardTokenDecoder(), { size: 30 }),
     ],
-    ['reserved', fixDecoderSize(getBytesDecoder(), 2296)],
+    ['reserved', fixDecoderSize(getBytesDecoder(), 1336)],
   ]);
 }
 

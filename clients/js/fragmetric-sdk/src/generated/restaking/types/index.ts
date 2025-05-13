@@ -27,6 +27,7 @@ export * from './denormalizeNTCommandItem';
 export * from './denormalizeNTCommandResult';
 export * from './denormalizeNTCommandState';
 export * from './depositMetadata';
+export * from './distributingRewardToken';
 export * from './enqueueWithdrawalBatchCommand';
 export * from './enqueueWithdrawalBatchCommandResult';
 export * from './enqueueWithdrawalBatchCommandState';
