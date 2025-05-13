@@ -74,6 +74,11 @@ export async function createTestSuiteContext(config?: {
             '../restaking/tests/mocks/sanctum_single_validator_stake_pool.so',
         },
         {
+          pubkey: 'SPMBzsVUuoHA4Jm6KunbsotaahvVikZs1JyTW6iJvbn',
+          soFilePath:
+            '../restaking/tests/mocks/sanctum_multi_validator_stake_pool.so',
+        },
+        {
           pubkey: 'Vau1t6sLNxnzB7ZDsef8TLbPLfyZMYXH8WTNqUdm9g8',
           soFilePath: '../restaking/tests/mocks/jito_vault.so',
         },

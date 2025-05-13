@@ -731,6 +731,7 @@ export class RestakingFundAccountContext extends AccountContext<
             'MarinadeStakePool',
             'OrcaDEXLiquidityPool',
             'SanctumSingleValidatorSPLStakePool',
+            'SanctumMultiValidatorSPLStakePool',
             'PeggedToken',
           ]),
           address: v.string(),
