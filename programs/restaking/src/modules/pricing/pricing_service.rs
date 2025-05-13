@@ -99,9 +99,7 @@ impl<'info> PricingService<'info> {
 
         // resolve underlying assets for each pricing source' value provider adapter
         match token_pricing_source {
-            TokenPricingSource::SPLStakePool { address }
-            | TokenPricingSource::SanctumSingleValidatorSPLStakePool { address }
-            | TokenPricingSource::SanctumMultiValidatorSPLStakePool { address } => {
+            TokenPricingSource::SPLStakePool { address } => {
                 let pricing_source_accounts =
                     [self.get_token_pricing_source_account_info(address)?];
                 SPLStakePoolValueProvider.resolve_underlying_assets(
@@ -155,12 +153,30 @@ impl<'info> PricingService<'info> {
                     &mut self.token_values[token_index],
                 )?
             }
+            TokenPricingSource::SanctumSingleValidatorSPLStakePool { address } => {
+                let pricing_source_accounts =
+                    [self.get_token_pricing_source_account_info(address)?];
+                SPLStakePoolValueProvider.resolve_underlying_assets(
+                    token_mint,
+                    &pricing_source_accounts,
+                    &mut self.token_values[token_index],
+                )?
+            }
             TokenPricingSource::PeggedToken { address } => {
                 require_keys_neq!(*address, *token_mint);
                 self.token_values[token_index] = self.get_token_value(address)?.clone();
             }
             TokenPricingSource::SolvBTCVault { .. } => {
                 self.token_values[token_index] = TokenValue::default();
+            }
+            TokenPricingSource::SanctumMultiValidatorSPLStakePool { address } => {
+                let pricing_source_accounts =
+                    [self.get_token_pricing_source_account_info(address)?];
+                SPLStakePoolValueProvider.resolve_underlying_assets(
+                    token_mint,
+                    &pricing_source_accounts,
+                    &mut self.token_values[token_index],
+                )?
             }
             #[cfg(all(test, not(feature = "idl-build")))]
             TokenPricingSource::Mock {
