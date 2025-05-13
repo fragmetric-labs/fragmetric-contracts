@@ -366,9 +366,6 @@ pub mod restaking {
         ctx: Context<FundManagerFundContext>,
         vault: Pubkey,
         distributing_reward_token_mint: Pubkey,
-        threshold_min_amount: u64,
-        threshold_max_amount: u64,
-        threshold_interval_seconds: u64,
     ) -> Result<()> {
         emit_cpi!(modules::fund::FundConfigurationService::new(
             &mut ctx.accounts.receipt_token_mint,
@@ -377,9 +374,6 @@ pub mod restaking {
         .process_add_restaking_vault_distributing_reward_token(
             &vault,
             distributing_reward_token_mint,
-            threshold_min_amount,
-            threshold_max_amount,
-            threshold_interval_seconds,
         )?);
 
         Ok(())

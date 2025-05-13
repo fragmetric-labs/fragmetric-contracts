@@ -178,9 +178,6 @@ impl RestakingVault {
     pub fn add_distributing_reward_token(
         &mut self,
         distributing_reward_token_mint: Pubkey,
-        threshold_min_amount: u64,
-        threshold_max_amount: u64,
-        threshold_interval_seconds: u64,
     ) -> Result<()> {
         if self
             .get_distributing_reward_tokens_iter()
@@ -202,12 +199,8 @@ impl RestakingVault {
             ErrorCode::FundExceededMaxRestakingVaultDistributingRewardTokensError,
         );
 
-        self.distributing_reward_tokens[self.num_compounding_reward_tokens as usize].initialize(
-            distributing_reward_token_mint,
-            threshold_min_amount,
-            threshold_max_amount,
-            threshold_interval_seconds,
-        );
+        self.distributing_reward_tokens[self.num_compounding_reward_tokens as usize]
+            .initialize(distributing_reward_token_mint);
         self.num_distributing_reward_tokens += 1;
 
         Ok(())
@@ -381,19 +374,11 @@ pub(super) struct DistributingRewardToken {
 }
 
 impl DistributingRewardToken {
-    fn initialize(
-        &mut self,
-        mint: Pubkey,
-        threshold_min_amount: u64,
-        threshold_max_amount: u64,
-        threshold_interval_seconds: u64,
-    ) {
+    fn initialize(&mut self, mint: Pubkey) {
         *self = Zeroable::zeroed();
 
         self.mint = mint;
-        self.threshold_min_amount = threshold_min_amount;
-        self.threshold_max_amount = threshold_max_amount;
-        self.threshold_interval_seconds = threshold_interval_seconds;
+        self.threshold_max_amount = u64::MAX;
     }
 
     fn update_threshold(
