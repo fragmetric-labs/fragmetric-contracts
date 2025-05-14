@@ -40,7 +40,7 @@ const signer = await createKeyPairSignerFromBytes(
 
 describe('can parse transaction result and events', async () => {
   const program = ProgramContext.devnet(
-    undefined,
+    process.env.SOLANA_RPC_DEVNET,
     undefined,
     'frag9zfFME5u1SNhUYGa4cXLzMKgZXF3xwZ2Y1KCYTQ'
   );
@@ -252,7 +252,7 @@ describe.each([
       svm: new LiteSVM().withBuiltins().withSysvars().withSplPrograms(),
     }),
   ],
-  ['devnet', ProgramContext.devnet()],
+  ['devnet', ProgramContext.devnet(process.env.SOLANA_RPC_DEVNET)],
 ])('handle transactions on %s', async (title, program) => {
   if (program.runtime.type == 'litesvm') {
     await program.runtime.rpc.requestAirdrop!(

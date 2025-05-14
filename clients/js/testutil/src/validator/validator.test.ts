@@ -101,15 +101,18 @@ describe.each(['litesvm', 'svm'] as const)(
 
     test('getSlot, skipSlots, getEpoch, skipEpoch', async () => {
       const firstSlot = await validator1.getSlot();
-      const firstEpoch = await validator1.getEpoch();
 
       await new Promise((resolve) => setTimeout(resolve, 400));
       const secondSlot = await validator1.getSlot();
       expect(secondSlot).toBeGreaterThan(firstSlot);
       expect(await validator2.getSlot()).toBeLessThan(secondSlot);
 
+      const firstEpoch = await validator1.getEpoch({ commitment: 'processed' });
+
       await validator1.skipEpoch();
-      const secondEpoch = await validator1.getEpoch();
+      const secondEpoch = await validator1.getEpoch({
+        commitment: 'processed',
+      });
       expect(firstEpoch + 1n).toEqual(secondEpoch);
     });
 

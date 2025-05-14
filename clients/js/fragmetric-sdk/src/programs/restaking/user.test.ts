@@ -3,7 +3,7 @@ import { RestakingProgram } from './program';
 import { testSignerResolver } from './testing_fixture';
 
 describe('RestakingUserContext on devnet', async () => {
-  const program = RestakingProgram.devnet();
+  const program = RestakingProgram.devnet(process.env.SOLANA_RPC_DEVNET);
   const signer = await testSignerResolver();
   const user = program.fragSOL.user(signer.address);
 

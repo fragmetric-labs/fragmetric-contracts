@@ -2,23 +2,35 @@ import { createSolanaRpc, createSolanaRpcSubscriptions } from '@solana/kit';
 import { describe, expect, test } from 'vitest';
 import { RestakingProgram } from './program';
 
+const devnetRpcUrl = process.env.SOLANA_RPC_DEVNET
+  ? process.env.SOLANA_RPC_DEVNET
+  : 'https://api.devnet.solana.com';
+const devnetRpcSubscriptionsUrl = devnetRpcUrl
+  .replace('https://', 'wss://')
+  .replace('http://', 'ws://');
+
+const mainnetRpcUrl = process.env.SOLANA_RPC_MAINNET
+  ? process.env.SOLANA_RPC_MAINNET
+  : 'https://api.mainnet-beta.solana.com';
+const mainnetRpcSubscriptionsUrl = mainnetRpcUrl
+  .replace('https://', 'wss://')
+  .replace('http://', 'ws://');
+
 describe.each([
   [
     'devnet',
     RestakingProgram.connect({
-      rpc: createSolanaRpc('https://api.devnet.solana.com'),
-      rpcSubscriptions: createSolanaRpcSubscriptions(
-        'wss://api.devnet.solana.com'
-      ),
+      rpc: createSolanaRpc(devnetRpcUrl),
+      rpcSubscriptions: createSolanaRpcSubscriptions(devnetRpcSubscriptionsUrl),
       cluster: 'devnet',
     }),
   ],
   [
     'mainnet',
     RestakingProgram.connect({
-      rpc: createSolanaRpc('https://api.mainnet-beta.solana.com'),
+      rpc: createSolanaRpc(mainnetRpcUrl),
       rpcSubscriptions: createSolanaRpcSubscriptions(
-        'wss://api.mainnet-beta.solana.com'
+        mainnetRpcSubscriptionsUrl
       ),
       cluster: 'mainnet',
     }),
@@ -93,8 +105,9 @@ describe.each([
 });
 
 test('can traverse context graph', async () => {
-  expect(RestakingProgram.devnet().toContextTreeString())
-    .toMatchInlineSnapshot(`
+  expect(
+    RestakingProgram.devnet(process.env.SOLANA_RPC_DEVNET).toContextTreeString()
+  ).toMatchInlineSnapshot(`
       "(this)                                                RestakingProgram address=frag9zfFME5u1SNhUYGa4cXLzMKgZXF3xwZ2Y1KCYTQ
       ├── fragSOL                                           RestakingReceiptTokenMintAccount address=undefined, supply=undefined, decimals=undefined
       │   ├── metadata                                      FragmetricMetadata address=undefined
@@ -341,7 +354,7 @@ test('can traverse context graph', async () => {
 });
 
 test('can marshal into JSON', async () => {
-  const program = RestakingProgram.devnet();
+  const program = RestakingProgram.devnet(process.env.SOLANA_RPC_DEVNET);
   await program.fragSOL.fund.wrap.receiptToken.resolveAccount();
   expect(program.fragSOL.fund.wrap.receiptToken.toJSON()).toMatchObject({
     label: 'TokenAccount',
@@ -357,7 +370,7 @@ test('can marshal into JSON', async () => {
 });
 
 test('can deduplicate requests and utilize cache', async () => {
-  const program = RestakingProgram.devnet(null, {
+  const program = RestakingProgram.devnet(process.env.SOLANA_RPC_DEVNET, {
     rpc: {
       accountCacheTTLSeconds: 2,
       accountDeduplicationIntervalSeconds: 1,

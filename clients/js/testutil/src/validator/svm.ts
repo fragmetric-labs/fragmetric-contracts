@@ -312,32 +312,36 @@ export class SVMValidator extends TestValidator<'svm'> {
     return this.rpc.getSlot({ commitment }).send();
   }
 
+  private async getFullSnapshotSlot(): Promise<bigint> {
+    return this.rpc
+      .getHighestSnapshotSlot()
+      .send()
+      .then(
+        (snapshot) => snapshot.full,
+        () => 0n
+      );
+  }
+
   async warpToSlot(slot: bigint): Promise<void> {
     this.logger(`PREPARE WARP TO SLOT ${slot}`);
-    const fullSnapshotReadySlot =
-      (await this.getSlot({ commitment: 'processed' })) + 100n;
+    const targetSnapshotSlot = await this.getSlot({ commitment: 'processed' });
 
     while (true) {
       await new Promise((resolve) => setTimeout(resolve, 1000));
-      const currentProcessedSlot = await this.getSlot({
-        commitment: 'processed',
-      });
-      const currentFinalizedSlot = await this.getSlot({
-        commitment: 'finalized',
-      });
+      const [currentProcessedSlot, currentFullSnapshotSlot] = await Promise.all(
+        [this.getSlot({ commitment: 'processed' }), this.getFullSnapshotSlot()]
+      );
 
       if (currentProcessedSlot >= slot) {
         this.logger(`NO NEED TO WARP TO SLOT ${slot}`);
         return;
-      } else if (currentFinalizedSlot > fullSnapshotReadySlot) {
-        this.logger(
-          `FULL SNAPSHOT POSSIBLY TAKEN AT SLOT ${fullSnapshotReadySlot}`
-        );
+      } else if (currentFullSnapshotSlot >= targetSnapshotSlot) {
+        this.logger(`FULL SNAPSHOT TAKEN AT SLOT ${currentFullSnapshotSlot}`);
         break;
       }
       if (this.options.debug) {
         this.logger(
-          `WAIT UNTIL FULL TAKING SNAPSHOT AT ${fullSnapshotReadySlot}`
+          `WAIT UNTIL TAKING FULL SNAPSHOT AFTER SLOT ${targetSnapshotSlot}`
         );
       }
     }

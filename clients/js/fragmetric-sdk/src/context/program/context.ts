@@ -92,7 +92,7 @@ export class ProgramContext extends ProgramDerivedContext<RuntimeContext> {
 
   static testnet<T extends ProgramContext>(
     this: new (...args: any) => T,
-    rpcURL?: string | null, // omit or give null to use https://api.devnet.solana.com
+    rpcURL?: string | null, // omit or give null to use https://api.testnet.solana.com
     options?: RuntimeContextPartialOptions,
     programAddress?: string
   ) {
