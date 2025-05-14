@@ -110,7 +110,7 @@ impl std::fmt::Debug for HarvestRewardCommandState {
     }
 }
 
-#[derive(Clone, AnchorSerialize, AnchorDeserialize)]
+#[derive(Clone, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct HarvestRewardCommandResult {
     pub vault: Pubkey,
     pub reward_token_mint: Pubkey,
@@ -1034,23 +1034,6 @@ impl HarvestRewardCommand {
                     return Ok(None);
                 }
 
-                anchor_spl::token_interface::transfer_checked(
-                    CpiContext::new_with_signer(
-                        reward_token_program.to_account_info(),
-                        anchor_spl::token_interface::TransferChecked {
-                            from: from_reward_token_account.to_account_info(),
-                            mint: reward_token_mint.to_account_info(),
-                            to: reward_token_reserve_account.to_account_info(),
-                            authority: ctx.fund_account.to_account_info(),
-                        },
-                        &[&ctx.fund_account.load()?.get_seeds()],
-                    ),
-                    reward_token_amount,
-                    reward_token_mint.decimals,
-                )?;
-                from_reward_token_account.reload()?;
-                reward_token_reserve_account.reload()?;
-
                 let fund_account = ctx.fund_account.load()?;
                 let distributing_reward_token = fund_account
                     .get_restaking_vault(vault)?
@@ -1060,54 +1043,75 @@ impl HarvestRewardCommand {
                         ErrorCode::FundRestakingVaultDistributingRewardTokenNotRegisteredError,
                     )?;
 
-                require_gte!(
-                    reward_token_amount,
-                    distributing_reward_token.threshold_min_amount,
-                    ErrorCode::FundRestakingVaultDistributingRewardTokenAmountThresholdNotMatchedError
-                );
-                require_gte!(
-                    distributing_reward_token.threshold_max_amount,
-                    reward_token_amount,
-                    ErrorCode::FundRestakingVaultDistributingRewardTokenAmountThresholdNotMatchedError
-                );
                 let current_timestamp = Clock::get()?.unix_timestamp as u64;
-                require_gte!(
-                    current_timestamp,
-                    distributing_reward_token.last_settled_at
-                        + distributing_reward_token.threshold_interval_seconds,
-                    ErrorCode::FundRestakingVaultDistributingRewardTokenTimestampThresholdNotMatchedError
-                );
 
-                RewardConfigurationService::new(ctx.receipt_token_mint, &reward_account)?
-                    .settle_reward(
-                        Some(&reward_token_mint),
-                        Some(&reward_token_program),
-                        Some(&reward_token_reserve_account),
-                        reward_token_mint.key(),
-                        false,
+                if reward_token_amount >= distributing_reward_token.threshold_min_amount
+                    && reward_token_amount <= distributing_reward_token.threshold_max_amount
+                    && current_timestamp
+                        >= (distributing_reward_token.last_settled_at
+                            + distributing_reward_token.threshold_interval_seconds)
+                {
+                    anchor_spl::token_interface::transfer_checked(
+                        CpiContext::new_with_signer(
+                            reward_token_program.to_account_info(),
+                            anchor_spl::token_interface::TransferChecked {
+                                from: from_reward_token_account.to_account_info(),
+                                mint: reward_token_mint.to_account_info(),
+                                to: reward_token_reserve_account.to_account_info(),
+                                authority: ctx.fund_account.to_account_info(),
+                            },
+                            &[&ctx.fund_account.load()?.get_seeds()],
+                        ),
                         reward_token_amount,
+                        reward_token_mint.decimals,
                     )?;
+                    from_reward_token_account.reload()?;
+                    reward_token_reserve_account.reload()?;
 
-                drop(fund_account);
+                    RewardConfigurationService::new(ctx.receipt_token_mint, &reward_account)?
+                        .settle_reward(
+                            Some(&reward_token_mint),
+                            Some(&reward_token_program),
+                            Some(&reward_token_reserve_account),
+                            reward_token_mint.key(),
+                            false,
+                            reward_token_amount,
+                        )?;
 
-                FundConfigurationService::new(ctx.receipt_token_mint, ctx.fund_account)?
-                    .update_restaking_vault_distributing_reward_token_settled_at(
-                        vault,
-                        reward_token_mint.key(),
-                    )?;
+                    drop(fund_account);
 
-                let result = HarvestRewardCommandResult {
-                    vault: *vault,
-                    reward_token_mint: reward_token_mint.key(),
-                    reward_token_amount,
-                    swapped_token_mint: None,
-                    compounded_token_amount: 0,
-                    distributed_token_amount: reward_token_amount,
-                    updated_reward_account: Some(reward_account.key()),
+                    FundConfigurationService::new(ctx.receipt_token_mint, ctx.fund_account)?
+                        .update_restaking_vault_distributing_reward_token_settled_at(
+                            vault,
+                            reward_token_mint.key(),
+                        )?;
+
+                    let result = HarvestRewardCommandResult {
+                        vault: *vault,
+                        reward_token_mint: reward_token_mint.key(),
+                        reward_token_amount,
+                        swapped_token_mint: None,
+                        compounded_token_amount: 0,
+                        distributed_token_amount: reward_token_amount,
+                        updated_reward_account: Some(reward_account.key()),
+                    }
+                    .into();
+
+                    Ok(Some(result))
+                } else {
+                    let result = HarvestRewardCommandResult {
+                        vault: *vault,
+                        reward_token_mint: reward_token_mint.key(),
+                        reward_token_amount: 0,
+                        swapped_token_mint: None,
+                        compounded_token_amount: 0,
+                        distributed_token_amount: 0,
+                        updated_reward_account: None,
+                    }
+                    .into();
+
+                    Ok(Some(result))
                 }
-                .into();
-
-                Ok(Some(result))
             }
             // otherwise fails
             Some(TokenPricingSource::SPLStakePool { .. })

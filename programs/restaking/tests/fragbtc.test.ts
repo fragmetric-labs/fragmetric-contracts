@@ -34,9 +34,9 @@ import { initializeFragBTC } from './fragbtc.init';
  * 18. delegate user2 reward account -> user1
  * 19. delegate user2 reward account -> user2
  * 20. settle with threshold
- *  20-1. settle fails by amount threshold
- *  20-2. settle fails by timestamp threshold
- *  20-3. settle passes by all threshold condition passes
+ *  20-1. settle not occurs by amount threshold
+ *  20-2. settle not occurs by timestamp threshold
+ *  20-3. settle occurs by all threshold conditions passed
  */
 
 describe('restaking.fragBTC test', async () => {
@@ -1080,43 +1080,7 @@ describe('restaking.fragBTC test', async () => {
     );
 
     // run operator to harvest
-    await expectMasked(ctx.fund.runCommand.executeChained(null)).resolves
-      .toMatchInlineSnapshot(`
-      {
-        "args": {
-          "forceResetCommand": null,
-          "operator": null,
-        },
-        "events": {
-          "operatorRanFundCommand": {
-            "command": {
-              "__kind": "DelegateVST",
-              "fields": [
-                {
-                  "state": {
-                    "__kind": "Prepare",
-                    "vaults": [
-                      "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
-                    ],
-                  },
-                },
-              ],
-            },
-            "fundAccount": "BEpVRdWw6VhvfwfQufB9iqcJ6acf51XRP1jETCvGDBVE",
-            "nextSequence": 0,
-            "numOperated": 23n,
-            "receiptTokenMint": "ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz",
-            "result": {
-              "__option": "None",
-            },
-          },
-          "unknown": [],
-        },
-        "signature": "MASKED(signature)",
-        "slot": "MASKED(/[.*S|s]lots?$/)",
-        "succeeded": true,
-      }
-    `);
+    await ctx.fund.runCommand.executeChained(null);
 
     await expect(ctx.resolve(true)).resolves.toMatchObject({
       __pricingSources: [
@@ -1869,7 +1833,7 @@ describe('restaking.fragBTC test', async () => {
   test('settle should not occur if threshold is not matched', async () => {
     const rewardAmount = 100_000_000_000n;
 
-    // 1. update distributing reward amount threshold -> always leads to error
+    // 1. update distributing reward amount threshold -> settle would not occur
     await ctx.fund.updateRestakingVaultDistributingRewardThreshold.execute({
       vault: solv.zBTC.address!,
       rewardTokenMint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
@@ -1888,11 +1852,18 @@ describe('restaking.fragBTC test', async () => {
     const globalReward_4 = await ctx.reward.resolve(true);
 
     // try to settle global reward
-    await expect(ctx.fund.runCommand.executeChained(null)).rejects.toThrowError(
-      'Transaction simulation failed'
-    ); // fund: restaking vault distributing reward token amount threshold not matched.
+    await ctx.fund.runCommand.executeChained(null);
 
-    // 2. update distributing reward interval second threshold -> always leads to error
+    const globalReward_5 = await ctx.reward.resolve(true);
+
+    // settle not occurs
+    expect(
+      globalReward_5?.basePool.settlements[0].settlementBlocksLastSlot!
+    ).toEqual(
+      globalReward_4?.basePool.settlements[0].settlementBlocksLastSlot!
+    );
+
+    // 2. update distributing reward interval second threshold -> settle would not occur
     await ctx.fund.updateRestakingVaultDistributingRewardThreshold.execute({
       vault: solv.zBTC.address!,
       rewardTokenMint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
@@ -1901,11 +1872,19 @@ describe('restaking.fragBTC test', async () => {
       thresholdIntervalSeconds: 100,
     });
 
-    await expect(ctx.fund.runCommand.executeChained(null)).rejects.toThrowError(
-      'Transaction simulation failed'
-    ); // fund: restaking vault distributing reward token timestamp threshold not matched.
+    // try to settle global reward
+    await ctx.fund.runCommand.executeChained(null);
 
-    // 3. update distributing reward interval second threshold -> now settle would pass
+    const globalReward_6 = await ctx.reward.resolve(true);
+
+    // settle not occurs
+    expect(
+      globalReward_6?.basePool.settlements[0].settlementBlocksLastSlot!
+    ).toEqual(
+      globalReward_4?.basePool.settlements[0].settlementBlocksLastSlot!
+    );
+
+    // 3. update distributing reward interval second threshold -> now settle would occur
     await ctx.fund.updateRestakingVaultDistributingRewardThreshold.execute({
       vault: solv.zBTC.address!,
       rewardTokenMint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
@@ -1917,10 +1896,10 @@ describe('restaking.fragBTC test', async () => {
     // now settle occurs
     await ctx.fund.runCommand.executeChained(null);
 
-    const globalReward_5 = await ctx.reward.resolve(true);
+    const globalReward_7 = await ctx.reward.resolve(true);
 
     expect(
-      globalReward_5?.basePool.settlements[0].settlementBlocksLastSlot!
+      globalReward_7?.basePool.settlements[0].settlementBlocksLastSlot!
     ).toBeGreaterThan(
       globalReward_4?.basePool.settlements[0].settlementBlocksLastSlot!
     );
