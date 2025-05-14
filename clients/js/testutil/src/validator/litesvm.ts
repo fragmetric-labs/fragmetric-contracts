@@ -138,6 +138,7 @@ export class LiteSVMValidator extends TestValidator<'litesvm'> {
       () => {
         const clock = svm.getClock();
         clock.slot++;
+        clock.unixTimestamp = BigInt(Math.floor(Date.now() / 1000));
         svm.setClock(clock);
       },
       (400 / 64) * options.ticksPerSlot

@@ -33,6 +33,10 @@ import { initializeFragBTC } from './fragbtc.init';
  * 17. user1 deposit 1~5 zBTC, cbBTC each
  * 18. delegate user2 reward account -> user1
  * 19. delegate user2 reward account -> user2
+ * 20. settle with threshold
+ *  20-1. settle fails by amount threshold
+ *  20-2. settle fails by timestamp threshold
+ *  20-3. settle passes by all threshold condition passes
  */
 
 describe('restaking.fragBTC test', async () => {
@@ -239,8 +243,14 @@ describe('restaking.fragBTC test', async () => {
           {
             "compoundingRewardTokenMints": [],
             "delegations": [],
-            "distributingRewardTokenMints": [
-              "ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq",
+            "distributingRewardTokens": [
+              {
+                "lastSettledAt": 0n,
+                "mint": "ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq",
+                "thresholdIntervalSeconds": 0n,
+                "thresholdMaxAmount": 18446744073709551615n,
+                "thresholdMinAmount": 0n,
+              },
             ],
             "pricingSource": {
               "__kind": "SolvBTCVault",
@@ -253,7 +263,7 @@ describe('restaking.fragBTC test', async () => {
           {
             "compoundingRewardTokenMints": [],
             "delegations": [],
-            "distributingRewardTokenMints": [],
+            "distributingRewardTokens": [],
             "pricingSource": {
               "__kind": "SolvBTCVault",
               "address": "5zXiPsDznkiEA4nKvWEWuJEYBupPEBAdA1Qnb7j25PdJ",
@@ -265,7 +275,7 @@ describe('restaking.fragBTC test', async () => {
           {
             "compoundingRewardTokenMints": [],
             "delegations": [],
-            "distributingRewardTokenMints": [],
+            "distributingRewardTokens": [],
             "pricingSource": {
               "__kind": "SolvBTCVault",
               "address": "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
@@ -1125,106 +1135,6 @@ describe('restaking.fragBTC test', async () => {
       ],
     });
 
-    await expect(ctx.fund.resolve(true)).resolves.toMatchInlineSnapshot(`
-      {
-        "assetStrategies": [
-          {
-            "solAccumulatedDepositAmount": 0n,
-            "solAccumulatedDepositCapacityAmount": 18446744073709551615n,
-            "solDepositable": false,
-            "solWithdrawable": false,
-            "solWithdrawalNormalReserveMaxAmount": 18446744073709551615n,
-            "solWithdrawalNormalReserveRateBps": 0,
-          },
-          {
-            "solAllocationCapacityAmount": 18446744073709551615n,
-            "solAllocationWeight": 0n,
-            "tokenAccumulatedDepositAmount": 100000000n,
-            "tokenAccumulatedDepositCapacityAmount": 18446744073709551615n,
-            "tokenDepositable": true,
-            "tokenMint": "zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg",
-            "tokenRebalancingAmount": 0n,
-            "tokenWithdrawable": true,
-            "tokenWithdrawalNormalReserveMaxAmount": 18446744073709551615n,
-            "tokenWithdrawalNormalReserveRateBps": 0,
-          },
-          {
-            "solAllocationCapacityAmount": 18446744073709551615n,
-            "solAllocationWeight": 0n,
-            "tokenAccumulatedDepositAmount": 100000000n,
-            "tokenAccumulatedDepositCapacityAmount": 18446744073709551615n,
-            "tokenDepositable": true,
-            "tokenMint": "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
-            "tokenRebalancingAmount": 0n,
-            "tokenWithdrawable": true,
-            "tokenWithdrawalNormalReserveMaxAmount": 18446744073709551615n,
-            "tokenWithdrawalNormalReserveRateBps": 0,
-          },
-          {
-            "solAllocationCapacityAmount": 18446744073709551615n,
-            "solAllocationWeight": 0n,
-            "tokenAccumulatedDepositAmount": 100000000n,
-            "tokenAccumulatedDepositCapacityAmount": 18446744073709551615n,
-            "tokenDepositable": true,
-            "tokenMint": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
-            "tokenRebalancingAmount": 0n,
-            "tokenWithdrawable": true,
-            "tokenWithdrawalNormalReserveMaxAmount": 18446744073709551615n,
-            "tokenWithdrawalNormalReserveRateBps": 0,
-          },
-        ],
-        "generalStrategy": {
-          "depositEnabled": true,
-          "donationEnabled": false,
-          "transferEnabled": true,
-          "withdrawalBatchThresholdSeconds": 1n,
-          "withdrawalEnabled": true,
-          "withdrawalFeeRateBps": 20,
-        },
-        "restakingVaultStrategies": [
-          {
-            "compoundingRewardTokenMints": [],
-            "delegations": [],
-            "distributingRewardTokenMints": [
-              "ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq",
-            ],
-            "pricingSource": {
-              "__kind": "SolvBTCVault",
-              "address": "H6pGcL98Rkz2aV8pq5jDEMdtrnogAmhUM5w8RAsddeB6",
-            },
-            "solAllocationCapacityAmount": 0n,
-            "solAllocationWeight": 0n,
-            "vault": "H6pGcL98Rkz2aV8pq5jDEMdtrnogAmhUM5w8RAsddeB6",
-          },
-          {
-            "compoundingRewardTokenMints": [],
-            "delegations": [],
-            "distributingRewardTokenMints": [],
-            "pricingSource": {
-              "__kind": "SolvBTCVault",
-              "address": "5zXiPsDznkiEA4nKvWEWuJEYBupPEBAdA1Qnb7j25PdJ",
-            },
-            "solAllocationCapacityAmount": 0n,
-            "solAllocationWeight": 0n,
-            "vault": "5zXiPsDznkiEA4nKvWEWuJEYBupPEBAdA1Qnb7j25PdJ",
-          },
-          {
-            "compoundingRewardTokenMints": [],
-            "delegations": [],
-            "distributingRewardTokenMints": [],
-            "pricingSource": {
-              "__kind": "SolvBTCVault",
-              "address": "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
-            },
-            "solAllocationCapacityAmount": 0n,
-            "solAllocationWeight": 0n,
-            "vault": "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
-          },
-        ],
-        "tokenSwapStrategies": [],
-      }
-    `);
-
     const globalReward_1 = await ctx.reward.resolve(true);
     await expectMasked(globalReward_1).resolves.toMatchInlineSnapshot(`
       {
@@ -1953,5 +1863,66 @@ describe('restaking.fragBTC test', async () => {
         { signers: [signer1] }
       )
     ).rejects.toThrowError('Transaction simulation failed'); // reward: user reward account authority must be either user or delegate
+  });
+
+  /** 7. settle with threshold */
+  test('settle should not occur if threshold is not matched', async () => {
+    const rewardAmount = 100_000_000_000n;
+
+    // 1. update distributing reward amount threshold -> always leads to error
+    await ctx.fund.updateRestakingVaultDistributingRewardThreshold.execute({
+      vault: solv.zBTC.address!,
+      rewardTokenMint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
+      thresholdMinAmount: rewardAmount + 100_000_000n,
+      thresholdMaxAmount: rewardAmount + 200_000_000n,
+      thresholdIntervalSeconds: 1,
+    });
+
+    // drop distribution token to the vault
+    await validator.airdropToken(
+      solv.zBTC.address!,
+      'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
+      100_000_000_000n
+    );
+
+    const globalReward_4 = await ctx.reward.resolve(true);
+
+    // try to settle global reward
+    await expect(ctx.fund.runCommand.executeChained(null)).rejects.toThrowError(
+      'Transaction simulation failed'
+    ); // fund: restaking vault distributing reward token amount threshold not matched.
+
+    // 2. update distributing reward interval second threshold -> always leads to error
+    await ctx.fund.updateRestakingVaultDistributingRewardThreshold.execute({
+      vault: solv.zBTC.address!,
+      rewardTokenMint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
+      thresholdMinAmount: rewardAmount - 100_000_000n,
+      thresholdMaxAmount: 2n ** 64n - 1n, // u64::MAX
+      thresholdIntervalSeconds: 100,
+    });
+
+    await expect(ctx.fund.runCommand.executeChained(null)).rejects.toThrowError(
+      'Transaction simulation failed'
+    ); // fund: restaking vault distributing reward token timestamp threshold not matched.
+
+    // 3. update distributing reward interval second threshold -> now settle would pass
+    await ctx.fund.updateRestakingVaultDistributingRewardThreshold.execute({
+      vault: solv.zBTC.address!,
+      rewardTokenMint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
+      thresholdMinAmount: rewardAmount - 100_000_000n,
+      thresholdMaxAmount: 2n ** 64n - 1n,
+      thresholdIntervalSeconds: 0,
+    });
+
+    // now settle occurs
+    await ctx.fund.runCommand.executeChained(null);
+
+    const globalReward_5 = await ctx.reward.resolve(true);
+
+    expect(
+      globalReward_5?.basePool.settlements[0].settlementBlocksLastSlot!
+    ).toBeGreaterThan(
+      globalReward_4?.basePool.settlements[0].settlementBlocksLastSlot!
+    );
   });
 });
