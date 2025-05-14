@@ -1810,6 +1810,7 @@ export class RestakingFundAccountContext extends AccountContext<
                   thresholdMinAmount: args.thresholdMinAmount,
                   thresholdMaxAmount: args.thresholdMaxAmount,
                   thresholdIntervalSeconds: args.thresholdIntervalSeconds,
+                  fundManager: createNoopSigner(fundManager),
                   program: this.program.address,
                   receiptTokenMint: data.receiptTokenMint,
                 },
