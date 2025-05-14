@@ -138,7 +138,7 @@ export abstract class TestValidator<T extends TestValidatorType> {
 
   abstract warpToSlot(slot: bigint): Promise<void>;
   async skipSlots(slots: bigint): Promise<void> {
-    const currentSlot = await this.getSlot({commitment: 'processed'});
+    const currentSlot = await this.getSlot({ commitment: 'processed' });
     await this.warpToSlot(currentSlot + slots);
   }
 

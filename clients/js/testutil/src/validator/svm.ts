@@ -19,10 +19,10 @@ import * as stream from 'node:stream';
 import * as url from 'node:url';
 import util from 'node:util';
 import {
+  GetSlotOptions,
   TestValidator,
   TestValidatorOptions,
   TestValidatorRuntime,
-  GetSlotOptions,
 } from './validator';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
@@ -314,12 +314,17 @@ export class SVMValidator extends TestValidator<'svm'> {
 
   async warpToSlot(slot: bigint): Promise<void> {
     this.logger(`PREPARE WARP TO SLOT ${slot}`);
-    const fullSnapshotReadySlot = await this.getSlot({ commitment: 'processed'}) + 100n;
+    const fullSnapshotReadySlot =
+      (await this.getSlot({ commitment: 'processed' })) + 100n;
 
     while (true) {
       await new Promise((resolve) => setTimeout(resolve, 1000));
-      const currentProcessedSlot = await this.getSlot({ commitment: 'processed'});
-      const currentFinalizedSlot = await this.getSlot({ commitment: 'finalized'});
+      const currentProcessedSlot = await this.getSlot({
+        commitment: 'processed',
+      });
+      const currentFinalizedSlot = await this.getSlot({
+        commitment: 'finalized',
+      });
 
       if (currentProcessedSlot >= slot) {
         this.logger(`NO NEED TO WARP TO SLOT ${slot}`);
@@ -343,7 +348,7 @@ export class SVMValidator extends TestValidator<'svm'> {
       ...this.options,
       warpSlot: slot,
     });
-    
+
     this.process = newInstance.process;
   }
 }

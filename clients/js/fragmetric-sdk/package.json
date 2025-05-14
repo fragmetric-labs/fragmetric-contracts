@@ -1,6 +1,6 @@
 {
   "name": "@fragmetric-labs/sdk",
-  "version": "2.4.7",
+  "version": "2.4.9",
   "description": "The Client SDK for Fragmetric Solana programs serves both end users and operational administrators.\nIt is designed for compatibility with web browsers and Node.js environments, offering support for web browser bundles (in ESM and UMD formats) as well as Node.js bundles (in ESM formats).",
   "repository": {
     "type": "git",
@@ -42,32 +42,32 @@
     "dev": "./src/cli/cli.executable.ts"
   },
   "dependencies": {
-    "@solana-program/address-lookup-table": "^0.7.0",
-    "@solana-program/compute-budget": "^0.7.0",
-    "@solana-program/system": "^0.7.0",
-    "@solana-program/token": "^0.5.1",
-    "@solana-program/token-2022": "^0.4.0",
-    "@solana/compat": "^2.1.0",
-    "@solana/kit": "^2.1.0",
-    "@solana/spl-token-metadata": "^0.1.6",
-    "@solana/webcrypto-ed25519-polyfill": "^2.1.0",
+    "@solana-program/address-lookup-table": "0.7.0",
+    "@solana-program/compute-budget": "0.7.0",
+    "@solana-program/system": "0.7.0",
+    "@solana-program/token": "0.5.1",
+    "@solana-program/token-2022": "0.4.1",
+    "@solana/compat": "2.1.1",
+    "@solana/kit": "2.1.1",
+    "@solana/spl-token-metadata": "0.1.6",
+    "@solana/webcrypto-ed25519-polyfill": "2.1.1",
     "chalk": "4.1.2",
-    "consola": "^3.4.2",
-    "dataloader": "^2.2.3",
-    "lru-cache": "^11.0.2",
-    "rpc-websockets": "^10.0.0",
+    "consola": "3.4.2",
+    "dataloader": "2.2.3",
+    "lru-cache": "11.1.0",
+    "rpc-websockets": "10.0.0",
     "strip-ansi": "6.0.1",
-    "valibot": "^1.0.0",
-    "ws": "^8.18.1"
+    "valibot": "1.1.0",
+    "ws": "8.18.2"
   },
   "optionalDependencies": {
-    "@ledgerhq/hw-app-solana": "^7.2.4",
-    "@ledgerhq/hw-transport": "^6.31.4",
-    "@ledgerhq/hw-transport-node-hid-singleton": "^6.31.5",
-    "commander": "^13.1.0",
-    "node-hid": "^3.1.2",
-    "pretty-repl": "^4.0.1",
-    "terminal-link": "^2.1.1"
+    "@ledgerhq/hw-app-solana": "7.2.4",
+    "@ledgerhq/hw-transport": "6.31.4",
+    "@ledgerhq/hw-transport-node-hid-singleton": "6.31.5",
+    "commander": "13.1.0",
+    "node-hid": "3.1.2",
+    "pretty-repl": "4.0.1",
+    "terminal-link": "2.1.1"
   },
   "devDependencies": {
     "@metaplex-foundation/mpl-token-metadata": "^3.4.0",

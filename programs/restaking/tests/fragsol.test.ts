@@ -735,22 +735,32 @@ describe('restaking.fragSOL test', async () => {
 
     await user1.deposit.execute(
       { assetMint: null, assetAmount: 9_430_988_120n },
-      { signers: [signer1] },
+      { signers: [signer1] }
     );
     await user1.wrap.execute(
       { receiptTokenAmount: 10_000_000_000n },
-      { signers: [signer1] },
+      { signers: [signer1] }
     );
-    await expect(user1.receiptToken.resolve(true).then(res => res?.amount)).resolves.toEqual(10_000_000_000n);
-    await expect(user1.wrappedToken.resolve(true).then(res => res?.amount)).resolves.toEqual(10_000_000_000n);
-    await expect(fundWrap.resolve(true).then(res => res!.retainedAmount)).resolves.toEqual(10_000_000_000n);
-    await expect(fundWrapReward.resolve(true).then(res => res!.basePool.tokenAllocatedAmount.totalAmount)).resolves.toEqual(10_000_000_000n);
+    await expect(
+      user1.receiptToken.resolve(true).then((res) => res?.amount)
+    ).resolves.toEqual(10_000_000_000n);
+    await expect(
+      user1.wrappedToken.resolve(true).then((res) => res?.amount)
+    ).resolves.toEqual(10_000_000_000n);
+    await expect(
+      fundWrap.resolve(true).then((res) => res!.retainedAmount)
+    ).resolves.toEqual(10_000_000_000n);
+    await expect(
+      fundWrapReward
+        .resolve(true)
+        .then((res) => res!.basePool.tokenAllocatedAmount.totalAmount)
+    ).resolves.toEqual(10_000_000_000n);
 
     // user1's wrapped token account as holder
     await expectMasked(
-      ctx.fund.initializeWrappedTokenHolder.execute(
-        { wrappedTokenAccount: user1.wrappedToken.address! },
-      )
+      ctx.fund.initializeWrappedTokenHolder.execute({
+        wrappedTokenAccount: user1.wrappedToken.address!,
+      })
     ).resolves.toMatchInlineSnapshot(`
       {
         "args": {
@@ -792,28 +802,44 @@ describe('restaking.fragSOL test', async () => {
           "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
         },
       }
-    `)
-    await expect(fundWrap.holders.resolve(true)?.then(res => res.length)).resolves.toEqual(1);
-    expect(fundWrap.holders.children[0]!.address).toEqual(user1.wrappedToken.address);
+    `);
+    await expect(
+      fundWrap.holders.resolve(true)?.then((res) => res.length)
+    ).resolves.toEqual(1);
+    expect(fundWrap.holders.children[0]!.address).toEqual(
+      user1.wrappedToken.address
+    );
 
     const holderReward = fundWrap.holders.children[0]!.reward;
-    await expect(holderReward.resolve().then(res => res!.delegate)).resolves.toEqual(ctx.parent.knownAddresses.fundManager);
-    await expect(holderReward.resolve().then(res => res!.basePool.tokenAllocatedAmount.totalAmount)).resolves.toEqual(0n);
-  })
+    await expect(
+      holderReward.resolve().then((res) => res!.delegate)
+    ).resolves.toEqual(ctx.parent.knownAddresses.fundManager);
+    await expect(
+      holderReward
+        .resolve()
+        .then((res) => res!.basePool.tokenAllocatedAmount.totalAmount)
+    ).resolves.toEqual(0n);
+  });
 
   test('wrapped token holder amount is updated by operator', async () => {
     await ctx.fund.runCommand.executeChained({
-      forceResetCommand: "Initialize"
+      forceResetCommand: 'Initialize',
     });
 
-    await expect(ctx.fund.wrap.resolve(true).then(res => res!.retainedAmount)).resolves.toEqual(0n);
     await expect(
-      ctx.fund.wrap.reward.resolve(true).then(res => res!.basePool.tokenAllocatedAmount.totalAmount)
+      ctx.fund.wrap.resolve(true).then((res) => res!.retainedAmount)
     ).resolves.toEqual(0n);
     await expect(
-      ctx.fund.wrap.holders.children[0]!.reward.resolve(true).then(res => res!.basePool.tokenAllocatedAmount.totalAmount)
+      ctx.fund.wrap.reward
+        .resolve(true)
+        .then((res) => res!.basePool.tokenAllocatedAmount.totalAmount)
+    ).resolves.toEqual(0n);
+    await expect(
+      ctx.fund.wrap.holders.children[0]!.reward.resolve(true).then(
+        (res) => res!.basePool.tokenAllocatedAmount.totalAmount
+      )
     ).resolves.toEqual(10_000_000_000n);
-  })
+  });
 
   test('wrapped token retained amount remains non-negative', async () => {
     const fundWrap = ctx.fund.wrap;
@@ -822,32 +848,66 @@ describe('restaking.fragSOL test', async () => {
 
     await user1.unwrap.execute(
       { wrappedTokenAmount: 5_000_000_000n },
-      { signers: [signer1] },
+      { signers: [signer1] }
     );
-    await expect(user1.receiptToken.resolve(true).then(res => res?.amount)).resolves.toEqual(15_000_000_000n);
-    await expect(user1.wrappedToken.resolve(true).then(res => res?.amount)).resolves.toEqual(5_000_000_000n);
-    await expect(fundWrap.resolve(true).then(res => res!.retainedAmount)).resolves.toEqual(0n);
-    await expect(fundWrapReward.resolve(true).then(res => res!.basePool.tokenAllocatedAmount.totalAmount)).resolves.toEqual(0n);
-    await expect(holderReward.resolve(true).then(res => res?.basePool.tokenAllocatedAmount.totalAmount)).resolves.toEqual(10_000_000_000n);
+    await expect(
+      user1.receiptToken.resolve(true).then((res) => res?.amount)
+    ).resolves.toEqual(15_000_000_000n);
+    await expect(
+      user1.wrappedToken.resolve(true).then((res) => res?.amount)
+    ).resolves.toEqual(5_000_000_000n);
+    await expect(
+      fundWrap.resolve(true).then((res) => res!.retainedAmount)
+    ).resolves.toEqual(0n);
+    await expect(
+      fundWrapReward
+        .resolve(true)
+        .then((res) => res!.basePool.tokenAllocatedAmount.totalAmount)
+    ).resolves.toEqual(0n);
+    await expect(
+      holderReward
+        .resolve(true)
+        .then((res) => res?.basePool.tokenAllocatedAmount.totalAmount)
+    ).resolves.toEqual(10_000_000_000n);
 
     await user2.deposit.execute(
       { assetMint: null, assetAmount: 5_000_000_000n },
-      { signers: [signer2] },
+      { signers: [signer2] }
     );
     await user2.wrap.execute(
       { receiptTokenAmount: 5_000_000_000n },
-      { signers: [signer2] },
+      { signers: [signer2] }
     );
-    await expect(fundWrap.resolve(true).then(res => res!.retainedAmount)).resolves.toEqual(0n);
-    await expect(fundWrapReward.resolve(true).then(res => res!.basePool.tokenAllocatedAmount.totalAmount)).resolves.toEqual(0n);
-    await expect(holderReward.resolve(true).then(res => res?.basePool.tokenAllocatedAmount.totalAmount)).resolves.toEqual(10_000_000_000n);
+    await expect(
+      fundWrap.resolve(true).then((res) => res!.retainedAmount)
+    ).resolves.toEqual(0n);
+    await expect(
+      fundWrapReward
+        .resolve(true)
+        .then((res) => res!.basePool.tokenAllocatedAmount.totalAmount)
+    ).resolves.toEqual(0n);
+    await expect(
+      holderReward
+        .resolve(true)
+        .then((res) => res?.basePool.tokenAllocatedAmount.totalAmount)
+    ).resolves.toEqual(10_000_000_000n);
 
     await ctx.fund.runCommand.executeChained({
-      forceResetCommand: "Initialize"
+      forceResetCommand: 'Initialize',
     });
 
-    await expect(fundWrap.resolve(true).then(res => res!.retainedAmount)).resolves.toEqual(5_000_000_000n);
-    await expect(fundWrapReward.resolve(true).then(res => res!.basePool.tokenAllocatedAmount.totalAmount)).resolves.toEqual(5_000_000_000n);
-    await expect(holderReward.resolve(true).then(res => res?.basePool.tokenAllocatedAmount.totalAmount)).resolves.toEqual(5_000_000_000n);
-  })
+    await expect(
+      fundWrap.resolve(true).then((res) => res!.retainedAmount)
+    ).resolves.toEqual(5_000_000_000n);
+    await expect(
+      fundWrapReward
+        .resolve(true)
+        .then((res) => res!.basePool.tokenAllocatedAmount.totalAmount)
+    ).resolves.toEqual(5_000_000_000n);
+    await expect(
+      holderReward
+        .resolve(true)
+        .then((res) => res?.basePool.tokenAllocatedAmount.totalAmount)
+    ).resolves.toEqual(5_000_000_000n);
+  });
 });

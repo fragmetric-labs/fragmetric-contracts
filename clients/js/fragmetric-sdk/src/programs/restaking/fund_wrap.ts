@@ -1,6 +1,13 @@
-import { BaseAccountContext, IterativeAccountContext, TokenAccountContext } from '../../context';
+import {
+  BaseAccountContext,
+  IterativeAccountContext,
+  TokenAccountContext,
+} from '../../context';
 import { RestakingFundAccountContext } from './fund';
-import { RestakingFundWrappedTokenHolderRewardAccountContext, RestakingFundWrapRewardAccountContext } from './user_reward';
+import {
+  RestakingFundWrappedTokenHolderRewardAccountContext,
+  RestakingFundWrapRewardAccountContext,
+} from './user_reward';
 
 export class RestakingFundWrapAccountContext extends BaseAccountContext<RestakingFundAccountContext> {
   async resolve(noCache = false) {
@@ -29,9 +36,9 @@ export class RestakingFundWrapAccountContext extends BaseAccountContext<Restakin
           wrappedAmount: wrappedToken.supply,
           retainedAmount: wrappedToken.retainedAmount,
           holders: wrappedToken.holders.slice(0, wrappedToken.numHolders),
-        }
+        };
       }
-    )
+    );
   }
 
   readonly reward = new RestakingFundWrapRewardAccountContext(this);
@@ -63,15 +70,17 @@ export class RestakingFundWrapAccountContext extends BaseAccountContext<Restakin
       if (!fund) return null;
       const wrappedToken = fund.data.wrappedToken;
       const holders = wrappedToken.holders.slice(0, wrappedToken.numHolders);
-      const addresses = holders.map(holder => holder.tokenAccount);
+      const addresses = holders.map((holder) => holder.tokenAccount);
       return addresses;
     },
     async (parent, address) => {
       return new RestakingFundWrappedTokenHolderContext(parent, address);
-    },
-  )
+    }
+  );
 }
 
 export class RestakingFundWrappedTokenHolderContext extends TokenAccountContext<RestakingFundWrapAccountContext> {
-  readonly reward = new RestakingFundWrappedTokenHolderRewardAccountContext(this);
+  readonly reward = new RestakingFundWrappedTokenHolderRewardAccountContext(
+    this
+  );
 }
