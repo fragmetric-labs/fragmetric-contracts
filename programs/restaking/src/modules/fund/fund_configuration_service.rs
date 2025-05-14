@@ -19,6 +19,8 @@ use super::*;
 pub struct FundConfigurationService<'a, 'info> {
     receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
     fund_account: &'a mut AccountLoader<'info, FundAccount>,
+
+    current_timestamp: u64,
 }
 
 impl Drop for FundConfigurationService<'_, '_> {
@@ -32,9 +34,11 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
         fund_account: &'a mut AccountLoader<'info, FundAccount>,
     ) -> Result<Self> {
+        let clock = Clock::get()?;
         Ok(Self {
             receipt_token_mint,
             fund_account,
+            current_timestamp: clock.unix_timestamp as u64,
         })
     }
 
@@ -589,6 +593,20 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
             .remove_distributing_reward_token(distributing_reward_token_mint)?;
 
         self.create_fund_manager_updated_fund_event()
+    }
+
+    pub fn update_restaking_vault_distributing_reward_token_settled_at(
+        &mut self,
+        vault: &Pubkey,
+        distributing_reward_token_mint: Pubkey,
+    ) -> Result<()> {
+        self.fund_account
+            .load_mut()?
+            .get_restaking_vault_mut(vault)?
+            .update_distributing_reward_token_settled_at(
+                distributing_reward_token_mint,
+                self.current_timestamp,
+            )
     }
 
     pub fn process_add_wrapped_token_holder(

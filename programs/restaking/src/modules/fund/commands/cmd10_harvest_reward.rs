@@ -232,7 +232,7 @@ impl HarvestRewardCommand {
                         .collect(),
                     HarvestType::Distribute => restaking_vault
                         .get_distributing_reward_tokens_iter()
-                        .copied()
+                        .map(|reward_token| reward_token.mint)
                         .collect(),
                 };
 
@@ -974,7 +974,7 @@ impl HarvestRewardCommand {
     #[inline(never)]
     fn execute_execute_distribute_command<'info>(
         &self,
-        ctx: &OperationCommandContext<'info, '_>,
+        ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
         vault: &Pubkey,
         reward_token_mints: &[Pubkey],
@@ -1051,6 +1051,33 @@ impl HarvestRewardCommand {
                 from_reward_token_account.reload()?;
                 reward_token_reserve_account.reload()?;
 
+                let fund_account = ctx.fund_account.load()?;
+                let distributing_reward_token = fund_account
+                    .get_restaking_vault(vault)?
+                    .get_distributing_reward_tokens_iter()
+                    .find(|reward_token| reward_token.mint == reward_token_mint.key())
+                    .ok_or(
+                        ErrorCode::FundRestakingVaultDistributingRewardTokenNotRegisteredError,
+                    )?;
+
+                require_gte!(
+                    reward_token_amount,
+                    distributing_reward_token.threshold_min_amount,
+                    ErrorCode::FundRestakingVaultDistributingRewardTokenAmountThresholdNotMatchedError
+                );
+                require_gte!(
+                    distributing_reward_token.threshold_max_amount,
+                    reward_token_amount,
+                    ErrorCode::FundRestakingVaultDistributingRewardTokenAmountThresholdNotMatchedError
+                );
+                let current_timestamp = Clock::get()?.unix_timestamp as u64;
+                require_gte!(
+                    current_timestamp,
+                    distributing_reward_token.last_settled_at
+                        + distributing_reward_token.threshold_interval_seconds,
+                    ErrorCode::FundRestakingVaultDistributingRewardTokenTimestampThresholdNotMatchedError
+                );
+
                 RewardConfigurationService::new(ctx.receipt_token_mint, &reward_account)?
                     .settle_reward(
                         Some(&reward_token_mint),
@@ -1059,6 +1086,14 @@ impl HarvestRewardCommand {
                         reward_token_mint.key(),
                         false,
                         reward_token_amount,
+                    )?;
+
+                drop(fund_account);
+
+                FundConfigurationService::new(ctx.receipt_token_mint, ctx.fund_account)?
+                    .update_restaking_vault_distributing_reward_token_settled_at(
+                        vault,
+                        reward_token_mint.key(),
                     )?;
 
                 let result = HarvestRewardCommandResult {

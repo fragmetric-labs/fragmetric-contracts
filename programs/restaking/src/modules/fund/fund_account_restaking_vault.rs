@@ -135,7 +135,7 @@ impl RestakingVault {
 
         if self
             .get_distributing_reward_tokens_iter()
-            .any(|reward_token| *reward_token == compounding_reward_token_mint)
+            .any(|reward_token| reward_token.mint == compounding_reward_token_mint)
         {
             err!(ErrorCode::FundRestakingVaultDistributingRewardTokenAlreadyRegisteredError)?
         }
@@ -181,7 +181,7 @@ impl RestakingVault {
     ) -> Result<()> {
         if self
             .get_distributing_reward_tokens_iter()
-            .any(|reward_token| *reward_token == distributing_reward_token_mint)
+            .any(|reward_token| reward_token.mint == distributing_reward_token_mint)
         {
             err!(ErrorCode::FundRestakingVaultDistributingRewardTokenAlreadyRegisteredError)?
         }
@@ -199,7 +199,7 @@ impl RestakingVault {
             ErrorCode::FundExceededMaxRestakingVaultDistributingRewardTokensError,
         );
 
-        self.distributing_reward_tokens[self.num_compounding_reward_tokens as usize]
+        self.distributing_reward_tokens[self.num_distributing_reward_tokens as usize]
             .initialize(distributing_reward_token_mint);
         self.num_distributing_reward_tokens += 1;
 
@@ -215,7 +215,7 @@ impl RestakingVault {
     ) -> Result<()> {
         let matched_idx = self
             .get_distributing_reward_tokens_iter()
-            .position(|reward_token| *reward_token == distributing_reward_token_mint)
+            .position(|reward_token| reward_token.mint == distributing_reward_token_mint)
             .ok_or(ErrorCode::FundRestakingVaultDistributingRewardTokenNotRegisteredError)?;
 
         self.distributing_reward_tokens[matched_idx].update_threshold(
@@ -233,22 +233,35 @@ impl RestakingVault {
     ) -> Result<()> {
         let matched_idx = self
             .get_distributing_reward_tokens_iter()
-            .position(|reward_token| *reward_token == distributing_reward_token_mint)
+            .position(|reward_token| reward_token.mint == distributing_reward_token_mint)
             .ok_or(ErrorCode::FundRestakingVaultDistributingRewardTokenNotRegisteredError)?;
 
         self.num_distributing_reward_tokens -= 1;
         self.distributing_reward_tokens
             .swap(matched_idx, self.num_distributing_reward_tokens as usize);
-        self.distributing_reward_tokens[self.num_compounding_reward_tokens as usize] =
+        self.distributing_reward_tokens[self.num_distributing_reward_tokens as usize] =
             Zeroable::zeroed();
 
         Ok(())
     }
 
-    pub fn get_distributing_reward_tokens_iter(&self) -> impl Iterator<Item = &Pubkey> {
-        self.distributing_reward_tokens[..self.num_compounding_reward_tokens as usize]
-            .iter()
-            .map(|reward_token| &reward_token.mint)
+    pub fn update_distributing_reward_token_settled_at(
+        &mut self,
+        distributing_reward_token_mint: Pubkey,
+        last_settled_at: u64,
+    ) -> Result<()> {
+        let matched_idx = self
+            .get_distributing_reward_tokens_iter()
+            .position(|reward_token| reward_token.mint == distributing_reward_token_mint)
+            .ok_or(ErrorCode::FundRestakingVaultDistributingRewardTokenNotRegisteredError)?;
+
+        self.distributing_reward_tokens[matched_idx].update_last_settled_at(last_settled_at)
+    }
+
+    pub fn get_distributing_reward_tokens_iter(
+        &self,
+    ) -> impl Iterator<Item = &DistributingRewardToken> {
+        self.distributing_reward_tokens[..self.num_distributing_reward_tokens as usize].iter()
     }
 
     pub fn add_delegation(

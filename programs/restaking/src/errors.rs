@@ -290,4 +290,10 @@ pub enum ErrorCode {
 
     #[msg("fund: supported token still in use")]
     FundSupportedTokenInUseError,
+
+    #[msg("fund: restaking vault distributing reward token amount threshold not matched")]
+    FundRestakingVaultDistributingRewardTokenAmountThresholdNotMatchedError,
+
+    #[msg("fund: restaking vault distributing reward token timestamp threshold not matched")]
+    FundRestakingVaultDistributingRewardTokenTimestampThresholdNotMatchedError,
 }
