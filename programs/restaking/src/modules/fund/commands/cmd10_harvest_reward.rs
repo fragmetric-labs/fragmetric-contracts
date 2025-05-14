@@ -110,7 +110,7 @@ impl std::fmt::Debug for HarvestRewardCommandState {
     }
 }
 
-#[derive(Clone, AnchorSerialize, AnchorDeserialize, Debug)]
+#[derive(Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct HarvestRewardCommandResult {
     pub vault: Pubkey,
     pub reward_token_mint: Pubkey,

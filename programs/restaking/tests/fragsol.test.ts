@@ -1114,7 +1114,7 @@ describe('restaking.fragSOL test', async () => {
 
   /** Jupsol & sanctum-multi-validator test **/
   test('new supported token with new pricing source deposits & withdraws without any issue', async () => {
-      const [signer3] = await Promise.all([
+    const [signer3] = await Promise.all([
       validator
         .newSigner('fragSOLDepositTestSigner3', 100_000_000_000n)
         .then(async (signer) => {
@@ -1132,11 +1132,10 @@ describe('restaking.fragSOL test', async () => {
 
     await validator.airdrop(
       restaking.knownAddresses.fundManager,
-      100_000_000_000n,
+      100_000_000_000n
     );
 
-
-    // 1) unstake test from jupSOL stake pool validators    
+    // 1) unstake test from jupSOL stake pool validators
     // 1-0) make jupSOL depositable & only weighted
     await ctx.fund.updateAssetStrategy.execute({
       tokenMint: 'jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v',
@@ -1149,21 +1148,23 @@ describe('restaking.fragSOL test', async () => {
     });
 
     // 1-1) user deposits 90 jupSOL
-    await user3.deposit.execute({
+    await user3.deposit.execute(
+      {
         assetMint: 'jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v',
-        assetAmount: 90_000_000_000n
+        assetAmount: 90_000_000_000n,
       },
       { signers: [signer3] }
     );
 
     // 1-2) user request withdraw 90 fragSOL
-    const executionResult = await user3.requestWithdrawal.execute({
+    const executionResult = await user3.requestWithdrawal.execute(
+      {
         receiptTokenAmount: 90_000_000_000n,
       },
       { signers: [signer3] }
     );
-    const requestId = executionResult.events!.userRequestedWithdrawalFromFund!.requestId;
-
+    const requestId =
+      executionResult.events!.userRequestedWithdrawalFromFund!.requestId;
 
     // 1-3) run commands
     /*
@@ -1173,10 +1174,12 @@ describe('restaking.fragSOL test', async () => {
     -> ClaimUnstakedSOL
     -> ProcessWithdrawalBatch
     */
-    await expectMasked(ctx.fund.runCommand.executeChained({
-      forceResetCommand: 'EnqueueWithdrawalBatch',
-      operator: restaking.knownAddresses.fundManager,
-    })).resolves.toMatchInlineSnapshot(`
+    await expectMasked(
+      ctx.fund.runCommand.executeChained({
+        forceResetCommand: 'EnqueueWithdrawalBatch',
+        operator: restaking.knownAddresses.fundManager,
+      })
+    ).resolves.toMatchInlineSnapshot(`
       {
         "args": {
           "forceResetCommand": "EnqueueWithdrawalBatch",
@@ -1221,10 +1224,12 @@ describe('restaking.fragSOL test', async () => {
     `);
 
     // *** since there is not enough sol in jupSOL reserve stake account, validator needs to unstake sol ***
-    await expectMasked(ctx.fund.runCommand.executeChained({
-      forceResetCommand: 'UnstakeLST',
-      operator: restaking.knownAddresses.fundManager,
-    })).resolves.toMatchInlineSnapshot(`
+    await expectMasked(
+      ctx.fund.runCommand.executeChained({
+        forceResetCommand: 'UnstakeLST',
+        operator: restaking.knownAddresses.fundManager,
+      })
+    ).resolves.toMatchInlineSnapshot(`
       {
         "args": {
           "forceResetCommand": null,
@@ -1366,10 +1371,12 @@ describe('restaking.fragSOL test', async () => {
       }
     `);
 
-    await expectMasked(ctx.fund.runCommand.executeChained({
-      forceResetCommand: 'ProcessWithdrawalBatch',
-      operator: restaking.knownAddresses.fundManager,
-    })).resolves.toMatchInlineSnapshot(`
+    await expectMasked(
+      ctx.fund.runCommand.executeChained({
+        forceResetCommand: 'ProcessWithdrawalBatch',
+        operator: restaking.knownAddresses.fundManager,
+      })
+    ).resolves.toMatchInlineSnapshot(`
       {
         "args": {
           "forceResetCommand": null,
@@ -1435,9 +1442,9 @@ describe('restaking.fragSOL test', async () => {
     `);
 
     // 1-4) user withdraws sol
-    await expectMasked(user3.withdraw.execute(
-      {requestId: requestId}, {signers: [signer3]}
-    )).resolves.toMatchInlineSnapshot(`
+    await expectMasked(
+      user3.withdraw.execute({ requestId: requestId }, { signers: [signer3] })
+    ).resolves.toMatchInlineSnapshot(`
       {
         "args": {
           "assetMint": null,
@@ -1470,22 +1477,24 @@ describe('restaking.fragSOL test', async () => {
         "slot": "MASKED(/[.*S|s]lots?$/)",
         "succeeded": true,
       }
-    `);;
+    `);
 
-    
     // 2) stake test
     // 2-1) user deposits more sol to trigger staking
-    await user3.deposit.execute({
+    await user3.deposit.execute(
+      {
         assetAmount: 50_000_000_000n,
       },
       { signers: [signer3] }
     );
 
     // 2-2) run 'StakeSOL'command to stake SOL & get jupSOL
-    await expectMasked(ctx.fund.runCommand.executeChained({
-      forceResetCommand: 'StakeSOL',
-      operator: restaking.knownAddresses.fundManager,
-    })).resolves.toMatchInlineSnapshot(`
+    await expectMasked(
+      ctx.fund.runCommand.executeChained({
+        forceResetCommand: 'StakeSOL',
+        operator: restaking.knownAddresses.fundManager,
+      })
+    ).resolves.toMatchInlineSnapshot(`
       {
         "args": {
           "forceResetCommand": null,
