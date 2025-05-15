@@ -615,6 +615,23 @@ pub mod restaking {
         Ok(())
     }
 
+    pub fn fund_manager_remove_supported_token<'info>(
+        ctx: Context<'_, '_, 'info, 'info, FundManagerFundSupportedTokenRemoveContext<'info>>,
+    ) -> Result<()> {
+        emit_cpi!(modules::fund::FundConfigurationService::new(
+            &mut ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.fund_account,
+        )?
+        .process_remove_supported_token(
+            &ctx.accounts.supported_token_mint,
+            ctx.accounts.normalized_token_mint.as_deref(),
+            ctx.accounts.normalized_token_pool_account.as_deref(),
+            ctx.remaining_accounts,
+        )?);
+
+        Ok(())
+    }
+
     ////////////////////////////////////////////
     // FundManagerNormalizedTokenPoolSupportedTokenContext
     ////////////////////////////////////////////

@@ -3863,6 +3863,98 @@
       ]
     },
     {
+      "name": "fund_manager_remove_supported_token",
+      "discriminator": [
+        234,
+        128,
+        24,
+        242,
+        144,
+        180,
+        101,
+        99
+      ],
+      "accounts": [
+        {
+          "name": "fund_manager",
+          "signer": true,
+          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
+        },
+        {
+          "name": "receipt_token_mint",
+          "relations": [
+            "fund_account"
+          ]
+        },
+        {
+          "name": "fund_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  117,
+                  110,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "normalized_token_mint",
+          "optional": true
+        },
+        {
+          "name": "normalized_token_pool_account",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "supported_token_mint"
+        },
+        {
+          "name": "event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "fund_manager_remove_wrapped_token_holder",
       "discriminator": [
         135,
@@ -11610,6 +11702,11 @@
       "code": 6092,
       "name": "FundRestakingVaultDistributingRewardTokenNotRegisteredError",
       "msg": "fund: restaking vault distributing reward token not registered"
+    },
+    {
+      "code": 6093,
+      "name": "FundSupportedTokenInUseError",
+      "msg": "fund: supported token still in use"
     }
   ],
   "types": [

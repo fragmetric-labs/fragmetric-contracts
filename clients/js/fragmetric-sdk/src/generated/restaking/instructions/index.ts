@@ -30,6 +30,7 @@ export * from './fundManagerInitializeFundSolvBtcVault';
 export * from './fundManagerInitializeFundWrappedToken';
 export * from './fundManagerRemoveRestakingVaultCompoundingRewardToken';
 export * from './fundManagerRemoveRestakingVaultDistributingRewardToken';
+export * from './fundManagerRemoveSupportedToken';
 export * from './fundManagerRemoveWrappedTokenHolder';
 export * from './fundManagerResetFundWrapAccountRewardAccountDelegate';
 export * from './fundManagerResetWrappedTokenHolderRewardAccountDelegate';
