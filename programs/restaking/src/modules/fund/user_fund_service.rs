@@ -104,7 +104,7 @@ impl<'a, 'info> UserFundService<'a, 'info> {
 
         // mint receipt token
         let mut pricing_service = FundService::new(self.receipt_token_mint, self.fund_account)?
-            .new_pricing_service(pricing_sources)?;
+            .new_pricing_service(pricing_sources, false)?;
 
         let receipt_token_mint_amount = if self.receipt_token_mint.supply == 0 {
             // receipt_token_mint_amount will be equal to asset_amount at the initial minting, so like either 1SOL = 1RECEIPT-TOKEN or 1SUPPORTED-TOKEN = 1RECEIPT-TOKEN.
@@ -188,7 +188,8 @@ impl<'a, 'info> UserFundService<'a, 'info> {
 
         // update asset value again
         FundService::new(self.receipt_token_mint, self.fund_account)?
-            .update_asset_values(&mut pricing_service)?;
+            .update_asset_values(&mut pricing_service, true)?;
+
 
         Ok(events::UserDepositedToFund {
             receipt_token_mint: self.receipt_token_mint.key(),
@@ -274,7 +275,7 @@ impl<'a, 'info> UserFundService<'a, 'info> {
 
         // update fund value before processing request
         FundService::new(self.receipt_token_mint, self.fund_account)?
-            .new_pricing_service(pricing_sources)?;
+            .new_pricing_service(pricing_sources, true)?;
 
         // create a user withdrawal request
         let withdrawal_request = self.fund_account.load_mut()?.create_withdrawal_request(
@@ -376,7 +377,7 @@ impl<'a, 'info> UserFundService<'a, 'info> {
 
         // update fund value after processing request
         FundService::new(self.receipt_token_mint, self.fund_account)?
-            .new_pricing_service(pricing_sources)?;
+            .new_pricing_service(pricing_sources, true)?;
 
         // unlock requested user receipt token amount
         // first, burn locked receipt token (use burn/mint instead of transfer to avoid circular CPI through transfer hook)

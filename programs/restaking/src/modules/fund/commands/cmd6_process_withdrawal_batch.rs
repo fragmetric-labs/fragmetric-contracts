@@ -399,8 +399,8 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                     let mut fund_service =
                         FundService::new(ctx.receipt_token_mint, ctx.fund_account)?;
 
-                    let mut pricing_service =
-                        fund_service.new_pricing_service(pricing_sources.into_iter().copied())?;
+                    let mut pricing_service = fund_service
+                        .new_pricing_service(pricing_sources.into_iter().copied(), false)?;
 
                     let (
                         processed_receipt_token_amount,
@@ -439,7 +439,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                             program_supported_token_revenue_account.to_option(),
                         )?;
 
-                    fund_service.update_asset_values(&mut pricing_service)?;
+                    fund_service.update_asset_values(&mut pricing_service, true)?;
                     (
                         processed_receipt_token_amount,
                         required_asset_amount,
