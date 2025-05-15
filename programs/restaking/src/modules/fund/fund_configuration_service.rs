@@ -164,7 +164,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
 
         // validate pricing source
         FundService::new(self.receipt_token_mint, self.fund_account)?
-            .new_pricing_service(pricing_sources)?;
+            .new_pricing_service(pricing_sources, true)?;
 
         self.create_fund_manager_updated_fund_event()
     }
@@ -202,7 +202,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
 
         // do pricing as a validation
         FundService::new(self.receipt_token_mint, self.fund_account)?
-            .new_pricing_service(pricing_sources)?;
+            .new_pricing_service(pricing_sources, true)?;
 
         self.create_fund_manager_updated_fund_event()
     }
@@ -254,7 +254,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
 
         // validate pricing source
         FundService::new(self.receipt_token_mint, self.fund_account)?
-            .new_pricing_service(pricing_sources)?;
+            .new_pricing_service(pricing_sources, true)?;
 
         self.create_fund_manager_updated_fund_event()
     }
@@ -311,7 +311,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
 
         // validate pricing source
         FundService::new(self.receipt_token_mint, self.fund_account)?
-            .new_pricing_service(pricing_sources)?;
+            .new_pricing_service(pricing_sources, true)?;
 
         self.create_fund_manager_updated_fund_event()
     }
