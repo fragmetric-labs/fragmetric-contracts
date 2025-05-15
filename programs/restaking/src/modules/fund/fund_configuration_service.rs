@@ -205,7 +205,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         drop(fund_account);
 
         FundService::new(self.receipt_token_mint, self.fund_account)?
-            .new_pricing_service(pricing_sources)?;
+            .new_pricing_service(pricing_sources, true)?;
 
         let new_receipt_token_price = self.fund_account.load()?.one_receipt_token_as_sol;
 

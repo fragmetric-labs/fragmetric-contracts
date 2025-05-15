@@ -190,7 +190,6 @@ impl<'a, 'info> UserFundService<'a, 'info> {
         FundService::new(self.receipt_token_mint, self.fund_account)?
             .update_asset_values(&mut pricing_service, true)?;
 
-
         Ok(events::UserDepositedToFund {
             receipt_token_mint: self.receipt_token_mint.key(),
             fund_account: self.fund_account.key(),
