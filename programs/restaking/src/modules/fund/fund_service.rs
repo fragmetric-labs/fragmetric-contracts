@@ -44,6 +44,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
     pub(in crate::modules) fn new_pricing_service<I>(
         &mut self,
         pricing_sources: I,
+        refresh_token_price: bool,
     ) -> Result<PricingService<'info>>
     where
         I: IntoIterator<Item = &'info AccountInfo<'info>> + Clone,
@@ -65,7 +66,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         };
 
         // try to update current underlying assets' price
-        self.update_asset_values(&mut pricing_service)?;
+        self.update_asset_values(&mut pricing_service, refresh_token_price)?;
 
         Ok(pricing_service)
     }
@@ -74,7 +75,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         &mut self,
         pricing_sources: &'info [AccountInfo<'info>],
     ) -> Result<events::OperatorUpdatedFundPrices> {
-        self.new_pricing_service(pricing_sources)?;
+        self.new_pricing_service(pricing_sources, true)?;
         Ok(events::OperatorUpdatedFundPrices {
             receipt_token_mint: self.receipt_token_mint.key(),
             fund_account: self.fund_account.key(),
@@ -137,6 +138,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
     pub(super) fn update_asset_values(
         &mut self,
         pricing_service: &mut PricingService,
+        refresh_token_price: bool,
     ) -> Result<()> {
         // ensure any update on fund account written before do pricing
         self.fund_account.exit(&crate::ID)?;
@@ -153,118 +155,124 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
         {
             // the values being written below are informative, only for event emission.
             let mut fund_account = self.fund_account.load_mut()?;
-
-            for supported_token in fund_account.get_supported_tokens_iter_mut() {
-                supported_token.one_token_as_sol = pricing_service
-                    .get_one_token_amount_as_sol(&supported_token.mint, supported_token.decimals)?
-                    .unwrap_or_default();
-                supported_token.one_token_as_receipt_token = pricing_service
-                    .get_one_token_amount_as_token(
-                        &supported_token.mint,
-                        supported_token.decimals,
-                        &self.receipt_token_mint.key(),
-                    )?
-                    .unwrap_or_default()
-            }
-
-            if let Some(normalized_token) = fund_account.get_normalized_token_mut() {
-                normalized_token.one_token_as_sol = pricing_service
-                    .get_one_token_amount_as_sol(&normalized_token.mint, normalized_token.decimals)?
-                    .unwrap_or_default();
-            }
-
-            for restaking_vault in fund_account.get_restaking_vaults_iter_mut() {
-                restaking_vault.one_receipt_token_as_sol = pricing_service
-                    .get_one_token_amount_as_sol(
-                        &restaking_vault.receipt_token_mint,
-                        restaking_vault.receipt_token_decimals,
-                    )?
-                    .unwrap_or_default();
-            }
-
-            let receipt_token_mint_key = &self.receipt_token_mint.key();
-            fund_account.one_receipt_token_as_sol = pricing_service
-                .get_one_token_amount_as_sol(
-                    receipt_token_mint_key,
-                    self.receipt_token_mint.decimals,
-                )?
-                .unwrap_or_default();
-
             let mut receipt_token_value = TokenValue::default();
+
             pricing_service.flatten_token_value(
-                receipt_token_mint_key,
+                &self.receipt_token_mint.key(),
                 &mut receipt_token_value,
                 false,
             )?;
             receipt_token_value.serialize_as_pod(&mut fund_account.receipt_token_value)?;
-
             fund_account.receipt_token_value_updated_slot = self.current_slot;
 
-            // now estimate withdrawal-request acceptable amount for each assets.
-            let mut total_withdrawal_requested_receipt_token_amount = 0;
+            if refresh_token_price {
+                for supported_token in fund_account.get_supported_tokens_iter_mut() {
+                    supported_token.one_token_as_sol = pricing_service
+                        .get_one_token_amount_as_sol(
+                            &supported_token.mint,
+                            supported_token.decimals,
+                        )?
+                        .unwrap_or_default();
+                    supported_token.one_token_as_receipt_token = pricing_service
+                        .get_one_token_amount_as_token(
+                            &supported_token.mint,
+                            supported_token.decimals,
+                            &self.receipt_token_mint.key(),
+                        )?
+                        .unwrap_or_default()
+                }
 
-            // here, atomic assets of receipt_token_value should be either SOL or one of supported tokens.
-            for asset_value in &receipt_token_value.numerator {
-                match asset_value {
-                    Asset::SOL(..) => {
-                        // just count the already processing withdrawal amount
-                        total_withdrawal_requested_receipt_token_amount += fund_account
-                            .sol
-                            .get_receipt_token_withdrawal_requested_amount();
-                    }
-                    Asset::Token(token_mint, pricing_source, token_amount) => {
-                        match pricing_source {
-                            None => err!(ErrorCode::TokenPricingSourceAccountNotFoundError)?,
-                            Some(pricing_source) => {
-                                #[deny(clippy::wildcard_enum_match_arm)]
-                                match pricing_source {
-                                    TokenPricingSource::SPLStakePool { .. }
-                                    | TokenPricingSource::MarinadeStakePool { .. }
-                                    | TokenPricingSource::SanctumSingleValidatorSPLStakePool {
-                                        ..
-                                    }
-                                    | TokenPricingSource::OrcaDEXLiquidityPool { .. }
-                                    | TokenPricingSource::PeggedToken { .. } => {
-                                        let asset =
-                                            fund_account.get_asset_state_mut(Some(*token_mint))?;
-                                        let asset_value_as_receipt_token_amount = pricing_service
-                                            .get_sol_amount_as_token(
-                                            &self.receipt_token_mint.key(),
-                                            pricing_service.get_token_amount_as_sol(
-                                                token_mint,
-                                                *token_amount,
-                                            )?,
-                                        )?;
-                                        let withdrawal_requested_receipt_token_amount =
-                                            asset.get_receipt_token_withdrawal_requested_amount();
-                                        asset.withdrawable_value_as_receipt_token_amount =
-                                            asset_value_as_receipt_token_amount.saturating_sub(
-                                                withdrawal_requested_receipt_token_amount,
-                                            );
+                if let Some(normalized_token) = fund_account.get_normalized_token_mut() {
+                    normalized_token.one_token_as_sol = pricing_service
+                        .get_one_token_amount_as_sol(
+                            &normalized_token.mint,
+                            normalized_token.decimals,
+                        )?
+                        .unwrap_or_default();
+                }
 
-                                        // sum the already processing withdrawal amount
-                                        total_withdrawal_requested_receipt_token_amount +=
-                                            withdrawal_requested_receipt_token_amount;
+                for restaking_vault in fund_account.get_restaking_vaults_iter_mut() {
+                    restaking_vault.one_receipt_token_as_sol = pricing_service
+                        .get_one_token_amount_as_sol(
+                            &restaking_vault.receipt_token_mint,
+                            restaking_vault.receipt_token_decimals,
+                        )?
+                        .unwrap_or_default();
+                }
+
+                fund_account.one_receipt_token_as_sol = pricing_service
+                    .get_one_token_amount_as_sol(
+                        &self.receipt_token_mint.key(),
+                        self.receipt_token_mint.decimals,
+                    )?
+                    .unwrap_or_default();
+
+                // now estimate withdrawal-request acceptable amount for each assets.
+                let mut total_withdrawal_requested_receipt_token_amount = 0;
+
+                // here, atomic assets of receipt_token_value should be either SOL or one of supported tokens.
+                for asset_value in &receipt_token_value.numerator {
+                    match asset_value {
+                        Asset::SOL(..) => {
+                            // just count the already processing withdrawal amount
+                            total_withdrawal_requested_receipt_token_amount += fund_account
+                                .sol
+                                .get_receipt_token_withdrawal_requested_amount();
+                        }
+                        Asset::Token(token_mint, pricing_source, token_amount) => {
+                            match pricing_source {
+                                None => err!(ErrorCode::TokenPricingSourceAccountNotFoundError)?,
+                                Some(pricing_source) => {
+                                    #[deny(clippy::wildcard_enum_match_arm)]
+                                    match pricing_source {
+                                        TokenPricingSource::SPLStakePool { .. }
+                                        | TokenPricingSource::MarinadeStakePool { .. }
+                                        | TokenPricingSource::SanctumSingleValidatorSPLStakePool {
+                                            ..
+                                        }
+                                        | TokenPricingSource::OrcaDEXLiquidityPool { .. }
+                                        | TokenPricingSource::PeggedToken { .. } => {
+                                            let asset =
+                                                fund_account.get_asset_state_mut(Some(*token_mint))?;
+                                            let asset_value_as_receipt_token_amount = pricing_service
+                                                .get_sol_amount_as_token(
+                                                &self.receipt_token_mint.key(),
+                                                pricing_service.get_token_amount_as_sol(
+                                                    token_mint,
+                                                    *token_amount,
+                                                )?,
+                                            )?;
+                                            let withdrawal_requested_receipt_token_amount =
+                                                asset.get_receipt_token_withdrawal_requested_amount();
+                                            asset.withdrawable_value_as_receipt_token_amount =
+                                                asset_value_as_receipt_token_amount.saturating_sub(
+                                                    withdrawal_requested_receipt_token_amount,
+                                                );
+
+                                            // sum the already processing withdrawal amount
+                                            total_withdrawal_requested_receipt_token_amount +=
+                                                withdrawal_requested_receipt_token_amount;
+                                        }
+                                        TokenPricingSource::JitoRestakingVault { .. }
+                                        | TokenPricingSource::SolvBTCVault { .. }
+                                        | TokenPricingSource::FragmetricNormalizedTokenPool {
+                                            ..
+                                        }
+                                        | TokenPricingSource::FragmetricRestakingFund { .. } => {}
+                                        #[cfg(all(test, not(feature = "idl-build")))]
+                                        TokenPricingSource::Mock { .. } => {}
                                     }
-                                    TokenPricingSource::JitoRestakingVault { .. }
-                                    | TokenPricingSource::SolvBTCVault { .. }
-                                    | TokenPricingSource::FragmetricNormalizedTokenPool {
-                                        ..
-                                    }
-                                    | TokenPricingSource::FragmetricRestakingFund { .. } => {}
-                                    #[cfg(all(test, not(feature = "idl-build")))]
-                                    TokenPricingSource::Mock { .. } => {}
                                 }
                             }
                         }
                     }
                 }
-            }
 
-            // when SOL is withdrawable, it assumes that any kind of underlying assets can be either unstaked, or swapped to be withdrawn as SOL.
-            fund_account.sol.withdrawable_value_as_receipt_token_amount = fund_account
-                .receipt_token_supply_amount
-                - total_withdrawal_requested_receipt_token_amount;
+                // when SOL is withdrawable, it assumes that any kind of underlying assets can be either unstaked, or swapped to be withdrawn as SOL.
+                fund_account.sol.withdrawable_value_as_receipt_token_amount = fund_account
+                    .receipt_token_supply_amount
+                    - total_withdrawal_requested_receipt_token_amount;
+            }
         }
 
         Ok(())
@@ -1443,7 +1451,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
 
         // update asset value
         FundService::new(self.receipt_token_mint, self.fund_account)?
-            .new_pricing_service(pricing_sources)?;
+            .new_pricing_service(pricing_sources, true)?;
 
         Ok(events::OperatorDonatedToFund {
             receipt_token_mint: self.receipt_token_mint.key(),
