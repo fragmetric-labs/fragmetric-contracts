@@ -406,6 +406,32 @@ describe('restaking.fragSOL test', async () => {
     `);
   });
 
+  // test('remove supported tokens', async () => {
+  //   await expect(ctx.normalizedTokenPool.addSupportedToken.execute({
+  //     mint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+  //     pricingSource: {
+  //       __kind: 'OrcaDEXLiquidityPool',
+  //       address: '4yp9YAXCJsKWMDZq2Q4j4amktvJGXBCpr3Lmv2cYBrb8',
+  //     },
+  //   })).resolves.not.toThrow('1');
+  //
+  //   await expect(ctx.normalizedTokenPool.addSupportedToken.execute({
+  //     mint: 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
+  //     pricingSource: {
+  //       __kind: 'PeggedToken',
+  //       address: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+  //     },
+  //   })).resolves.not.toThrow('2');
+  //
+  //   await expect(ctx.normalizedTokenPool.removeSupportedToken.execute({
+  //     mint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+  //   })).resolves.toThrow('3');
+  //
+  //   await expect(ctx.normalizedTokenPool.removeSupportedToken.execute({
+  //     mint: 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
+  //   })).resolves.not.toThrow('4');
+  // });
+
   /** 2. deposit **/
   test('user can deposit SOL', async () => {
     await expectMasked(

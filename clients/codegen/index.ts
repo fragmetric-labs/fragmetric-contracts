@@ -70,7 +70,6 @@ async function generate(targetId?: string) {
           })
         );
         fs.writeFileSync(jsOutputHashFilePath, outputHash);
-        console.log({ idlFilePath, jsOutputIDLFilePath });
         fs.copyFileSync(idlFilePath, jsOutputIDLFilePath);
         console.log(
           `${chalk.green('[codegen] generated')} ${chalk.yellow(

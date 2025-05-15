@@ -28,6 +28,7 @@ export * from './fundManagerInitializeFundJitoRestakingVaultDelegation';
 export * from './fundManagerInitializeFundNormalizedToken';
 export * from './fundManagerInitializeFundSolvBtcVault';
 export * from './fundManagerInitializeFundWrappedToken';
+export * from './fundManagerRemoveNormalizedTokenPoolSupportedToken';
 export * from './fundManagerRemoveRestakingVaultCompoundingRewardToken';
 export * from './fundManagerRemoveRestakingVaultDistributingRewardToken';
 export * from './fundManagerRemoveSupportedToken';

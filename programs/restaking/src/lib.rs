@@ -662,6 +662,28 @@ pub mod restaking {
         Ok(())
     }
 
+    pub fn fund_manager_remove_normalized_token_pool_supported_token<'info>(
+        ctx: Context<
+            '_,
+            '_,
+            'info,
+            'info,
+            FundManagerNormalizedTokenPoolSupportedTokenContext<'info>,
+        >,
+    ) -> Result<()> {
+        modules::normalization::NormalizedTokenPoolConfigurationService::new(
+            &mut ctx.accounts.normalized_token_pool_account,
+            &mut ctx.accounts.normalized_token_mint,
+            &ctx.accounts.normalized_token_program,
+        )?
+        .process_remove_supported_token(
+            &ctx.accounts.supported_token_mint.key(),
+            ctx.remaining_accounts,
+        )?;
+
+        Ok(())
+    }
+
     ////////////////////////////////////////////
     // FundManagerRewardContext
     ////////////////////////////////////////////
