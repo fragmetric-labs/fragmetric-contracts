@@ -647,7 +647,7 @@ impl<'info: 'a, 'a> FundService<'info, 'a> {
             }
 
             // check cash + receivable is enough to pay shares of each treasury and user.
-            // here, the lack of pennies during calculation which originally belongs to the treasury is tolerable up to FUND_ACCOUNT_MAX_SUPPORTED_TOKENS (30).
+            // here, the lack of pennies during calculation which originally belongs to the treasury is tolerable up to FUND_ACCOUNT_MAX_SUPPORTED_TOKENS (16).
             let lack_of_asset_amount = (next_asset_user_amount_processing
                 + next_asset_fee_amount_processing)
                 .saturating_sub(

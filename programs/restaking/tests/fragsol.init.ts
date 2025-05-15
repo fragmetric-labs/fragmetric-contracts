@@ -273,11 +273,11 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
         vault: 'HR1ANmDHjaEhknvsTaK48M5xZtbBiwNdXM5NTiWhAb4S',
         rewardTokenMint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
       }),
-    () =>
-      ctx.fund.addRestakingVaultDistributingReward.execute({
-        vault: 'HR1ANmDHjaEhknvsTaK48M5xZtbBiwNdXM5NTiWhAb4S',
-        rewardTokenMint: 'REALSWTCH7J8JdafNBLZpfSCLiFwpMCqod2RpkU4RNn',
-      }),
+    // () =>
+    //   ctx.fund.addRestakingVaultDistributingReward.execute({
+    //     vault: 'HR1ANmDHjaEhknvsTaK48M5xZtbBiwNdXM5NTiWhAb4S',
+    //     rewardTokenMint: 'REALSWTCH7J8JdafNBLZpfSCLiFwpMCqod2RpkU4RNn',
+    //   }),
 
     // configure operator delegations
     () =>

@@ -12793,7 +12793,16 @@
                     "name": "SupportedToken"
                   }
                 },
-                30
+                16
+              ]
+            }
+          },
+          {
+            "name": "_reserved2",
+            "type": {
+              "array": [
+                "u8",
+                16016
               ]
             }
           },

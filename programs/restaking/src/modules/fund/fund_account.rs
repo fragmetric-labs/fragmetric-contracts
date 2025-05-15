@@ -22,7 +22,7 @@ use super::*;
 pub const FUND_ACCOUNT_CURRENT_VERSION: u16 = 19;
 
 pub const FUND_WITHDRAWAL_FEE_RATE_BPS_LIMIT: u16 = 500;
-pub const FUND_ACCOUNT_MAX_SUPPORTED_TOKENS: usize = 30;
+pub const FUND_ACCOUNT_MAX_SUPPORTED_TOKENS: usize = 16;
 pub const FUND_ACCOUNT_MAX_RESTAKING_VAULTS: usize = 16;
 pub const FUND_ACCOUNT_MAX_TOKEN_SWAP_STRATEGIES: usize = 30;
 
@@ -69,6 +69,7 @@ pub struct FundAccount {
     _padding4: [u8; 15],
     num_supported_tokens: u8,
     supported_tokens: [SupportedToken; FUND_ACCOUNT_MAX_SUPPORTED_TOKENS],
+    _reserved2: [u8; 16016],
 
     /// optional basket of underlying assets
     normalized_token: NormalizedToken,

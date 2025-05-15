@@ -11,7 +11,7 @@ describe('restaking.fragSOL test', async () => {
   const { validator, feePayer, restaking, initializationTasks } = testCtx;
   const ctx = restaking.fragSOL;
 
-  const [signer1, signer2] = await Promise.all([
+  const [signer1, signer2, signer3] = await Promise.all([
     validator
       .newSigner('fragSOLDepositTestSigner1', 100_000_000_000n)
       .then(async (signer) => {
@@ -25,9 +25,22 @@ describe('restaking.fragSOL test', async () => {
         return signer;
       }),
     validator.newSigner('fragSOLDepositTestSigner2', 100_000_000_000n),
+    validator
+      .newSigner('fragSOLDepositTestSigner3', 100_000_000_000n)
+      .then(async (signer) => {
+        await Promise.all([
+          validator.airdropToken(
+            signer.address,
+            'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+            100_000_000_000n
+          ),
+        ]);
+        return signer;
+      })
   ]);
   const user1 = ctx.user(signer1);
   const user2 = ctx.user(signer2);
+  const user3 = ctx.user(signer3);
 
   /** 1. configuration **/
   test(`restaking.fragSOL initializationTasks snapshot`, async () => {
@@ -276,9 +289,7 @@ describe('restaking.fragSOL test', async () => {
                 "tokenRedelegatingAmount": 0n,
               },
             ],
-            "distributingRewardTokenMints": [
-              "REALSWTCH7J8JdafNBLZpfSCLiFwpMCqod2RpkU4RNn",
-            ],
+            "distributingRewardTokenMints": [],
             "pricingSource": {
               "__kind": "JitoRestakingVault",
               "address": "HR1ANmDHjaEhknvsTaK48M5xZtbBiwNdXM5NTiWhAb4S",
@@ -406,31 +417,147 @@ describe('restaking.fragSOL test', async () => {
     `);
   });
 
-  // test('remove supported tokens', async () => {
-  //   await expect(ctx.normalizedTokenPool.addSupportedToken.execute({
-  //     mint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
-  //     pricingSource: {
-  //       __kind: 'OrcaDEXLiquidityPool',
-  //       address: '4yp9YAXCJsKWMDZq2Q4j4amktvJGXBCpr3Lmv2cYBrb8',
-  //     },
-  //   })).resolves.not.toThrow('1');
-  //
-  //   await expect(ctx.normalizedTokenPool.addSupportedToken.execute({
-  //     mint: 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
-  //     pricingSource: {
-  //       __kind: 'PeggedToken',
-  //       address: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
-  //     },
-  //   })).resolves.not.toThrow('2');
-  //
-  //   await expect(ctx.normalizedTokenPool.removeSupportedToken.execute({
-  //     mint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
-  //   })).resolves.toThrow('3');
-  //
-  //   await expect(ctx.normalizedTokenPool.removeSupportedToken.execute({
-  //     mint: 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
-  //   })).resolves.not.toThrow('4');
-  // });
+  test('remove supported tokens', async () => {
+    await ctx.fund.addSupportedToken.execute({
+      mint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+      pricingSource: {
+        __kind: 'OrcaDEXLiquidityPool',
+        address: '4yp9YAXCJsKWMDZq2Q4j4amktvJGXBCpr3Lmv2cYBrb8',
+      },
+    });
+    await ctx.normalizedTokenPool.addSupportedToken.execute({
+      mint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+      pricingSource: {
+        __kind: 'OrcaDEXLiquidityPool',
+        address: '4yp9YAXCJsKWMDZq2Q4j4amktvJGXBCpr3Lmv2cYBrb8',
+      },
+    });
+
+    await ctx.resolve(true);
+
+    await ctx.fund.addSupportedToken.execute({
+      mint: 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
+      pricingSource: {
+        __kind: 'PeggedToken',
+        address: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+      },
+    });
+    await ctx.normalizedTokenPool.addSupportedToken.execute({
+      mint: 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
+      pricingSource: {
+        __kind: 'PeggedToken',
+        address: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+      },
+    });
+  
+    await expect(ctx.resolve(true)).resolves.toMatchInlineSnapshot(`
+      {
+        "__lookupTableAddress": "G45gQa12Uwvnrp2Yb9oWTSwZSEHZWL71QDWvyLz23bNc",
+        "__pricingSources": [
+          {
+            "address": "stk9ApL5HeVAwPLr3TLhDXdZS8ptVu7zp6ov8HFDuMi",
+            "role": 0,
+          },
+          {
+            "address": "Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb",
+            "role": 0,
+          },
+          {
+            "address": "8szGkuLTAux9XMgZ2vtY39jVSowEcpBfFfD8hXSEqdGC",
+            "role": 0,
+          },
+          {
+            "address": "Hr9pzexrBge3vgmBNRR8u42CNQgBXdHm4UkUN2DH4a7r",
+            "role": 0,
+          },
+          {
+            "address": "2aMLkB5p5gVvCwKkdSo5eZAL1WwhZbxezQr1wxiynRhq",
+            "role": 0,
+          },
+          {
+            "address": "4yp9YAXCJsKWMDZq2Q4j4amktvJGXBCpr3Lmv2cYBrb8",
+            "role": 0,
+          },
+          {
+            "address": "HR1ANmDHjaEhknvsTaK48M5xZtbBiwNdXM5NTiWhAb4S",
+            "role": 0,
+          },
+          {
+            "address": "GVqitNXDVx1PdG47PMNeNEoHSEnVNqybW7E8NckmSJ2R",
+            "role": 0,
+          },
+        ],
+        "metadata": null,
+        "oneReceiptTokenAsSOL": 0n,
+        "receiptTokenDecimals": 9,
+        "receiptTokenMint": "Cs29UiPhAkM2v8fZW7qCJ1UjhF1UAhgrsKj61yGGYizD",
+        "receiptTokenSupply": 0n,
+        "supportedAssets": [
+          {
+            "decimals": 9,
+            "depositable": true,
+            "mint": null,
+            "oneTokenAsReceiptToken": 0n,
+            "oneTokenAsSol": 1000000000n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 0n,
+            "operationTotalAmount": 0n,
+            "program": null,
+            "withdrawable": true,
+            "withdrawableValueAsReceiptTokenAmount": 0n,
+            "withdrawalLastBatchProcessedAt": 1970-01-01T00:00:00.000Z,
+            "withdrawalUserReservedAmount": 0n,
+          },
+          {
+            "decimals": 9,
+            "depositable": true,
+            "mint": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
+            "oneTokenAsReceiptToken": 0n,
+            "oneTokenAsSol": 1160715954n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 0n,
+            "operationTotalAmount": 0n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "withdrawable": false,
+            "withdrawableValueAsReceiptTokenAmount": 0n,
+            "withdrawalLastBatchProcessedAt": 1970-01-01T00:00:00.000Z,
+            "withdrawalUserReservedAmount": 0n,
+          },
+        ],
+        "wrappedTokenMint": "h7veGmqGWmFPe2vbsrKVNARvucfZ2WKCXUvJBmbJ86Q",
+      }
+    `);
+
+    // start remove
+    // failed because used by other pegged token
+    await expect(ctx.normalizedTokenPool.removeSupportedToken.execute({
+      mint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+    })).rejects.toThrow();
+    await expect(ctx.fund.removeSupportedToken.execute({
+      mint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+    })).rejects.toThrow();
+
+    // failed because used by ntp
+    await expect(ctx.fund.removeSupportedToken.execute({
+      mint: 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
+    })).rejects.toThrow();
+
+    // success
+    await expect(ctx.normalizedTokenPool.removeSupportedToken.execute({
+      mint: 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
+    })).resolves.not.toThrow();
+    await expect(ctx.fund.removeSupportedToken.execute({
+      mint: 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
+    })).resolves.not.toThrow();
+    await expect(ctx.normalizedTokenPool.removeSupportedToken.execute({
+      mint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+    })).resolves.not.toThrow();
+    await expect(ctx.fund.removeSupportedToken.execute({
+      mint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+    })).resolves.not.toThrow();
+
+    await ctx.resolve(true);
+  });
 
   /** 2. deposit **/
   test('user can deposit SOL', async () => {
@@ -936,4 +1063,32 @@ describe('restaking.fragSOL test', async () => {
         .then((res) => res?.basePool.tokenAllocatedAmount.totalAmount)
     ).resolves.toEqual(5_000_000_000n);
   });
+
+  test('operator test', async () => {
+    const bSOL = 'bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1';
+    const jitoSOL = 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn';
+    const mSOL = 'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So';
+    const BNSOL = 'BNso1VUJnh4zcfpZa6986Ea66P6TCp59hvtNJ8b1X85';
+    const bbSOL = 'Bybit2vBJGhPF52GBdNaQfUJ6ZpThSgHBobjWZpLPb4B';
+
+    restaking.fragSOL.payer.deposit.execute({assetAmount: 10_000_000_000n, assetMint: null});
+
+    for (const mint of [bSOL, jitoSOL, mSOL, BNSOL, bbSOL]) {
+      await validator.airdropToken(user1.address!, mint, 10_000_000_000n);
+    }
+    
+    for (const mint of [bSOL, jitoSOL, mSOL, BNSOL, bbSOL]) {
+      await restaking.fragSOL.fund.updateAssetStrategy.execute({tokenDepositable: true, tokenMint: mint});
+    }
+    
+    restaking.fragSOL.payer.deposit.execute({assetAmount: 10_000_000_000n, assetMint: null});
+    
+    for (const mint of [bSOL, jitoSOL, mSOL, BNSOL, bbSOL]) {
+      restaking.fragSOL.payer.deposit.execute({assetAmount: 10_000_000_000n, assetMint: mint});
+    }
+
+    restaking.fragSOL.payer.deposit.execute({assetAmount: 10_000_000_000n, assetMint: null});
+
+    restaking.fragSOL.fund.runCommand.executeChained({});
+  })
 });
