@@ -678,6 +678,27 @@ impl HarvestRewardCommand {
                     return Ok(None);
                 };
 
+                // settle threshold validation
+                let fund_account = ctx.fund_account.load()?;
+                let distributing_reward_token = fund_account
+                    .get_restaking_vault(vault)?
+                    .get_distributing_reward_tokens_iter()
+                    .find(|reward_token| reward_token.mint == reward_token_mint.key())
+                    .ok_or(
+                        ErrorCode::FundRestakingVaultDistributingRewardTokenNotRegisteredError,
+                    )?;
+
+                let current_timestamp = Clock::get()?.unix_timestamp as u64;
+
+                if !(reward_token_amount >= distributing_reward_token.threshold_min_amount
+                    && reward_token_amount <= distributing_reward_token.threshold_max_amount
+                    && current_timestamp
+                        >= (distributing_reward_token.last_settled_at
+                            + distributing_reward_token.threshold_interval_seconds))
+                {
+                    return Ok(None);
+                }
+
                 let required_accounts = [
                     (reward_token_mint.key(), false),
                     (vault_reward_token_account.key(), true),
