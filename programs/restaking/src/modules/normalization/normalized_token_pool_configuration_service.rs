@@ -91,7 +91,7 @@ impl<'a, 'info> NormalizedTokenPoolConfigurationService<'a, 'info> {
             supported_token_program.key(),
         );
 
-        self.normalized_token_pool_account.add_new_supported_token(
+        self.normalized_token_pool_account.add_supported_token(
             supported_token_mint.key(),
             supported_token_program.key(),
             supported_token_mint.decimals,
@@ -106,6 +106,36 @@ impl<'a, 'info> NormalizedTokenPoolConfigurationService<'a, 'info> {
             self.normalized_token_program,
         )?
         .new_pricing_service(pricing_sources)?;
+
+        Ok(())
+    }
+
+    pub fn process_remove_supported_token(
+        &mut self,
+        supported_token_mint: &Pubkey,
+        pricing_sources: &'info [AccountInfo<'info>],
+    ) -> Result<()> {
+        let old_value = self
+            .normalized_token_pool_account
+            .one_normalized_token_as_sol;
+
+        self.normalized_token_pool_account
+            .remove_supported_token(supported_token_mint.key())?;
+
+        // validate pricing source
+        NormalizedTokenPoolService::new(
+            self.normalized_token_pool_account,
+            self.normalized_token_mint,
+            self.normalized_token_program,
+        )?
+        .new_pricing_service(pricing_sources)?;
+
+        let new_value = self
+            .normalized_token_pool_account
+            .one_normalized_token_as_sol;
+
+        msg!("DELETE# old_value: {}, new_value: {}", old_value, new_value);
+        require_gte!(new_value, old_value);
 
         Ok(())
     }

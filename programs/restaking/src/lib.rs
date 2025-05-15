@@ -615,6 +615,23 @@ pub mod restaking {
         Ok(())
     }
 
+    pub fn fund_manager_remove_supported_token<'info>(
+        ctx: Context<'_, '_, 'info, 'info, FundManagerFundSupportedTokenRemoveContext<'info>>,
+    ) -> Result<()> {
+        emit_cpi!(modules::fund::FundConfigurationService::new(
+            &mut ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.fund_account,
+        )?
+        .process_remove_supported_token(
+            &ctx.accounts.supported_token_mint,
+            ctx.accounts.normalized_token_mint.as_deref(),
+            ctx.accounts.normalized_token_pool_account.as_deref(),
+            ctx.remaining_accounts,
+        )?);
+
+        Ok(())
+    }
+
     ////////////////////////////////////////////
     // FundManagerNormalizedTokenPoolSupportedTokenContext
     ////////////////////////////////////////////
@@ -639,6 +656,28 @@ pub mod restaking {
             &ctx.accounts.supported_token_mint,
             &ctx.accounts.supported_token_program,
             pricing_source,
+            ctx.remaining_accounts,
+        )?;
+
+        Ok(())
+    }
+
+    pub fn fund_manager_remove_normalized_token_pool_supported_token<'info>(
+        ctx: Context<
+            '_,
+            '_,
+            'info,
+            'info,
+            FundManagerNormalizedTokenPoolSupportedTokenContext<'info>,
+        >,
+    ) -> Result<()> {
+        modules::normalization::NormalizedTokenPoolConfigurationService::new(
+            &mut ctx.accounts.normalized_token_pool_account,
+            &mut ctx.accounts.normalized_token_mint,
+            &ctx.accounts.normalized_token_program,
+        )?
+        .process_remove_supported_token(
+            &ctx.accounts.supported_token_mint.key(),
             ctx.remaining_accounts,
         )?;
 

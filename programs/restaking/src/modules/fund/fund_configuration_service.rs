@@ -6,6 +6,7 @@ use anchor_spl::token_interface::{Mint, TokenAccount};
 
 use crate::errors::ErrorCode;
 use crate::events;
+use crate::modules::normalization;
 use crate::modules::normalization::{NormalizedTokenPoolAccount, NormalizedTokenPoolService};
 use crate::modules::pricing::TokenPricingSource;
 use crate::modules::restaking;
@@ -164,7 +165,51 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
 
         // validate pricing source
         FundService::new(self.receipt_token_mint, self.fund_account)?
-            .new_pricing_service(pricing_sources)?;
+            .new_pricing_service(pricing_sources, true)?;
+
+        self.create_fund_manager_updated_fund_event()
+    }
+
+    pub fn process_remove_supported_token(
+        &mut self,
+        supported_token_mint: &InterfaceAccount<Mint>,
+        normalized_token_mint: Option<&InterfaceAccount<Mint>>,
+        normalized_token_pool_account: Option<&Account<normalization::NormalizedTokenPoolAccount>>,
+        pricing_sources: &'info [AccountInfo<'info>],
+    ) -> Result<events::FundManagerUpdatedFund> {
+        let mut fund_account = self.fund_account.load_mut()?;
+
+        // NSOL must not support this token
+        if let Some(normalized_token) = fund_account.get_normalized_token() {
+            let normalized_token_mint = normalized_token_mint
+                .ok_or_else(|| error!(error::ErrorCode::ConstraintAccountIsNone))?;
+            let normalized_token_pool_account = normalized_token_pool_account
+                .ok_or_else(|| error!(error::ErrorCode::ConstraintAccountIsNone))?;
+
+            normalization::NormalizedTokenPoolService::validate_normalized_token_pool(
+                normalized_token_pool_account,
+                normalized_token_mint,
+            )?;
+
+            require_keys_eq!(normalized_token.mint, normalized_token_mint.key());
+
+            if normalized_token_pool_account.has_supported_token(&supported_token_mint.key()) {
+                err!(ErrorCode::FundSupportedTokenInUseError)?;
+            }
+        }
+
+        fund_account.remove_supported_token(&supported_token_mint.key())?;
+
+        // validate pricing
+        let old_receipt_token_price = fund_account.one_receipt_token_as_sol;
+        drop(fund_account);
+
+        FundService::new(self.receipt_token_mint, self.fund_account)?
+            .new_pricing_service(pricing_sources, true)?;
+
+        let new_receipt_token_price = self.fund_account.load()?.one_receipt_token_as_sol;
+
+        require_gte!(new_receipt_token_price, old_receipt_token_price);
 
         self.create_fund_manager_updated_fund_event()
     }
@@ -202,7 +247,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
 
         // do pricing as a validation
         FundService::new(self.receipt_token_mint, self.fund_account)?
-            .new_pricing_service(pricing_sources)?;
+            .new_pricing_service(pricing_sources, true)?;
 
         self.create_fund_manager_updated_fund_event()
     }
@@ -254,7 +299,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
 
         // validate pricing source
         FundService::new(self.receipt_token_mint, self.fund_account)?
-            .new_pricing_service(pricing_sources)?;
+            .new_pricing_service(pricing_sources, true)?;
 
         self.create_fund_manager_updated_fund_event()
     }
@@ -311,7 +356,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
 
         // validate pricing source
         FundService::new(self.receipt_token_mint, self.fund_account)?
-            .new_pricing_service(pricing_sources)?;
+            .new_pricing_service(pricing_sources, true)?;
 
         self.create_fund_manager_updated_fund_event()
     }

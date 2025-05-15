@@ -45,6 +45,11 @@ impl<'a, 'info: 'a> NormalizedTokenPoolService<'a, 'info> {
         normalized_token_pool_account: &Account<NormalizedTokenPoolAccount>,
         normalized_token_mint: &InterfaceAccount<Mint>,
     ) -> Result<()> {
+        require_keys_eq!(
+            NormalizedTokenPoolAccount::find_account_address(&normalized_token_mint.key()),
+            normalized_token_pool_account.key(),
+        );
+
         require!(
             normalized_token_pool_account.is_latest_version(),
             ErrorCode::InvalidAccountDataVersionError

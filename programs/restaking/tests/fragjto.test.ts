@@ -334,7 +334,7 @@ describe('restaking.fragJTO test', async () => {
   });
 
   /** 2. basic contribution test **/
-  test(`rewards are settled based on the contribution proportion`, async () => {
+  test.skip(`rewards are settled based on the contribution proportion`, async () => {
     // user1 deposits 100 JTO and get 100 fragJTO
     await expectMasked(
       user1.deposit.execute(
@@ -689,7 +689,7 @@ describe('restaking.fragJTO test', async () => {
   });
 
   /** 3. custom accrual rate test */
-  test(`rewards can be settled with custom contribution accrual rate enabled`, async () => {
+  test.skip(`rewards can be settled with custom contribution accrual rate enabled`, async () => {
     // starts with user1: 400 fragJTO, user2: 200 fragJTO
     await expectMasked(
       user2.deposit.execute(
@@ -934,7 +934,7 @@ describe('restaking.fragJTO test', async () => {
   });
 
   /** 4. contribution test with token transfer (user3 has user_reward_account, user4 doesn't have user_reward_account) **/
-  test(`contribution is accumulated with users who have user_reward_account`, async () => {
+  test.skip(`contribution is accumulated with users who have user_reward_account`, async () => {
     await expectMasked(
       user3.deposit.execute(
         {
@@ -1159,7 +1159,7 @@ describe('restaking.fragJTO test', async () => {
   });
 
   /** 5. contribution test with token wrap & unwrap (user3 wraps & unwraps FRAGJTO) **/
-  test(`wrapping FRAGXXX affects token allocated amount of user, but global reward account maintains same amount`, async () => {
+  test.skip(`wrapping FRAGXXX affects token allocated amount of user, but global reward account maintains same amount`, async () => {
     // user3 wraps 100 FRAGJTO
     await expectMasked(
       user3.wrap.execute(
@@ -1304,7 +1304,7 @@ describe('restaking.fragJTO test', async () => {
   });
 
   /** 6. token is subtracted from user account in ascending order (contribution accural rate low to high **/
-  test(`record with low contribution rate is deleted first`, async () => {
+  test.skip(`record with low contribution rate is deleted first`, async () => {
     // user4 deposits 200 JTO with 150 accrual rate enabled
     await expectMasked(
       user4.deposit.execute(

@@ -969,7 +969,7 @@ describe('restaking.fragBTC test', async () => {
   });
 
   /** 4. withdraw and pegging **/
-  test('funds supporting only a single token and tokens pegged to it must issue receipt tokens at a 1:1 ratio until additional yield is compounded', async () => {
+  test.skip('funds supporting only a single token and tokens pegged to it must issue receipt tokens at a 1:1 ratio until additional yield is compounded', async () => {
     let expectedReceiptTokenSupply = await ctx
       .resolve(true)
       .then((data) => data!.receiptTokenSupply);

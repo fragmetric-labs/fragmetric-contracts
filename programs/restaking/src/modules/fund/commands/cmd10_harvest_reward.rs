@@ -810,7 +810,7 @@ impl HarvestRewardCommand {
 
             // Update pricing
             FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-                .new_pricing_service(accounts.iter().copied())?;
+                .new_pricing_service(accounts.iter().copied(), true)?;
         }
 
         // move on to next item

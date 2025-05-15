@@ -135,7 +135,7 @@ impl NormalizedTokenPoolAccount {
         Ok(supported_token.find_reserve_account_address(&self.normalized_token_mint))
     }
 
-    pub(super) fn add_new_supported_token(
+    pub(super) fn add_supported_token(
         &mut self,
         supported_token_mint: Pubkey,
         supported_token_program: Pubkey,
@@ -160,6 +160,21 @@ impl NormalizedTokenPoolAccount {
             supported_token_reserve_account,
             supported_token_pricing_source,
         ));
+
+        Ok(())
+    }
+
+    pub(super) fn remove_supported_token(&mut self, supported_token_mint: Pubkey) -> Result<()> {
+        let token = self.get_supported_token(&supported_token_mint)?;
+        require_eq!(token.locked_amount, 0);
+        require_eq!(token.withdrawal_reserved_amount, 0);
+
+        let index = self
+            .supported_tokens
+            .iter()
+            .position(|token| token.mint == supported_token_mint)
+            .ok_or_else(|| error!(ErrorCode::NormalizedTokenPoolNotSupportedTokenError))?;
+        self.supported_tokens.remove(index);
 
         Ok(())
     }

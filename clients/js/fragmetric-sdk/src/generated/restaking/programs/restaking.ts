@@ -36,8 +36,10 @@ import {
   type ParsedFundManagerInitializeFundNormalizedTokenInstruction,
   type ParsedFundManagerInitializeFundSolvBtcVaultInstruction,
   type ParsedFundManagerInitializeFundWrappedTokenInstruction,
+  type ParsedFundManagerRemoveNormalizedTokenPoolSupportedTokenInstruction,
   type ParsedFundManagerRemoveRestakingVaultCompoundingRewardTokenInstruction,
   type ParsedFundManagerRemoveRestakingVaultDistributingRewardTokenInstruction,
+  type ParsedFundManagerRemoveSupportedTokenInstruction,
   type ParsedFundManagerRemoveWrappedTokenHolderInstruction,
   type ParsedFundManagerResetFundWrapAccountRewardAccountDelegateInstruction,
   type ParsedFundManagerResetWrappedTokenHolderRewardAccountDelegateInstruction,
@@ -424,8 +426,10 @@ export enum RestakingInstruction {
   FundManagerInitializeFundNormalizedToken,
   FundManagerInitializeFundSolvBtcVault,
   FundManagerInitializeFundWrappedToken,
+  FundManagerRemoveNormalizedTokenPoolSupportedToken,
   FundManagerRemoveRestakingVaultCompoundingRewardToken,
   FundManagerRemoveRestakingVaultDistributingRewardToken,
+  FundManagerRemoveSupportedToken,
   FundManagerRemoveWrappedTokenHolder,
   FundManagerResetFundWrapAccountRewardAccountDelegate,
   FundManagerResetWrappedTokenHolderRewardAccountDelegate,
@@ -712,6 +716,17 @@ export function identifyRestakingInstruction(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([111, 180, 31, 154, 139, 208, 184, 129])
+      ),
+      0
+    )
+  ) {
+    return RestakingInstruction.FundManagerRemoveNormalizedTokenPoolSupportedToken;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
         new Uint8Array([103, 237, 63, 36, 105, 160, 171, 66])
       ),
       0
@@ -729,6 +744,17 @@ export function identifyRestakingInstruction(
     )
   ) {
     return RestakingInstruction.FundManagerRemoveRestakingVaultDistributingRewardToken;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([234, 128, 24, 242, 144, 180, 101, 99])
+      ),
+      0
+    )
+  ) {
+    return RestakingInstruction.FundManagerRemoveSupportedToken;
   }
   if (
     containsBytes(
@@ -1179,11 +1205,17 @@ export type ParsedRestakingInstruction<
       instructionType: RestakingInstruction.FundManagerInitializeFundWrappedToken;
     } & ParsedFundManagerInitializeFundWrappedTokenInstruction<TProgram>)
   | ({
+      instructionType: RestakingInstruction.FundManagerRemoveNormalizedTokenPoolSupportedToken;
+    } & ParsedFundManagerRemoveNormalizedTokenPoolSupportedTokenInstruction<TProgram>)
+  | ({
       instructionType: RestakingInstruction.FundManagerRemoveRestakingVaultCompoundingRewardToken;
     } & ParsedFundManagerRemoveRestakingVaultCompoundingRewardTokenInstruction<TProgram>)
   | ({
       instructionType: RestakingInstruction.FundManagerRemoveRestakingVaultDistributingRewardToken;
     } & ParsedFundManagerRemoveRestakingVaultDistributingRewardTokenInstruction<TProgram>)
+  | ({
+      instructionType: RestakingInstruction.FundManagerRemoveSupportedToken;
+    } & ParsedFundManagerRemoveSupportedTokenInstruction<TProgram>)
   | ({
       instructionType: RestakingInstruction.FundManagerRemoveWrappedTokenHolder;
     } & ParsedFundManagerRemoveWrappedTokenHolderInstruction<TProgram>)

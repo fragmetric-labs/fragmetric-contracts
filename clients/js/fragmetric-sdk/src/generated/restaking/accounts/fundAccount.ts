@@ -124,6 +124,7 @@ export type FundAccount = {
   padding4: ReadonlyUint8Array;
   numSupportedTokens: number;
   supportedTokens: Array<SupportedToken>;
+  reserved2: ReadonlyUint8Array;
   /** optional basket of underlying assets */
   normalizedToken: NormalizedToken;
   /** investments */
@@ -177,6 +178,7 @@ export type FundAccountArgs = {
   padding4: ReadonlyUint8Array;
   numSupportedTokens: number;
   supportedTokens: Array<SupportedTokenArgs>;
+  reserved2: ReadonlyUint8Array;
   /** optional basket of underlying assets */
   normalizedToken: NormalizedTokenArgs;
   /** investments */
@@ -230,8 +232,9 @@ export function getFundAccountEncoder(): Encoder<FundAccountArgs> {
       ['numSupportedTokens', getU8Encoder()],
       [
         'supportedTokens',
-        getArrayEncoder(getSupportedTokenEncoder(), { size: 30 }),
+        getArrayEncoder(getSupportedTokenEncoder(), { size: 16 }),
       ],
+      ['reserved2', fixEncoderSize(getBytesEncoder(), 16016)],
       ['normalizedToken', getNormalizedTokenEncoder()],
       ['padding5', fixEncoderSize(getBytesEncoder(), 15)],
       ['numRestakingVaults', getU8Encoder()],
@@ -288,8 +291,9 @@ export function getFundAccountDecoder(): Decoder<FundAccount> {
     ['numSupportedTokens', getU8Decoder()],
     [
       'supportedTokens',
-      getArrayDecoder(getSupportedTokenDecoder(), { size: 30 }),
+      getArrayDecoder(getSupportedTokenDecoder(), { size: 16 }),
     ],
+    ['reserved2', fixDecoderSize(getBytesDecoder(), 16016)],
     ['normalizedToken', getNormalizedTokenDecoder()],
     ['padding5', fixDecoderSize(getBytesDecoder(), 15)],
     ['numRestakingVaults', getU8Decoder()],

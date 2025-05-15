@@ -91,8 +91,8 @@ impl UnrestakeVRTCommand {
         Option<OperationCommandResult>,
         Option<OperationCommandEntry>,
     )> {
-        let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-            .new_pricing_service(accounts.iter().copied())?;
+        let mut pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+            .new_pricing_service(accounts.iter().copied(), false)?;
         let fund_account = ctx.fund_account.load()?;
 
         let normalized_token_pool_account = fund_account
@@ -355,6 +355,12 @@ impl UnrestakeVRTCommand {
             .filter(|item| item.allocated_receipt_token_amount >= 1_000_000_000)
             .copied()
             .collect();
+
+        drop(fund_account);
+        FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+            .update_asset_values(&mut pricing_service, true)?;
+
+        let fund_account = ctx.fund_account.load()?;
 
         Ok((
             None,

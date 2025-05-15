@@ -164,9 +164,6 @@ export class RestakingNormalizedTokenPoolAccountContext extends AccountContext<
     }),
     {
       description: 'add a new supported token to the normalized token pool',
-      anchorEventDecoders: getRestakingAnchorEventDecoders(
-        'operatorUpdatedNormalizedTokenPoolPrices'
-      ),
       addressLookupTables: [this.__resolveAddressLookupTable],
       instructions: [
         async (parent, args, overrides) => {
@@ -213,6 +210,51 @@ export class RestakingNormalizedTokenPoolAccountContext extends AccountContext<
                   address: args.pricingSource.address as Address,
                   role: AccountRole.READONLY,
                 });
+                return ix;
+              }),
+          ]);
+        },
+      ],
+    }
+  );
+
+  readonly removeSupportedToken = new TransactionTemplateContext(
+    this,
+    v.object({
+      mint: v.string(),
+      program: v.nullish(v.string(), token.TOKEN_PROGRAM_ADDRESS),
+    }),
+    {
+      description: 'remove an unused and unfunded supported token',
+      addressLookupTables: [this.__resolveAddressLookupTable],
+      instructions: [
+        async (parent, args, overrides) => {
+          const [data, ntp] = await Promise.all([
+            parent.parent.resolve(true),
+            parent.resolveAccount(),
+          ]);
+          if (!(data && ntp)) throw new Error('invalid context');
+          const fundManager = (this.program as RestakingProgram).knownAddresses
+            .fundManager;
+
+          return Promise.all([
+            restaking
+              .getFundManagerRemoveNormalizedTokenPoolSupportedTokenInstructionAsync(
+                {
+                  fundManager: createNoopSigner(fundManager),
+                  normalizedTokenMint: ntp.data.normalizedTokenMint,
+                  supportedTokenMint: args.mint as Address,
+                  supportedTokenProgram: args.program as Address,
+                  program: this.program.address,
+                },
+                {
+                  programAddress: this.program.address,
+                }
+              )
+              .then((ix) => {
+                for (const accountMeta of data.__pricingSources) {
+                  ix.accounts.push(accountMeta);
+                }
                 return ix;
               }),
           ]);

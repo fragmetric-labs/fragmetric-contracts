@@ -1,8 +1,8 @@
 use anchor_lang::prelude::*;
 
-use crate::errors;
 use crate::modules::pricing::TokenPricingSource;
 use crate::modules::restaking::JitoRestakingVaultService;
+use crate::{errors, modules::pricing};
 
 use super::{
     DelegateVSTCommand, FundService, OperationCommandContext, OperationCommandEntry,
@@ -63,8 +63,9 @@ impl SelfExecutable for RestakeVSTCommand {
 
         match &self.state {
             RestakeVSTCommandState::New => {
-                let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-                    .new_pricing_service(accounts.into_iter().copied())?;
+                let mut pricing_service =
+                    FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+                        .new_pricing_service(accounts.into_iter().copied(), false)?;
                 let fund_account = ctx.fund_account.load()?;
 
                 // find restakable tokens with their restakable amount among ST and NT
@@ -157,6 +158,10 @@ impl SelfExecutable for RestakeVSTCommand {
                 if items.len() > 0 {
                     remaining_items = Some(items);
                 }
+
+                drop(fund_account);
+                FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+                    .update_asset_values(&mut pricing_service, true)?;
             }
             RestakeVSTCommandState::Prepare { items } => {
                 if let Some(item) = items.first() {
@@ -287,9 +292,9 @@ impl SelfExecutable for RestakeVSTCommand {
 
                             drop(fund_account);
 
-                            let pricing_service =
+                            let mut pricing_service =
                                 FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-                                    .new_pricing_service(accounts.into_iter().copied())?;
+                                    .new_pricing_service(accounts.into_iter().copied(), false)?;
                             let mut fund_account = ctx.fund_account.load_mut()?;
                             match fund_account.get_normalized_token_mut() {
                                 Some(normalized_token)
@@ -338,6 +343,10 @@ impl SelfExecutable for RestakeVSTCommand {
 
                             remaining_items =
                                 Some(items.into_iter().skip(1).copied().collect::<Vec<_>>());
+
+                            drop(fund_account);
+                            FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+                                .update_asset_values(&mut pricing_service, true)?;
                         }
                         Some(TokenPricingSource::SolvBTCVault { .. }) => {
                             // TODO/v0.7.0: deal with solv vault if needed
