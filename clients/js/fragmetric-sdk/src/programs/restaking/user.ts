@@ -230,7 +230,7 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
       if (!self || !globalReward) return null;
       return (
         await Promise.all(
-          globalReward.rewards.map(reward => {
+          globalReward.rewards.map((reward) => {
             return TokenAccountContext.findAssociatedTokenAccountAddress({
               owner: self,
               mint: reward.mint,

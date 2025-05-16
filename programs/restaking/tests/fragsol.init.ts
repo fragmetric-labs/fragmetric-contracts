@@ -1,4 +1,3 @@
-import { C } from 'vitest/dist/chunks/reporters.d.CfRkRKN2';
 import type { TestSuiteContext } from '../../testutil';
 
 export function initializeFragSOL(testCtx: TestSuiteContext) {
@@ -156,7 +155,7 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
         pricingSource: {
           __kind: 'SanctumMultiValidatorSPLStakePool',
           address: '8VpRhuxa7sUUepdY3kQiTmX9rS5vx4WgaXiAnXq4KCtr',
-        }
+        },
       }),
     () =>
       ctx.fund.updateAssetStrategy.execute({

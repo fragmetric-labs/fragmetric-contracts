@@ -420,38 +420,44 @@ describe('restaking.fragSOL test', async () => {
   });
 
   test('remove supported tokens', async () => {
-    await ctx.fund.addSupportedToken.execute({
-      mint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
-      pricingSource: {
-        __kind: 'OrcaDEXLiquidityPool',
-        address: '4yp9YAXCJsKWMDZq2Q4j4amktvJGXBCpr3Lmv2cYBrb8',
-      },
-    });
-    await ctx.normalizedTokenPool.addSupportedToken.execute({
-      mint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
-      pricingSource: {
-        __kind: 'OrcaDEXLiquidityPool',
-        address: '4yp9YAXCJsKWMDZq2Q4j4amktvJGXBCpr3Lmv2cYBrb8',
-      },
-    });
+    await expect(
+      ctx.fund.addSupportedToken.execute({
+        mint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+        pricingSource: {
+          __kind: 'OrcaDEXLiquidityPool',
+          address: '4yp9YAXCJsKWMDZq2Q4j4amktvJGXBCpr3Lmv2cYBrb8',
+        },
+      })
+    ).resolves.not.toThrow();
+    await expect(
+      ctx.normalizedTokenPool.addSupportedToken.execute({
+        mint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+        pricingSource: {
+          __kind: 'OrcaDEXLiquidityPool',
+          address: '4yp9YAXCJsKWMDZq2Q4j4amktvJGXBCpr3Lmv2cYBrb8',
+        },
+      })
+    ).resolves.not.toThrow();
 
-    await ctx.resolve(true);
+    await expect(
+      ctx.fund.addSupportedToken.execute({
+        mint: 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
+        pricingSource: {
+          __kind: 'PeggedToken',
+          address: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+        },
+      })
+    ).resolves.not.toThrow();
+    await expect(
+      ctx.normalizedTokenPool.addSupportedToken.execute({
+        mint: 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
+        pricingSource: {
+          __kind: 'PeggedToken',
+          address: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+        },
+      })
+    ).resolves.not.toThrow();
 
-    await ctx.fund.addSupportedToken.execute({
-      mint: 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
-      pricingSource: {
-        __kind: 'PeggedToken',
-        address: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
-      },
-    });
-    await ctx.normalizedTokenPool.addSupportedToken.execute({
-      mint: 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
-      pricingSource: {
-        __kind: 'PeggedToken',
-        address: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
-      },
-    });
-  
     await expect(ctx.resolve(true)).resolves.toMatchInlineSnapshot(`
       {
         "__lookupTableAddress": "G45gQa12Uwvnrp2Yb9oWTSwZSEHZWL71QDWvyLz23bNc",
@@ -547,31 +553,45 @@ describe('restaking.fragSOL test', async () => {
 
     // start remove
     // failed because used by other pegged token
-    await expect(ctx.normalizedTokenPool.removeSupportedToken.execute({
-      mint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
-    })).rejects.toThrow();
-    await expect(ctx.fund.removeSupportedToken.execute({
-      mint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
-    })).rejects.toThrow();
+    await expect(
+      ctx.normalizedTokenPool.removeSupportedToken.execute({
+        mint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+      })
+    ).rejects.toThrow();
+    await expect(
+      ctx.fund.removeSupportedToken.execute({
+        mint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+      })
+    ).rejects.toThrow();
 
     // failed because used by ntp
-    await expect(ctx.fund.removeSupportedToken.execute({
-      mint: 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
-    })).rejects.toThrow();
+    await expect(
+      ctx.fund.removeSupportedToken.execute({
+        mint: 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
+      })
+    ).rejects.toThrow();
 
     // success
-    await expect(ctx.normalizedTokenPool.removeSupportedToken.execute({
-      mint: 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
-    })).resolves.not.toThrow();
-    await expect(ctx.fund.removeSupportedToken.execute({
-      mint: 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
-    })).resolves.not.toThrow();
-    await expect(ctx.normalizedTokenPool.removeSupportedToken.execute({
-      mint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
-    })).resolves.not.toThrow();
-    await expect(ctx.fund.removeSupportedToken.execute({
-      mint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
-    })).resolves.not.toThrow();
+    await expect(
+      ctx.normalizedTokenPool.removeSupportedToken.execute({
+        mint: 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
+      })
+    ).resolves.not.toThrow();
+    await expect(
+      ctx.fund.removeSupportedToken.execute({
+        mint: 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
+      })
+    ).resolves.not.toThrow();
+    await expect(
+      ctx.normalizedTokenPool.removeSupportedToken.execute({
+        mint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+      })
+    ).resolves.not.toThrow();
+    await expect(
+      ctx.fund.removeSupportedToken.execute({
+        mint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+      })
+    ).resolves.not.toThrow();
 
     await ctx.resolve(true);
   });
@@ -1114,7 +1134,7 @@ describe('restaking.fragSOL test', async () => {
 
   /** Jupsol & sanctum-multi-validator test **/
   test('new supported token with new pricing source deposits & withdraws without any issue', async () => {
-      const [signer3] = await Promise.all([
+    const [signer3] = await Promise.all([
       validator
         .newSigner('fragSOLDepositTestSigner3', 100_000_000_000n)
         .then(async (signer) => {
@@ -1132,11 +1152,10 @@ describe('restaking.fragSOL test', async () => {
 
     await validator.airdrop(
       restaking.knownAddresses.fundManager,
-      100_000_000_000n,
+      100_000_000_000n
     );
 
-
-    // 1) unstake test from jupSOL stake pool validators    
+    // 1) unstake test from jupSOL stake pool validators
     // 1-0) make jupSOL depositable & only weighted
     await ctx.fund.updateAssetStrategy.execute({
       tokenMint: 'jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v',
@@ -1149,21 +1168,23 @@ describe('restaking.fragSOL test', async () => {
     });
 
     // 1-1) user deposits 90 jupSOL
-    await user3.deposit.execute({
+    await user3.deposit.execute(
+      {
         assetMint: 'jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v',
-        assetAmount: 90_000_000_000n
+        assetAmount: 90_000_000_000n,
       },
       { signers: [signer3] }
     );
 
     // 1-2) user request withdraw 90 fragSOL
-    const executionResult = await user3.requestWithdrawal.execute({
+    const executionResult = await user3.requestWithdrawal.execute(
+      {
         receiptTokenAmount: 90_000_000_000n,
       },
       { signers: [signer3] }
     );
-    const requestId = executionResult.events!.userRequestedWithdrawalFromFund!.requestId;
-
+    const requestId =
+      executionResult.events!.userRequestedWithdrawalFromFund!.requestId;
 
     // 1-3) run commands
     /*
@@ -1173,10 +1194,12 @@ describe('restaking.fragSOL test', async () => {
     -> ClaimUnstakedSOL
     -> ProcessWithdrawalBatch
     */
-    await expectMasked(ctx.fund.runCommand.executeChained({
-      forceResetCommand: 'EnqueueWithdrawalBatch',
-      operator: restaking.knownAddresses.fundManager,
-    })).resolves.toMatchInlineSnapshot(`
+    await expectMasked(
+      ctx.fund.runCommand.executeChained({
+        forceResetCommand: 'EnqueueWithdrawalBatch',
+        operator: restaking.knownAddresses.fundManager,
+      })
+    ).resolves.toMatchInlineSnapshot(`
       {
         "args": {
           "forceResetCommand": "EnqueueWithdrawalBatch",
@@ -1221,10 +1244,12 @@ describe('restaking.fragSOL test', async () => {
     `);
 
     // *** since there is not enough sol in jupSOL reserve stake account, validator needs to unstake sol ***
-    await expectMasked(ctx.fund.runCommand.executeChained({
-      forceResetCommand: 'UnstakeLST',
-      operator: restaking.knownAddresses.fundManager,
-    })).resolves.toMatchInlineSnapshot(`
+    await expectMasked(
+      ctx.fund.runCommand.executeChained({
+        forceResetCommand: 'UnstakeLST',
+        operator: restaking.knownAddresses.fundManager,
+      })
+    ).resolves.toMatchInlineSnapshot(`
       {
         "args": {
           "forceResetCommand": null,
@@ -1366,10 +1391,12 @@ describe('restaking.fragSOL test', async () => {
       }
     `);
 
-    await expectMasked(ctx.fund.runCommand.executeChained({
-      forceResetCommand: 'ProcessWithdrawalBatch',
-      operator: restaking.knownAddresses.fundManager,
-    })).resolves.toMatchInlineSnapshot(`
+    await expectMasked(
+      ctx.fund.runCommand.executeChained({
+        forceResetCommand: 'ProcessWithdrawalBatch',
+        operator: restaking.knownAddresses.fundManager,
+      })
+    ).resolves.toMatchInlineSnapshot(`
       {
         "args": {
           "forceResetCommand": null,
@@ -1435,9 +1462,9 @@ describe('restaking.fragSOL test', async () => {
     `);
 
     // 1-4) user withdraws sol
-    await expectMasked(user3.withdraw.execute(
-      {requestId: requestId}, {signers: [signer3]}
-    )).resolves.toMatchInlineSnapshot(`
+    await expectMasked(
+      user3.withdraw.execute({ requestId: requestId }, { signers: [signer3] })
+    ).resolves.toMatchInlineSnapshot(`
       {
         "args": {
           "assetMint": null,
@@ -1470,22 +1497,24 @@ describe('restaking.fragSOL test', async () => {
         "slot": "MASKED(/[.*S|s]lots?$/)",
         "succeeded": true,
       }
-    `);;
+    `);
 
-    
     // 2) stake test
     // 2-1) user deposits more sol to trigger staking
-    await user3.deposit.execute({
+    await user3.deposit.execute(
+      {
         assetAmount: 50_000_000_000n,
       },
       { signers: [signer3] }
     );
 
     // 2-2) run 'StakeSOL'command to stake SOL & get jupSOL
-    await expectMasked(ctx.fund.runCommand.executeChained({
-      forceResetCommand: 'StakeSOL',
-      operator: restaking.knownAddresses.fundManager,
-    })).resolves.toMatchInlineSnapshot(`
+    await expectMasked(
+      ctx.fund.runCommand.executeChained({
+        forceResetCommand: 'StakeSOL',
+        operator: restaking.knownAddresses.fundManager,
+      })
+    ).resolves.toMatchInlineSnapshot(`
       {
         "args": {
           "forceResetCommand": null,
@@ -1539,27 +1568,41 @@ describe('restaking.fragSOL test', async () => {
       }
     `);
   });
+  /** 4. Operation **/
+  test('operation test', async () => {
+    await user1.resolveAddress(true);
 
-  test('operator test', async () => {
-    const jitoSOL = 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn';
-    const mSOL = 'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So';
-    const BNSOL = 'BNso1VUJnh4zcfpZa6986Ea66P6TCp59hvtNJ8b1X85';
-    const bbSOL = 'Bybit2vBJGhPF52GBdNaQfUJ6ZpThSgHBobjWZpLPb4B';
-
-    for (const mint of [jitoSOL, mSOL, BNSOL, bbSOL]) {
-      await restaking.fragSOL.fund.updateAssetStrategy.execute({tokenDepositable: true, tokenMint: mint});
+    for (const mint of [
+      'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+      'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So',
+      'BNso1VUJnh4zcfpZa6986Ea66P6TCp59hvtNJ8b1X85',
+      'Bybit2vBJGhPF52GBdNaQfUJ6ZpThSgHBobjWZpLPb4B',
+      'jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v',
+    ]) {
+      if (mint) {
+        await validator.airdropToken(user1.address!, mint, 10_000_000_000n);
+        await expect(
+          ctx.fund.updateAssetStrategy.execute({
+            tokenDepositable: true,
+            tokenMint: mint,
+          })
+        ).resolves.not.toThrow();
+      }
+      await expect(
+        user1.deposit.execute(
+          {
+            assetAmount: 10_000_000_000n,
+            assetMint: mint,
+          },
+          {
+            signers: [signer1],
+          }
+        )
+      ).resolves.not.toThrow();
     }
 
-    await Promise.all([jitoSOL, mSOL, BNSOL, bbSOL].map(mint => validator.airdropToken(signer1.address, mint, 100_000_000_000n)));
-
-    restaking.fragSOL.payer.deposit.execute({assetAmount: 10_000_000_000n, assetMint: null});
-    
-    for (const mint of [jitoSOL, mSOL, BNSOL, bbSOL]) {
-      restaking.fragSOL.payer.deposit.execute({assetAmount: 10_000_000_000n, assetMint: mint});
-    }
-
-    restaking.fragSOL.payer.deposit.execute({assetAmount: 10_000_000_000n, assetMint: null});
-
-    restaking.fragSOL.fund.runCommand.executeChained({});
-  })
+    await expect(
+      ctx.fund.runCommand.executeChained(null)
+    ).resolves.not.toThrow();
+  });
 });
