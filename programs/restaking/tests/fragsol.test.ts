@@ -36,7 +36,7 @@ describe('restaking.fragSOL test', async () => {
           ),
         ]);
         return signer;
-      })
+      }),
   ]);
   const user1 = ctx.user(signer1);
   const user2 = ctx.user(signer2);
@@ -418,38 +418,44 @@ describe('restaking.fragSOL test', async () => {
   });
 
   test('remove supported tokens', async () => {
-    await ctx.fund.addSupportedToken.execute({
-      mint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
-      pricingSource: {
-        __kind: 'OrcaDEXLiquidityPool',
-        address: '4yp9YAXCJsKWMDZq2Q4j4amktvJGXBCpr3Lmv2cYBrb8',
-      },
-    });
-    await ctx.normalizedTokenPool.addSupportedToken.execute({
-      mint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
-      pricingSource: {
-        __kind: 'OrcaDEXLiquidityPool',
-        address: '4yp9YAXCJsKWMDZq2Q4j4amktvJGXBCpr3Lmv2cYBrb8',
-      },
-    });
+    await expect(
+      ctx.fund.addSupportedToken.execute({
+        mint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+        pricingSource: {
+          __kind: 'OrcaDEXLiquidityPool',
+          address: '4yp9YAXCJsKWMDZq2Q4j4amktvJGXBCpr3Lmv2cYBrb8',
+        },
+      })
+    ).resolves.not.toThrow();
+    await expect(
+      ctx.normalizedTokenPool.addSupportedToken.execute({
+        mint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+        pricingSource: {
+          __kind: 'OrcaDEXLiquidityPool',
+          address: '4yp9YAXCJsKWMDZq2Q4j4amktvJGXBCpr3Lmv2cYBrb8',
+        },
+      })
+    ).resolves.not.toThrow();
 
-    await ctx.resolve(true);
+    await expect(
+      ctx.fund.addSupportedToken.execute({
+        mint: 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
+        pricingSource: {
+          __kind: 'PeggedToken',
+          address: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+        },
+      })
+    ).resolves.not.toThrow();
+    await expect(
+      ctx.normalizedTokenPool.addSupportedToken.execute({
+        mint: 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
+        pricingSource: {
+          __kind: 'PeggedToken',
+          address: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+        },
+      })
+    ).resolves.not.toThrow();
 
-    await ctx.fund.addSupportedToken.execute({
-      mint: 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
-      pricingSource: {
-        __kind: 'PeggedToken',
-        address: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
-      },
-    });
-    await ctx.normalizedTokenPool.addSupportedToken.execute({
-      mint: 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
-      pricingSource: {
-        __kind: 'PeggedToken',
-        address: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
-      },
-    });
-  
     await expect(ctx.resolve(true)).resolves.toMatchInlineSnapshot(`
       {
         "__lookupTableAddress": "G45gQa12Uwvnrp2Yb9oWTSwZSEHZWL71QDWvyLz23bNc",
@@ -530,31 +536,45 @@ describe('restaking.fragSOL test', async () => {
 
     // start remove
     // failed because used by other pegged token
-    await expect(ctx.normalizedTokenPool.removeSupportedToken.execute({
-      mint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
-    })).rejects.toThrow();
-    await expect(ctx.fund.removeSupportedToken.execute({
-      mint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
-    })).rejects.toThrow();
+    await expect(
+      ctx.normalizedTokenPool.removeSupportedToken.execute({
+        mint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+      })
+    ).rejects.toThrow();
+    await expect(
+      ctx.fund.removeSupportedToken.execute({
+        mint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+      })
+    ).rejects.toThrow();
 
     // failed because used by ntp
-    await expect(ctx.fund.removeSupportedToken.execute({
-      mint: 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
-    })).rejects.toThrow();
+    await expect(
+      ctx.fund.removeSupportedToken.execute({
+        mint: 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
+      })
+    ).rejects.toThrow();
 
     // success
-    await expect(ctx.normalizedTokenPool.removeSupportedToken.execute({
-      mint: 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
-    })).resolves.not.toThrow();
-    await expect(ctx.fund.removeSupportedToken.execute({
-      mint: 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
-    })).resolves.not.toThrow();
-    await expect(ctx.normalizedTokenPool.removeSupportedToken.execute({
-      mint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
-    })).resolves.not.toThrow();
-    await expect(ctx.fund.removeSupportedToken.execute({
-      mint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
-    })).resolves.not.toThrow();
+    await expect(
+      ctx.normalizedTokenPool.removeSupportedToken.execute({
+        mint: 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
+      })
+    ).resolves.not.toThrow();
+    await expect(
+      ctx.fund.removeSupportedToken.execute({
+        mint: 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
+      })
+    ).resolves.not.toThrow();
+    await expect(
+      ctx.normalizedTokenPool.removeSupportedToken.execute({
+        mint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+      })
+    ).resolves.not.toThrow();
+    await expect(
+      ctx.fund.removeSupportedToken.execute({
+        mint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+      })
+    ).resolves.not.toThrow();
 
     await ctx.resolve(true);
   });
@@ -1064,31 +1084,41 @@ describe('restaking.fragSOL test', async () => {
     ).resolves.toEqual(5_000_000_000n);
   });
 
-  test('operator test', async () => {
-    const bSOL = 'bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1';
-    const jitoSOL = 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn';
-    const mSOL = 'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So';
-    const BNSOL = 'BNso1VUJnh4zcfpZa6986Ea66P6TCp59hvtNJ8b1X85';
-    const bbSOL = 'Bybit2vBJGhPF52GBdNaQfUJ6ZpThSgHBobjWZpLPb4B';
+  /** 4. Operation **/
+  test('operation test', async () => {
+    await user1.resolveAddress(true);
 
-    restaking.fragSOL.payer.deposit.execute({assetAmount: 10_000_000_000n, assetMint: null});
-
-    for (const mint of [bSOL, jitoSOL, mSOL, BNSOL, bbSOL]) {
-      await validator.airdropToken(user1.address!, mint, 10_000_000_000n);
+    for (const mint of [
+      'bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1',
+      'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+      'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So',
+      'BNso1VUJnh4zcfpZa6986Ea66P6TCp59hvtNJ8b1X85',
+      'Bybit2vBJGhPF52GBdNaQfUJ6ZpThSgHBobjWZpLPb4B',
+    ]) {
+      if (mint) {
+        await validator.airdropToken(user1.address!, mint, 10_000_000_000n);
+        await expect(
+          ctx.fund.updateAssetStrategy.execute({
+            tokenDepositable: true,
+            tokenMint: mint,
+          })
+        ).resolves.not.toThrow();
+      }
+      await expect(
+        user1.deposit.execute(
+          {
+            assetAmount: 10_000_000_000n,
+            assetMint: mint,
+          },
+          {
+            signers: [signer1],
+          }
+        )
+      ).resolves.not.toThrow();
     }
-    
-    for (const mint of [bSOL, jitoSOL, mSOL, BNSOL, bbSOL]) {
-      await restaking.fragSOL.fund.updateAssetStrategy.execute({tokenDepositable: true, tokenMint: mint});
-    }
-    
-    restaking.fragSOL.payer.deposit.execute({assetAmount: 10_000_000_000n, assetMint: null});
-    
-    for (const mint of [bSOL, jitoSOL, mSOL, BNSOL, bbSOL]) {
-      restaking.fragSOL.payer.deposit.execute({assetAmount: 10_000_000_000n, assetMint: mint});
-    }
 
-    restaking.fragSOL.payer.deposit.execute({assetAmount: 10_000_000_000n, assetMint: null});
-
-    restaking.fragSOL.fund.runCommand.executeChained({});
-  })
+    await expect(
+      ctx.fund.runCommand.executeChained(null)
+    ).resolves.not.toThrow();
+  });
 });

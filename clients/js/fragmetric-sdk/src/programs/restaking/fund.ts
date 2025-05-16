@@ -820,36 +820,41 @@ export class RestakingFundAccountContext extends AccountContext<
       addressLookupTables: [this.__resolveAddressLookupTable],
       instructions: [
         async (parent, args, overrides) => {
-          const [normalizedTokenMint, normalizedTokenPoolAccount, data] = await Promise.all([
-            parent.parent.normalizedTokenMint.resolveAddress(true),
-            parent.parent.normalizedTokenPool.resolveAddress(true),
-            parent.parent.resolve(true),
-          ]);
-          if (!(normalizedTokenMint && normalizedTokenPoolAccount && data)) throw new Error('invalid context');
-          const fundManager = (this.program as RestakingProgram).knownAddresses.fundManager;
+          const [normalizedTokenMint, normalizedTokenPoolAccount, data] =
+            await Promise.all([
+              parent.parent.normalizedTokenMint.resolveAddress(true),
+              parent.parent.normalizedTokenPool.resolveAddress(true),
+              parent.parent.resolve(true),
+            ]);
+          if (!data) throw new Error('invalid context');
+          const fundManager = (this.program as RestakingProgram).knownAddresses
+            .fundManager;
 
-          return restaking.getFundManagerRemoveSupportedTokenInstructionAsync(
-            {
-              fundManager: createNoopSigner(fundManager),
-              receiptTokenMint: data.receiptTokenMint,
-              supportedTokenMint: args.mint as Address,
-              normalizedTokenMint: normalizedTokenMint ?? undefined,
-              normalizedTokenPoolAccount: normalizedTokenPoolAccount ?? undefined,
-              program: this.program.address,
-            },
-            {
-              programAddress: this.program.address,
-            }
-          ).then(ix => {
-            for (const accountMeta of data.__pricingSources) {
-              ix.accounts.push(accountMeta);
-            }
-            return [ix];
-          });
-        }
-      ]
+          return restaking
+            .getFundManagerRemoveSupportedTokenInstructionAsync(
+              {
+                fundManager: createNoopSigner(fundManager),
+                receiptTokenMint: data.receiptTokenMint,
+                supportedTokenMint: args.mint as Address,
+                normalizedTokenMint: normalizedTokenMint ?? undefined,
+                normalizedTokenPoolAccount:
+                  normalizedTokenPoolAccount ?? undefined,
+                program: this.program.address,
+              },
+              {
+                programAddress: this.program.address,
+              }
+            )
+            .then((ix) => {
+              for (const accountMeta of data.__pricingSources) {
+                ix.accounts.push(accountMeta);
+              }
+              return [ix];
+            });
+        },
+      ],
     }
-  )
+  );
 
   async resolveAssetStrategies(
     noCache = false
@@ -1287,6 +1292,8 @@ export class RestakingFundAccountContext extends AccountContext<
             const vaultFeeWallet = vaultAccount.data.feeWallet;
             const vaultProgramFeeWallet =
               vaultContext.knownAddresses.programFeeWallet;
+
+            console.log({ vst: vaultAccount.data.supportedMint });
 
             return Promise.all([
               token.getCreateAssociatedTokenIdempotentInstructionAsync({
