@@ -4451,6 +4451,107 @@
       ]
     },
     {
+      "name": "fund_manager_update_restaking_vault_distributing_reward_token_threshold",
+      "discriminator": [
+        219,
+        174,
+        127,
+        21,
+        77,
+        228,
+        60,
+        43
+      ],
+      "accounts": [
+        {
+          "name": "fund_manager",
+          "signer": true,
+          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
+        },
+        {
+          "name": "receipt_token_mint",
+          "relations": [
+            "fund_account"
+          ]
+        },
+        {
+          "name": "fund_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  117,
+                  110,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "vault",
+          "type": "pubkey"
+        },
+        {
+          "name": "distributing_reward_token_mint",
+          "type": "pubkey"
+        },
+        {
+          "name": "threshold_min_amount",
+          "type": "u64"
+        },
+        {
+          "name": "threshold_max_amount",
+          "type": "u64"
+        },
+        {
+          "name": "threshold_interval_seconds",
+          "type": "u64"
+        }
+      ]
+    },
+    {
       "name": "fund_manager_update_restaking_vault_strategy",
       "discriminator": [
         131,
@@ -12079,6 +12180,38 @@
       }
     },
     {
+      "name": "DistributingRewardToken",
+      "serialization": "bytemuck",
+      "repr": {
+        "kind": "c"
+      },
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "threshold_min_amount",
+            "type": "u64"
+          },
+          {
+            "name": "threshold_max_amount",
+            "type": "u64"
+          },
+          {
+            "name": "threshold_interval_seconds",
+            "type": "u64"
+          },
+          {
+            "name": "last_settled_at",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
       "name": "EnqueueWithdrawalBatchCommand",
       "type": {
         "kind": "struct",
@@ -14310,10 +14443,14 @@
             "type": "u8"
           },
           {
-            "name": "distributing_reward_token_mints",
+            "name": "distributing_reward_tokens",
             "type": {
               "array": [
-                "pubkey",
+                {
+                  "defined": {
+                    "name": "DistributingRewardToken"
+                  }
+                },
                 30
               ]
             }
@@ -14323,7 +14460,7 @@
             "type": {
               "array": [
                 "u8",
-                2296
+                1336
               ]
             }
           }

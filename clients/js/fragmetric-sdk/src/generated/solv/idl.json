@@ -485,12 +485,12 @@
     {
       "name": "DEVNET_PROGRAM_ID",
       "type": "pubkey",
-      "value": "FSoLvf9dv17a4DzMGYKxqFnDGj9EiXRW5wKrwQ39UDH"
+      "value": "FsoLVPaSSXfsfZHYaxtQSZs6npFFUeRCyXB6dcC8ckn"
     },
     {
       "name": "MAINNET_PROGRAM_ID",
       "type": "pubkey",
-      "value": "FsoLVPaSSXfsfZHYaxtQSZs6npFFUeRCyXB6dcC8ckn"
+      "value": "FSoLvf9dv17a4DzMGYKxqFnDGj9EiXRW5wKrwQ39UDH"
     },
     {
       "name": "TARGET",
