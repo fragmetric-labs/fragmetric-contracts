@@ -4,7 +4,7 @@ import { testSignerResolver } from './testing_fixture';
 
 describe('RestakingFundOperatorContext on devnet', async () => {
   const signer = await testSignerResolver();
-  const program = RestakingProgram.devnet();
+  const program = RestakingProgram.devnet(process.env.SOLANA_RPC_DEVNET);
 
   test('can execute updatePricesTransaction', async () => {
     await expect(

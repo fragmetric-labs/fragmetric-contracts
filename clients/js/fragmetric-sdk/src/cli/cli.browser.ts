@@ -3,7 +3,9 @@ export function startCommandLineInterface() {
 }
 
 export function createDefaultTransactionExecutionHooks() {
-  throw new Error('createDefaultTransactionExecutionHooks is not supported in browser');
+  throw new Error(
+    'createDefaultTransactionExecutionHooks is not supported in browser'
+  );
 }
 
 export const logger = console;

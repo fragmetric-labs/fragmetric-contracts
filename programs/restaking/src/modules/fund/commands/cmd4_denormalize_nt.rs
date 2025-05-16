@@ -90,7 +90,7 @@ impl DenormalizeNTCommand {
         Option<OperationCommandEntry>,
     )> {
         let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-            .new_pricing_service(accounts.iter().copied())?;
+            .new_pricing_service(accounts.iter().copied(), true)?;
         let fund_account = ctx.fund_account.load()?;
 
         let normalized_token = fund_account.get_normalized_token();
@@ -301,7 +301,7 @@ impl DenormalizeNTCommand {
 
                 let mut pricing_service =
                     FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-                        .new_pricing_service(pricing_sources.iter().cloned())?;
+                        .new_pricing_service(pricing_sources.iter().cloned(), false)?;
 
                 let mut normalized_token_pool_account =
                     Account::<NormalizedTokenPoolAccount>::try_from(normalized_token_pool_account)?;
@@ -357,6 +357,8 @@ impl DenormalizeNTCommand {
                 );
 
                 // update fund account
+                FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+                    .update_asset_values(&mut pricing_service, true)?;
                 let mut fund_account = ctx.fund_account.load_mut()?;
 
                 let supported_token =

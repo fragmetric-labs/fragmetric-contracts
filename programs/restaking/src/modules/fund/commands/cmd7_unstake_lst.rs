@@ -173,8 +173,8 @@ impl UnstakeLSTCommand {
         Option<OperationCommandResult>,
         Option<OperationCommandEntry>,
     )> {
-        let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-            .new_pricing_service(accounts.iter().copied())?;
+        let mut pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+            .new_pricing_service(accounts.iter().copied(), false)?;
         let fund_account = ctx.fund_account.load()?;
         let unstaking_obligated_amount_as_sol =
             fund_account.get_total_unstaking_obligated_amount_as_sol(&pricing_service)?;
@@ -253,6 +253,8 @@ impl UnstakeLSTCommand {
                 }
             }
             drop(fund_account);
+            FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+                .update_asset_values(&mut pricing_service, true)?;
 
             self.execute_prepare(ctx, accounts, items, None)
         }
@@ -864,8 +866,8 @@ impl UnstakeLSTCommand {
         drop(fund_account);
 
         // pricing service with updated token values
-        let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-            .new_pricing_service(pricing_sources.iter().copied())?;
+        let mut pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+            .new_pricing_service(pricing_sources.iter().copied(), false)?;
 
         // validation (expects diff <= withdraw_stake_count)
         let total_burnt_token_amount =
@@ -883,6 +885,9 @@ impl UnstakeLSTCommand {
         // calculate deducted fee as SOL (will be added to SOL receivable)
         let total_deducted_sol_fee_amount = pricing_service
             .get_token_amount_as_sol(pool_token_mint.key, total_deducted_pool_token_fee_amount)?;
+
+        FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+            .update_asset_values(&mut pricing_service, true)?;
 
         Ok(Some(UnstakeResult {
             to_sol_account_amount: fund_reserve_account.lamports(),
@@ -967,7 +972,7 @@ impl UnstakeLSTCommand {
 
         // pricing service with updated token values
         let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-            .new_pricing_service(pricing_sources.iter().copied())?;
+            .new_pricing_service(pricing_sources.iter().copied(), true)?;
 
         // validation (expects diff <= 1)
         let expected_sol_fee_amount = pricing_service

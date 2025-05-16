@@ -44,27 +44,28 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
         solWithdrawalNormalReserveRateBps: 0,
         solWithdrawalNormalReserveMaxAmount: MAX_U64,
       }),
-    () =>
-      ctx.fund.addSupportedToken.execute({
-        mint: 'bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1',
-        pricingSource: {
-          __kind: 'SPLStakePool',
-          address: 'stk9ApL5HeVAwPLr3TLhDXdZS8ptVu7zp6ov8HFDuMi',
-        },
-      }),
-    () =>
-      ctx.fund.updateAssetStrategy.execute({
-        tokenMint: 'bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1',
-        tokenDepositable: false,
-        tokenAccumulatedDepositAmount: null,
-        tokenAccumulatedDepositCapacityAmount: MAX_U64,
-        tokenWithdrawable: false,
-        tokenWithdrawalNormalReserveRateBps: 0,
-        tokenWithdrawalNormalReserveMaxAmount: MAX_U64,
-        tokenRebalancingAmount: 0n,
-        solAllocationWeight: 0n,
-        solAllocationCapacityAmount: MAX_U64,
-      }),
+    // NOTE: bSOL is no longer supported
+    // () =>
+    //   ctx.fund.addSupportedToken.execute({
+    //     mint: 'bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1',
+    //     pricingSource: {
+    //       __kind: 'SPLStakePool',
+    //       address: 'stk9ApL5HeVAwPLr3TLhDXdZS8ptVu7zp6ov8HFDuMi',
+    //     },
+    //   }),
+    // () =>
+    //   ctx.fund.updateAssetStrategy.execute({
+    //     tokenMint: 'bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1',
+    //     tokenDepositable: false,
+    //     tokenAccumulatedDepositAmount: null,
+    //     tokenAccumulatedDepositCapacityAmount: MAX_U64,
+    //     tokenWithdrawable: false,
+    //     tokenWithdrawalNormalReserveRateBps: 0,
+    //     tokenWithdrawalNormalReserveMaxAmount: MAX_U64,
+    //     tokenRebalancingAmount: 0n,
+    //     solAllocationWeight: 0n,
+    //     solAllocationCapacityAmount: MAX_U64,
+    //   }),
     () =>
       ctx.fund.addSupportedToken.execute({
         mint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
@@ -139,7 +140,7 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
     () =>
       ctx.fund.updateAssetStrategy.execute({
         tokenMint: 'Bybit2vBJGhPF52GBdNaQfUJ6ZpThSgHBobjWZpLPb4B',
-        tokenDepositable: false,
+        tokenDepositable: true,
         tokenAccumulatedDepositAmount: null,
         tokenAccumulatedDepositCapacityAmount: MAX_U64,
         tokenWithdrawable: false,
@@ -197,6 +198,7 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
         amount: 0n,
         isBonus: true,
       }),
+    // NOTE: updateReward ix test
     // () => receiptToken.reward.updateRewardTransaction.execute({
     //   mint: 'FSWSBMV5EB7J8JdafNBLZpfSCLiFwpMCqod2RpkU4RNn',
     //   newMint: 'REALSWTCH7J8JdafNBLZpfSCLiFwpMCqod2RpkU4RNn',
@@ -223,14 +225,15 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
       ctx.fund.initializeNormalizedToken.execute({
         mint: '4noNmx2RpxK4zdr68Fq1CYM5VhN4yjgGZEFyuB7t2pBX',
       }),
-    () =>
-      ctx.normalizedTokenPool.addSupportedToken.execute({
-        mint: 'bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1',
-        pricingSource: {
-          __kind: 'SPLStakePool',
-          address: 'stk9ApL5HeVAwPLr3TLhDXdZS8ptVu7zp6ov8HFDuMi',
-        },
-      }),
+    // NOTE: bSOL is no longer supported
+    // () =>
+    //   ctx.normalizedTokenPool.addSupportedToken.execute({
+    //     mint: 'bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1',
+    //     pricingSource: {
+    //       __kind: 'SPLStakePool',
+    //       address: 'stk9ApL5HeVAwPLr3TLhDXdZS8ptVu7zp6ov8HFDuMi',
+    //     },
+    //   }),
     () =>
       ctx.normalizedTokenPool.addSupportedToken.execute({
         mint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
@@ -302,11 +305,11 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
         vault: 'HR1ANmDHjaEhknvsTaK48M5xZtbBiwNdXM5NTiWhAb4S',
         rewardTokenMint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
       }),
-    () =>
-      ctx.fund.addRestakingVaultDistributingReward.execute({
-        vault: 'HR1ANmDHjaEhknvsTaK48M5xZtbBiwNdXM5NTiWhAb4S',
-        rewardTokenMint: 'REALSWTCH7J8JdafNBLZpfSCLiFwpMCqod2RpkU4RNn',
-      }),
+    // () =>
+    //   ctx.fund.addRestakingVaultDistributingReward.execute({
+    //     vault: 'HR1ANmDHjaEhknvsTaK48M5xZtbBiwNdXM5NTiWhAb4S',
+    //     rewardTokenMint: 'REALSWTCH7J8JdafNBLZpfSCLiFwpMCqod2RpkU4RNn',
+    //   }),
 
     // configure operator delegations
     () =>

@@ -9,11 +9,15 @@ import { RuntimeContext } from './context';
 import { web3Compat } from './litesvm.web3js.node';
 
 describe('all runtimes provide required rpc methods', async () => {
+  const rpcUrl = process.env.SOLANA_RPC_DEVNET
+    ? process.env.SOLANA_RPC_DEVNET
+    : 'https://api.devnet.solana.com';
+  const rpcSubscriptionsUrl = rpcUrl
+    .replace('https://', 'wss://')
+    .replace('http://', 'ws://');
   const solanaCtx = new RuntimeContext({
-    rpc: createSolanaRpc('https://api.devnet.solana.com'),
-    rpcSubscriptions: createSolanaRpcSubscriptions(
-      'wss://api.devnet.solana.com'
-    ),
+    rpc: createSolanaRpc(rpcUrl),
+    rpcSubscriptions: createSolanaRpcSubscriptions(rpcSubscriptionsUrl),
     cluster: 'devnet',
   });
 

@@ -4,6 +4,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::associated_token::spl_associated_token_account;
 use anchor_spl::token_2022;
 use anchor_spl::token_interface::Mint;
+use bytemuck::Zeroable;
 
 use crate::errors::ErrorCode;
 use crate::modules::pricing::{PricingService, TokenPricingSource, TokenValuePod};
@@ -21,7 +22,7 @@ use super::*;
 pub const FUND_ACCOUNT_CURRENT_VERSION: u16 = 19;
 
 pub const FUND_WITHDRAWAL_FEE_RATE_BPS_LIMIT: u16 = 500;
-pub const FUND_ACCOUNT_MAX_SUPPORTED_TOKENS: usize = 30;
+pub const FUND_ACCOUNT_MAX_SUPPORTED_TOKENS: usize = 16;
 pub const FUND_ACCOUNT_MAX_RESTAKING_VAULTS: usize = 16;
 pub const FUND_ACCOUNT_MAX_TOKEN_SWAP_STRATEGIES: usize = 30;
 
@@ -68,6 +69,7 @@ pub struct FundAccount {
     _padding4: [u8; 15],
     num_supported_tokens: u8,
     supported_tokens: [SupportedToken; FUND_ACCOUNT_MAX_SUPPORTED_TOKENS],
+    _reserved2: [u8; 16016],
 
     /// optional basket of underlying assets
     normalized_token: NormalizedToken,
@@ -473,6 +475,53 @@ impl FundAccount {
             operation_reserved_amount,
         )?;
         self.num_supported_tokens += 1;
+
+        Ok(())
+    }
+
+    pub(super) fn remove_supported_token(&mut self, mint: &Pubkey) -> Result<()> {
+        // This token must not be any of vault's VST
+        if self
+            .get_restaking_vaults_iter()
+            .any(|restaking_vault| restaking_vault.supported_token_mint == *mint)
+        {
+            err!(ErrorCode::FundSupportedTokenInUseError)?;
+        }
+
+        // There should not be pegged token
+        // In other words, all other tokens must not be pegged to this token.
+        for supported_token in self.get_supported_tokens_iter() {
+            if matches!(supported_token.pricing_source.try_deserialize()?, Some(TokenPricingSource::PeggedToken { address }) if address == *mint)
+            {
+                err!(ErrorCode::FundSupportedTokenInUseError)?;
+            }
+        }
+
+        let (index, supported_token) = self
+            .get_supported_tokens_iter()
+            .enumerate()
+            .find(|(_, supported_token)| supported_token.mint == *mint)
+            .ok_or_else(|| error!(ErrorCode::FundNotSupportedTokenError))?;
+
+        // There should not be pending unstaking amount
+        // In other words, all unstaking must be completed and claimed.
+        if supported_token.pending_unstaking_amount_as_sol > 0 {
+            err!(ErrorCode::FundSupportedTokenInUseError)?;
+        }
+
+        // Fund must not hold any token, even receivable
+        if supported_token.token.get_total_reserved_amount() > 0 {
+            err!(ErrorCode::FundSupportedTokenInUseError)?;
+        }
+
+        if supported_token.token.operation_receivable_amount > 0 {
+            err!(ErrorCode::FundSupportedTokenInUseError)?;
+        }
+
+        // Remove supported token
+        self.supported_tokens[index] = Zeroable::zeroed();
+        self.supported_tokens[index..self.num_supported_tokens as usize].rotate_left(1);
+        self.num_supported_tokens -= 1;
 
         Ok(())
     }

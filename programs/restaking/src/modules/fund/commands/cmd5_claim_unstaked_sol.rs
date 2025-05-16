@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 use crate::errors::ErrorCode;
-use crate::modules::pricing::TokenPricingSource;
+use crate::modules::pricing::{self, TokenPricingSource};
 use crate::modules::staking::*;
 use crate::utils::{AccountInfoExt, AsAccountInfo, PDASeeds};
 
@@ -512,8 +512,8 @@ impl ClaimUnstakedSOLCommand {
 
             // while paying treasury debt, offsets available receivables and sends remaining to the treasury account.
             let mut fund_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?;
-            let pricing_service =
-                fund_service.new_pricing_service(remaining_accounts.into_iter().copied())?;
+            let mut pricing_service =
+                fund_service.new_pricing_service(remaining_accounts.into_iter().copied(), false)?;
 
             let (
                 transferred_sol_revenue_amount,
@@ -530,6 +530,7 @@ impl ClaimUnstakedSOLCommand {
                 claimed_sol_amount,
                 &pricing_service,
             )?;
+            fund_service.update_asset_values(&mut pricing_service, true)?;
             drop(fund_service);
 
             let mut fund_account = ctx.fund_account.load_mut()?;

@@ -4,12 +4,16 @@ import { createRuntime } from './index';
 
 describe('createRuntime with SVMRuntimeOptions', () => {
   test('create SVMRuntime with rpc, cluster options', async () => {
+    const rpcUrl = process.env.SOLANA_RPC_DEVNET
+      ? process.env.SOLANA_RPC_DEVNET
+      : 'https://api.devnet.solana.com';
+    const rpcSubscriptionsUrl = rpcUrl
+      .replace('https://', 'wss://')
+      .replace('http://', 'ws://');
     const runtime = createRuntime({
       type: 'svm',
-      rpc: createSolanaRpc('https://api.devnet.solana.com'),
-      rpcSubscriptions: createSolanaRpcSubscriptions(
-        'wss://api.devnet.solana.com'
-      ),
+      rpc: createSolanaRpc(rpcUrl),
+      rpcSubscriptions: createSolanaRpcSubscriptions(rpcSubscriptionsUrl),
       cluster: 'devnet',
     });
 

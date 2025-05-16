@@ -138,18 +138,21 @@ export abstract class TestValidator<T extends TestValidatorType> {
 
   abstract warpToSlot(slot: bigint): Promise<void>;
   async skipSlots(slots: bigint): Promise<void> {
-    const currentSlot = await this.getSlot({commitment: 'processed'});
+    const currentSlot = await this.getSlot({ commitment: 'processed' });
     await this.warpToSlot(currentSlot + slots);
   }
 
-  async getEpoch(): Promise<bigint> {
-    return (await this.getSlot()) / this.options.slotsPerEpoch;
+  async getEpoch(opts?: GetSlotOptions): Promise<bigint> {
+    return (await this.getSlot(opts)) / this.options.slotsPerEpoch;
   }
   async skipEpoch(): Promise<void> {
-    const currentSlot = await this.getSlot();
+    const currentProcessedSlot = await this.getSlot({
+      commitment: 'processed',
+    });
     const slotsPerEpoch = this.options.slotsPerEpoch;
-    const remainingSlots = slotsPerEpoch - (currentSlot % slotsPerEpoch);
-    await this.warpToSlot(currentSlot + remainingSlots);
+    const remainingSlots =
+      slotsPerEpoch - (currentProcessedSlot % slotsPerEpoch);
+    await this.warpToSlot(currentProcessedSlot + remainingSlots);
   }
 
   abstract airdrop(pubkey: string, lamports: bigint): Promise<void>;

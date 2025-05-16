@@ -15,7 +15,10 @@ import {
 } from '../../context';
 import * as restaking from '../../generated/restaking';
 import { getRestakingAnchorEventDecoders } from './events';
-import { RestakingFundWrapAccountContext, RestakingFundWrappedTokenHolderContext } from './fund_wrap';
+import {
+  RestakingFundWrapAccountContext,
+  RestakingFundWrappedTokenHolderContext,
+} from './fund_wrap';
 import { RestakingProgram } from './program';
 import { RestakingRewardAccountContext } from './reward';
 import { RestakingUserAccountContext } from './user';
@@ -391,8 +394,7 @@ abstract class RestakingAbstractUserRewardAccountContext<
             this.parent.resolveAddress(true),
             this.parent.resolveAccount(true),
           ]);
-        userAddress =
-          userAddress ?? (user?.address as Address | null) ?? null;
+        userAddress = userAddress ?? (user?.address as Address | null) ?? null;
         if (!(receiptTokenMint && wrappedTokenMint && fundWrap && userAddress))
           throw new Error('invalid context');
         return Promise.all([
@@ -409,7 +411,7 @@ abstract class RestakingAbstractUserRewardAccountContext<
                   programAddress: this.program.address,
                 }
               )
-            : (user && user.programAddress == system.SYSTEM_PROGRAM_ADDRESS)
+            : user && user.programAddress == system.SYSTEM_PROGRAM_ADDRESS
               ? restaking.getUserDelegateRewardAccountInstructionAsync(
                   {
                     delegateAuthority: createNoopSigner(userAddress),

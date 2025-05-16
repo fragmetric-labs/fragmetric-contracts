@@ -119,8 +119,8 @@ impl StakeSOLCommand {
         Option<OperationCommandResult>,
         Option<OperationCommandEntry>,
     )> {
-        let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-            .new_pricing_service(accounts.iter().copied())?;
+        let mut pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+            .new_pricing_service(accounts.iter().copied(), false)?;
         let fund_account = ctx.fund_account.load()?;
 
         let sol_net_operation_reserved_amount =
@@ -189,6 +189,8 @@ impl StakeSOLCommand {
         // prepare state does not require additional accounts,
         // so we can execute directly.
         drop(fund_account);
+        FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+            .update_asset_values(&mut pricing_service, true)?;
         self.execute_prepare(ctx, accounts, items, None)
     }
 
@@ -425,8 +427,8 @@ impl StakeSOLCommand {
         )?;
 
         // pricing service with updated token values
-        let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-            .new_pricing_service(pricing_sources.iter().copied())?;
+        let mut pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+            .new_pricing_service(pricing_sources.iter().copied(), false)?;
 
         // validation (expects diff <= 1)
         let expected_pool_token_fee_amount = pricing_service
@@ -440,6 +442,9 @@ impl StakeSOLCommand {
         // calculate deducted fee as SOL (will be added to SOL receivable)
         let deducted_sol_fee_amount = pricing_service
             .get_token_amount_as_sol(pool_token_mint.key, deducted_pool_token_fee_amount)?;
+
+        FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+            .update_asset_values(&mut pricing_service, true)?;
 
         Ok((
             to_pool_token_account_amount,
@@ -493,7 +498,7 @@ impl StakeSOLCommand {
 
         // pricing service with updated token values
         let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-            .new_pricing_service(pricing_sources.iter().copied())?;
+            .new_pricing_service(pricing_sources.iter().copied(), true)?;
 
         // validation (expects diff <= 1)
         let expected_minted_pool_token_amount = pricing_service

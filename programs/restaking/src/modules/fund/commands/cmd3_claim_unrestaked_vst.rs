@@ -257,8 +257,6 @@ impl ClaimUnrestakedVSTCommand {
         }
 
         let item = &items[0];
-        let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-            .new_pricing_service(accounts.iter().copied())?;
         let fund_account = ctx.fund_account.load()?;
         let restaking_vault = fund_account.get_restaking_vault(&item.vault)?;
 
@@ -355,6 +353,9 @@ impl ClaimUnrestakedVSTCommand {
                     }
 
                     drop(fund_account);
+                    let pricing_service =
+                        FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+                            .new_pricing_service(accounts.iter().copied(), false)?;
                     let mut fund_account = ctx.fund_account.load_mut()?;
 
                     let restaking_vault = fund_account.get_restaking_vault_mut(&item.vault)?;
@@ -404,6 +405,9 @@ impl ClaimUnrestakedVSTCommand {
                         }
                     };
                     drop(fund_account);
+
+                    FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+                        .new_pricing_service(accounts.iter().copied(), true)?;
 
                     Some(result.into())
                 } else {

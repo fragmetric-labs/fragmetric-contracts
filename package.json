@@ -14,6 +14,7 @@
     "test:coverage": "pnpm vitest --coverage --run",
     "build": "pnpm --filter ./clients/codegen build && pnpm --filter \\!./clients/codegen build",
     "codegen": "pnpm --filter ./clients/codegen build",
+    "codegen:force": "pnpm --filter ./clients/codegen build:force",
     "keypairs:local": "mkdir -p ./target/deploy && cp ./keypairs/restaking/shared_local_program_4qEHCzsLFUnw8jmhmRSmAK5VhZVoSD1iVqukAf92yHi5.json ./target/deploy/restaking-keypair.json && cp ./keypairs/solv/shared_local_program_9beGuWXNoKPKCApT6xJUm5435Fz8EMGzoTTXgkcf3zAz.json ./target/deploy/solv-keypair.json",
     "keypairs": "cd keypairs && (which jq 1>/dev/null || brew install jq) && aws secretsmanager get-secret-value --profile encrypt_dev --secret-id wallet --region ap-northeast-2 --output json | jq .SecretString | jq -c fromjson | jq -r 'to_entries[] | \"\\(.key) \\(.value)\"' | while read -r key value; do echo $key; echo $value > $key; done",
     "dev": "pnpm dev:restaking",

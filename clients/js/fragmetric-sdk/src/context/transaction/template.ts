@@ -963,9 +963,9 @@ export class TransactionTemplateContext<
       addressTableLookups.flatMap((lookup) => {
         const addresses =
           addressesByLookupTableAddress[lookup.lookupTableAddress];
-        return lookup.writableIndices
+        return lookup.writableIndexes
           .map((index) => addresses[index])
-          .concat(lookup.readableIndices.map((index) => addresses[index]));
+          .concat(lookup.readonlyIndexes.map((index) => addresses[index]));
       })
     ) as string[];
     const transaction = decompileTransactionMessage(

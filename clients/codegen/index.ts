@@ -23,10 +23,8 @@ async function generate(targetId?: string) {
     if (!!targetId && targetId != id) continue;
 
     // prepare generation
-    const idlContent = fs.readFileSync(
-      path.join(__dirname, config.idlFilePath),
-      'utf-8'
-    );
+    const idlFilePath = path.join(__dirname, config.idlFilePath);
+    const idlContent = fs.readFileSync(idlFilePath, 'utf-8');
     const outputHash = crypto
       .createHash('sha256')
       .update(JSON.stringify({ id, config }) + idlContent)
@@ -44,6 +42,7 @@ async function generate(targetId?: string) {
       id
     );
 
+    const jsOutputIDLFilePath = path.join(jsOutputDir, 'idl.json');
     const jsOutputHashFilePath = path.join(jsOutputDir, 'codegen.lock');
     const jsGen =
       config.javascript !== false &&
@@ -71,6 +70,7 @@ async function generate(targetId?: string) {
           })
         );
         fs.writeFileSync(jsOutputHashFilePath, outputHash);
+        fs.copyFileSync(idlFilePath, jsOutputIDLFilePath);
         console.log(
           `${chalk.green('[codegen] generated')} ${chalk.yellow(
             id

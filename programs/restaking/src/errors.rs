@@ -287,4 +287,7 @@ pub enum ErrorCode {
 
     #[msg("fund: restaking vault distributing reward token not registered")]
     FundRestakingVaultDistributingRewardTokenNotRegisteredError,
+
+    #[msg("fund: supported token still in use")]
+    FundSupportedTokenInUseError,
 }
