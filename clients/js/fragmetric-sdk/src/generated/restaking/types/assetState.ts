@@ -58,6 +58,8 @@ export type AssetState = {
   withdrawalNumQueuedBatches: number;
   withdrawalQueuedBatches: Array<WithdrawalBatch>;
   reserved: ReadonlyUint8Array;
+  /** for pricing precision enhancement in withdrawal processing */
+  withdrawalResidualMicroAssetAmount: bigint;
   /**
    * receipt token amount that users can request to withdraw with the given asset from the fund.
    * it can be conditionally inaccurate on price changes among multiple assets, so make sure to update this properly before any use of it.
@@ -96,6 +98,8 @@ export type AssetStateArgs = {
   withdrawalNumQueuedBatches: number;
   withdrawalQueuedBatches: Array<WithdrawalBatchArgs>;
   reserved: ReadonlyUint8Array;
+  /** for pricing precision enhancement in withdrawal processing */
+  withdrawalResidualMicroAssetAmount: number | bigint;
   /**
    * receipt token amount that users can request to withdraw with the given asset from the fund.
    * it can be conditionally inaccurate on price changes among multiple assets, so make sure to update this properly before any use of it.
@@ -137,7 +141,8 @@ export function getAssetStateEncoder(): Encoder<AssetStateArgs> {
       'withdrawalQueuedBatches',
       getArrayEncoder(getWithdrawalBatchEncoder(), { size: 10 }),
     ],
-    ['reserved', fixEncoderSize(getBytesEncoder(), 56)],
+    ['reserved', fixEncoderSize(getBytesEncoder(), 48)],
+    ['withdrawalResidualMicroAssetAmount', getU64Encoder()],
     ['withdrawableValueAsReceiptTokenAmount', getU64Encoder()],
     ['withdrawalUserReservedAmount', getU64Encoder()],
     ['operationReceivableAmount', getU64Encoder()],
@@ -167,7 +172,8 @@ export function getAssetStateDecoder(): Decoder<AssetState> {
       'withdrawalQueuedBatches',
       getArrayDecoder(getWithdrawalBatchDecoder(), { size: 10 }),
     ],
-    ['reserved', fixDecoderSize(getBytesDecoder(), 56)],
+    ['reserved', fixDecoderSize(getBytesDecoder(), 48)],
+    ['withdrawalResidualMicroAssetAmount', getU64Decoder()],
     ['withdrawableValueAsReceiptTokenAmount', getU64Decoder()],
     ['withdrawalUserReservedAmount', getU64Decoder()],
     ['operationReceivableAmount', getU64Decoder()],

@@ -44,6 +44,7 @@ spl-stake-pool = { workspace = true }
 marinade-cpi = { workspace = true }
 whirlpool-cpi = { workspace = true }
 primitive-types = { workspace = true }
+once_cell = { workspace = true }
 
 [dev-dependencies]
 proptest = { workspace = true }

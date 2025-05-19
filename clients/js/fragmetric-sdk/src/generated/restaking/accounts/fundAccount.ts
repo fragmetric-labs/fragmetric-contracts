@@ -141,6 +141,8 @@ export type FundAccount = {
   numTokenSwapStrategies: number;
   padding6: ReadonlyUint8Array;
   tokenSwapStrategies: Array<TokenSwapStrategy>;
+  /** for pricing precision enhancement in deposit */
+  depositResidualMicroReceiptTokenAmount: bigint;
   reserved1: ReadonlyUint8Array;
 };
 
@@ -195,6 +197,8 @@ export type FundAccountArgs = {
   numTokenSwapStrategies: number;
   padding6: ReadonlyUint8Array;
   tokenSwapStrategies: Array<TokenSwapStrategyArgs>;
+  /** for pricing precision enhancement in deposit */
+  depositResidualMicroReceiptTokenAmount: number | bigint;
   reserved1: ReadonlyUint8Array;
 };
 
@@ -252,7 +256,8 @@ export function getFundAccountEncoder(): Encoder<FundAccountArgs> {
         'tokenSwapStrategies',
         getArrayEncoder(getTokenSwapStrategyEncoder(), { size: 30 }),
       ],
-      ['reserved1', fixEncoderSize(getBytesEncoder(), 3616)],
+      ['depositResidualMicroReceiptTokenAmount', getU64Encoder()],
+      ['reserved1', fixEncoderSize(getBytesEncoder(), 3608)],
     ]),
     (value) => ({ ...value, discriminator: FUND_ACCOUNT_DISCRIMINATOR })
   );
@@ -311,7 +316,8 @@ export function getFundAccountDecoder(): Decoder<FundAccount> {
       'tokenSwapStrategies',
       getArrayDecoder(getTokenSwapStrategyDecoder(), { size: 30 }),
     ],
-    ['reserved1', fixDecoderSize(getBytesDecoder(), 3616)],
+    ['depositResidualMicroReceiptTokenAmount', getU64Decoder()],
+    ['reserved1', fixDecoderSize(getBytesDecoder(), 3608)],
   ]);
 }
 

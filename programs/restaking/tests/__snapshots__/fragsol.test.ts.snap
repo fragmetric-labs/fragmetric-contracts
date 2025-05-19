@@ -1038,6 +1038,17 @@ exports[`restaking.fragSOL test > restaking.fragSOL initializationTasks snapshot
     "Program 4qEHCzsLFUnw8jmhmRSmAK5VhZVoSD1iVqukAf92yHi5 success",
   ],
   [
+    "Program ComputeBudget111111111111111111111111111111 invoke [1]",
+    "Program ComputeBudget111111111111111111111111111111 success",
+    "Program 4qEHCzsLFUnw8jmhmRSmAK5VhZVoSD1iVqukAf92yHi5 invoke [1]",
+    "Program log: Instruction: FundManagerUpdateRestakingVaultStrategy",
+    "Program 4qEHCzsLFUnw8jmhmRSmAK5VhZVoSD1iVqukAf92yHi5 invoke [2]",
+    "MASKED(/^Program \\w{32,44} consumed \\d+ of \\d+ compute units$/)",
+    "Program 4qEHCzsLFUnw8jmhmRSmAK5VhZVoSD1iVqukAf92yHi5 success",
+    "MASKED(/^Program \\w{32,44} consumed \\d+ of \\d+ compute units$/)",
+    "Program 4qEHCzsLFUnw8jmhmRSmAK5VhZVoSD1iVqukAf92yHi5 success",
+  ],
+  [
     "Program 4qEHCzsLFUnw8jmhmRSmAK5VhZVoSD1iVqukAf92yHi5 invoke [1]",
     "Program log: Instruction: FundManagerAddRestakingVaultCompoundingRewardToken",
     "Program 4qEHCzsLFUnw8jmhmRSmAK5VhZVoSD1iVqukAf92yHi5 invoke [2]",

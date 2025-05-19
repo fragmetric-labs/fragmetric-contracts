@@ -109,6 +109,7 @@ describe('restaking.fragBTC test', async () => {
             "withdrawable": true,
             "withdrawableValueAsReceiptTokenAmount": 0n,
             "withdrawalLastBatchProcessedAt": 1970-01-01T00:00:00.000Z,
+            "withdrawalResidualMicroAssetAmount": 0n,
             "withdrawalUserReservedAmount": 0n,
           },
           {
@@ -124,6 +125,7 @@ describe('restaking.fragBTC test', async () => {
             "withdrawable": true,
             "withdrawableValueAsReceiptTokenAmount": 0n,
             "withdrawalLastBatchProcessedAt": 1970-01-01T00:00:00.000Z,
+            "withdrawalResidualMicroAssetAmount": 0n,
             "withdrawalUserReservedAmount": 0n,
           },
           {
@@ -139,6 +141,7 @@ describe('restaking.fragBTC test', async () => {
             "withdrawable": true,
             "withdrawableValueAsReceiptTokenAmount": 0n,
             "withdrawalLastBatchProcessedAt": 1970-01-01T00:00:00.000Z,
+            "withdrawalResidualMicroAssetAmount": 0n,
             "withdrawalUserReservedAmount": 0n,
           },
         ],
@@ -512,6 +515,7 @@ describe('restaking.fragBTC test', async () => {
             "withdrawable": true,
             "withdrawableValueAsReceiptTokenAmount": 100000000n,
             "withdrawalLastBatchProcessedAt": 1970-01-01T00:00:00.000Z,
+            "withdrawalResidualMicroAssetAmount": 0n,
             "withdrawalUserReservedAmount": 0n,
           },
           {
@@ -527,6 +531,7 @@ describe('restaking.fragBTC test', async () => {
             "withdrawable": true,
             "withdrawableValueAsReceiptTokenAmount": 0n,
             "withdrawalLastBatchProcessedAt": 1970-01-01T00:00:00.000Z,
+            "withdrawalResidualMicroAssetAmount": 0n,
             "withdrawalUserReservedAmount": 0n,
           },
           {
@@ -542,6 +547,7 @@ describe('restaking.fragBTC test', async () => {
             "withdrawable": true,
             "withdrawableValueAsReceiptTokenAmount": 0n,
             "withdrawalLastBatchProcessedAt": 1970-01-01T00:00:00.000Z,
+            "withdrawalResidualMicroAssetAmount": 0n,
             "withdrawalUserReservedAmount": 0n,
           },
         ],
@@ -754,6 +760,7 @@ describe('restaking.fragBTC test', async () => {
             "withdrawable": true,
             "withdrawableValueAsReceiptTokenAmount": 100000000n,
             "withdrawalLastBatchProcessedAt": 1970-01-01T00:00:00.000Z,
+            "withdrawalResidualMicroAssetAmount": 0n,
             "withdrawalUserReservedAmount": 0n,
           },
           {
@@ -769,6 +776,7 @@ describe('restaking.fragBTC test', async () => {
             "withdrawable": true,
             "withdrawableValueAsReceiptTokenAmount": 100000000n,
             "withdrawalLastBatchProcessedAt": 1970-01-01T00:00:00.000Z,
+            "withdrawalResidualMicroAssetAmount": 0n,
             "withdrawalUserReservedAmount": 0n,
           },
           {
@@ -784,6 +792,7 @@ describe('restaking.fragBTC test', async () => {
             "withdrawable": true,
             "withdrawableValueAsReceiptTokenAmount": 100000000n,
             "withdrawalLastBatchProcessedAt": 1970-01-01T00:00:00.000Z,
+            "withdrawalResidualMicroAssetAmount": 0n,
             "withdrawalUserReservedAmount": 0n,
           },
         ],
@@ -969,7 +978,7 @@ describe('restaking.fragBTC test', async () => {
   });
 
   /** 4. withdraw and pegging **/
-  test.skip('funds supporting only a single token and tokens pegged to it must issue receipt tokens at a 1:1 ratio until additional yield is compounded', async () => {
+  test('funds supporting only a single token and tokens pegged to it must issue receipt tokens at a 1:1 ratio until additional yield is compounded', async () => {
     let expectedReceiptTokenSupply = await ctx
       .resolve(true)
       .then((data) => data!.receiptTokenSupply);
@@ -1082,15 +1091,19 @@ describe('restaking.fragBTC test', async () => {
       receiptTokenSupply: expectedReceiptTokenSupply,
     });
 
+    let withdrawalResidualMicroAssetAmount = 0n;
     await expect(
-      ctx
-        .resolve(true)
-        .then((data) =>
-          data!.supportedAssets.reduce(
-            (sum, asset) => sum + asset.operationTotalAmount,
-            0n
-          )
-        ),
+      ctx.resolve(true).then((data) => {
+        withdrawalResidualMicroAssetAmount =
+          data!.supportedAssets.reduce((sum, asset) => {
+            return sum + asset.withdrawalResidualMicroAssetAmount;
+          }, 0n) / 1_000_000n;
+        return (
+          data!.supportedAssets.reduce((sum, asset) => {
+            return sum + asset.operationTotalAmount;
+          }, 0n) - withdrawalResidualMicroAssetAmount
+        );
+      }),
       'sum of all underlying assets must be equal to receipt token supply (fund accounting)'
     ).resolves.toEqual(expectedReceiptTokenSupply);
 
@@ -1101,7 +1114,7 @@ describe('restaking.fragBTC test', async () => {
           accounts.reduce(
             (sum, tokenAccount) =>
               tokenAccount ? sum + tokenAccount.amount : sum,
-            0n
+            -withdrawalResidualMicroAssetAmount
           )
         ),
       'sum of all assets must be equal to receipt token supply (token account)'
@@ -1115,26 +1128,25 @@ describe('restaking.fragBTC test', async () => {
       const assetAmount = BigInt(i);
       expectedReceiptTokenSupply += assetAmount;
 
-      await expect(
-        user1.deposit.execute(
-          {
-            assetMint,
-            assetAmount,
-          },
-          { signers: [signer1] }
-        )
-      ).resolves.toMatchObject({
-        events: {
-          userDepositedToFund: {
-            depositedAmount: assetAmount,
-            mintedReceiptTokenAmount: assetAmount,
-          },
+      const res = await user1.deposit.execute(
+        {
+          assetMint,
+          assetAmount,
         },
-      });
+        { signers: [signer1] }
+      );
+      const evt = res.events!.userDepositedToFund!;
+      expect(
+        evt.mintedReceiptTokenAmount,
+        'mintedReceiptTokenAmount = assetAmount - [optional residual error up to one denomalized unit]'
+      ).toBeOneOf([assetAmount, assetAmount - 1n]);
     }
 
-    await expect(ctx.resolve(true)).resolves.toMatchObject({
-      receiptTokenSupply: expectedReceiptTokenSupply,
-    });
+    await expect(
+      ctx.resolve(true).then((data) => data?.receiptTokenSupply)
+    ).resolves.toBeOneOf([
+      expectedReceiptTokenSupply,
+      expectedReceiptTokenSupply - 1n,
+    ]);
   });
 });

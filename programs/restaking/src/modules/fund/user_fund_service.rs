@@ -106,14 +106,19 @@ impl<'a, 'info> UserFundService<'a, 'info> {
         let mut pricing_service = FundService::new(self.receipt_token_mint, self.fund_account)?
             .new_pricing_service(pricing_sources, false)?;
 
+        let mut deposit_residual_micro_receipt_token_amount = self
+            .fund_account
+            .load()?
+            .deposit_residual_micro_receipt_token_amount;
         let receipt_token_mint_amount = if self.receipt_token_mint.supply == 0 {
             // receipt_token_mint_amount will be equal to asset_amount at the initial minting, so like either 1SOL = 1RECEIPT-TOKEN or 1SUPPORTED-TOKEN = 1RECEIPT-TOKEN.
             asset_amount
         } else {
-            pricing_service.get_asset_amount_as_token(
+            pricing_service.get_asset_amount_as_asset(
                 supported_token_mint_key.as_ref(),
                 asset_amount,
-                &self.receipt_token_mint.key(),
+                Some(&self.receipt_token_mint.key()),
+                Some(&mut deposit_residual_micro_receipt_token_amount),
             )?
         };
 
@@ -130,10 +135,6 @@ impl<'a, 'info> UserFundService<'a, 'info> {
             receipt_token_mint_amount,
         )?;
 
-        self.fund_account
-            .load_mut()?
-            .reload_receipt_token_supply(self.receipt_token_mint)?;
-
         self.user_fund_account
             .reload_receipt_token_amount(self.user_receipt_token_account)?;
 
@@ -147,13 +148,17 @@ impl<'a, 'info> UserFundService<'a, 'info> {
                     contribution_accrual_rate,
                 )?;
 
-        // transfer user asset to the fund
-        let deposited_amount = self
-            .fund_account
-            .load_mut()?
-            .deposit(supported_token_mint_key, asset_amount)?;
+        // update fund state
+        let deposited_amount = {
+            let mut fund_account = self.fund_account.load_mut()?;
+            fund_account.reload_receipt_token_supply(self.receipt_token_mint)?;
+            fund_account.deposit_residual_micro_receipt_token_amount =
+                deposit_residual_micro_receipt_token_amount;
+            fund_account.deposit(supported_token_mint_key, asset_amount)?
+        };
         assert_eq!(asset_amount, deposited_amount);
 
+        // transfer user asset to the fund
         match supported_token_mint {
             Some(supported_token_mint) => {
                 token_interface::transfer_checked(
@@ -545,7 +550,7 @@ impl<'a, 'info> UserFundService<'a, 'info> {
             batch_id: withdrawal_request.batch_id,
             request_id: withdrawal_request.request_id,
             burnt_receipt_token_amount: receipt_token_amount,
-            returned_receipt_token_amount: 0, // TODO/v0.6.2: returned_receipt_token_amount: can be absolutely lack of the certain asset?
+            returned_receipt_token_amount: 0,
             withdrawn_amount: asset_user_amount,
             deducted_fee_amount: asset_fee_amount,
         })
