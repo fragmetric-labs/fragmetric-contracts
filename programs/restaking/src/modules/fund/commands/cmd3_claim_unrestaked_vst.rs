@@ -352,7 +352,7 @@ impl ClaimUnrestakedVSTCommand {
                     }
 
                     drop(fund_account);
-                    let pricing_service =
+                    let mut pricing_service =
                         FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
                             .new_pricing_service(accounts.iter().copied(), false)?;
                     let mut fund_account = ctx.fund_account.load_mut()?;
@@ -406,7 +406,7 @@ impl ClaimUnrestakedVSTCommand {
                     drop(fund_account);
 
                     FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-                        .new_pricing_service(accounts.iter().copied(), true)?;
+                        .update_asset_values(&mut pricing_service, true)?;
 
                     Some(result.into())
                 } else {
