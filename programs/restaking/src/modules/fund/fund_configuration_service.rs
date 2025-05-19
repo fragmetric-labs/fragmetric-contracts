@@ -19,8 +19,6 @@ use super::*;
 pub struct FundConfigurationService<'a, 'info> {
     receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
     fund_account: &'a mut AccountLoader<'info, FundAccount>,
-
-    current_timestamp: u64,
 }
 
 impl Drop for FundConfigurationService<'_, '_> {
@@ -34,11 +32,9 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,
         fund_account: &'a mut AccountLoader<'info, FundAccount>,
     ) -> Result<Self> {
-        let clock = Clock::get()?;
         Ok(Self {
             receipt_token_mint,
             fund_account,
-            current_timestamp: clock.unix_timestamp as u64,
         })
     }
 
@@ -561,22 +557,22 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         self.create_fund_manager_updated_fund_event()
     }
 
-    pub fn process_update_restaking_vault_distributing_reward_token_threshold(
+    pub fn process_update_restaking_vault_distributing_reward_token_harvest_threshold(
         &mut self,
         vault: &Pubkey,
         distributing_reward_token_mint: &Pubkey,
-        threshold_min_amount: u64,
-        threshold_max_amount: u64,
-        threshold_interval_seconds: u64,
+        harvest_threshold_min_amount: u64,
+        harvest_threshold_max_amount: u64,
+        harvest_threshold_interval_seconds: i64,
     ) -> Result<events::FundManagerUpdatedFund> {
         self.fund_account
             .load_mut()?
             .get_restaking_vault_mut(vault)?
-            .update_distributing_reward_token_threshold(
-                distributing_reward_token_mint,
-                threshold_min_amount,
-                threshold_max_amount,
-                threshold_interval_seconds,
+            .get_distributing_reward_token_mut(distributing_reward_token_mint)?
+            .update_harvest_threshold(
+                harvest_threshold_min_amount,
+                harvest_threshold_max_amount,
+                harvest_threshold_interval_seconds,
             )?;
 
         self.create_fund_manager_updated_fund_event()
@@ -593,20 +589,6 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
             .remove_distributing_reward_token(distributing_reward_token_mint)?;
 
         self.create_fund_manager_updated_fund_event()
-    }
-
-    pub fn update_restaking_vault_distributing_reward_token_settled_at(
-        &mut self,
-        vault: &Pubkey,
-        distributing_reward_token_mint: Pubkey,
-    ) -> Result<()> {
-        self.fund_account
-            .load_mut()?
-            .get_restaking_vault_mut(vault)?
-            .update_distributing_reward_token_settled_at(
-                distributing_reward_token_mint,
-                self.current_timestamp,
-            )
     }
 
     pub fn process_add_wrapped_token_holder(

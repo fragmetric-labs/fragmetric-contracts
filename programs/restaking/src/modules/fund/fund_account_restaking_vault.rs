@@ -49,7 +49,7 @@ pub(super) struct RestakingVault {
     distributing_reward_tokens:
         [DistributingRewardToken; FUND_ACCOUNT_MAX_RESTAKING_VAULT_DISTRIBUTING_REWARD_TOKENS],
 
-    _reserved: [u8; 1336],
+    _reserved: [u8; 856],
 }
 
 impl RestakingVault {
@@ -206,27 +206,6 @@ impl RestakingVault {
         Ok(())
     }
 
-    pub fn update_distributing_reward_token_threshold(
-        &mut self,
-        distributing_reward_token_mint: &Pubkey,
-        threshold_min_amount: u64,
-        threshold_max_amount: u64,
-        threshold_interval_seconds: u64,
-    ) -> Result<()> {
-        let matched_idx = self
-            .get_distributing_reward_tokens_iter()
-            .position(|reward_token| reward_token.mint == *distributing_reward_token_mint)
-            .ok_or(ErrorCode::FundRestakingVaultDistributingRewardTokenNotRegisteredError)?;
-
-        self.distributing_reward_tokens[matched_idx].update_threshold(
-            threshold_min_amount,
-            threshold_max_amount,
-            threshold_interval_seconds,
-        );
-
-        Ok(())
-    }
-
     pub fn remove_distributing_reward_token(
         &mut self,
         distributing_reward_token_mint: &Pubkey,
@@ -245,23 +224,35 @@ impl RestakingVault {
         Ok(())
     }
 
-    pub fn update_distributing_reward_token_settled_at(
-        &mut self,
-        distributing_reward_token_mint: Pubkey,
-        last_settled_at: u64,
-    ) -> Result<()> {
-        let matched_idx = self
-            .get_distributing_reward_tokens_iter()
-            .position(|reward_token| reward_token.mint == distributing_reward_token_mint)
-            .ok_or(ErrorCode::FundRestakingVaultDistributingRewardTokenNotRegisteredError)?;
-
-        self.distributing_reward_tokens[matched_idx].update_last_settled_at(last_settled_at)
-    }
-
     pub fn get_distributing_reward_tokens_iter(
         &self,
     ) -> impl Iterator<Item = &DistributingRewardToken> {
         self.distributing_reward_tokens[..self.num_distributing_reward_tokens as usize].iter()
+    }
+
+    pub fn get_distributing_reward_tokens_iter_mut(
+        &mut self,
+    ) -> impl Iterator<Item = &mut DistributingRewardToken> {
+        self.distributing_reward_tokens[..self.num_distributing_reward_tokens as usize].iter_mut()
+    }
+
+    pub fn get_distributing_reward_token(&self, mint: &Pubkey) -> Result<&DistributingRewardToken> {
+        self.get_distributing_reward_tokens_iter()
+            .find(|reward_token| reward_token.mint == *mint)
+            .ok_or_else(|| {
+                error!(ErrorCode::FundRestakingVaultDistributingRewardTokenNotRegisteredError)
+            })
+    }
+
+    pub fn get_distributing_reward_token_mut(
+        &mut self,
+        mint: &Pubkey,
+    ) -> Result<&mut DistributingRewardToken> {
+        self.get_distributing_reward_tokens_iter_mut()
+            .find(|reward_token| reward_token.mint == *mint)
+            .ok_or_else(|| {
+                error!(ErrorCode::FundRestakingVaultDistributingRewardTokenNotRegisteredError)
+            })
     }
 
     pub fn add_delegation(
@@ -380,10 +371,11 @@ impl RestakingVaultDelegation {
 #[repr(C)]
 pub(super) struct DistributingRewardToken {
     pub mint: Pubkey,
-    pub threshold_min_amount: u64,
-    pub threshold_max_amount: u64,
-    pub threshold_interval_seconds: u64,
-    pub last_settled_at: u64,
+    pub harvest_threshold_min_amount: u64,
+    pub harvest_threshold_max_amount: u64,
+    pub harvest_threshold_interval_seconds: i64,
+    pub last_harvested_at: i64,
+    _reserved: [u8; 16],
 }
 
 impl DistributingRewardToken {
@@ -391,25 +383,32 @@ impl DistributingRewardToken {
         *self = Zeroable::zeroed();
 
         self.mint = mint;
-        self.threshold_max_amount = u64::MAX;
+        self.harvest_threshold_max_amount = u64::MAX;
     }
 
-    fn update_threshold(
+    pub fn update_harvest_threshold(
         &mut self,
-        threshold_min_amount: u64,
-        threshold_max_amount: u64,
-        threshold_interval_seconds: u64,
-    ) {
-        self.threshold_min_amount = threshold_min_amount;
-        self.threshold_max_amount = threshold_max_amount;
-        self.threshold_interval_seconds = threshold_interval_seconds;
-    }
+        harvest_threshold_min_amount: u64,
+        harvest_threshold_max_amount: u64,
+        harvest_threshold_interval_seconds: i64,
+    ) -> Result<()> {
+        require_gte!(harvest_threshold_max_amount, harvest_threshold_min_amount);
+        require_gte!(harvest_threshold_interval_seconds, 0);
 
-    fn update_last_settled_at(&mut self, last_settled_at: u64) -> Result<()> {
-        require_gt!(last_settled_at, self.last_settled_at);
-
-        self.last_settled_at = last_settled_at;
+        self.harvest_threshold_min_amount = harvest_threshold_min_amount;
+        self.harvest_threshold_max_amount = harvest_threshold_max_amount;
+        self.harvest_threshold_interval_seconds = harvest_threshold_interval_seconds;
 
         Ok(())
+    }
+
+    pub fn get_available_amount_to_harvest(&self, amount: u64, current_timestamp: i64) -> u64 {
+        let available = current_timestamp
+            >= self.last_harvested_at + self.harvest_threshold_interval_seconds
+            && amount >= self.harvest_threshold_min_amount;
+
+        available
+            .then(|| amount.min(self.harvest_threshold_max_amount))
+            .unwrap_or_default()
     }
 }
