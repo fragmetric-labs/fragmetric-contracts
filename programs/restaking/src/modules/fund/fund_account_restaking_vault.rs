@@ -46,20 +46,10 @@ pub(super) struct RestakingVault {
     /// reward to distribute
     _padding4: [u8; 7],
     num_distributing_reward_tokens: u8,
-    // distributing_reward_tokens: [
-    //     {
-    //         mint: Pubkey,
-    //         threshold_min_amount: u64,
-    //         threshold_max_amount: u64,
-    //         threshold_interval_seconds: u64,
-    //         last_settled_at: u64
-    //     }; FUND_ACCOUNT_MAX_RESTAKING_VAULT_DISTRIBUTING_REWARD_TOKENS
-    // ],
-    distributing_reward_token_mints:
-        [Pubkey; FUND_ACCOUNT_MAX_RESTAKING_VAULT_DISTRIBUTING_REWARD_TOKENS],
+    distributing_reward_tokens:
+        [DistributingRewardToken; FUND_ACCOUNT_MAX_RESTAKING_VAULT_DISTRIBUTING_REWARD_TOKENS],
 
-    // _reserved: [u8; 1336],
-    _reserved: [u8; 2296],
+    _reserved: [u8; 856],
 }
 
 impl RestakingVault {
@@ -145,7 +135,7 @@ impl RestakingVault {
 
         if self
             .get_distributing_reward_tokens_iter()
-            .any(|reward_token| *reward_token == compounding_reward_token_mint)
+            .any(|reward_token| reward_token.mint == compounding_reward_token_mint)
         {
             err!(ErrorCode::FundRestakingVaultDistributingRewardTokenAlreadyRegisteredError)?
         }
@@ -165,11 +155,11 @@ impl RestakingVault {
 
     pub fn remove_compounding_reward_token(
         &mut self,
-        compounding_reward_token_mint: Pubkey,
+        compounding_reward_token_mint: &Pubkey,
     ) -> Result<()> {
         let matched_idx = self
             .get_compounding_reward_tokens_iter()
-            .position(|reward_token| *reward_token == compounding_reward_token_mint)
+            .position(|reward_token| reward_token == compounding_reward_token_mint)
             .ok_or(ErrorCode::FundRestakingVaultCompoundingRewardTokenNotRegisteredError)?;
 
         self.num_compounding_reward_tokens -= 1;
@@ -191,7 +181,7 @@ impl RestakingVault {
     ) -> Result<()> {
         if self
             .get_distributing_reward_tokens_iter()
-            .any(|reward_token| *reward_token == distributing_reward_token_mint)
+            .any(|reward_token| reward_token.mint == distributing_reward_token_mint)
         {
             err!(ErrorCode::FundRestakingVaultDistributingRewardTokenAlreadyRegisteredError)?
         }
@@ -209,8 +199,8 @@ impl RestakingVault {
             ErrorCode::FundExceededMaxRestakingVaultDistributingRewardTokensError,
         );
 
-        self.distributing_reward_token_mints[self.num_distributing_reward_tokens as usize] =
-            distributing_reward_token_mint;
+        self.distributing_reward_tokens[self.num_distributing_reward_tokens as usize]
+            .initialize(distributing_reward_token_mint);
         self.num_distributing_reward_tokens += 1;
 
         Ok(())
@@ -218,24 +208,51 @@ impl RestakingVault {
 
     pub fn remove_distributing_reward_token(
         &mut self,
-        distributing_reward_token_mint: Pubkey,
+        distributing_reward_token_mint: &Pubkey,
     ) -> Result<()> {
         let matched_idx = self
             .get_distributing_reward_tokens_iter()
-            .position(|reward_token| *reward_token == distributing_reward_token_mint)
+            .position(|reward_token| reward_token.mint == *distributing_reward_token_mint)
             .ok_or(ErrorCode::FundRestakingVaultDistributingRewardTokenNotRegisteredError)?;
 
         self.num_distributing_reward_tokens -= 1;
-        self.distributing_reward_token_mints
+        self.distributing_reward_tokens
             .swap(matched_idx, self.num_distributing_reward_tokens as usize);
-        self.distributing_reward_token_mints[self.num_distributing_reward_tokens as usize] =
-            Pubkey::default();
+        self.distributing_reward_tokens[self.num_distributing_reward_tokens as usize] =
+            Zeroable::zeroed();
 
         Ok(())
     }
 
-    pub fn get_distributing_reward_tokens_iter(&self) -> impl Iterator<Item = &Pubkey> {
-        self.distributing_reward_token_mints[..self.num_distributing_reward_tokens as usize].iter()
+    pub fn get_distributing_reward_tokens_iter(
+        &self,
+    ) -> impl Iterator<Item = &DistributingRewardToken> {
+        self.distributing_reward_tokens[..self.num_distributing_reward_tokens as usize].iter()
+    }
+
+    pub fn get_distributing_reward_tokens_iter_mut(
+        &mut self,
+    ) -> impl Iterator<Item = &mut DistributingRewardToken> {
+        self.distributing_reward_tokens[..self.num_distributing_reward_tokens as usize].iter_mut()
+    }
+
+    pub fn get_distributing_reward_token(&self, mint: &Pubkey) -> Result<&DistributingRewardToken> {
+        self.get_distributing_reward_tokens_iter()
+            .find(|reward_token| reward_token.mint == *mint)
+            .ok_or_else(|| {
+                error!(ErrorCode::FundRestakingVaultDistributingRewardTokenNotRegisteredError)
+            })
+    }
+
+    pub fn get_distributing_reward_token_mut(
+        &mut self,
+        mint: &Pubkey,
+    ) -> Result<&mut DistributingRewardToken> {
+        self.get_distributing_reward_tokens_iter_mut()
+            .find(|reward_token| reward_token.mint == *mint)
+            .ok_or_else(|| {
+                error!(ErrorCode::FundRestakingVaultDistributingRewardTokenNotRegisteredError)
+            })
     }
 
     pub fn add_delegation(
@@ -347,5 +364,51 @@ impl RestakingVaultDelegation {
         self.supported_token_redelegating_amount = token_amount;
 
         Ok(())
+    }
+}
+
+#[zero_copy]
+#[repr(C)]
+pub(super) struct DistributingRewardToken {
+    pub mint: Pubkey,
+    pub harvest_threshold_min_amount: u64,
+    pub harvest_threshold_max_amount: u64,
+    pub harvest_threshold_interval_seconds: i64,
+    pub last_harvested_at: i64,
+    _reserved: [u8; 16],
+}
+
+impl DistributingRewardToken {
+    fn initialize(&mut self, mint: Pubkey) {
+        *self = Zeroable::zeroed();
+
+        self.mint = mint;
+        self.harvest_threshold_max_amount = u64::MAX;
+    }
+
+    pub fn update_harvest_threshold(
+        &mut self,
+        harvest_threshold_min_amount: u64,
+        harvest_threshold_max_amount: u64,
+        harvest_threshold_interval_seconds: i64,
+    ) -> Result<()> {
+        require_gte!(harvest_threshold_max_amount, harvest_threshold_min_amount);
+        require_gte!(harvest_threshold_interval_seconds, 0);
+
+        self.harvest_threshold_min_amount = harvest_threshold_min_amount;
+        self.harvest_threshold_max_amount = harvest_threshold_max_amount;
+        self.harvest_threshold_interval_seconds = harvest_threshold_interval_seconds;
+
+        Ok(())
+    }
+
+    pub fn get_available_amount_to_harvest(&self, amount: u64, current_timestamp: i64) -> u64 {
+        let available = current_timestamp
+            >= self.last_harvested_at + self.harvest_threshold_interval_seconds
+            && amount >= self.harvest_threshold_min_amount;
+
+        available
+            .then(|| amount.min(self.harvest_threshold_max_amount))
+            .unwrap_or_default()
     }
 }

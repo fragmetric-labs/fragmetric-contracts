@@ -45,6 +45,7 @@ import {
   type ParsedFundManagerSettleRewardInstruction,
   type ParsedFundManagerUpdateFundStrategyInstruction,
   type ParsedFundManagerUpdateRestakingVaultDelegationStrategyInstruction,
+  type ParsedFundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdInstruction,
   type ParsedFundManagerUpdateRestakingVaultStrategyInstruction,
   type ParsedFundManagerUpdateRewardInstruction,
   type ParsedFundManagerUpdateSolStrategyInstruction,
@@ -434,6 +435,7 @@ export enum RestakingInstruction {
   FundManagerSettleReward,
   FundManagerUpdateFundStrategy,
   FundManagerUpdateRestakingVaultDelegationStrategy,
+  FundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThreshold,
   FundManagerUpdateRestakingVaultStrategy,
   FundManagerUpdateReward,
   FundManagerUpdateSolStrategy,
@@ -808,6 +810,17 @@ export function identifyRestakingInstruction(
     )
   ) {
     return RestakingInstruction.FundManagerUpdateRestakingVaultDelegationStrategy;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([14, 107, 151, 57, 181, 186, 184, 16])
+      ),
+      0
+    )
+  ) {
+    return RestakingInstruction.FundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThreshold;
   }
   if (
     containsBytes(
@@ -1218,6 +1231,9 @@ export type ParsedRestakingInstruction<
   | ({
       instructionType: RestakingInstruction.FundManagerUpdateRestakingVaultDelegationStrategy;
     } & ParsedFundManagerUpdateRestakingVaultDelegationStrategyInstruction<TProgram>)
+  | ({
+      instructionType: RestakingInstruction.FundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThreshold;
+    } & ParsedFundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdInstruction<TProgram>)
   | ({
       instructionType: RestakingInstruction.FundManagerUpdateRestakingVaultStrategy;
     } & ParsedFundManagerUpdateRestakingVaultStrategyInstruction<TProgram>)

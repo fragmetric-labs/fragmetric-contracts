@@ -140,7 +140,11 @@ export class JitoVaultAccountContext extends AccountContext<
 
       return (await Promise.all(
         vaultStrategy.compoundingRewardTokenMints
-          .concat(vaultStrategy.distributingRewardTokenMints)
+          .concat(
+            vaultStrategy.distributingRewardTokens.map(
+              (rewardToken) => rewardToken.mint
+            )
+          )
           .map((mint) => {
             return TokenAccountContext.findAssociatedTokenAccountAddress({
               owner: vault,

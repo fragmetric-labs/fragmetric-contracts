@@ -534,7 +534,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
     pub fn process_remove_restaking_vault_compounding_reward_token(
         &mut self,
         vault: &Pubkey,
-        compounding_reward_token_mint: Pubkey,
+        compounding_reward_token_mint: &Pubkey,
     ) -> Result<events::FundManagerUpdatedFund> {
         self.fund_account
             .load_mut()?
@@ -557,10 +557,31 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         self.create_fund_manager_updated_fund_event()
     }
 
+    pub fn process_update_restaking_vault_distributing_reward_token_harvest_threshold(
+        &mut self,
+        vault: &Pubkey,
+        distributing_reward_token_mint: &Pubkey,
+        harvest_threshold_min_amount: u64,
+        harvest_threshold_max_amount: u64,
+        harvest_threshold_interval_seconds: i64,
+    ) -> Result<events::FundManagerUpdatedFund> {
+        self.fund_account
+            .load_mut()?
+            .get_restaking_vault_mut(vault)?
+            .get_distributing_reward_token_mut(distributing_reward_token_mint)?
+            .update_harvest_threshold(
+                harvest_threshold_min_amount,
+                harvest_threshold_max_amount,
+                harvest_threshold_interval_seconds,
+            )?;
+
+        self.create_fund_manager_updated_fund_event()
+    }
+
     pub fn process_remove_restaking_vault_distributing_reward_token(
         &mut self,
         vault: &Pubkey,
-        distributing_reward_token_mint: Pubkey,
+        distributing_reward_token_mint: &Pubkey,
     ) -> Result<events::FundManagerUpdatedFund> {
         self.fund_account
             .load_mut()?

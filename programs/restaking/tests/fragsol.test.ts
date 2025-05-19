@@ -291,7 +291,7 @@ describe('restaking.fragSOL test', async () => {
                 "tokenRedelegatingAmount": 0n,
               },
             ],
-            "distributingRewardTokenMints": [],
+            "distributingRewardTokens": [],
             "pricingSource": {
               "__kind": "JitoRestakingVault",
               "address": "HR1ANmDHjaEhknvsTaK48M5xZtbBiwNdXM5NTiWhAb4S",

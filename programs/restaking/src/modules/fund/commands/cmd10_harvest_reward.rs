@@ -232,7 +232,7 @@ impl HarvestRewardCommand {
                         .collect(),
                     HarvestType::Distribute => restaking_vault
                         .get_distributing_reward_tokens_iter()
-                        .copied()
+                        .map(|reward_token| reward_token.mint)
                         .collect(),
                 };
 
@@ -678,6 +678,19 @@ impl HarvestRewardCommand {
                     return Ok(None);
                 };
 
+                // harvest threshold check
+                let current_timestamp = Clock::get()?.unix_timestamp;
+
+                let available_reward_token_amount_to_harvest = fund_account
+                    .get_restaking_vault(vault)?
+                    .get_distributing_reward_token(reward_token_mint.key)?
+                    .get_available_amount_to_harvest(reward_token_amount, current_timestamp);
+
+                if available_reward_token_amount_to_harvest == 0 {
+                    // threshold unmet yet
+                    return Ok(None);
+                }
+
                 let required_accounts = [
                     (reward_token_mint.key(), false),
                     (vault_reward_token_account.key(), true),
@@ -974,7 +987,7 @@ impl HarvestRewardCommand {
     #[inline(never)]
     fn execute_execute_distribute_command<'info>(
         &self,
-        ctx: &OperationCommandContext<'info, '_>,
+        ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
         vault: &Pubkey,
         reward_token_mints: &[Pubkey],
@@ -1025,12 +1038,19 @@ impl HarvestRewardCommand {
 
                 let reward_token_program = Interface::try_from(*reward_token_program)?;
 
+                let current_timestamp = Clock::get()?.unix_timestamp;
                 let reward_token_amount = from_reward_token_account
                     .amount
                     .min(from_reward_token_account.delegated_amount);
+                let available_reward_token_amount_to_harvest = ctx
+                    .fund_account
+                    .load()?
+                    .get_restaking_vault(vault)?
+                    .get_distributing_reward_token(&reward_token_mint.key())?
+                    .get_available_amount_to_harvest(reward_token_amount, current_timestamp);
 
-                // No reward, so move on to next item
-                if reward_token_amount == 0 {
+                // No reward (or harvest threshold unmet), so move on to next item
+                if available_reward_token_amount_to_harvest == 0 {
                     return Ok(None);
                 }
 
@@ -1045,7 +1065,7 @@ impl HarvestRewardCommand {
                         },
                         &[&ctx.fund_account.load()?.get_seeds()],
                     ),
-                    reward_token_amount,
+                    available_reward_token_amount_to_harvest,
                     reward_token_mint.decimals,
                 )?;
                 from_reward_token_account.reload()?;
@@ -1058,8 +1078,14 @@ impl HarvestRewardCommand {
                         Some(&reward_token_reserve_account),
                         reward_token_mint.key(),
                         false,
-                        reward_token_amount,
+                        available_reward_token_amount_to_harvest,
                     )?;
+
+                ctx.fund_account
+                    .load_mut()?
+                    .get_restaking_vault_mut(vault)?
+                    .get_distributing_reward_token_mut(&reward_token_mint.key())?
+                    .last_harvested_at = current_timestamp;
 
                 let result = HarvestRewardCommandResult {
                     vault: *vault,
@@ -1067,7 +1093,7 @@ impl HarvestRewardCommand {
                     reward_token_amount,
                     swapped_token_mint: None,
                     compounded_token_amount: 0,
-                    distributed_token_amount: reward_token_amount,
+                    distributed_token_amount: available_reward_token_amount_to_harvest,
                     updated_reward_account: Some(reward_account.key()),
                 }
                 .into();
