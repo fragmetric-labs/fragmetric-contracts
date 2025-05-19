@@ -203,8 +203,8 @@ pub mod restaking {
     // FundManagerFundContext
     ////////////////////////////////////////////
 
-    pub fn fund_manager_update_fund_strategy<'info>(
-        ctx: Context<'_, '_, 'info, 'info, FundManagerFundContext<'info>>,
+    pub fn fund_manager_update_fund_strategy(
+        ctx: Context<FundManagerFundContext>,
         deposit_enabled: bool,
         donation_enabled: bool,
         withdrawal_enabled: bool,
@@ -228,8 +228,8 @@ pub mod restaking {
         Ok(())
     }
 
-    pub fn fund_manager_update_sol_strategy<'info>(
-        ctx: Context<'_, '_, 'info, 'info, FundManagerFundContext<'info>>,
+    pub fn fund_manager_update_sol_strategy(
+        ctx: Context<FundManagerFundContext>,
         sol_depositable: bool,
         sol_accumulated_deposit_capacity_amount: u64,
         sol_accumulated_deposit_amount: Option<u64>,
@@ -253,8 +253,8 @@ pub mod restaking {
         Ok(())
     }
 
-    pub fn fund_manager_update_supported_token_strategy<'info>(
-        ctx: Context<'_, '_, 'info, 'info, FundManagerFundContext<'info>>,
+    pub fn fund_manager_update_supported_token_strategy(
+        ctx: Context<FundManagerFundContext>,
         token_mint: Pubkey,
         token_depositable: bool,
         token_accumulated_deposit_capacity_amount: u64,
@@ -286,8 +286,8 @@ pub mod restaking {
         Ok(())
     }
 
-    pub fn fund_manager_update_restaking_vault_strategy<'info>(
-        ctx: Context<'_, '_, 'info, 'info, FundManagerFundContext<'info>>,
+    pub fn fund_manager_update_restaking_vault_strategy(
+        ctx: Context<FundManagerFundContext>,
         vault: Pubkey,
         sol_allocation_weight: u64,
         sol_allocation_capacity_amount: u64,
@@ -305,8 +305,8 @@ pub mod restaking {
         Ok(())
     }
 
-    pub fn fund_manager_update_restaking_vault_delegation_strategy<'info>(
-        ctx: Context<'_, '_, 'info, 'info, FundManagerFundContext<'info>>,
+    pub fn fund_manager_update_restaking_vault_delegation_strategy(
+        ctx: Context<FundManagerFundContext>,
         vault: Pubkey,
         operator: Pubkey,
         token_allocation_weight: u64,
@@ -356,7 +356,7 @@ pub mod restaking {
         )?
         .process_remove_restaking_vault_compounding_reward_token(
             &vault,
-            compounding_reward_token_mint,
+            &compounding_reward_token_mint,
         )?);
 
         Ok(())
@@ -393,7 +393,7 @@ pub mod restaking {
         )?
         .process_update_restaking_vault_distributing_reward_token_threshold(
             &vault,
-            distributing_reward_token_mint,
+            &distributing_reward_token_mint,
             threshold_min_amount,
             threshold_max_amount,
             threshold_interval_seconds
@@ -413,7 +413,7 @@ pub mod restaking {
         )?
         .process_remove_restaking_vault_distributing_reward_token(
             &vault,
-            distributing_reward_token_mint
+            &distributing_reward_token_mint
         )?);
 
         Ok(())
@@ -462,7 +462,7 @@ pub mod restaking {
     // FundManagerFundWrappedTokenInitialContext
     ////////////////////////////////////////////
 
-    pub fn fund_manager_initialize_fund_wrapped_token<'info>(
+    pub fn fund_manager_initialize_fund_wrapped_token(
         ctx: Context<FundManagerFundWrappedTokenInitialContext>,
     ) -> Result<()> {
         emit_cpi!(modules::fund::FundConfigurationService::new(
@@ -812,7 +812,7 @@ pub mod restaking {
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
         )?
-        .process_update_prices(ctx.remaining_accounts,)?);
+        .process_update_prices(ctx.remaining_accounts)?);
 
         Ok(())
     }

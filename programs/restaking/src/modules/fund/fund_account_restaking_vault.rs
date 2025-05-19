@@ -155,11 +155,11 @@ impl RestakingVault {
 
     pub fn remove_compounding_reward_token(
         &mut self,
-        compounding_reward_token_mint: Pubkey,
+        compounding_reward_token_mint: &Pubkey,
     ) -> Result<()> {
         let matched_idx = self
             .get_compounding_reward_tokens_iter()
-            .position(|reward_token| *reward_token == compounding_reward_token_mint)
+            .position(|reward_token| reward_token == compounding_reward_token_mint)
             .ok_or(ErrorCode::FundRestakingVaultCompoundingRewardTokenNotRegisteredError)?;
 
         self.num_compounding_reward_tokens -= 1;
@@ -208,14 +208,14 @@ impl RestakingVault {
 
     pub fn update_distributing_reward_token_threshold(
         &mut self,
-        distributing_reward_token_mint: Pubkey,
+        distributing_reward_token_mint: &Pubkey,
         threshold_min_amount: u64,
         threshold_max_amount: u64,
         threshold_interval_seconds: u64,
     ) -> Result<()> {
         let matched_idx = self
             .get_distributing_reward_tokens_iter()
-            .position(|reward_token| reward_token.mint == distributing_reward_token_mint)
+            .position(|reward_token| reward_token.mint == *distributing_reward_token_mint)
             .ok_or(ErrorCode::FundRestakingVaultDistributingRewardTokenNotRegisteredError)?;
 
         self.distributing_reward_tokens[matched_idx].update_threshold(
@@ -229,11 +229,11 @@ impl RestakingVault {
 
     pub fn remove_distributing_reward_token(
         &mut self,
-        distributing_reward_token_mint: Pubkey,
+        distributing_reward_token_mint: &Pubkey,
     ) -> Result<()> {
         let matched_idx = self
             .get_distributing_reward_tokens_iter()
-            .position(|reward_token| reward_token.mint == distributing_reward_token_mint)
+            .position(|reward_token| reward_token.mint == *distributing_reward_token_mint)
             .ok_or(ErrorCode::FundRestakingVaultDistributingRewardTokenNotRegisteredError)?;
 
         self.num_distributing_reward_tokens -= 1;
