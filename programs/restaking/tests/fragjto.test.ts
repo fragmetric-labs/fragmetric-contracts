@@ -236,11 +236,11 @@ describe('restaking.fragJTO test', async () => {
             ],
             "distributingRewardTokens": [
               {
-                "lastSettledAt": 0n,
+                "harvestThresholdIntervalSeconds": 0n,
+                "harvestThresholdMaxAmount": 18446744073709551615n,
+                "harvestThresholdMinAmount": 0n,
+                "lastHarvestedAt": 0n,
                 "mint": "REALSWTCH7J8JdafNBLZpfSCLiFwpMCqod2RpkU4RNn",
-                "thresholdIntervalSeconds": 0n,
-                "thresholdMaxAmount": 18446744073709551615n,
-                "thresholdMinAmount": 0n,
               },
             ],
             "pricingSource": {

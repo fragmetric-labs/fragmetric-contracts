@@ -4451,16 +4451,16 @@
       ]
     },
     {
-      "name": "fund_manager_update_restaking_vault_distributing_reward_token_threshold",
+      "name": "fund_manager_update_restaking_vault_distributing_reward_token_harvest_threshold",
       "discriminator": [
-        219,
-        174,
-        127,
-        21,
-        77,
-        228,
-        60,
-        43
+        14,
+        107,
+        151,
+        57,
+        181,
+        186,
+        184,
+        16
       ],
       "accounts": [
         {
@@ -4538,16 +4538,16 @@
           "type": "pubkey"
         },
         {
-          "name": "threshold_min_amount",
+          "name": "harvest_threshold_min_amount",
           "type": "u64"
         },
         {
-          "name": "threshold_max_amount",
+          "name": "harvest_threshold_max_amount",
           "type": "u64"
         },
         {
-          "name": "threshold_interval_seconds",
-          "type": "u64"
+          "name": "harvest_threshold_interval_seconds",
+          "type": "i64"
         }
       ]
     },
@@ -12193,20 +12193,29 @@
             "type": "pubkey"
           },
           {
-            "name": "threshold_min_amount",
+            "name": "harvest_threshold_min_amount",
             "type": "u64"
           },
           {
-            "name": "threshold_max_amount",
+            "name": "harvest_threshold_max_amount",
             "type": "u64"
           },
           {
-            "name": "threshold_interval_seconds",
-            "type": "u64"
+            "name": "harvest_threshold_interval_seconds",
+            "type": "i64"
           },
           {
-            "name": "last_settled_at",
-            "type": "u64"
+            "name": "last_harvested_at",
+            "type": "i64"
+          },
+          {
+            "name": "_reserved",
+            "type": {
+              "array": [
+                "u8",
+                16
+              ]
+            }
           }
         ]
       }
@@ -14460,7 +14469,7 @@
             "type": {
               "array": [
                 "u8",
-                1336
+                856
               ]
             }
           }

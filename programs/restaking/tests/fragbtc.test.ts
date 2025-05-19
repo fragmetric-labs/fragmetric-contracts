@@ -245,11 +245,11 @@ describe('restaking.fragBTC test', async () => {
             "delegations": [],
             "distributingRewardTokens": [
               {
-                "lastSettledAt": 0n,
+                "harvestThresholdIntervalSeconds": 0n,
+                "harvestThresholdMaxAmount": 18446744073709551615n,
+                "harvestThresholdMinAmount": 0n,
+                "lastHarvestedAt": 0n,
                 "mint": "ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq",
-                "thresholdIntervalSeconds": 0n,
-                "thresholdMaxAmount": 18446744073709551615n,
-                "thresholdMinAmount": 0n,
               },
             ],
             "pricingSource": {
@@ -1834,12 +1834,12 @@ describe('restaking.fragBTC test', async () => {
     const rewardAmount = 100_000_000_000n;
 
     // 1. update distributing reward amount threshold -> settle would not occur
-    await ctx.fund.updateRestakingVaultDistributingRewardThreshold.execute({
+    await ctx.fund.updateRestakingVaultDistributingRewardHarvestThreshold.execute({
       vault: solv.zBTC.address!,
       rewardTokenMint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
-      thresholdMinAmount: rewardAmount + 100_000_000n,
-      thresholdMaxAmount: rewardAmount + 200_000_000n,
-      thresholdIntervalSeconds: 1,
+      harvestThresholdMinAmount: rewardAmount + 100_000_000n,
+      harvestThresholdMaxAmount: rewardAmount + 200_000_000n,
+      harvestThresholdIntervalSeconds: 1n,
     });
 
     // drop distribution token to the vault
@@ -1864,12 +1864,12 @@ describe('restaking.fragBTC test', async () => {
     );
 
     // 2. update distributing reward interval second threshold -> settle would not occur
-    await ctx.fund.updateRestakingVaultDistributingRewardThreshold.execute({
+    await ctx.fund.updateRestakingVaultDistributingRewardHarvestThreshold.execute({
       vault: solv.zBTC.address!,
       rewardTokenMint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
-      thresholdMinAmount: rewardAmount - 100_000_000n,
-      thresholdMaxAmount: 2n ** 64n - 1n, // u64::MAX
-      thresholdIntervalSeconds: 100,
+      harvestThresholdMinAmount: rewardAmount - 100_000_000n,
+      harvestThresholdMaxAmount: 2n ** 64n - 1n, // u64::MAX
+      harvestThresholdIntervalSeconds: 100n,
     });
 
     // try to settle global reward
@@ -1885,12 +1885,12 @@ describe('restaking.fragBTC test', async () => {
     );
 
     // 3. update distributing reward interval second threshold -> now settle would occur
-    await ctx.fund.updateRestakingVaultDistributingRewardThreshold.execute({
+    await ctx.fund.updateRestakingVaultDistributingRewardHarvestThreshold.execute({
       vault: solv.zBTC.address!,
       rewardTokenMint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
-      thresholdMinAmount: rewardAmount - 100_000_000n,
-      thresholdMaxAmount: 2n ** 64n - 1n,
-      thresholdIntervalSeconds: 0,
+      harvestThresholdMinAmount: rewardAmount - 100_000_000n,
+      harvestThresholdMaxAmount: 2n ** 64n - 1n,
+      harvestThresholdIntervalSeconds: 0n,
     });
 
     // now settle occurs

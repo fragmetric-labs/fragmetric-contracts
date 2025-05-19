@@ -143,7 +143,7 @@ export function getRestakingVaultEncoder(): Encoder<RestakingVaultArgs> {
       'distributingRewardTokens',
       getArrayEncoder(getDistributingRewardTokenEncoder(), { size: 30 }),
     ],
-    ['reserved', fixEncoderSize(getBytesEncoder(), 1336)],
+    ['reserved', fixEncoderSize(getBytesEncoder(), 856)],
   ]);
 }
 
@@ -181,7 +181,7 @@ export function getRestakingVaultDecoder(): Decoder<RestakingVault> {
       'distributingRewardTokens',
       getArrayDecoder(getDistributingRewardTokenDecoder(), { size: 30 }),
     ],
-    ['reserved', fixDecoderSize(getBytesDecoder(), 1336)],
+    ['reserved', fixDecoderSize(getBytesDecoder(), 856)],
   ]);
 }
 

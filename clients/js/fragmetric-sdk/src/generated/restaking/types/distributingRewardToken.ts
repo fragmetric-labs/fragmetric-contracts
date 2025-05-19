@@ -8,8 +8,14 @@
 
 import {
   combineCodec,
+  fixDecoderSize,
+  fixEncoderSize,
   getAddressDecoder,
   getAddressEncoder,
+  getBytesDecoder,
+  getBytesEncoder,
+  getI64Decoder,
+  getI64Encoder,
   getStructDecoder,
   getStructEncoder,
   getU64Decoder,
@@ -18,41 +24,46 @@ import {
   type Codec,
   type Decoder,
   type Encoder,
+  type ReadonlyUint8Array,
 } from '@solana/kit';
 
 export type DistributingRewardToken = {
   mint: Address;
-  thresholdMinAmount: bigint;
-  thresholdMaxAmount: bigint;
-  thresholdIntervalSeconds: bigint;
-  lastSettledAt: bigint;
+  harvestThresholdMinAmount: bigint;
+  harvestThresholdMaxAmount: bigint;
+  harvestThresholdIntervalSeconds: bigint;
+  lastHarvestedAt: bigint;
+  reserved: ReadonlyUint8Array;
 };
 
 export type DistributingRewardTokenArgs = {
   mint: Address;
-  thresholdMinAmount: number | bigint;
-  thresholdMaxAmount: number | bigint;
-  thresholdIntervalSeconds: number | bigint;
-  lastSettledAt: number | bigint;
+  harvestThresholdMinAmount: number | bigint;
+  harvestThresholdMaxAmount: number | bigint;
+  harvestThresholdIntervalSeconds: number | bigint;
+  lastHarvestedAt: number | bigint;
+  reserved: ReadonlyUint8Array;
 };
 
 export function getDistributingRewardTokenEncoder(): Encoder<DistributingRewardTokenArgs> {
   return getStructEncoder([
     ['mint', getAddressEncoder()],
-    ['thresholdMinAmount', getU64Encoder()],
-    ['thresholdMaxAmount', getU64Encoder()],
-    ['thresholdIntervalSeconds', getU64Encoder()],
-    ['lastSettledAt', getU64Encoder()],
+    ['harvestThresholdMinAmount', getU64Encoder()],
+    ['harvestThresholdMaxAmount', getU64Encoder()],
+    ['harvestThresholdIntervalSeconds', getI64Encoder()],
+    ['lastHarvestedAt', getI64Encoder()],
+    ['reserved', fixEncoderSize(getBytesEncoder(), 16)],
   ]);
 }
 
 export function getDistributingRewardTokenDecoder(): Decoder<DistributingRewardToken> {
   return getStructDecoder([
     ['mint', getAddressDecoder()],
-    ['thresholdMinAmount', getU64Decoder()],
-    ['thresholdMaxAmount', getU64Decoder()],
-    ['thresholdIntervalSeconds', getU64Decoder()],
-    ['lastSettledAt', getU64Decoder()],
+    ['harvestThresholdMinAmount', getU64Decoder()],
+    ['harvestThresholdMaxAmount', getU64Decoder()],
+    ['harvestThresholdIntervalSeconds', getI64Decoder()],
+    ['lastHarvestedAt', getI64Decoder()],
+    ['reserved', fixDecoderSize(getBytesDecoder(), 16)],
   ]);
 }
 

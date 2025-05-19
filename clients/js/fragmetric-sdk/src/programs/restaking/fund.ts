@@ -1149,7 +1149,7 @@ export class RestakingFundAccountContext extends AccountContext<
     | (restaking.FundManagerUpdateRestakingVaultStrategyInstructionDataArgs & {
         pricingSource: restaking.TokenPricingSourceArgs;
         compoundingRewardTokenMints: Address[];
-        distributingRewardTokens: restaking.DistributingRewardTokenArgs[];
+        distributingRewardTokens: Omit<restaking.DistributingRewardTokenArgs, 'reserved'>[];
         delegations: Omit<
           restaking.FundManagerUpdateRestakingVaultDelegationStrategyInstructionDataArgs,
           'vault'
@@ -1166,7 +1166,7 @@ export class RestakingFundAccountContext extends AccountContext<
         const strategy: restaking.FundManagerUpdateRestakingVaultStrategyInstructionDataArgs & {
           pricingSource: restaking.TokenPricingSourceArgs;
           compoundingRewardTokenMints: Address[];
-          distributingRewardTokens: restaking.DistributingRewardTokenArgs[];
+          distributingRewardTokens: Omit<restaking.DistributingRewardTokenArgs, 'reserved'>[];
           delegations: Omit<
             restaking.FundManagerUpdateRestakingVaultDelegationStrategyInstructionDataArgs,
             'vault'
@@ -1205,7 +1205,10 @@ export class RestakingFundAccountContext extends AccountContext<
           distributingRewardTokens: item.distributingRewardTokens.slice(
             0,
             item.numDistributingRewardTokens
-          ),
+          ).map((distributingRewardTokenItem) => {
+            const { reserved, ...distributingRewardToken } = distributingRewardTokenItem;
+            return distributingRewardToken;
+          }),
         };
         return strategy;
       });
@@ -1779,15 +1782,15 @@ export class RestakingFundAccountContext extends AccountContext<
     }
   );
 
-  readonly updateRestakingVaultDistributingRewardThreshold =
+  readonly updateRestakingVaultDistributingRewardHarvestThreshold =
     new TransactionTemplateContext(
       this,
       v.object({
         vault: v.string(),
         rewardTokenMint: v.string(),
-        thresholdMinAmount: v.bigint(),
-        thresholdMaxAmount: v.bigint(),
-        thresholdIntervalSeconds: v.number(),
+        harvestThresholdMinAmount: v.bigint(),
+        harvestThresholdMaxAmount: v.bigint(),
+        harvestThresholdIntervalSeconds: v.bigint(),
       }),
       {
         description: 'update distributing reward threshold',
@@ -1810,13 +1813,13 @@ export class RestakingFundAccountContext extends AccountContext<
               .knownAddresses.fundManager;
 
             return Promise.all([
-              restaking.getFundManagerUpdateRestakingVaultDistributingRewardTokenThresholdInstructionAsync(
+              restaking.getFundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdInstructionAsync(
                 {
                   vault: args.vault as Address,
                   distributingRewardTokenMint: args.rewardTokenMint as Address,
-                  thresholdMinAmount: args.thresholdMinAmount,
-                  thresholdMaxAmount: args.thresholdMaxAmount,
-                  thresholdIntervalSeconds: args.thresholdIntervalSeconds,
+                  harvestThresholdMinAmount: args.harvestThresholdMinAmount,
+                  harvestThresholdMaxAmount: args.harvestThresholdMaxAmount,
+                  harvestThresholdIntervalSeconds: args.harvestThresholdIntervalSeconds,
                   fundManager: createNoopSigner(fundManager),
                   program: this.program.address,
                   receiptTokenMint: data.receiptTokenMint,

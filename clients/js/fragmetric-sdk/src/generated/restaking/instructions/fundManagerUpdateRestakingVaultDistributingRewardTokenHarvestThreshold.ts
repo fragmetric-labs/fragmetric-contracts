@@ -14,6 +14,8 @@ import {
   getAddressEncoder,
   getBytesDecoder,
   getBytesEncoder,
+  getI64Decoder,
+  getI64Encoder,
   getProgramDerivedAddress,
   getStructDecoder,
   getStructEncoder,
@@ -42,16 +44,16 @@ import {
   type ResolvedAccount,
 } from '../shared';
 
-export const FUND_MANAGER_UPDATE_RESTAKING_VAULT_DISTRIBUTING_REWARD_TOKEN_THRESHOLD_DISCRIMINATOR =
-  new Uint8Array([219, 174, 127, 21, 77, 228, 60, 43]);
+export const FUND_MANAGER_UPDATE_RESTAKING_VAULT_DISTRIBUTING_REWARD_TOKEN_HARVEST_THRESHOLD_DISCRIMINATOR =
+  new Uint8Array([14, 107, 151, 57, 181, 186, 184, 16]);
 
-export function getFundManagerUpdateRestakingVaultDistributingRewardTokenThresholdDiscriminatorBytes() {
+export function getFundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdDiscriminatorBytes() {
   return fixEncoderSize(getBytesEncoder(), 8).encode(
-    FUND_MANAGER_UPDATE_RESTAKING_VAULT_DISTRIBUTING_REWARD_TOKEN_THRESHOLD_DISCRIMINATOR
+    FUND_MANAGER_UPDATE_RESTAKING_VAULT_DISTRIBUTING_REWARD_TOKEN_HARVEST_THRESHOLD_DISCRIMINATOR
   );
 }
 
-export type FundManagerUpdateRestakingVaultDistributingRewardTokenThresholdInstruction<
+export type FundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdInstruction<
   TProgram extends string = typeof RESTAKING_PROGRAM_ADDRESS,
   TAccountFundManager extends
     | string
@@ -85,65 +87,65 @@ export type FundManagerUpdateRestakingVaultDistributingRewardTokenThresholdInstr
     ]
   >;
 
-export type FundManagerUpdateRestakingVaultDistributingRewardTokenThresholdInstructionData =
+export type FundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdInstructionData =
   {
     discriminator: ReadonlyUint8Array;
     vault: Address;
     distributingRewardTokenMint: Address;
-    thresholdMinAmount: bigint;
-    thresholdMaxAmount: bigint;
-    thresholdIntervalSeconds: bigint;
+    harvestThresholdMinAmount: bigint;
+    harvestThresholdMaxAmount: bigint;
+    harvestThresholdIntervalSeconds: bigint;
   };
 
-export type FundManagerUpdateRestakingVaultDistributingRewardTokenThresholdInstructionDataArgs =
+export type FundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdInstructionDataArgs =
   {
     vault: Address;
     distributingRewardTokenMint: Address;
-    thresholdMinAmount: number | bigint;
-    thresholdMaxAmount: number | bigint;
-    thresholdIntervalSeconds: number | bigint;
+    harvestThresholdMinAmount: number | bigint;
+    harvestThresholdMaxAmount: number | bigint;
+    harvestThresholdIntervalSeconds: number | bigint;
   };
 
-export function getFundManagerUpdateRestakingVaultDistributingRewardTokenThresholdInstructionDataEncoder(): Encoder<FundManagerUpdateRestakingVaultDistributingRewardTokenThresholdInstructionDataArgs> {
+export function getFundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdInstructionDataEncoder(): Encoder<FundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
       ['vault', getAddressEncoder()],
       ['distributingRewardTokenMint', getAddressEncoder()],
-      ['thresholdMinAmount', getU64Encoder()],
-      ['thresholdMaxAmount', getU64Encoder()],
-      ['thresholdIntervalSeconds', getU64Encoder()],
+      ['harvestThresholdMinAmount', getU64Encoder()],
+      ['harvestThresholdMaxAmount', getU64Encoder()],
+      ['harvestThresholdIntervalSeconds', getI64Encoder()],
     ]),
     (value) => ({
       ...value,
       discriminator:
-        FUND_MANAGER_UPDATE_RESTAKING_VAULT_DISTRIBUTING_REWARD_TOKEN_THRESHOLD_DISCRIMINATOR,
+        FUND_MANAGER_UPDATE_RESTAKING_VAULT_DISTRIBUTING_REWARD_TOKEN_HARVEST_THRESHOLD_DISCRIMINATOR,
     })
   );
 }
 
-export function getFundManagerUpdateRestakingVaultDistributingRewardTokenThresholdInstructionDataDecoder(): Decoder<FundManagerUpdateRestakingVaultDistributingRewardTokenThresholdInstructionData> {
+export function getFundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdInstructionDataDecoder(): Decoder<FundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
     ['vault', getAddressDecoder()],
     ['distributingRewardTokenMint', getAddressDecoder()],
-    ['thresholdMinAmount', getU64Decoder()],
-    ['thresholdMaxAmount', getU64Decoder()],
-    ['thresholdIntervalSeconds', getU64Decoder()],
+    ['harvestThresholdMinAmount', getU64Decoder()],
+    ['harvestThresholdMaxAmount', getU64Decoder()],
+    ['harvestThresholdIntervalSeconds', getI64Decoder()],
   ]);
 }
 
-export function getFundManagerUpdateRestakingVaultDistributingRewardTokenThresholdInstructionDataCodec(): Codec<
-  FundManagerUpdateRestakingVaultDistributingRewardTokenThresholdInstructionDataArgs,
-  FundManagerUpdateRestakingVaultDistributingRewardTokenThresholdInstructionData
+export function getFundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdInstructionDataCodec(): Codec<
+  FundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdInstructionDataArgs,
+  FundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdInstructionData
 > {
   return combineCodec(
-    getFundManagerUpdateRestakingVaultDistributingRewardTokenThresholdInstructionDataEncoder(),
-    getFundManagerUpdateRestakingVaultDistributingRewardTokenThresholdInstructionDataDecoder()
+    getFundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdInstructionDataEncoder(),
+    getFundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdInstructionDataDecoder()
   );
 }
 
-export type FundManagerUpdateRestakingVaultDistributingRewardTokenThresholdAsyncInput<
+export type FundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdAsyncInput<
   TAccountFundManager extends string = string,
   TAccountReceiptTokenMint extends string = string,
   TAccountFundAccount extends string = string,
@@ -155,14 +157,14 @@ export type FundManagerUpdateRestakingVaultDistributingRewardTokenThresholdAsync
   fundAccount?: Address<TAccountFundAccount>;
   eventAuthority?: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
-  vault: FundManagerUpdateRestakingVaultDistributingRewardTokenThresholdInstructionDataArgs['vault'];
-  distributingRewardTokenMint: FundManagerUpdateRestakingVaultDistributingRewardTokenThresholdInstructionDataArgs['distributingRewardTokenMint'];
-  thresholdMinAmount: FundManagerUpdateRestakingVaultDistributingRewardTokenThresholdInstructionDataArgs['thresholdMinAmount'];
-  thresholdMaxAmount: FundManagerUpdateRestakingVaultDistributingRewardTokenThresholdInstructionDataArgs['thresholdMaxAmount'];
-  thresholdIntervalSeconds: FundManagerUpdateRestakingVaultDistributingRewardTokenThresholdInstructionDataArgs['thresholdIntervalSeconds'];
+  vault: FundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdInstructionDataArgs['vault'];
+  distributingRewardTokenMint: FundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdInstructionDataArgs['distributingRewardTokenMint'];
+  harvestThresholdMinAmount: FundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdInstructionDataArgs['harvestThresholdMinAmount'];
+  harvestThresholdMaxAmount: FundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdInstructionDataArgs['harvestThresholdMaxAmount'];
+  harvestThresholdIntervalSeconds: FundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdInstructionDataArgs['harvestThresholdIntervalSeconds'];
 };
 
-export async function getFundManagerUpdateRestakingVaultDistributingRewardTokenThresholdInstructionAsync<
+export async function getFundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdInstructionAsync<
   TAccountFundManager extends string,
   TAccountReceiptTokenMint extends string,
   TAccountFundAccount extends string,
@@ -170,7 +172,7 @@ export async function getFundManagerUpdateRestakingVaultDistributingRewardTokenT
   TAccountProgram extends string,
   TProgramAddress extends Address = typeof RESTAKING_PROGRAM_ADDRESS,
 >(
-  input: FundManagerUpdateRestakingVaultDistributingRewardTokenThresholdAsyncInput<
+  input: FundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdAsyncInput<
     TAccountFundManager,
     TAccountReceiptTokenMint,
     TAccountFundAccount,
@@ -179,7 +181,7 @@ export async function getFundManagerUpdateRestakingVaultDistributingRewardTokenT
   >,
   config?: { programAddress?: TProgramAddress }
 ): Promise<
-  FundManagerUpdateRestakingVaultDistributingRewardTokenThresholdInstruction<
+  FundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdInstruction<
     TProgramAddress,
     TAccountFundManager,
     TAccountReceiptTokenMint,
@@ -250,10 +252,10 @@ export async function getFundManagerUpdateRestakingVaultDistributingRewardTokenT
       getAccountMeta(accounts.program),
     ],
     programAddress,
-    data: getFundManagerUpdateRestakingVaultDistributingRewardTokenThresholdInstructionDataEncoder().encode(
-      args as FundManagerUpdateRestakingVaultDistributingRewardTokenThresholdInstructionDataArgs
+    data: getFundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdInstructionDataEncoder().encode(
+      args as FundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdInstructionDataArgs
     ),
-  } as FundManagerUpdateRestakingVaultDistributingRewardTokenThresholdInstruction<
+  } as FundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdInstruction<
     TProgramAddress,
     TAccountFundManager,
     TAccountReceiptTokenMint,
@@ -265,7 +267,7 @@ export async function getFundManagerUpdateRestakingVaultDistributingRewardTokenT
   return instruction;
 }
 
-export type FundManagerUpdateRestakingVaultDistributingRewardTokenThresholdInput<
+export type FundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdInput<
   TAccountFundManager extends string = string,
   TAccountReceiptTokenMint extends string = string,
   TAccountFundAccount extends string = string,
@@ -277,14 +279,14 @@ export type FundManagerUpdateRestakingVaultDistributingRewardTokenThresholdInput
   fundAccount: Address<TAccountFundAccount>;
   eventAuthority: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
-  vault: FundManagerUpdateRestakingVaultDistributingRewardTokenThresholdInstructionDataArgs['vault'];
-  distributingRewardTokenMint: FundManagerUpdateRestakingVaultDistributingRewardTokenThresholdInstructionDataArgs['distributingRewardTokenMint'];
-  thresholdMinAmount: FundManagerUpdateRestakingVaultDistributingRewardTokenThresholdInstructionDataArgs['thresholdMinAmount'];
-  thresholdMaxAmount: FundManagerUpdateRestakingVaultDistributingRewardTokenThresholdInstructionDataArgs['thresholdMaxAmount'];
-  thresholdIntervalSeconds: FundManagerUpdateRestakingVaultDistributingRewardTokenThresholdInstructionDataArgs['thresholdIntervalSeconds'];
+  vault: FundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdInstructionDataArgs['vault'];
+  distributingRewardTokenMint: FundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdInstructionDataArgs['distributingRewardTokenMint'];
+  harvestThresholdMinAmount: FundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdInstructionDataArgs['harvestThresholdMinAmount'];
+  harvestThresholdMaxAmount: FundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdInstructionDataArgs['harvestThresholdMaxAmount'];
+  harvestThresholdIntervalSeconds: FundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdInstructionDataArgs['harvestThresholdIntervalSeconds'];
 };
 
-export function getFundManagerUpdateRestakingVaultDistributingRewardTokenThresholdInstruction<
+export function getFundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdInstruction<
   TAccountFundManager extends string,
   TAccountReceiptTokenMint extends string,
   TAccountFundAccount extends string,
@@ -292,7 +294,7 @@ export function getFundManagerUpdateRestakingVaultDistributingRewardTokenThresho
   TAccountProgram extends string,
   TProgramAddress extends Address = typeof RESTAKING_PROGRAM_ADDRESS,
 >(
-  input: FundManagerUpdateRestakingVaultDistributingRewardTokenThresholdInput<
+  input: FundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdInput<
     TAccountFundManager,
     TAccountReceiptTokenMint,
     TAccountFundAccount,
@@ -300,7 +302,7 @@ export function getFundManagerUpdateRestakingVaultDistributingRewardTokenThresho
     TAccountProgram
   >,
   config?: { programAddress?: TProgramAddress }
-): FundManagerUpdateRestakingVaultDistributingRewardTokenThresholdInstruction<
+): FundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdInstruction<
   TProgramAddress,
   TAccountFundManager,
   TAccountReceiptTokenMint,
@@ -346,10 +348,10 @@ export function getFundManagerUpdateRestakingVaultDistributingRewardTokenThresho
       getAccountMeta(accounts.program),
     ],
     programAddress,
-    data: getFundManagerUpdateRestakingVaultDistributingRewardTokenThresholdInstructionDataEncoder().encode(
-      args as FundManagerUpdateRestakingVaultDistributingRewardTokenThresholdInstructionDataArgs
+    data: getFundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdInstructionDataEncoder().encode(
+      args as FundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdInstructionDataArgs
     ),
-  } as FundManagerUpdateRestakingVaultDistributingRewardTokenThresholdInstruction<
+  } as FundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdInstruction<
     TProgramAddress,
     TAccountFundManager,
     TAccountReceiptTokenMint,
@@ -361,7 +363,7 @@ export function getFundManagerUpdateRestakingVaultDistributingRewardTokenThresho
   return instruction;
 }
 
-export type ParsedFundManagerUpdateRestakingVaultDistributingRewardTokenThresholdInstruction<
+export type ParsedFundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdInstruction<
   TProgram extends string = typeof RESTAKING_PROGRAM_ADDRESS,
   TAccountMetas extends readonly IAccountMeta[] = readonly IAccountMeta[],
 > = {
@@ -373,17 +375,17 @@ export type ParsedFundManagerUpdateRestakingVaultDistributingRewardTokenThreshol
     eventAuthority: TAccountMetas[3];
     program: TAccountMetas[4];
   };
-  data: FundManagerUpdateRestakingVaultDistributingRewardTokenThresholdInstructionData;
+  data: FundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdInstructionData;
 };
 
-export function parseFundManagerUpdateRestakingVaultDistributingRewardTokenThresholdInstruction<
+export function parseFundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdInstruction<
   TProgram extends string,
   TAccountMetas extends readonly IAccountMeta[],
 >(
   instruction: IInstruction<TProgram> &
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
-): ParsedFundManagerUpdateRestakingVaultDistributingRewardTokenThresholdInstruction<
+): ParsedFundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdInstruction<
   TProgram,
   TAccountMetas
 > {
@@ -406,7 +408,7 @@ export function parseFundManagerUpdateRestakingVaultDistributingRewardTokenThres
       eventAuthority: getNextAccount(),
       program: getNextAccount(),
     },
-    data: getFundManagerUpdateRestakingVaultDistributingRewardTokenThresholdInstructionDataDecoder().decode(
+    data: getFundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdInstructionDataDecoder().decode(
       instruction.data
     ),
   };

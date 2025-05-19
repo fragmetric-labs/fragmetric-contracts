@@ -45,7 +45,7 @@ import {
   type ParsedFundManagerSettleRewardInstruction,
   type ParsedFundManagerUpdateFundStrategyInstruction,
   type ParsedFundManagerUpdateRestakingVaultDelegationStrategyInstruction,
-  type ParsedFundManagerUpdateRestakingVaultDistributingRewardTokenThresholdInstruction,
+  type ParsedFundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdInstruction,
   type ParsedFundManagerUpdateRestakingVaultStrategyInstruction,
   type ParsedFundManagerUpdateRewardInstruction,
   type ParsedFundManagerUpdateSolStrategyInstruction,
@@ -435,7 +435,7 @@ export enum RestakingInstruction {
   FundManagerSettleReward,
   FundManagerUpdateFundStrategy,
   FundManagerUpdateRestakingVaultDelegationStrategy,
-  FundManagerUpdateRestakingVaultDistributingRewardTokenThreshold,
+  FundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThreshold,
   FundManagerUpdateRestakingVaultStrategy,
   FundManagerUpdateReward,
   FundManagerUpdateSolStrategy,
@@ -815,12 +815,12 @@ export function identifyRestakingInstruction(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([219, 174, 127, 21, 77, 228, 60, 43])
+        new Uint8Array([14, 107, 151, 57, 181, 186, 184, 16])
       ),
       0
     )
   ) {
-    return RestakingInstruction.FundManagerUpdateRestakingVaultDistributingRewardTokenThreshold;
+    return RestakingInstruction.FundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThreshold;
   }
   if (
     containsBytes(
@@ -1232,8 +1232,8 @@ export type ParsedRestakingInstruction<
       instructionType: RestakingInstruction.FundManagerUpdateRestakingVaultDelegationStrategy;
     } & ParsedFundManagerUpdateRestakingVaultDelegationStrategyInstruction<TProgram>)
   | ({
-      instructionType: RestakingInstruction.FundManagerUpdateRestakingVaultDistributingRewardTokenThreshold;
-    } & ParsedFundManagerUpdateRestakingVaultDistributingRewardTokenThresholdInstruction<TProgram>)
+      instructionType: RestakingInstruction.FundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThreshold;
+    } & ParsedFundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdInstruction<TProgram>)
   | ({
       instructionType: RestakingInstruction.FundManagerUpdateRestakingVaultStrategy;
     } & ParsedFundManagerUpdateRestakingVaultStrategyInstruction<TProgram>)
