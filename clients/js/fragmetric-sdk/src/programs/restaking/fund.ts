@@ -1472,14 +1472,7 @@ export class RestakingFundAccountContext extends AccountContext<
                   {
                     programAddress: this.program.address,
                   }
-                )
-                .then((ix) => {
-                  // add pricing sources
-                  for (const accountMeta of data.__pricingSources) {
-                    ix.accounts.push(accountMeta);
-                  }
-                  return ix;
-                }),
+                ),
             ]);
           }
 
