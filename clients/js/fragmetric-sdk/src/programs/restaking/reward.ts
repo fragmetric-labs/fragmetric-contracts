@@ -208,10 +208,6 @@ export class RestakingRewardAccountContext extends AccountContext<
           }
         );
 
-        for (const accountMeta of data.__pricingSources) {
-          ix.accounts.push(accountMeta);
-        }
-
         return [ix];
       },
     ],
