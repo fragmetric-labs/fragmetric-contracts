@@ -103,7 +103,9 @@ export class RestakingRewardAccountContext extends AccountContext<
             } = settlement;
             // [ head ... tail ] or [ tail ... head ]
             const blocks =
-              settlementBlocksHead <= settlementBlocksTail
+              settlementBlocksHead < settlementBlocksTail ||
+              (settlementBlocksHead == settlementBlocksTail &&
+                numSettlementBlocks == 0)
                 ? settlementBlocks.slice(
                     settlementBlocksHead,
                     settlementBlocksTail

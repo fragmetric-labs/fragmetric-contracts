@@ -34,9 +34,10 @@ import { initializeFragBTC } from './fragbtc.init';
  * 18. delegate user2 reward account -> user1
  * 19. delegate user2 reward account -> user2
  * 20. settle with threshold
- *  20-1. settle not occurs by amount threshold
+ *  20-1. settle not occurs by min amount threshold
  *  20-2. settle not occurs by timestamp threshold
- *  20-3. settle occurs by all threshold conditions passed
+ *  20-3. settle not fully occurs by max amount threshold
+ *  20-4. settle occurs by all threshold conditions passed
  */
 
 describe('restaking.fragBTC test', async () => {
@@ -1831,28 +1832,33 @@ describe('restaking.fragBTC test', async () => {
 
   /** 7. settle with threshold */
   test('settle should not occur if threshold is not matched', async () => {
-    const rewardAmount = 100_000_000_000n;
+    const rewardTokenMint = 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq';
 
     // 1. update distributing reward amount threshold -> settle would not occur
-    await ctx.fund.updateRestakingVaultDistributingRewardHarvestThreshold.execute({
-      vault: solv.zBTC.address!,
-      rewardTokenMint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
-      harvestThresholdMinAmount: rewardAmount + 100_000_000n,
-      harvestThresholdMaxAmount: rewardAmount + 200_000_000n,
-      harvestThresholdIntervalSeconds: 1n,
-    });
+    await ctx.fund.updateRestakingVaultDistributingRewardHarvestThreshold.execute(
+      {
+        vault: solv.zBTC.address!,
+        rewardTokenMint,
+        harvestThresholdMinAmount: 600_000_000n,
+        harvestThresholdMaxAmount: 700_000_000n,
+        harvestThresholdIntervalSeconds: 1n,
+      }
+    );
 
     // drop distribution token to the vault
     await validator.airdropToken(
       solv.zBTC.address!,
-      'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
-      100_000_000_000n
+      rewardTokenMint,
+      500_000_000n
     );
 
     const globalReward_4 = await ctx.reward.resolve(true);
 
     // try to settle global reward
-    await ctx.fund.runCommand.executeChained(null);
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestReward',
+      operator: restaking.knownAddresses.fundManager,
+    });
 
     const globalReward_5 = await ctx.reward.resolve(true);
 
@@ -1864,16 +1870,21 @@ describe('restaking.fragBTC test', async () => {
     );
 
     // 2. update distributing reward interval second threshold -> settle would not occur
-    await ctx.fund.updateRestakingVaultDistributingRewardHarvestThreshold.execute({
-      vault: solv.zBTC.address!,
-      rewardTokenMint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
-      harvestThresholdMinAmount: rewardAmount - 100_000_000n,
-      harvestThresholdMaxAmount: 2n ** 64n - 1n, // u64::MAX
-      harvestThresholdIntervalSeconds: 100n,
-    });
+    await ctx.fund.updateRestakingVaultDistributingRewardHarvestThreshold.execute(
+      {
+        vault: solv.zBTC.address!,
+        rewardTokenMint,
+        harvestThresholdMinAmount: 200_000_000n,
+        harvestThresholdMaxAmount: 300_000_000n,
+        harvestThresholdIntervalSeconds: 100n,
+      }
+    );
 
     // try to settle global reward
-    await ctx.fund.runCommand.executeChained(null);
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestReward',
+      operator: restaking.knownAddresses.fundManager,
+    });
 
     const globalReward_6 = await ctx.reward.resolve(true);
 
@@ -1884,17 +1895,22 @@ describe('restaking.fragBTC test', async () => {
       globalReward_4?.basePool.settlements[0].settlementBlocksLastSlot!
     );
 
-    // 3. update distributing reward interval second threshold -> now settle would occur
-    await ctx.fund.updateRestakingVaultDistributingRewardHarvestThreshold.execute({
-      vault: solv.zBTC.address!,
-      rewardTokenMint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
-      harvestThresholdMinAmount: rewardAmount - 100_000_000n,
-      harvestThresholdMaxAmount: 2n ** 64n - 1n,
-      harvestThresholdIntervalSeconds: 0n,
-    });
+    // 3. update distributing reward interval second threshold -> now settle would occur but not fully settled due to max amount threshold
+    await ctx.fund.updateRestakingVaultDistributingRewardHarvestThreshold.execute(
+      {
+        vault: solv.zBTC.address!,
+        rewardTokenMint,
+        harvestThresholdMinAmount: 200_000_000n,
+        harvestThresholdMaxAmount: 300_000_000n,
+        harvestThresholdIntervalSeconds: 0n,
+      }
+    );
 
-    // now settle occurs
-    await ctx.fund.runCommand.executeChained(null);
+    // now settle occurs but not fully settled
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestReward',
+      operator: restaking.knownAddresses.fundManager,
+    });
 
     const globalReward_7 = await ctx.reward.resolve(true);
 
@@ -1903,5 +1919,29 @@ describe('restaking.fragBTC test', async () => {
     ).toBeGreaterThan(
       globalReward_4?.basePool.settlements[0].settlementBlocksLastSlot!
     );
+
+    expect(
+      globalReward_7?.basePool.settlements[0].settledAmount! -
+        globalReward_4?.basePool.settlements[0].settledAmount!
+    ).toEqual(300_000_000n);
+
+    // 4. now fully settled
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestReward',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    const globalReward_8 = await ctx.reward.resolve(true);
+
+    expect(
+      globalReward_8?.basePool.settlements[0].settlementBlocksLastSlot!
+    ).toBeGreaterThan(
+      globalReward_7?.basePool.settlements[0].settlementBlocksLastSlot!
+    );
+
+    expect(
+      globalReward_8?.basePool.settlements[0].settledAmount! -
+        globalReward_7?.basePool.settlements[0].settledAmount!
+    ).toEqual(200_000_000n);
   });
 });

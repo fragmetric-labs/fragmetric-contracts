@@ -1027,7 +1027,7 @@ export class RestakingFundAccountContext extends AccountContext<
                   {
                     programAddress: this.program.address,
                   }
-                )
+                ),
           ]);
         },
       ],
@@ -1142,7 +1142,10 @@ export class RestakingFundAccountContext extends AccountContext<
     | (restaking.FundManagerUpdateRestakingVaultStrategyInstructionDataArgs & {
         pricingSource: restaking.TokenPricingSourceArgs;
         compoundingRewardTokenMints: Address[];
-        distributingRewardTokens: Omit<restaking.DistributingRewardTokenArgs, 'reserved'>[];
+        distributingRewardTokens: Omit<
+          restaking.DistributingRewardTokenArgs,
+          'reserved'
+        >[];
         delegations: Omit<
           restaking.FundManagerUpdateRestakingVaultDelegationStrategyInstructionDataArgs,
           'vault'
@@ -1159,7 +1162,10 @@ export class RestakingFundAccountContext extends AccountContext<
         const strategy: restaking.FundManagerUpdateRestakingVaultStrategyInstructionDataArgs & {
           pricingSource: restaking.TokenPricingSourceArgs;
           compoundingRewardTokenMints: Address[];
-          distributingRewardTokens: Omit<restaking.DistributingRewardTokenArgs, 'reserved'>[];
+          distributingRewardTokens: Omit<
+            restaking.DistributingRewardTokenArgs,
+            'reserved'
+          >[];
           delegations: Omit<
             restaking.FundManagerUpdateRestakingVaultDelegationStrategyInstructionDataArgs,
             'vault'
@@ -1195,13 +1201,13 @@ export class RestakingFundAccountContext extends AccountContext<
             0,
             item.numCompoundingRewardTokens
           ),
-          distributingRewardTokens: item.distributingRewardTokens.slice(
-            0,
-            item.numDistributingRewardTokens
-          ).map((distributingRewardTokenItem) => {
-            const { reserved, ...distributingRewardToken } = distributingRewardTokenItem;
-            return distributingRewardToken;
-          }),
+          distributingRewardTokens: item.distributingRewardTokens
+            .slice(0, item.numDistributingRewardTokens)
+            .map((distributingRewardTokenItem) => {
+              const { reserved, ...distributingRewardToken } =
+                distributingRewardTokenItem;
+              return distributingRewardToken;
+            }),
         };
         return strategy;
       });
@@ -1459,20 +1465,19 @@ export class RestakingFundAccountContext extends AccountContext<
                 payer: createNoopSigner(payer as Address),
                 vaultOperatorDelegation,
               }),
-              restaking
-                .getFundManagerInitializeFundRestakingVaultDelegationInstructionAsync(
-                  {
-                    vaultOperatorDelegation,
-                    vaultAccount: args.vault as Address,
-                    operatorAccount: args.operator as Address,
-                    fundManager: createNoopSigner(fundManager),
-                    program: this.program.address,
-                    receiptTokenMint: data.receiptTokenMint,
-                  },
-                  {
-                    programAddress: this.program.address,
-                  }
-                ),
+              restaking.getFundManagerInitializeFundRestakingVaultDelegationInstructionAsync(
+                {
+                  vaultOperatorDelegation,
+                  vaultAccount: args.vault as Address,
+                  operatorAccount: args.operator as Address,
+                  fundManager: createNoopSigner(fundManager),
+                  program: this.program.address,
+                  receiptTokenMint: data.receiptTokenMint,
+                },
+                {
+                  programAddress: this.program.address,
+                }
+              ),
             ]);
           }
 
@@ -1805,7 +1810,8 @@ export class RestakingFundAccountContext extends AccountContext<
                   distributingRewardTokenMint: args.rewardTokenMint as Address,
                   harvestThresholdMinAmount: args.harvestThresholdMinAmount,
                   harvestThresholdMaxAmount: args.harvestThresholdMaxAmount,
-                  harvestThresholdIntervalSeconds: args.harvestThresholdIntervalSeconds,
+                  harvestThresholdIntervalSeconds:
+                    args.harvestThresholdIntervalSeconds,
                   fundManager: createNoopSigner(fundManager),
                   program: this.program.address,
                   receiptTokenMint: data.receiptTokenMint,
