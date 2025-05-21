@@ -127,6 +127,7 @@ export type FundAccount = {
   reserved2: ReadonlyUint8Array;
   /** fund pricing source address information (support for third party integration) */
   numPricingSourceAddresses: number;
+  padding7: ReadonlyUint8Array;
   pricingSourceAddresses: Array<Address>;
   reserved3: ReadonlyUint8Array;
   /** optional basket of underlying assets */
@@ -185,6 +186,7 @@ export type FundAccountArgs = {
   reserved2: ReadonlyUint8Array;
   /** fund pricing source address information (support for third party integration) */
   numPricingSourceAddresses: number;
+  padding7: ReadonlyUint8Array;
   pricingSourceAddresses: Array<Address>;
   reserved3: ReadonlyUint8Array;
   /** optional basket of underlying assets */
@@ -242,13 +244,14 @@ export function getFundAccountEncoder(): Encoder<FundAccountArgs> {
         'supportedTokens',
         getArrayEncoder(getSupportedTokenEncoder(), { size: 16 }),
       ],
-      ['reserved2', fixEncoderSize(getBytesEncoder(), 14191)],
+      ['reserved2', fixEncoderSize(getBytesEncoder(), 14188)],
       ['numPricingSourceAddresses', getU8Encoder()],
+      ['padding7', fixEncoderSize(getBytesEncoder(), 3)],
       [
         'pricingSourceAddresses',
-        getArrayEncoder(getAddressEncoder(), { size: 16 }),
+        getArrayEncoder(getAddressEncoder(), { size: 33 }),
       ],
-      ['reserved3', fixEncoderSize(getBytesEncoder(), 1312)],
+      ['reserved3', fixEncoderSize(getBytesEncoder(), 768)],
       ['normalizedToken', getNormalizedTokenEncoder()],
       ['padding5', fixEncoderSize(getBytesEncoder(), 15)],
       ['numRestakingVaults', getU8Encoder()],
@@ -307,13 +310,14 @@ export function getFundAccountDecoder(): Decoder<FundAccount> {
       'supportedTokens',
       getArrayDecoder(getSupportedTokenDecoder(), { size: 16 }),
     ],
-    ['reserved2', fixDecoderSize(getBytesDecoder(), 14191)],
+    ['reserved2', fixDecoderSize(getBytesDecoder(), 14188)],
     ['numPricingSourceAddresses', getU8Decoder()],
+    ['padding7', fixDecoderSize(getBytesDecoder(), 3)],
     [
       'pricingSourceAddresses',
-      getArrayDecoder(getAddressDecoder(), { size: 16 }),
+      getArrayDecoder(getAddressDecoder(), { size: 33 }),
     ],
-    ['reserved3', fixDecoderSize(getBytesDecoder(), 1312)],
+    ['reserved3', fixDecoderSize(getBytesDecoder(), 768)],
     ['normalizedToken', getNormalizedTokenDecoder()],
     ['padding5', fixDecoderSize(getBytesDecoder(), 15)],
     ['numRestakingVaults', getU8Decoder()],
