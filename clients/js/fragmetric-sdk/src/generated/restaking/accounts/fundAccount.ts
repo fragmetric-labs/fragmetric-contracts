@@ -125,6 +125,10 @@ export type FundAccount = {
   numSupportedTokens: number;
   supportedTokens: Array<SupportedToken>;
   reserved2: ReadonlyUint8Array;
+  /** fund pricing source address information (support for third party integration) */
+  numPricingSourceAddresses: number;
+  pricingSourceAddresses: Array<Address>;
+  reserved3: ReadonlyUint8Array;
   /** optional basket of underlying assets */
   normalizedToken: NormalizedToken;
   /** investments */
@@ -179,6 +183,10 @@ export type FundAccountArgs = {
   numSupportedTokens: number;
   supportedTokens: Array<SupportedTokenArgs>;
   reserved2: ReadonlyUint8Array;
+  /** fund pricing source address information (support for third party integration) */
+  numPricingSourceAddresses: number;
+  pricingSourceAddresses: Array<Address>;
+  reserved3: ReadonlyUint8Array;
   /** optional basket of underlying assets */
   normalizedToken: NormalizedTokenArgs;
   /** investments */
@@ -234,7 +242,13 @@ export function getFundAccountEncoder(): Encoder<FundAccountArgs> {
         'supportedTokens',
         getArrayEncoder(getSupportedTokenEncoder(), { size: 16 }),
       ],
-      ['reserved2', fixEncoderSize(getBytesEncoder(), 16016)],
+      ['reserved2', fixEncoderSize(getBytesEncoder(), 14191)],
+      ['numPricingSourceAddresses', getU8Encoder()],
+      [
+        'pricingSourceAddresses',
+        getArrayEncoder(getAddressEncoder(), { size: 16 }),
+      ],
+      ['reserved3', fixEncoderSize(getBytesEncoder(), 1312)],
       ['normalizedToken', getNormalizedTokenEncoder()],
       ['padding5', fixEncoderSize(getBytesEncoder(), 15)],
       ['numRestakingVaults', getU8Encoder()],
@@ -293,7 +307,13 @@ export function getFundAccountDecoder(): Decoder<FundAccount> {
       'supportedTokens',
       getArrayDecoder(getSupportedTokenDecoder(), { size: 16 }),
     ],
-    ['reserved2', fixDecoderSize(getBytesDecoder(), 16016)],
+    ['reserved2', fixDecoderSize(getBytesDecoder(), 14191)],
+    ['numPricingSourceAddresses', getU8Decoder()],
+    [
+      'pricingSourceAddresses',
+      getArrayDecoder(getAddressDecoder(), { size: 16 }),
+    ],
+    ['reserved3', fixDecoderSize(getBytesDecoder(), 1312)],
     ['normalizedToken', getNormalizedTokenDecoder()],
     ['padding5', fixDecoderSize(getBytesDecoder(), 15)],
     ['numRestakingVaults', getU8Decoder()],
