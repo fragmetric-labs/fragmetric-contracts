@@ -1669,7 +1669,7 @@ describe('restaking.fragSOL test', async () => {
     const pricingSourceAddresses: string[] = []
     const encodedPricingSourceAddresses = byteData.slice(0x9000, 0x9200);
     const ADDRESS_SIZE = 32;
-    const MAX_PRICING_SOURCE_ADDRESSES = 16;
+    const MAX_PRICING_SOURCE_ADDRESSES = 33;
     for (let offset = 0; offset < ADDRESS_SIZE * MAX_PRICING_SOURCE_ADDRESSES; offset += ADDRESS_SIZE) {
       const chunk = encodedPricingSourceAddresses.slice(offset, offset + ADDRESS_SIZE);
       const address = new PublicKey(chunk);

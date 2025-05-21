@@ -25,8 +25,10 @@ pub const FUND_ACCOUNT_CURRENT_VERSION: u16 = 19;
 
 pub const FUND_WITHDRAWAL_FEE_RATE_BPS_LIMIT: u16 = 500;
 pub const FUND_ACCOUNT_MAX_SUPPORTED_TOKENS: usize = 16;
-pub const FUND_ACCOUNT_MAX_PRICING_SOURCE_ADDRESSES: usize = 16;
 pub const FUND_ACCOUNT_MAX_RESTAKING_VAULTS: usize = 16;
+pub const FUND_ACCOUNT_MAX_PRICING_SOURCE_ADDRESSES: usize =
+    FUND_ACCOUNT_MAX_SUPPORTED_TOKENS + FUND_ACCOUNT_MAX_RESTAKING_VAULTS + 1;
+
 pub const FUND_ACCOUNT_MAX_TOKEN_SWAP_STRATEGIES: usize = 30;
 
 #[account(zero_copy)]
@@ -78,7 +80,7 @@ pub struct FundAccount {
     pub(super) num_pricing_source_addresses: u8,
     pub(super) pricing_source_addresses: [Pubkey; FUND_ACCOUNT_MAX_PRICING_SOURCE_ADDRESSES],
 
-    _reserved3: [u8; 1312],
+    _reserved3: [u8; 768],
 
     /// optional basket of underlying assets
     normalized_token: NormalizedToken,
