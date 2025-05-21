@@ -7,7 +7,9 @@ use anchor_spl::token_interface::Mint;
 use bytemuck::Zeroable;
 
 use crate::errors::ErrorCode;
-use crate::modules::pricing::{PricingService, TokenPricingSource, TokenValuePod};
+use crate::modules::pricing::{
+    self, PricingService, TokenPricingSource, TokenPricingSourcePod, TokenValuePod,
+};
 use crate::modules::swap::TokenSwapSource;
 use crate::utils::*;
 
@@ -23,6 +25,7 @@ pub const FUND_ACCOUNT_CURRENT_VERSION: u16 = 19;
 
 pub const FUND_WITHDRAWAL_FEE_RATE_BPS_LIMIT: u16 = 500;
 pub const FUND_ACCOUNT_MAX_SUPPORTED_TOKENS: usize = 16;
+pub const FUND_ACCOUNT_MAX_PRICING_SOURCE_ADDRESSES: usize = 16;
 pub const FUND_ACCOUNT_MAX_RESTAKING_VAULTS: usize = 16;
 pub const FUND_ACCOUNT_MAX_TOKEN_SWAP_STRATEGIES: usize = 30;
 
@@ -69,7 +72,13 @@ pub struct FundAccount {
     _padding4: [u8; 15],
     num_supported_tokens: u8,
     supported_tokens: [SupportedToken; FUND_ACCOUNT_MAX_SUPPORTED_TOKENS],
-    _reserved2: [u8; 16016],
+    _reserved2: [u8; 14191],
+
+    /// fund pricing source address information (support for third party integration)
+    pub(super) num_pricing_source_addresses: u8,
+    pub(super) pricing_source_addresses: [Pubkey; FUND_ACCOUNT_MAX_PRICING_SOURCE_ADDRESSES],
+
+    _reserved3: [u8; 1312],
 
     /// optional basket of underlying assets
     normalized_token: NormalizedToken,
@@ -356,6 +365,59 @@ impl FundAccount {
                 &self.receipt_token_program,
             ),
         )
+    }
+
+    pub(super) fn get_pricing_source_addresses(&self) -> Result<Vec<Pubkey>> {
+        let mut pricing_source_addresses =
+            Vec::with_capacity(FUND_ACCOUNT_MAX_PRICING_SOURCE_ADDRESSES);
+
+        self.get_pricing_source_pods_iter()
+            .try_for_each(|pricing_source| match pricing_source.try_deserialize()? {
+                Some(TokenPricingSource::SPLStakePool { address })
+                | Some(TokenPricingSource::MarinadeStakePool { address })
+                | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { address })
+                | Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { address })
+                | Some(TokenPricingSource::OrcaDEXLiquidityPool { address })
+                | Some(TokenPricingSource::JitoRestakingVault { address })
+                | Some(TokenPricingSource::FragmetricNormalizedTokenPool { address })
+                | Some(TokenPricingSource::SolvBTCVault { address }) => {
+                    require_gt!(
+                        FUND_ACCOUNT_MAX_PRICING_SOURCE_ADDRESSES,
+                        pricing_source_addresses.len(),
+                        ErrorCode::FundExceededMaxPricingSourcesError
+                    );
+                    pricing_source_addresses.push(address);
+
+                    Ok(())
+                }
+                Some(TokenPricingSource::FragmetricRestakingFund { .. }) | None => {
+                    err!(ErrorCode::TokenPricingSourceAccountNotFoundError)
+                }
+                Some(TokenPricingSource::PeggedToken { .. }) => Ok(()),
+                #[cfg(all(test, not(feature = "idl-build")))]
+                Some(TokenPricingSource::Mock { .. }) => {
+                    err!(ErrorCode::TokenPricingSourceAccountNotFoundError)
+                }
+            })?;
+
+        Ok(pricing_source_addresses)
+    }
+
+    #[inline(always)]
+    pub(super) fn get_pricing_source_pods_iter(
+        &self,
+    ) -> impl Iterator<Item = &TokenPricingSourcePod> {
+        self.get_supported_tokens_iter()
+            .map(|supported_token| &supported_token.pricing_source)
+            .chain(
+                self.get_restaking_vaults_iter()
+                    .map(|restaking_vault| &restaking_vault.receipt_token_pricing_source),
+            )
+            .chain(
+                self.get_normalized_token()
+                    .into_iter()
+                    .map(|normalized_token| &normalized_token.pricing_source),
+            )
     }
 
     #[inline(always)]
