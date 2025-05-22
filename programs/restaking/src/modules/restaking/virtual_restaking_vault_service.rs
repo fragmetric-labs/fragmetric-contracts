@@ -25,7 +25,7 @@ impl<'info> VirtualRestakingVaultService<'info> {
         vault_account: &AccountInfo,
         vault_receipt_token_mint: &AccountInfo,
     ) -> Result<()> {
-        require_keys_eq!(*vault_account.owner, System::id()); // do again? it is checked at new method -> but should also be here, because this method doesn't access new().
+        require_keys_eq!(*vault_account.owner, System::id());
 
         let vault_receipt_token_mint_data =
             Mint::try_deserialize(&mut &vault_receipt_token_mint.data.borrow()[..])?;

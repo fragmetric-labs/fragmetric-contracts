@@ -1,4 +1,4 @@
-import web3 from '@solana/web3.js';
+import * as web3 from '@solana/web3.js';
 import { VirtualVaultAccountContext } from '../../../clients/js/fragmetric-sdk/src/programs/restaking/restaking_vault_virtual';
 import type { TestSuiteContext } from '../../testutil';
 
@@ -7,6 +7,16 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
   const { MAX_U64 } = sdk;
 
   const ctx = restaking.fragSOL;
+  const [virtualVaultAddr] = web3.PublicKey.findProgramAddressSync(
+    [
+      Buffer.from('virtual_vault'),
+      new web3.PublicKey(
+        '8vEunBQvD3L4aNnRPyQzfQ7pecq4tPb46PjZVKUnTP9i'
+      ).toBuffer(),
+    ],
+    new web3.PublicKey(restaking.program.address.toString())
+  );
+
   const initializationTasks = [
     // initialize receipt token mint and transfer hook metadata
     () =>
@@ -472,15 +482,6 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
 
     // initialize virtual restaking vault (FRAG)
     () => {
-      const [virtualVaultAddr] = web3.PublicKey.findProgramAddressSync(
-        [
-          Buffer.from('virtual_vault'),
-          new web3.PublicKey(
-            '8vEunBQvD3L4aNnRPyQzfQ7pecq4tPb46PjZVKUnTP9i'
-          ).toBuffer(),
-        ],
-        new web3.PublicKey(restaking.program.address.toString())
-      );
       const vaultContext = ctx.fund.restakingVault(
         virtualVaultAddr.toString(),
         '11111111111111111111111111111111'
@@ -499,46 +500,25 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
         decimals: 9,
       });
     },
-    () => {
-      const [virtualVaultAddr] = web3.PublicKey.findProgramAddressSync(
-        [
-          Buffer.from('virtual_vault'),
-          new web3.PublicKey(
-            '8vEunBQvD3L4aNnRPyQzfQ7pecq4tPb46PjZVKUnTP9i'
-          ).toBuffer(),
-        ],
-        new web3.PublicKey(restaking.program.address.toString())
-      );
-
-      return ctx.fund.addRestakingVault.execute({
+    () =>
+      ctx.fund.addRestakingVault.execute({
         vault: virtualVaultAddr.toString(),
         pricingSource: {
           __kind: 'VirtualRestakingVault',
           address: virtualVaultAddr.toString(),
         },
-      });
-    },
+      }),
 
     // configure reward settings
-    () => {
-      const [virtualVaultAddr] = web3.PublicKey.findProgramAddressSync(
-        [
-          Buffer.from('virtual_vault'),
-          new web3.PublicKey(
-            '8vEunBQvD3L4aNnRPyQzfQ7pecq4tPb46PjZVKUnTP9i'
-          ).toBuffer(),
-        ],
-        new web3.PublicKey(restaking.program.address.toString())
-      );
-      // return ctx.fund.addRestakingVaultCompoundingReward.execute({
+    () =>
+      // ctx.fund.addRestakingVaultCompoundingReward.execute({
       //   vault: virtualVaultAddr.toString(),
       //   rewardTokenMint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
-      // });
-      return ctx.fund.addRestakingVaultDistributingReward.execute({
+      // }),
+      ctx.fund.addRestakingVaultDistributingReward.execute({
         vault: virtualVaultAddr.toString(),
         rewardTokenMint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
-      });
-    },
+      }),
 
     // initialize address lookup table
     () =>

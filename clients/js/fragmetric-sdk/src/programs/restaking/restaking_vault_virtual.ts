@@ -7,7 +7,7 @@ import {
   EncodedAccount,
   None,
 } from '@solana/kit';
-import web3 from '@solana/web3.js';
+import * as web3 from '@solana/web3.js';
 import * as v from 'valibot';
 import {
   AccountContext,
@@ -72,54 +72,6 @@ export class VirtualVaultAccountContext extends AccountContext<
       space: account.space,
     };
   }
-
-  readonly initializeVstMint = new TransactionTemplateContext(
-    this,
-    v.object({
-      name: v.string(),
-      symbol: v.string(),
-      uri: v.string(),
-      description: v.string(),
-      decimals: v.number(),
-    }),
-    {
-      description: 'initialize vst mint',
-      instructions: [
-        async (parent, args, overrides) => {
-          const [payer] = await Promise.all([
-            transformAddressResolverVariant(
-              overrides.feePayer ??
-                this.runtime.options.transaction.feePayer ??
-                (() => Promise.resolve(null))
-            )(parent),
-          ]);
-          const admin = (this.program as RestakingProgram).knownAddresses.admin;
-
-          const space = token.getMintSize();
-          const rent = await this.runtime.rpc
-            .getMinimumBalanceForRentExemption(BigInt(space))
-            .send();
-
-          return [
-            system.getCreateAccountInstruction({
-              payer: createNoopSigner(payer as Address),
-              newAccount: createNoopSigner(
-                'EQFJ1FMNNBeNmznS6QVmMXEZMW55EFXZvzfEepxgXgVE' as Address
-              ),
-              lamports: rent,
-              space,
-              programAddress: token.TOKEN_PROGRAM_ADDRESS,
-            }),
-            token.getInitializeMintInstruction({
-              mint: 'EQFJ1FMNNBeNmznS6QVmMXEZMW55EFXZvzfEepxgXgVE' as Address, // vst
-              decimals: 9,
-              mintAuthority: admin,
-            }),
-          ];
-        },
-      ],
-    }
-  );
 
   readonly initializeVrtMint = new TransactionTemplateContext(
     this,
@@ -191,7 +143,6 @@ export class VirtualVaultAccountContext extends AccountContext<
             parent.parent.parent.parent.program.address.toString()
           )
         );
-        console.log(`virtualVault address: ${virtualVaultAddr}`);
         const vault = fund.data.restakingVaults.filter(
           (restakingVault) =>
             restakingVault.vault == virtualVaultAddr.toString()

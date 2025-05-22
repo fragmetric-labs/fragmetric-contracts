@@ -13,7 +13,6 @@ import {
   getProgramDerivedAddress,
   IAccountMeta,
 } from '@solana/kit';
-import web3 from '@solana/web3.js';
 import * as v from 'valibot';
 import {
   AccountContext,
@@ -1410,22 +1409,10 @@ export class RestakingFundAccountContext extends AccountContext<
               throw new Error('invalid context: virtual vault not found');
             }
 
-            const [virtualVaultAddr] = web3.PublicKey.findProgramAddressSync(
-              [
-                Buffer.from('virtual_vault'),
-                new web3.PublicKey(
-                  '8vEunBQvD3L4aNnRPyQzfQ7pecq4tPb46PjZVKUnTP9i'
-                ).toBuffer(),
-              ],
-              new web3.PublicKey(
-                parent.parent.parent.program.address.toString()
-              )
-            );
-
             const ix =
               await restaking.getFundManagerInitializeFundRestakingVaultInstructionAsync(
                 {
-                  vaultAccount: virtualVaultAddr.toString() as Address,
+                  vaultAccount: args.vault as Address,
                   vaultReceiptTokenMint:
                     '8vEunBQvD3L4aNnRPyQzfQ7pecq4tPb46PjZVKUnTP9i' as Address,
                   vaultSupportedTokenMint:
@@ -1458,7 +1445,7 @@ export class RestakingFundAccountContext extends AccountContext<
               token.getCreateAssociatedTokenIdempotentInstructionAsync({
                 payer: createNoopSigner(payer as Address),
                 mint: '8vEunBQvD3L4aNnRPyQzfQ7pecq4tPb46PjZVKUnTP9i' as Address, // vrt
-                owner: virtualVaultAddr.toString() as Address,
+                owner: args.vault as Address,
                 tokenProgram: token.TOKEN_PROGRAM_ADDRESS,
               }),
               token.getCreateAssociatedTokenIdempotentInstructionAsync({
@@ -1470,7 +1457,7 @@ export class RestakingFundAccountContext extends AccountContext<
               token.getCreateAssociatedTokenIdempotentInstructionAsync({
                 payer: createNoopSigner(payer as Address),
                 mint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq' as Address, // vst, zeus token
-                owner: virtualVaultAddr.toString() as Address,
+                owner: args.vault as Address,
                 tokenProgram: token.TOKEN_PROGRAM_ADDRESS,
               }),
               ix,

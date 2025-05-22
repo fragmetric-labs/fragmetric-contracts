@@ -1,4 +1,4 @@
-import web3 from '@solana/web3.js';
+import * as web3 from '@solana/web3.js';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { createTestSuiteContext, expectMasked } from '../../testutil';
 import { initializeFragSOL } from './fragsol.init';
