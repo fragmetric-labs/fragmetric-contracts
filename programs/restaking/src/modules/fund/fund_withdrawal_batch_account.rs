@@ -26,7 +26,6 @@ pub struct FundWithdrawalBatchAccount {
     pub(super) asset_fee_amount: u64,
 
     processed_at: i64,
-    // TODO/v0.5: returned_receipt_token_amount? if fund is absolutely lack of the certain asset
     _reserved: [u8; 32],
 }
 
@@ -197,6 +196,12 @@ impl FundWithdrawalBatchAccount {
             ErrorCode::FundWithdrawalRequestIncorrectBatchError,
         );
 
+        let asset_total_amount = crate::utils::get_proportional_amount(
+            request.receipt_token_amount,
+            self.asset_user_amount + self.asset_fee_amount,
+            self.receipt_token_amount,
+        )?;
+
         let asset_user_amount = crate::utils::get_proportional_amount(
             request.receipt_token_amount,
             self.asset_user_amount,
@@ -204,11 +209,7 @@ impl FundWithdrawalBatchAccount {
         )?;
 
         // informative
-        let asset_fee_amount = crate::utils::get_proportional_amount(
-            request.receipt_token_amount,
-            self.asset_fee_amount,
-            self.receipt_token_amount,
-        )?;
+        let asset_fee_amount = asset_total_amount - asset_user_amount;
 
         self.num_claimed_requests += 1;
         self.claimed_receipt_token_amount += request.receipt_token_amount;

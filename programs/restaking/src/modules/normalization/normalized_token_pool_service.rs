@@ -556,7 +556,6 @@ impl<'a, 'info> NormalizedTokenPoolService<'a, 'info> {
         pricing_service.flatten_token_value(
             normalized_token_mint_key,
             &mut self.normalized_token_pool_account.normalized_token_value,
-            false,
         )?;
 
         self.normalized_token_pool_account

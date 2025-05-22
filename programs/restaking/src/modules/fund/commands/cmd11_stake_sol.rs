@@ -132,6 +132,7 @@ impl StakeSOLCommand {
         }
         let sol_staking_reserved_amount = u64::try_from(sol_net_operation_reserved_amount)?;
 
+        // let participating_supported_tokens = [bool; FUND_ACCOUNT_MAX_SUPPORTED_TOKENS]
         let mut strategy = WeightedAllocationStrategy::<FUND_ACCOUNT_MAX_SUPPORTED_TOKENS>::new(
             fund_account
                 .get_supported_tokens_iter()

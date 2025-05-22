@@ -163,11 +163,8 @@ impl<'a, 'info> FundService<'a, 'info> {
             let mut fund_account = self.fund_account.load_mut()?;
             let mut receipt_token_value = TokenValue::default();
 
-            pricing_service.flatten_token_value(
-                &self.receipt_token_mint.key(),
-                &mut receipt_token_value,
-                false,
-            )?;
+            pricing_service
+                .flatten_token_value(&self.receipt_token_mint.key(), &mut receipt_token_value)?;
             receipt_token_value.serialize_as_pod(&mut fund_account.receipt_token_value)?;
             fund_account.receipt_token_value_updated_slot = self.current_slot;
 
@@ -244,13 +241,11 @@ impl<'a, 'info> FundService<'a, 'info> {
                                             let asset =
                                                 fund_account.get_asset_state_mut(Some(*token_mint))?;
                                             let asset_value_as_receipt_token_amount = pricing_service
-                                                .get_sol_amount_as_token(
-                                                &self.receipt_token_mint.key(),
-                                                pricing_service.get_token_amount_as_sol(
-                                                    token_mint,
+                                                .get_asset_amount_as_token(
+                                                    Some(token_mint),
                                                     *token_amount,
-                                                )?,
-                                            )?;
+                                                    &self.receipt_token_mint.key(),
+                                                )?;
                                             let withdrawal_requested_receipt_token_amount =
                                                 asset.get_receipt_token_withdrawal_requested_amount();
                                             asset.withdrawable_value_as_receipt_token_amount =
@@ -557,7 +552,7 @@ impl<'a, 'info> FundService<'a, 'info> {
         uninitialized_withdrawal_batch_accounts: &[&'info AccountInfo<'info>],
         forced: bool,
         receipt_token_amount_to_process: u64,
-        _receipt_token_amount_to_return: u64, // TODO/v0.5: returned_receipt_token_amount? if fund is absolutely lack of the certain asset due to slashing event
+        _receipt_token_amount_to_return: u64,
 
         pricing_service: &PricingService,
     ) -> Result<(u64, u64, u64, u64, Vec<(Option<Pubkey>, u64)>)> {
@@ -618,10 +613,11 @@ impl<'a, 'info> FundService<'a, 'info> {
                 break;
             }
 
-            let asset_amount = pricing_service.get_token_amount_as_asset(
-                &self.receipt_token_mint.key(),
+            let asset_amount = pricing_service.get_asset_amount_as_asset(
+                Some(&self.receipt_token_mint.key()),
                 batch.receipt_token_amount,
                 supported_token_mint_key.as_ref(),
+                None,
             )?;
             let asset_fee_amount = fund_account.get_withdrawal_fee_amount(asset_amount)?;
             let asset_user_amount = asset_amount - asset_fee_amount;
@@ -808,10 +804,16 @@ impl<'a, 'info> FundService<'a, 'info> {
                 );
 
                 // to reserve user_asset_amount of the batch account
-                let asset_amount = pricing_service.get_token_amount_as_asset(
-                    &self.receipt_token_mint.key(),
+                let mut withdrawal_residual_micro_asset_amount = self
+                    .fund_account
+                    .load()?
+                    .get_asset_state(supported_token_mint_key)?
+                    .withdrawal_residual_micro_asset_amount;
+                let asset_amount = pricing_service.get_asset_amount_as_asset(
+                    Some(&self.receipt_token_mint.key()),
                     batch.receipt_token_amount,
                     supported_token_mint_key.as_ref(),
+                    Some(&mut withdrawal_residual_micro_asset_amount),
                 )?;
                 let asset_fee_amount = self
                     .fund_account
@@ -826,6 +828,10 @@ impl<'a, 'info> FundService<'a, 'info> {
                 asset.withdrawal_user_reserved_amount += asset_user_amount;
                 asset_user_amount_processing -= asset_user_amount;
                 receipt_token_amount_processing -= batch.receipt_token_amount;
+
+                // update residual
+                asset.withdrawal_residual_micro_asset_amount =
+                    withdrawal_residual_micro_asset_amount;
 
                 batch_account.set_claimable_amount(
                     batch.num_requests,

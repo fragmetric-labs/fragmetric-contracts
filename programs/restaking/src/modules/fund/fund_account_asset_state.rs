@@ -31,7 +31,10 @@ pub(super) struct AssetState {
     _padding2: [u8; 15],
     withdrawal_num_queued_batches: u8,
     withdrawal_queued_batches: [WithdrawalBatch; FUND_ACCOUNT_MAX_QUEUED_WITHDRAWAL_BATCHES],
-    _reserved: [u8; 56],
+    _reserved: [u8; 48],
+
+    /// for pricing precision enhancement in withdrawal processing
+    pub(super) withdrawal_residual_micro_asset_amount: u64,
 
     /// receipt token amount that users can request to withdraw with the given asset from the fund.
     /// it can be conditionally inaccurate on price changes among multiple assets, so make sure to update this properly before any use of it.
@@ -336,10 +339,11 @@ impl AssetState {
         with_normal_reserve: bool,
     ) -> Result<u64> {
         let (supported_token_mint, _) = self.get_token_mint_and_program().unzip();
-        let asset_withdrawal_obligated_reserve_amount = pricing_service.get_token_amount_as_asset(
-            receipt_token_mint,
+        let asset_withdrawal_obligated_reserve_amount = pricing_service.get_asset_amount_as_asset(
+            Some(receipt_token_mint),
             self.get_receipt_token_withdrawal_obligated_amount(),
             supported_token_mint.as_ref(),
+            None,
         )?;
 
         Ok(asset_withdrawal_obligated_reserve_amount

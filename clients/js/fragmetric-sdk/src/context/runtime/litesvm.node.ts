@@ -71,23 +71,24 @@ function createLiteSVMRPC(svm: LiteSVM): RuntimeRPC {
         context: {
           slot: svm.getClock().slot,
         },
-        value: account
-          ? {
-              data: [
-                Buffer.from(account.data).toString(
-                  'base64'
-                ) as Base64EncodedBytes,
-                'base64',
-              ],
-              executable: account.executable,
-              lamports: web3Compat.fromLegacyLamports(account.lamports),
-              owner: web3Compat.fromLegacyPublicKey(account.owner),
-              rentEpoch: account.rentEpoch
-                ? BigInt(account.rentEpoch)
-                : BigInt('18446744073709551615'),
-              space: BigInt(account.data.length),
-            }
-          : null,
+        value:
+          account && (account.data.length || account.lamports)
+            ? {
+                data: [
+                  Buffer.from(account.data).toString(
+                    'base64'
+                  ) as Base64EncodedBytes,
+                  'base64',
+                ],
+                executable: account.executable,
+                lamports: web3Compat.fromLegacyLamports(account.lamports),
+                owner: web3Compat.fromLegacyPublicKey(account.owner),
+                rentEpoch: account.rentEpoch
+                  ? BigInt(account.rentEpoch)
+                  : BigInt('18446744073709551615'),
+                space: BigInt(account.data.length),
+              }
+            : null,
       };
       return res;
     },

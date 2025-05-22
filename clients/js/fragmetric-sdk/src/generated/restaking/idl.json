@@ -11662,9 +11662,16 @@
             "type": {
               "array": [
                 "u8",
-                56
+                48
               ]
             }
+          },
+          {
+            "name": "withdrawal_residual_micro_asset_amount",
+            "docs": [
+              "for pricing precision enhancement in withdrawal processing"
+            ],
+            "type": "u64"
           },
           {
             "name": "withdrawable_value_as_receipt_token_amount",
@@ -12599,11 +12606,18 @@
             }
           },
           {
+            "name": "deposit_residual_micro_receipt_token_amount",
+            "docs": [
+              "for pricing precision enhancement in deposit"
+            ],
+            "type": "u64"
+          },
+          {
             "name": "_reserved1",
             "type": {
               "array": [
                 "u8",
-                3616
+                3608
               ]
             }
           }

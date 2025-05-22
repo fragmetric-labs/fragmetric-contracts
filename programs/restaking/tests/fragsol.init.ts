@@ -327,6 +327,12 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
           address: 'HR1ANmDHjaEhknvsTaK48M5xZtbBiwNdXM5NTiWhAb4S',
         },
       }),
+    () =>
+      ctx.fund.updateRestakingVaultStrategy.execute({
+        vault: 'HR1ANmDHjaEhknvsTaK48M5xZtbBiwNdXM5NTiWhAb4S',
+        solAllocationWeight: 100n,
+        solAllocationCapacityAmount: MAX_U64,
+      }),
 
     // configure reward settings
     () =>

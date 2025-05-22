@@ -1,8 +1,7 @@
+use crate::errors;
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::{entrypoint, system_program};
 use anchor_lang::{CheckOwner, ZeroCopy};
-
-use crate::errors;
 
 pub trait PDASeeds<const N: usize> {
     const SEED: &'static [u8];
@@ -76,6 +75,9 @@ impl<'info, T: ZeroCopyHeader + Owner> AccountLoaderExt<'info> for AccountLoader
 pub fn get_proportional_amount(amount: u64, numerator: u64, denominator: u64) -> Result<u64> {
     if numerator == denominator || denominator == 0 && amount == 0 {
         return Ok(amount);
+    }
+    if amount == denominator {
+        return Ok(numerator);
     }
 
     (amount as u128)

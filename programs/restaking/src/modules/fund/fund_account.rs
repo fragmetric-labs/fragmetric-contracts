@@ -99,7 +99,9 @@ pub struct FundAccount {
     _padding6: [u8; 7],
     token_swap_strategies: [TokenSwapStrategy; FUND_ACCOUNT_MAX_TOKEN_SWAP_STRATEGIES],
 
-    _reserved1: [u8; 3616],
+    /// for pricing precision enhancement in deposit
+    pub(super) deposit_residual_micro_receipt_token_amount: u64,
+    _reserved1: [u8; 3608],
 }
 
 impl PDASeeds<3> for FundAccount {

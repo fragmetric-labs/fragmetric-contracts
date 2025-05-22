@@ -70,6 +70,8 @@ export class RestakingReceiptTokenMintAccountContext extends TokenMintAccountCon
             withdrawable: !!data.sol.withdrawable,
             withdrawableValueAsReceiptTokenAmount:
               data.sol.withdrawableValueAsReceiptTokenAmount,
+            withdrawalResidualMicroAssetAmount:
+              data.sol.withdrawalResidualMicroAssetAmount,
             withdrawalUserReservedAmount: data.sol.withdrawalUserReservedAmount,
             withdrawalLastBatchProcessedAt: new Date(
               Number(data.sol.withdrawalLastBatchProcessedAt) * 1000
@@ -93,6 +95,8 @@ export class RestakingReceiptTokenMintAccountContext extends TokenMintAccountCon
                 withdrawable: !!v.token.withdrawable,
                 withdrawableValueAsReceiptTokenAmount:
                   v.token.withdrawableValueAsReceiptTokenAmount,
+                withdrawalResidualMicroAssetAmount:
+                  v.token.withdrawalResidualMicroAssetAmount,
                 withdrawalUserReservedAmount:
                   v.token.withdrawalUserReservedAmount,
                 withdrawalLastBatchProcessedAt: new Date(
@@ -138,10 +142,21 @@ export class RestakingReceiptTokenMintAccountContext extends TokenMintAccountCon
           receiptTokenSupply: receiptTokenMint.data.supply,
           receiptTokenDecimals: receiptTokenMint.data.decimals,
           oneReceiptTokenAsSOL: fund.data.oneReceiptTokenAsSol,
+          depositResidualMicroReceiptTokenAmount:
+            fund.data.depositResidualMicroReceiptTokenAmount,
           wrappedTokenMint: fund.data.wrappedToken.enabled
             ? fund.data.wrappedToken.mint
             : null,
           supportedAssets,
+          normalizedToken: normalizedTokenPool
+            ? {
+                mint: fund.data.normalizedToken.mint,
+                program: fund.data.normalizedToken.program,
+                oneTokenAsSol: fund.data.normalizedToken.oneTokenAsSol,
+                operationReservedAmount:
+                  fund.data.normalizedToken.operationReservedAmount,
+              }
+            : null,
           __lookupTableAddress: lookupTableAddress,
           __pricingSources: pricingSources,
         };
