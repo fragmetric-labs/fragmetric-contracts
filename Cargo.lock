@@ -1198,8 +1198,8 @@ checksum = "4a5f13b858c8d314ee3e8f639011f7ccefe71f97f96e50151fb991f267928e2c"
 
 [[package]]
 name = "jito-account-traits-derive"
-version = "0.0.3"
-source = "git+https://github.com/jito-foundation/restaking.git?rev=9efa55c30b3427d94975b22dcd27a82181c776ba#9efa55c30b3427d94975b22dcd27a82181c776ba"
+version = "0.0.5"
+source = "git+https://github.com/jito-foundation/restaking.git?rev=0cbf8f83012bd5d18183c45ed128302b4aee4dca#0cbf8f83012bd5d18183c45ed128302b4aee4dca"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1208,8 +1208,8 @@ dependencies = [
 
 [[package]]
 name = "jito-bytemuck"
-version = "0.0.3"
-source = "git+https://github.com/jito-foundation/restaking.git?rev=9efa55c30b3427d94975b22dcd27a82181c776ba#9efa55c30b3427d94975b22dcd27a82181c776ba"
+version = "0.0.5"
+source = "git+https://github.com/jito-foundation/restaking.git?rev=0cbf8f83012bd5d18183c45ed128302b4aee4dca#0cbf8f83012bd5d18183c45ed128302b4aee4dca"
 dependencies = [
  "borsh 0.10.4",
  "bytemuck",
@@ -1219,8 +1219,8 @@ dependencies = [
 
 [[package]]
 name = "jito-jsm-core"
-version = "0.0.3"
-source = "git+https://github.com/jito-foundation/restaking.git?rev=9efa55c30b3427d94975b22dcd27a82181c776ba#9efa55c30b3427d94975b22dcd27a82181c776ba"
+version = "0.0.5"
+source = "git+https://github.com/jito-foundation/restaking.git?rev=0cbf8f83012bd5d18183c45ed128302b4aee4dca#0cbf8f83012bd5d18183c45ed128302b4aee4dca"
 dependencies = [
  "borsh 0.10.4",
  "bytemuck",
@@ -1235,8 +1235,8 @@ dependencies = [
 
 [[package]]
 name = "jito-vault-core"
-version = "0.0.3"
-source = "git+https://github.com/jito-foundation/restaking.git?rev=9efa55c30b3427d94975b22dcd27a82181c776ba#9efa55c30b3427d94975b22dcd27a82181c776ba"
+version = "0.0.5"
+source = "git+https://github.com/jito-foundation/restaking.git?rev=0cbf8f83012bd5d18183c45ed128302b4aee4dca#0cbf8f83012bd5d18183c45ed128302b4aee4dca"
 dependencies = [
  "borsh 0.10.4",
  "bytemuck",
@@ -1253,8 +1253,8 @@ dependencies = [
 
 [[package]]
 name = "jito-vault-sdk"
-version = "0.0.3"
-source = "git+https://github.com/jito-foundation/restaking.git?rev=9efa55c30b3427d94975b22dcd27a82181c776ba#9efa55c30b3427d94975b22dcd27a82181c776ba"
+version = "0.0.5"
+source = "git+https://github.com/jito-foundation/restaking.git?rev=0cbf8f83012bd5d18183c45ed128302b4aee4dca#0cbf8f83012bd5d18183c45ed128302b4aee4dca"
 dependencies = [
  "borsh 0.10.4",
  "shank",
