@@ -1,3 +1,5 @@
+import * as web3 from '@solana/web3.js';
+import { VirtualVaultAccountContext } from '../../../clients/js/fragmetric-sdk/src/programs/restaking/restaking_vault_virtual';
 import type { TestSuiteContext } from '../../testutil';
 
 export function initializeFragSOL(testCtx: TestSuiteContext) {
@@ -5,6 +7,16 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
   const { MAX_U64 } = sdk;
 
   const ctx = restaking.fragSOL;
+  const [virtualVaultAddr] = web3.PublicKey.findProgramAddressSync(
+    [
+      Buffer.from('virtual_vault'),
+      new web3.PublicKey(
+        '8vEunBQvD3L4aNnRPyQzfQ7pecq4tPb46PjZVKUnTP9i'
+      ).toBuffer(),
+    ],
+    new web3.PublicKey(restaking.program.address.toString())
+  );
+
   const initializationTasks = [
     // initialize receipt token mint and transfer hook metadata
     () =>
@@ -207,6 +219,24 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
     () =>
       ctx.reward.settleReward.execute({
         mint: 'FSWSBMV5EB7J8JdafNBLZpfSCLiFwpMCqod2RpkU4RNn',
+        amount: 0n,
+      }),
+    () =>
+      ctx.reward.addReward.execute({
+        mint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
+        decimals: 6,
+        name: 'ZEUS',
+        description: 'ZEUS insentive',
+      }),
+    () =>
+      ctx.reward.updateReward.execute({
+        mint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
+        claimable: true,
+      }),
+    () => validator.skipSlots(1n),
+    () =>
+      ctx.reward.settleReward.execute({
+        mint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
         amount: 0n,
       }),
 
@@ -448,6 +478,46 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
         ],
         solAllocationCapacityAmount: MAX_U64,
         solAllocationWeight: 1n,
+      }),
+
+    // initialize virtual restaking vault (FRAG)
+    () => {
+      const vaultContext = ctx.fund.restakingVault(
+        virtualVaultAddr.toString(),
+        '11111111111111111111111111111111'
+      );
+      if (
+        !(vaultContext && vaultContext instanceof VirtualVaultAccountContext)
+      ) {
+        throw new Error('invalid context: virtual vault not found');
+      }
+
+      return vaultContext.initializeVrtMint.execute({
+        name: 'fragSOL Virtual Vault Receeipt Token Mint',
+        symbol: 'fragVVrt',
+        uri: '',
+        description: 'fragSOL Virtual Vault Receeipt Token Mint',
+        decimals: 9,
+      });
+    },
+    () =>
+      ctx.fund.addRestakingVault.execute({
+        vault: virtualVaultAddr.toString(),
+        pricingSource: {
+          __kind: 'VirtualRestakingVault',
+          address: virtualVaultAddr.toString(),
+        },
+      }),
+
+    // configure reward settings
+    () =>
+      // ctx.fund.addRestakingVaultCompoundingReward.execute({
+      //   vault: virtualVaultAddr.toString(),
+      //   rewardTokenMint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
+      // }),
+      ctx.fund.addRestakingVaultDistributingReward.execute({
+        vault: virtualVaultAddr.toString(),
+        rewardTokenMint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
       }),
 
     // initialize address lookup table

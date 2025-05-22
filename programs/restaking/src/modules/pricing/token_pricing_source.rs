@@ -37,6 +37,9 @@ pub enum TokenPricingSource {
     SanctumMultiValidatorSPLStakePool {
         address: Pubkey,
     },
+    VirtualRestakingVault {
+        address: Pubkey,
+    },
     #[cfg(all(test, not(feature = "idl-build")))]
     Mock {
         #[max_len(0)]
@@ -71,6 +74,9 @@ impl std::fmt::Display for TokenPricingSource {
             }
             Self::SanctumMultiValidatorSPLStakePool { address } => {
                 write!(f, "SanctumMultiValidatorSPLStakePool({})", address)
+            }
+            Self::VirtualRestakingVault { address } => {
+                write!(f, "VirtualRestakingVault({})", address)
             }
             #[cfg(all(test, not(feature = "idl-build")))]
             Self::Mock { .. } => write!(f, "Mock(...)"),
@@ -119,6 +125,10 @@ impl TokenPricingSource {
             }
             TokenPricingSource::SanctumMultiValidatorSPLStakePool { address } => {
                 pod.discriminant = 10;
+                pod.address = *address;
+            }
+            TokenPricingSource::VirtualRestakingVault { address } => {
+                pod.discriminant = 11;
                 pod.address = *address;
             }
             #[cfg(all(test, not(feature = "idl-build")))]
@@ -180,6 +190,9 @@ impl TokenPricingSourcePod {
                 address: self.address,
             },
             10 => TokenPricingSource::SanctumMultiValidatorSPLStakePool {
+                address: self.address,
+            },
+            11 => TokenPricingSource::VirtualRestakingVault {
                 address: self.address,
             },
             #[cfg(all(test, not(feature = "idl-build")))]

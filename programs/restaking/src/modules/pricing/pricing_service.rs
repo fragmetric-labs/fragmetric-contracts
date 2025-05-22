@@ -178,6 +178,9 @@ impl<'info> PricingService<'info> {
                     &mut self.token_values[token_index],
                 )?
             }
+            TokenPricingSource::VirtualRestakingVault { .. } => {
+                self.token_values[token_index] = TokenValue::default();
+            }
             #[cfg(all(test, not(feature = "idl-build")))]
             TokenPricingSource::Mock {
                 numerator,

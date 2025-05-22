@@ -212,7 +212,8 @@ impl ClaimUnrestakedVSTCommand {
                     ),
                 ))
             }
-            Some(TokenPricingSource::SolvBTCVault { .. }) => {
+            Some(TokenPricingSource::SolvBTCVault { .. })
+            | Some(TokenPricingSource::VirtualRestakingVault { .. }) => {
                 // TODO/v0.7.0: deal with solv vault if needed
                 Ok((
                     None,
@@ -414,7 +415,8 @@ impl ClaimUnrestakedVSTCommand {
                     None
                 }
             }
-            Some(TokenPricingSource::SolvBTCVault { .. }) => {
+            Some(TokenPricingSource::SolvBTCVault { .. })
+            | Some(TokenPricingSource::VirtualRestakingVault { .. }) => {
                 // TODO/v0.7.0: deal with solv vault if needed
                 None
             }

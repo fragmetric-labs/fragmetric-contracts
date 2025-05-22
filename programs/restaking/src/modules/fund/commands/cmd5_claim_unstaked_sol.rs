@@ -207,6 +207,7 @@ impl ClaimUnstakedSOLCommand {
             | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
             | Some(TokenPricingSource::PeggedToken { .. })
             | Some(TokenPricingSource::SolvBTCVault { .. })
+            | Some(TokenPricingSource::VirtualRestakingVault { .. })
             | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
             #[cfg(all(test, not(feature = "idl-build")))]
             Some(TokenPricingSource::Mock { .. }) => {
@@ -271,6 +272,7 @@ impl ClaimUnstakedSOLCommand {
             | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
             | Some(TokenPricingSource::PeggedToken { .. })
             | Some(TokenPricingSource::SolvBTCVault { .. })
+            | Some(TokenPricingSource::VirtualRestakingVault { .. })
             | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
             #[cfg(all(test, not(feature = "idl-build")))]
             Some(TokenPricingSource::Mock { .. }) => {
@@ -351,6 +353,7 @@ impl ClaimUnstakedSOLCommand {
             | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
             | Some(TokenPricingSource::PeggedToken { .. })
             | Some(TokenPricingSource::SolvBTCVault { .. })
+            | Some(TokenPricingSource::VirtualRestakingVault { .. })
             | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
             #[cfg(all(test, not(feature = "idl-build")))]
             Some(TokenPricingSource::Mock { .. }) => {
@@ -493,6 +496,7 @@ impl ClaimUnstakedSOLCommand {
             | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
             | Some(TokenPricingSource::PeggedToken { .. })
             | Some(TokenPricingSource::SolvBTCVault { .. })
+            | Some(TokenPricingSource::VirtualRestakingVault { .. })
             | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
             #[cfg(all(test, not(feature = "idl-build")))]
             Some(TokenPricingSource::Mock { .. }) => {
