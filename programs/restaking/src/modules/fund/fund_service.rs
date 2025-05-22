@@ -241,8 +241,8 @@ impl<'a, 'info> FundService<'a, 'info> {
                                             let asset =
                                                 fund_account.get_asset_state_mut(Some(*token_mint))?;
                                             let asset_value_as_receipt_token_amount = pricing_service
-                                                .get_asset_amount_as_token(
-                                                    Some(token_mint),
+                                                .get_token_amount_as_token(
+                                                    token_mint,
                                                     *token_amount,
                                                     &self.receipt_token_mint.key(),
                                                 )?;
@@ -613,11 +613,10 @@ impl<'a, 'info> FundService<'a, 'info> {
                 break;
             }
 
-            let asset_amount = pricing_service.get_asset_amount_as_asset(
-                Some(&self.receipt_token_mint.key()),
+            let asset_amount = pricing_service.get_token_amount_as_asset(
+                &self.receipt_token_mint.key(),
                 batch.receipt_token_amount,
                 supported_token_mint_key.as_ref(),
-                None,
             )?;
             let asset_fee_amount = fund_account.get_withdrawal_fee_amount(asset_amount)?;
             let asset_user_amount = asset_amount - asset_fee_amount;
@@ -809,11 +808,11 @@ impl<'a, 'info> FundService<'a, 'info> {
                     .load()?
                     .get_asset_state(supported_token_mint_key)?
                     .withdrawal_residual_micro_asset_amount;
-                let asset_amount = pricing_service.get_asset_amount_as_asset(
+                let asset_amount = pricing_service.convert_asset_amount(
                     Some(&self.receipt_token_mint.key()),
                     batch.receipt_token_amount,
                     supported_token_mint_key.as_ref(),
-                    Some(&mut withdrawal_residual_micro_asset_amount),
+                    &mut withdrawal_residual_micro_asset_amount,
                 )?;
                 let asset_fee_amount = self
                     .fund_account
@@ -826,7 +825,8 @@ impl<'a, 'info> FundService<'a, 'info> {
                 let asset = fund_account.get_asset_state_mut(supported_token_mint_key)?;
                 asset.operation_reserved_amount -= asset_user_amount;
                 asset.withdrawal_user_reserved_amount += asset_user_amount;
-                asset_user_amount_processing -= asset_user_amount;
+                asset_user_amount_processing =
+                    asset_user_amount_processing.saturating_sub(asset_user_amount);
                 receipt_token_amount_processing -= batch.receipt_token_amount;
 
                 // update residual

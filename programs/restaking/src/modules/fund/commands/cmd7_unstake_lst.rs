@@ -216,7 +216,9 @@ impl UnstakeLSTCommand {
 
                             // not stakable tokens
                             Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
-                            | Some(TokenPricingSource::PeggedToken { .. }) => None,
+                            | Some(TokenPricingSource::PeggedToken { .. }) => {
+                                Some(WeightedAllocationParticipant::new(0, 0, 0))
+                            }
 
                             // invalid configuration
                             Some(TokenPricingSource::JitoRestakingVault { .. })
@@ -237,7 +239,10 @@ impl UnstakeLSTCommand {
                     .into_iter()
                     .flatten(),
             );
-            unstaking_strategy.cut_greedy(unstaking_obligated_amount_as_sol)?;
+            unstaking_strategy.cut_greedy(
+                unstaking_obligated_amount_as_sol
+                    + fund_account.get_supported_tokens_iter().count() as u64, // try to withdraw extra lamports to compensate for flooring errors for each token
+            )?;
 
             let mut items = Vec::with_capacity(FUND_ACCOUNT_MAX_SUPPORTED_TOKENS);
             for (index, supported_token) in fund_account.get_supported_tokens_iter().enumerate() {
@@ -246,7 +251,7 @@ impl UnstakeLSTCommand {
                 let allocated_token_amount = pricing_service
                     .get_sol_amount_as_token(&supported_token.mint, allocated_sol_amount)?;
 
-                if allocated_token_amount >= 1_500_000_000 {
+                if allocated_token_amount >= 1_000_000 {
                     items.push(UnstakeLSTCommandItem {
                         token_mint: supported_token.mint,
                         allocated_token_amount,
