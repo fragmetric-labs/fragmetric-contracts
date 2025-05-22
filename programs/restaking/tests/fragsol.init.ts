@@ -214,9 +214,14 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
     () =>
       ctx.reward.addReward.execute({
         mint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
-        decimals: 9,
+        decimals: 6,
         name: 'ZEUS',
         description: 'ZEUS insentive',
+      }),
+    () =>
+      ctx.reward.updateReward.execute({
+        mint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
+        claimable: true,
       }),
     () => validator.skipSlots(1n),
     () =>
@@ -504,7 +509,7 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
         ],
         new web3.PublicKey(restaking.program.address.toString())
       );
-      console.log(`virtualVault address: ${virtualVaultAddr}`);
+
       return ctx.fund.addRestakingVault.execute({
         vault: virtualVaultAddr.toString(),
         pricingSource: {
@@ -525,7 +530,11 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
         ],
         new web3.PublicKey(restaking.program.address.toString())
       );
-      return ctx.fund.addRestakingVaultCompoundingReward.execute({
+      // return ctx.fund.addRestakingVaultCompoundingReward.execute({
+      //   vault: virtualVaultAddr.toString(),
+      //   rewardTokenMint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
+      // });
+      return ctx.fund.addRestakingVaultDistributingReward.execute({
         vault: virtualVaultAddr.toString(),
         rewardTokenMint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
       });

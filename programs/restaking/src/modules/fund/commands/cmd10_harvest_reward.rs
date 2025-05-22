@@ -352,7 +352,8 @@ impl HarvestRewardCommand {
 
         let entry = match receipt_token_pricing_source {
             Some(TokenPricingSource::JitoRestakingVault { .. })
-            | Some(TokenPricingSource::SolvBTCVault { .. }) => {
+            | Some(TokenPricingSource::SolvBTCVault { .. })
+            | Some(TokenPricingSource::VirtualRestakingVault { .. }) => {
                 // We need to check vault's token account whether
                 // the account is delegated to fund account or not.
                 // Although we do not know whether the token
@@ -390,7 +391,6 @@ impl HarvestRewardCommand {
                 };
                 command.with_required_accounts(required_accounts)
             }
-            Some(TokenPricingSource::VirtualRestakingVault { .. }) => return Ok(None), // TODO, does virtual restaking vault wouldn't have distributing token?
             // otherwise fails
             Some(TokenPricingSource::SPLStakePool { .. })
             | Some(TokenPricingSource::MarinadeStakePool { .. })
@@ -514,7 +514,8 @@ impl HarvestRewardCommand {
                 },
                 HarvestType::Distribute => match receipt_token_pricing_source {
                     Some(TokenPricingSource::JitoRestakingVault { .. })
-                    | Some(TokenPricingSource::SolvBTCVault { .. }) => self
+                    | Some(TokenPricingSource::SolvBTCVault { .. })
+                    | Some(TokenPricingSource::VirtualRestakingVault { .. }) => self
                         .create_execute_command_from_vault_ata(
                             ctx,
                             harvest_type,
@@ -523,7 +524,6 @@ impl HarvestRewardCommand {
                             vault,
                             reward_token_mints,
                         ),
-                    Some(TokenPricingSource::VirtualRestakingVault { .. }) => Ok(None),
                     // otherwise fails
                     Some(TokenPricingSource::SPLStakePool { .. })
                     | Some(TokenPricingSource::MarinadeStakePool { .. })
@@ -715,6 +715,7 @@ impl HarvestRewardCommand {
                     (reward_token_reserve_account, true),
                     (*reward_token_program, false),
                     (reward_account.key(), true),
+                    (*vault, false),
                 ];
 
                 let command = Self {
@@ -1063,9 +1064,10 @@ impl HarvestRewardCommand {
             .try_deserialize()?;
         let result = (|| match receipt_token_pricing_source {
             Some(TokenPricingSource::JitoRestakingVault { .. })
-            | Some(TokenPricingSource::SolvBTCVault { .. }) => {
+            | Some(TokenPricingSource::SolvBTCVault { .. })
+            | Some(TokenPricingSource::VirtualRestakingVault { .. }) => {
                 // Transfer & Settle
-                let [reward_token_mint, from_reward_token_account, reward_token_reserve_account, reward_token_program, reward_account, ..] =
+                let [reward_token_mint, from_reward_token_account, reward_token_reserve_account, reward_token_program, reward_account, vault_account, ..] =
                     accounts
                 else {
                     err!(error::ErrorCode::AccountNotEnoughKeys)?
@@ -1098,9 +1100,16 @@ impl HarvestRewardCommand {
                 let reward_token_program = Interface::try_from(*reward_token_program)?;
 
                 let current_timestamp = Clock::get()?.unix_timestamp;
-                let reward_token_amount = from_reward_token_account
-                    .amount
-                    .min(from_reward_token_account.delegated_amount);
+                let reward_token_amount = match receipt_token_pricing_source {
+                    Some(TokenPricingSource::JitoRestakingVault { .. })
+                    | Some(TokenPricingSource::SolvBTCVault { .. }) => from_reward_token_account
+                        .amount
+                        .min(from_reward_token_account.delegated_amount),
+                    Some(TokenPricingSource::VirtualRestakingVault { .. }) => {
+                        from_reward_token_account.amount
+                    }
+                    _ => 0,
+                };
                 let available_reward_token_amount_to_harvest = ctx
                     .fund_account
                     .load()?
@@ -1113,20 +1122,46 @@ impl HarvestRewardCommand {
                     return Ok(None);
                 }
 
-                anchor_spl::token_interface::transfer_checked(
-                    CpiContext::new_with_signer(
-                        reward_token_program.to_account_info(),
-                        anchor_spl::token_interface::TransferChecked {
-                            from: from_reward_token_account.to_account_info(),
-                            mint: reward_token_mint.to_account_info(),
-                            to: reward_token_reserve_account.to_account_info(),
-                            authority: ctx.fund_account.to_account_info(),
-                        },
-                        &[&ctx.fund_account.load()?.get_seeds()],
-                    ),
-                    available_reward_token_amount_to_harvest,
-                    reward_token_mint.decimals,
-                )?;
+                match receipt_token_pricing_source {
+                    Some(TokenPricingSource::JitoRestakingVault { .. })
+                    | Some(TokenPricingSource::SolvBTCVault { .. }) => {
+                        anchor_spl::token_interface::transfer_checked(
+                            CpiContext::new_with_signer(
+                                reward_token_program.to_account_info(),
+                                anchor_spl::token_interface::TransferChecked {
+                                    from: from_reward_token_account.to_account_info(),
+                                    mint: reward_token_mint.to_account_info(),
+                                    to: reward_token_reserve_account.to_account_info(),
+                                    authority: ctx.fund_account.to_account_info(),
+                                },
+                                &[&ctx.fund_account.load()?.get_seeds()],
+                            ),
+                            available_reward_token_amount_to_harvest,
+                            reward_token_mint.decimals,
+                        )?
+                    }
+                    Some(TokenPricingSource::VirtualRestakingVault { .. }) => {
+                        anchor_spl::token_interface::transfer_checked(
+                            CpiContext::new_with_signer(
+                                reward_token_program.to_account_info(),
+                                anchor_spl::token_interface::TransferChecked {
+                                    from: from_reward_token_account.to_account_info(),
+                                    mint: reward_token_mint.to_account_info(),
+                                    to: reward_token_reserve_account.to_account_info(),
+                                    authority: vault_account.to_account_info(),
+                                },
+                                &[&[
+                                    b"virtual_vault",
+                                    ctx.receipt_token_mint.key().as_ref(),
+                                    &[255],
+                                ]],
+                            ),
+                            available_reward_token_amount_to_harvest,
+                            reward_token_mint.decimals,
+                        )?
+                    }
+                    _ => (),
+                };
                 from_reward_token_account.reload()?;
                 reward_token_reserve_account.reload()?;
 
@@ -1159,7 +1194,6 @@ impl HarvestRewardCommand {
 
                 Ok(Some(result))
             }
-            Some(TokenPricingSource::VirtualRestakingVault { .. }) => Ok(None),
             // otherwise fails
             Some(TokenPricingSource::SPLStakePool { .. })
             | Some(TokenPricingSource::MarinadeStakePool { .. })

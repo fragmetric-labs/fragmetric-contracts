@@ -306,11 +306,17 @@ describe('restaking.fragSOL test', async () => {
             "vault": "HR1ANmDHjaEhknvsTaK48M5xZtbBiwNdXM5NTiWhAb4S",
           },
           {
-            "compoundingRewardTokenMints": [
-              "ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq",
-            ],
+            "compoundingRewardTokenMints": [],
             "delegations": [],
-            "distributingRewardTokens": [],
+            "distributingRewardTokens": [
+              {
+                "harvestThresholdIntervalSeconds": 0n,
+                "harvestThresholdMaxAmount": 18446744073709551615n,
+                "harvestThresholdMinAmount": 0n,
+                "lastHarvestedAt": 0n,
+                "mint": "ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq",
+              },
+            ],
             "pricingSource": {
               "__kind": "VirtualRestakingVault",
               "address": "4VvjAVkgquu5prpwCaw4kHkddrEeSGdZmUTQvuLVNGNm",
@@ -382,8 +388,8 @@ describe('restaking.fragSOL test', async () => {
               "claimedAmountUpdatedSlot": "MASKED(/[.*S|s]lots?$/)",
               "remainingAmount": 0n,
               "reward": {
-                "claimable": false,
-                "decimals": 9,
+                "claimable": true,
+                "decimals": 6,
                 "description": "ZEUS insentive",
                 "id": 2,
                 "mint": "ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq",
@@ -464,8 +470,8 @@ describe('restaking.fragSOL test', async () => {
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
           },
           {
-            "claimable": false,
-            "decimals": 9,
+            "claimable": true,
+            "decimals": 6,
             "description": "ZEUS insentive",
             "id": 2,
             "mint": "ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq",
@@ -1673,7 +1679,7 @@ describe('restaking.fragSOL test', async () => {
   });
 
   /** 5. virtual vault harvet/compound */
-  test('virtual vault harvest/compound', async () => {
+  test.skip('virtual vault harvest/compound', async () => {
     const [virtualVaultAddr] = web3.PublicKey.findProgramAddressSync(
       [
         Buffer.from('virtual_vault'),
@@ -1698,17 +1704,6 @@ describe('restaking.fragSOL test', async () => {
     await ctx.fund.runCommand.executeChained(null);
 
     const fund_2 = await ctx.fund.resolveAccount(true);
-    console.log(
-      `fund_1 nSOL vault's receiptTokenOperationReservedAmount: ${fund_1.data.restakingVaults[0].receiptTokenOperationReservedAmount}`
-    );
-    console.log(
-      `fund_2 nSOL vault's receiptTokenOperationReservedAmount: ${fund_2.data.restakingVaults[0].receiptTokenOperationReservedAmount}`
-    );
-    expect(
-      fund_2.data.restakingVaults[0].receiptTokenOperationReservedAmount
-    ).toBeGreaterThanOrEqual(
-      fund_1.data.restakingVaults[0].receiptTokenOperationReservedAmount
-    );
 
     const fund_1_fragToken = fund_1.data.supportedTokens.filter(
       (supportedToken) =>
@@ -1720,5 +1715,36 @@ describe('restaking.fragSOL test', async () => {
     )[0];
     console.log(`fund_1_fragToken:`, fund_1_fragToken);
     console.log(`fund_2 fragToken:`, fund_2_fragToken);
+  });
+
+  test('virtual vault harvest/distribute', async () => {
+    const [virtualVaultAddr] = web3.PublicKey.findProgramAddressSync(
+      [
+        Buffer.from('virtual_vault'),
+        new web3.PublicKey(
+          restaking.knownAddresses.fragSOL.toString()
+        ).toBuffer(),
+      ],
+      new web3.PublicKey(restaking.program.address.toString())
+    );
+
+    // airdrop to virtual vault - zeus token vst
+    // dev) tested with zeus token not jitoSOL, because when harvesting jitoSOL from virtual vault, that jitoSOL moves to nSOL vault at restake command step
+    const rewardAmount = 100_000_000_000n; // 100_000
+    await validator.airdropToken(
+      virtualVaultAddr.toString(),
+      'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
+      rewardAmount
+    );
+
+    const globalReward_1 = await ctx.reward.resolve(true);
+
+    // run operator to harvest
+    await ctx.fund.runCommand.executeChained(null);
+
+    const globalReward_2 = await ctx.reward.resolve(true);
+    expect(globalReward_2.basePool.settlements[1].blocks[0].amount).toEqual(
+      globalReward_1.basePool.settlements[1].blocks[0].amount + rewardAmount
+    );
   });
 });
