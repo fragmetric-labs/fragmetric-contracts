@@ -12460,7 +12460,7 @@
             "type": {
               "array": [
                 "u8",
-                14188
+                14191
               ]
             }
           },
@@ -12470,15 +12470,6 @@
               "fund pricing source address information (support for third party integration)"
             ],
             "type": "u8"
-          },
-          {
-            "name": "_padding7",
-            "type": {
-              "array": [
-                "u8",
-                3
-              ]
-            }
           },
           {
             "name": "pricing_source_addresses",
