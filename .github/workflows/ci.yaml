@@ -38,7 +38,7 @@ jobs:
   ci:
     if: ${{ github.event_name != 'workflow_dispatch' && !contains(github.event.head_commit.message, '[skip ci]') }}
     name: build and test
-    runs-on: macos-latest # arch: arm64
+    runs-on: ubuntu-latest-8core-x86
     steps:
       # checkout
       - uses: actions/checkout@v4
@@ -173,7 +173,7 @@ jobs:
           
           {
             echo "### Hash Verification Example"
-            echo "The program binary hashes listed above were computed on a macOS (arm64) system for now."
+            echo "The program binary hashes listed above were computed on a ubuntu-20.04-x86 system for now."
             echo '```'
             echo "# install solana-verify"
             echo "$ cargo install solana-verify"
