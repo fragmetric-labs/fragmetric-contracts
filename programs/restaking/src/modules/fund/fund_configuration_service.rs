@@ -155,19 +155,20 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
             supported_token_mint.key()
         );
 
-        self.fund_account.load_mut()?.add_supported_token(
+        let mut fund_account = self.fund_account.load_mut()?;
+        fund_account.add_supported_token(
             supported_token_mint.key(),
             *AsRef::<AccountInfo>::as_ref(supported_token_mint).owner,
             supported_token_mint.decimals,
             pricing_source,
             fund_supported_token_reserve_account.amount,
         )?;
+        fund_account.update_pricing_source_addresses()?;
+        drop(fund_account);
 
         // validate pricing source
-        let mut fund_service = FundService::new(self.receipt_token_mint, self.fund_account)?;
-        fund_service.update_pricing_source_addresses()?;
-        fund_service.new_pricing_service(pricing_sources, true)?;
-        drop(fund_service);
+        FundService::new(self.receipt_token_mint, self.fund_account)?
+            .new_pricing_service(pricing_sources, true)?;
 
         self.create_fund_manager_updated_fund_event()
     }
@@ -201,15 +202,14 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         }
 
         fund_account.remove_supported_token(&supported_token_mint.key())?;
+        fund_account.update_pricing_source_addresses()?;
 
         // validate pricing
         let old_receipt_token_price = fund_account.one_receipt_token_as_sol;
         drop(fund_account);
 
-        let mut fund_service = FundService::new(self.receipt_token_mint, self.fund_account)?;
-        fund_service.update_pricing_source_addresses()?;
-        fund_service.new_pricing_service(pricing_sources, true)?;
-        drop(fund_service);
+        FundService::new(self.receipt_token_mint, self.fund_account)?
+            .new_pricing_service(pricing_sources, true)?;
 
         let new_receipt_token_price = self.fund_account.load()?.one_receipt_token_as_sol;
 
@@ -240,20 +240,21 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
             normalized_token_mint,
         )?;
 
+        let mut fund_account = self.fund_account.load_mut()?;
         // set normalized token and validate pricing source
-        self.fund_account.load_mut()?.set_normalized_token(
+        fund_account.set_normalized_token(
             normalized_token_mint.key(),
             *AsRef::<AccountInfo>::as_ref(normalized_token_mint).owner,
             normalized_token_mint.decimals,
             normalized_token_pool.key(),
             fund_normalized_token_reserve_account.amount,
         )?;
+        fund_account.update_pricing_source_addresses()?;
+        drop(fund_account);
 
         // do pricing as a validation
-        let mut fund_service = FundService::new(self.receipt_token_mint, self.fund_account)?;
-        fund_service.update_pricing_source_addresses()?;
-        fund_service.new_pricing_service(pricing_sources, true)?;
-        drop(fund_service);
+        FundService::new(self.receipt_token_mint, self.fund_account)?
+            .new_pricing_service(pricing_sources, true)?;
 
         self.create_fund_manager_updated_fund_event()
     }
@@ -274,7 +275,8 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
             vault_receipt_token_mint.as_ref(),
         )?;
 
-        self.fund_account.load_mut()?.add_restaking_vault(
+        let mut fund_account = self.fund_account.load_mut()?;
+        fund_account.add_restaking_vault(
             vault.key(),
             *vault.owner,
             vault_supported_token_mint.key(),
@@ -284,12 +286,12 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
             receipt_token_pricing_source,
             fund_vault_receipt_token_account.amount,
         )?;
+        fund_account.update_pricing_source_addresses()?;
+        drop(fund_account);
 
         // validate pricing source
-        let mut fund_service = FundService::new(self.receipt_token_mint, self.fund_account)?;
-        fund_service.update_pricing_source_addresses()?;
-        fund_service.new_pricing_service(pricing_sources, true)?;
-        drop(fund_service);
+        FundService::new(self.receipt_token_mint, self.fund_account)?
+            .new_pricing_service(pricing_sources, true)?;
 
         self.create_fund_manager_updated_fund_event()
     }

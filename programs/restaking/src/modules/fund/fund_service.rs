@@ -6,7 +6,7 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::errors::ErrorCode;
 use crate::events;
-use crate::modules::pricing::{self, Asset, PricingService, TokenPricingSource, TokenValue};
+use crate::modules::pricing::{Asset, PricingService, TokenPricingSource, TokenValue};
 use crate::modules::reward;
 use crate::utils::*;
 
@@ -75,28 +75,15 @@ impl<'a, 'info> FundService<'a, 'info> {
         &mut self,
         pricing_sources: &'info [AccountInfo<'info>],
     ) -> Result<events::OperatorUpdatedFundPrices> {
-        self.update_pricing_source_addresses()?;
+        let mut fund_account = self.fund_account.load_mut()?;
+        fund_account.update_pricing_source_addresses()?;
+        drop(fund_account);
+
         self.new_pricing_service(pricing_sources, true)?;
         Ok(events::OperatorUpdatedFundPrices {
             receipt_token_mint: self.receipt_token_mint.key(),
             fund_account: self.fund_account.key(),
         })
-    }
-
-    pub fn update_pricing_source_addresses(&mut self) -> Result<()> {
-        let mut fund_account = self.fund_account.load_mut()?;
-        let pricing_source_addresses = fund_account.get_pricing_source_addresses()?;
-
-        for index in 0..FUND_ACCOUNT_MAX_PRICING_SOURCE_ADDRESSES {
-            if index < pricing_source_addresses.len() {
-                fund_account.pricing_source_addresses[index] = pricing_source_addresses[index];
-            } else {
-                fund_account.pricing_source_addresses[index] = Pubkey::default();
-            }
-        }
-        fund_account.num_pricing_source_addresses = pricing_source_addresses.len() as u8;
-
-        Ok(())
     }
 
     fn get_pricing_source_infos(
@@ -110,7 +97,19 @@ impl<'a, 'info> FundService<'a, 'info> {
         let mut pricing_sources = Vec::with_capacity(pricing_sources_max_len);
 
         fund_account
-            .get_pricing_source_pods_iter()
+            .get_supported_tokens_iter()
+            .map(|supported_token| &supported_token.pricing_source)
+            .chain(
+                fund_account
+                    .get_restaking_vaults_iter()
+                    .map(|restaking_vault| &restaking_vault.receipt_token_pricing_source),
+            )
+            .chain(
+                fund_account
+                    .get_normalized_token()
+                    .into_iter()
+                    .map(|normalized_token| &normalized_token.pricing_source),
+            )
             .try_for_each(|pricing_source| match pricing_source.try_deserialize()? {
                 Some(TokenPricingSource::SPLStakePool { address })
                 | Some(TokenPricingSource::MarinadeStakePool { address })
