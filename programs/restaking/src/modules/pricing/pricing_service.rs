@@ -248,8 +248,11 @@ impl<'info> PricingService<'info> {
             .cloned()
     }
 
-    /// Convert an asset amount (`from_asset_amount`) into another asset or SOL.
-    pub fn get_asset_amount_as_asset(
+    /// Convert `from_asset_amount` (in the unit of `from_asset_mint` or SOL) into the equivalent amount of
+    /// `to_asset_mint` (or SOL). To avoid cumulative flooring drift during repeated deposits/withdrawals,
+    /// It can optionally process a mutable `to_asset_residual_micro_amount` slot. Any fractional "dust"
+    /// below the asset’s smallest unit will be stored there (in micro-units) and reapplied on the next call.
+    fn get_asset_amount_as_asset(
         &self,
         from_asset_mint: Option<&Pubkey>,
         from_asset_amount: u64,
@@ -327,19 +330,26 @@ impl<'info> PricingService<'info> {
                         let (to_numerator_as_micro_lamports, to_denominator_as_micro_token) =
                             self.get_token_value_as_mirco_lamports(to_token_mint)?;
 
-                        let numerator = U256::from((from_asset_amount as u128) * 1_000_000)
-                            .checked_mul(U256::from(from_numerator_as_micro_lamports))
-                            .and_then(|x| x.checked_mul(U256::from(to_denominator_as_micro_token)))
+                        let micro_micro_numerator = U256::from(from_numerator_as_micro_lamports)
+                            .checked_mul(U256::from(to_denominator_as_micro_token))
                             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
 
-                        let denominator = U256::from(from_denominator_as_micro_token)
+                        let micro_micro_denominator = U256::from(from_denominator_as_micro_token)
                             .checked_mul(U256::from(to_numerator_as_micro_lamports))
                             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
 
-                        let mut to_micro_token = numerator
-                            .checked_div(denominator)
-                            .and_then(|v| u128::try_from(v).ok())
-                            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+                        if micro_micro_numerator == micro_micro_denominator
+                            || micro_micro_denominator.is_zero() && from_asset_amount == 0
+                        {
+                            return Ok(from_asset_amount);
+                        }
+
+                        let mut to_micro_token =
+                            U256::from((from_asset_amount as u128) * 1_000_000)
+                                .checked_mul(micro_micro_numerator)
+                                .and_then(|v| v.checked_div(micro_micro_denominator))
+                                .and_then(|v| u128::try_from(v).ok())
+                                .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
 
                         if let Some(to_token_residual_micro_amount) = to_asset_residual_micro_amount
                         {
@@ -360,24 +370,28 @@ impl<'info> PricingService<'info> {
         }
     }
 
-    pub fn get_asset_amount_as_token(
+    #[inline(always)]
+    pub fn convert_asset_amount(
         &self,
         from_asset_mint: Option<&Pubkey>,
         from_asset_amount: u64,
-        to_token_mint: &Pubkey,
+        to_asset_mint: Option<&Pubkey>,
+        to_asset_residual_micro_amount: &mut u64,
     ) -> Result<u64> {
         self.get_asset_amount_as_asset(
             from_asset_mint,
             from_asset_amount,
-            Some(to_token_mint),
-            None,
+            to_asset_mint,
+            Some(to_asset_residual_micro_amount),
         )
     }
 
+    #[inline(always)]
     pub fn get_sol_amount_as_token(&self, to_token_mint: &Pubkey, sol_amount: u64) -> Result<u64> {
         self.get_asset_amount_as_asset(None, sol_amount, Some(to_token_mint), None)
     }
 
+    #[inline(always)]
     pub fn get_token_amount_as_sol(
         &self,
         from_token_mint: &Pubkey,
@@ -386,6 +400,37 @@ impl<'info> PricingService<'info> {
         self.get_asset_amount_as_asset(Some(from_token_mint), token_amount, None, None)
     }
 
+    #[inline(always)]
+    pub fn get_token_amount_as_token(
+        &self,
+        from_asset_mint: &Pubkey,
+        from_asset_amount: u64,
+        to_token_mint: &Pubkey,
+    ) -> Result<u64> {
+        self.get_asset_amount_as_asset(
+            Some(from_asset_mint),
+            from_asset_amount,
+            Some(to_token_mint),
+            None,
+        )
+    }
+
+    #[inline(always)]
+    pub fn get_token_amount_as_asset(
+        &self,
+        from_asset_mint: &Pubkey,
+        from_asset_amount: u64,
+        to_asset_mint: Option<&Pubkey>,
+    ) -> Result<u64> {
+        self.get_asset_amount_as_asset(
+            Some(from_asset_mint),
+            from_asset_amount,
+            to_asset_mint,
+            None,
+        )
+    }
+
+    /// This is for display or informational purposes only.
     pub fn get_one_token_amount_as_sol(
         &self,
         from_token_mint: &Pubkey,
@@ -406,6 +451,7 @@ impl<'info> PricingService<'info> {
         })
     }
 
+    /// This is for display or informational purposes only.
     pub fn get_one_token_amount_as_token(
         &self,
         from_token_mint: &Pubkey,
@@ -436,8 +482,8 @@ impl<'info> PricingService<'info> {
         )
     }
 
-    /// **Flatten**s the token value of given token.
-    /// This result should be used only as informative data.
+    /// This is for display or informational purposes only.
+    /// Computes a flattened breakdown of the given token’s value into its underlying assets.
     /// A token value is **flattened** if and only if:
     /// * there is no duplicated assets in token value.
     /// * all assets in token value are atomic tokens.
@@ -537,6 +583,7 @@ impl<'info> PricingService<'info> {
         Ok(())
     }
 
+    /// This is for precise calculation.
     fn get_proportional_amount_u128(
         amount: u128,
         numerator: u128,
@@ -556,6 +603,7 @@ impl<'info> PricingService<'info> {
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
     }
 
+    /// This is for display or informational purposes only.
     fn get_proportional_amount_u64(amount: u64, numerator: u64, denominator: u64) -> Result<u64> {
         if numerator == denominator || denominator == 0 && amount == 0 {
             return Ok(amount);
@@ -612,12 +660,12 @@ mod tests {
             .unwrap();
 
         let stable_conversion = pricing_service
-            .get_asset_amount_as_token(Some(&token_mint), 1_000_000_000, &stable_fund_mint)
+            .get_token_amount_as_token(&token_mint, 1_000_000_000, &stable_fund_mint)
             .unwrap();
         assert_eq!(stable_conversion, 1_000_000_000);
 
         let stable_conversion_rev = pricing_service
-            .get_asset_amount_as_token(Some(&stable_fund_mint), 1_000_000_000, &token_mint)
+            .get_token_amount_as_token(&stable_fund_mint, 1_000_000_000, &token_mint)
             .unwrap();
         assert_eq!(stable_conversion_rev, 1_000_000_000);
 
@@ -633,35 +681,35 @@ mod tests {
             .unwrap();
 
         let increased_conversion = pricing_service
-            .get_asset_amount_as_token(Some(&token_mint), 1_000_000_000, &increased_fund_mint)
+            .get_token_amount_as_token(&token_mint, 1_000_000_000, &increased_fund_mint)
             .unwrap();
         assert_eq!(increased_conversion, 1_000_000_000 / 2);
         assert_eq!(
             pricing_service
-                .get_asset_amount_as_token(Some(&token_mint), 1234, &stable_fund_mint)
+                .get_token_amount_as_token(&token_mint, 1234, &stable_fund_mint)
                 .unwrap(),
             1234
         );
         assert_eq!(
             pricing_service
-                .get_asset_amount_as_token(None, 1234, &stable_fund_mint)
+                .get_sol_amount_as_token(&stable_fund_mint, 1234)
                 .unwrap(),
             617
         );
 
         let increased_conversion_rev = pricing_service
-            .get_asset_amount_as_token(Some(&increased_fund_mint), 1_000_000_000, &token_mint)
+            .get_token_amount_as_token(&increased_fund_mint, 1_000_000_000, &token_mint)
             .unwrap();
         assert_eq!(increased_conversion_rev, 1_000_000_000 * 2);
         assert_eq!(
             pricing_service
-                .get_asset_amount_as_token(Some(&token_mint), 1234, &increased_fund_mint)
+                .get_token_amount_as_token(&token_mint, 1234, &increased_fund_mint)
                 .unwrap(),
             617
         );
         assert_eq!(
             pricing_service
-                .get_asset_amount_as_token(None, 1234, &increased_fund_mint)
+                .get_sol_amount_as_token(&increased_fund_mint, 1234)
                 .unwrap(),
             308
         );
@@ -762,27 +810,27 @@ mod tests {
         );
 
         let root_conversion = pricing_service
-            .get_asset_amount_as_token(Some(&root_token_mint), 1_000_000_000, &receipt_token_mint)
+            .get_token_amount_as_token(&root_token_mint, 1_000_000_000, &receipt_token_mint)
             .unwrap();
         assert_eq!(root_conversion, 1_000_000_000);
 
         let pegged_conversion = pricing_service
-            .get_asset_amount_as_token(Some(&pegged_token_mint), 1_000_000_000, &receipt_token_mint)
+            .get_token_amount_as_token(&pegged_token_mint, 1_000_000_000, &receipt_token_mint)
             .unwrap();
         assert_eq!(pegged_conversion, 1_000_000_000);
 
         let pegged_conversion_rev = pricing_service
-            .get_asset_amount_as_token(Some(&receipt_token_mint), 1_000_000_000, &pegged_token_mint)
+            .get_token_amount_as_token(&receipt_token_mint, 1_000_000_000, &pegged_token_mint)
             .unwrap();
         assert_eq!(pegged_conversion_rev, 1_000_000_000);
 
         let basket_conversion = pricing_service
-            .get_asset_amount_as_token(Some(&basket_token_mint), 1_000_000_000, &receipt_token_mint)
+            .get_token_amount_as_token(&basket_token_mint, 1_000_000_000, &receipt_token_mint)
             .unwrap();
         assert_eq!(basket_conversion, 1_000_000_000);
 
         let sol_conversion = pricing_service
-            .get_asset_amount_as_token(None, 1_000_000_000, &receipt_token_mint)
+            .get_sol_amount_as_token(&receipt_token_mint, 1_000_000_000)
             .unwrap();
         assert_eq!(sol_conversion, 1_000_000_000 / 2);
     }

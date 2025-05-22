@@ -681,6 +681,7 @@ impl<'info> JitoRestakingVaultService<'info> {
             signer.key,
             from_vault_receipt_token_account.to_account_info().key,
             withdrawal_ticket_base_account.key,
+            None,
             vault_receipt_token_amount,
         );
         invoke_signed(
@@ -842,6 +843,7 @@ impl<'info> JitoRestakingVaultService<'info> {
             vault_program_fee_receipt_token_account
                 .to_account_info()
                 .key,
+            None,
         );
 
         invoke_signed(

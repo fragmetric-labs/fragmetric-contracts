@@ -198,9 +198,7 @@ impl UndelegateVSTCommand {
                 for (index, _) in strategy.get_participants_iter().enumerate() {
                     let allocated_token_amount =
                         strategy.get_participant_last_cut_amount_by_index(index)?;
-                    if allocated_token_amount > 0 {
-                        items[index].allocated_supported_token_amount = allocated_token_amount;
-                    }
+                    items[index].allocated_supported_token_amount = allocated_token_amount;
                 }
                 items.retain(|item| item.allocated_supported_token_amount > 0);
 

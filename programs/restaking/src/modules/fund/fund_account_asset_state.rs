@@ -339,11 +339,10 @@ impl AssetState {
         with_normal_reserve: bool,
     ) -> Result<u64> {
         let (supported_token_mint, _) = self.get_token_mint_and_program().unzip();
-        let asset_withdrawal_obligated_reserve_amount = pricing_service.get_asset_amount_as_asset(
-            Some(receipt_token_mint),
+        let asset_withdrawal_obligated_reserve_amount = pricing_service.get_token_amount_as_asset(
+            receipt_token_mint,
             self.get_receipt_token_withdrawal_obligated_amount(),
             supported_token_mint.as_ref(),
-            None,
         )?;
 
         Ok(asset_withdrawal_obligated_reserve_amount

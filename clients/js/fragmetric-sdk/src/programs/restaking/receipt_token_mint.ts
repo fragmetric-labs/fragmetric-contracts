@@ -157,6 +157,20 @@ export class RestakingReceiptTokenMintAccountContext extends TokenMintAccountCon
                   fund.data.normalizedToken.operationReservedAmount,
               }
             : null,
+          restakingVaultReceiptTokens: restakingVaults.map((v) => {
+            return {
+              vault: v.vault,
+              mint: v.receiptTokenMint,
+              program: v.receiptTokenProgram,
+              oneReceiptTokenAsSol: v.oneReceiptTokenAsSol,
+              operationTotalAmount:
+                v.receiptTokenOperationReceivableAmount +
+                v.receiptTokenOperationReservedAmount,
+              operationReservedAmount: v.receiptTokenOperationReservedAmount,
+              operationReceivableAmount:
+                v.receiptTokenOperationReceivableAmount,
+            };
+          }),
           __lookupTableAddress: lookupTableAddress,
           __pricingSources: pricingSources,
         };

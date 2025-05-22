@@ -108,6 +108,17 @@ describe('restaking.fragJTO test', async () => {
         "receiptTokenDecimals": 9,
         "receiptTokenMint": "bxn2sjQkkoe1MevsZHWQdVeaY18uTNr9KYUjJsYmC7v",
         "receiptTokenSupply": 0n,
+        "restakingVaultReceiptTokens": [
+          {
+            "mint": "FRJtoBLuU72X3qgkVeBU1wXtmgQpWQmWptYsAdyyu3qT",
+            "oneReceiptTokenAsSol": 0n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 0n,
+            "operationTotalAmount": 0n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "vault": "BmJvUzoiiNBRx3v2Gqsix9WvVtw8FaztrfBHQyqpMbTd",
+          },
+        ],
         "supportedAssets": [
           {
             "decimals": 9,

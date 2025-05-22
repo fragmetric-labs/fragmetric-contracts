@@ -144,8 +144,8 @@ impl DenormalizeNTCommand {
 
             let allocated_normalized_token_amount = if allocated_supported_token_amount > 0 {
                 pricing_service
-                    .get_asset_amount_as_token(
-                        Some(&supported_token.mint),
+                    .get_token_amount_as_token(
+                        &supported_token.mint,
                         allocated_supported_token_amount,
                         &normalized_token_pool_account.normalized_token_mint,
                     )?
@@ -177,8 +177,8 @@ impl DenormalizeNTCommand {
                             // here, conversion from NT to SOL is not required as we just cut the remaining amount following the weights
                             Ok(WeightedAllocationParticipant::new(
                                 supported_token.sol_allocation_weight,
-                                pricing_service.get_asset_amount_as_token(
-                                    Some(&supported_token.mint),
+                                pricing_service.get_token_amount_as_token(
+                                    &supported_token.mint,
                                     normalized_supported_token.locked_amount,
                                     &normalized_token.mint,
                                 )? - items[index].allocated_normalized_token_amount,

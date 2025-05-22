@@ -145,15 +145,6 @@ export abstract class TestValidator<T extends TestValidatorType> {
   async getEpoch(opts?: GetSlotOptions): Promise<bigint> {
     return (await this.getSlot(opts)) / this.options.slotsPerEpoch;
   }
-  async skipEpoch(): Promise<void> {
-    const currentProcessedSlot = await this.getSlot({
-      commitment: 'processed',
-    });
-    const remainingSlots =
-      this.options.slotsPerEpoch -
-      (currentProcessedSlot % this.options.slotsPerEpoch);
-    await this.warpToSlot(currentProcessedSlot + remainingSlots);
-  }
 
   async skipEpoches(epoches: bigint): Promise<void> {
     const currentProcessedSlot = await this.getSlot({

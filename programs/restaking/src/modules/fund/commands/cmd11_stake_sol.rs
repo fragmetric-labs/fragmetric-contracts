@@ -155,7 +155,9 @@ impl StakeSOLCommand {
 
                         // not stakable tokens
                         Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
-                        | Some(TokenPricingSource::PeggedToken { .. }) => None,
+                        | Some(TokenPricingSource::PeggedToken { .. }) => {
+                            Some(WeightedAllocationParticipant::new(0, 0, 0))
+                        }
 
                         // invalid configuration
                         Some(TokenPricingSource::JitoRestakingVault { .. })

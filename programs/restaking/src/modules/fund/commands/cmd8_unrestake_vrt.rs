@@ -330,7 +330,10 @@ impl UnrestakeVRTCommand {
             );
 
             unrestaking_strategy.cut_greedy(
-                extra_unrestaking_obligated_amount_as_sol + unrestaking_obligated_amounts_as_sol,
+                extra_unrestaking_obligated_amount_as_sol
+                    + unrestaking_obligated_amounts_as_sol
+                    + fund_account.get_supported_tokens_iter().count() as u64
+                    + fund_account.get_restaking_vaults_iter().count() as u64, // try to withdraw extra lamports to compensate for flooring errors for each vault & token
             )?;
 
             for (p_index, p) in unrestaking_strategy.get_participants_iter().enumerate() {
@@ -352,7 +355,7 @@ impl UnrestakeVRTCommand {
 
         items = items
             .iter()
-            .filter(|item| item.allocated_receipt_token_amount >= 1_000_000_000)
+            .filter(|item| item.allocated_receipt_token_amount >= 1_000_000)
             .copied()
             .collect();
 

@@ -28,9 +28,9 @@ edition = "2021"
 anchor-lang = { version = "0.31.1", features = ["event-cpi"] }
 anchor-spl = { version = "0.31.1", features = ["memo"] }
 bytemuck = { version = "1", features = ["derive", "min_const_generics"] }
-jito-vault-sdk = { git = "https://github.com/jito-foundation/restaking.git", rev = "9efa55c30b3427d94975b22dcd27a82181c776ba" }
-jito-vault-core = { git = "https://github.com/jito-foundation/restaking.git", rev = "9efa55c30b3427d94975b22dcd27a82181c776ba" }
-jito-bytemuck = { git = "https://github.com/jito-foundation/restaking.git", rev = "9efa55c30b3427d94975b22dcd27a82181c776ba" }
+jito-vault-sdk = { git = "https://github.com/jito-foundation/restaking.git", rev = "0cbf8f83012bd5d18183c45ed128302b4aee4dca" }
+jito-vault-core = { git = "https://github.com/jito-foundation/restaking.git", rev = "0cbf8f83012bd5d18183c45ed128302b4aee4dca" }
+jito-bytemuck = { git = "https://github.com/jito-foundation/restaking.git", rev = "0cbf8f83012bd5d18183c45ed128302b4aee4dca" }
 spl-tlv-account-resolution = "0.9.0"
 spl-transfer-hook-interface = "0.9.0"
 spl-discriminator = "0.4.1"
