@@ -204,6 +204,8 @@ export const RESTAKING_ERROR__FUND_RESTAKING_VAULT_DISTRIBUTING_REWARD_TOKEN_NOT
 export const RESTAKING_ERROR__FUND_SUPPORTED_TOKEN_IN_USE_ERROR = 0x17cd; // 6093
 /** FundExceededMaxPricingSourcesError: fund: exceeded max pricing sources */
 export const RESTAKING_ERROR__FUND_EXCEEDED_MAX_PRICING_SOURCES_ERROR = 0x17ce; // 6094
+/** FundRestakingVaultAuthorityNotMatchedError: fund: restaking vault authority not matched */
+export const RESTAKING_ERROR__FUND_RESTAKING_VAULT_AUTHORITY_NOT_MATCHED_ERROR = 0x17cf; // 6095
 
 export type RestakingError =
   | typeof RESTAKING_ERROR__CALCULATION_ARITHMETIC_EXCEPTION

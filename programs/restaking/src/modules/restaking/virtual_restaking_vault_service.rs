@@ -29,6 +29,9 @@ impl<'info> VirtualRestakingVaultService<'info> {
 
         let vault_receipt_token_mint_data =
             Mint::try_deserialize(&mut &vault_receipt_token_mint.data.borrow()[..])?;
+        // TODO: lifetime error occurs
+        // let vault_receipt_token_mint_data =
+        //     InterfaceAccount::<Mint>::try_from(vault_receipt_token_mint)?;
 
         require_eq!(vault_receipt_token_mint_data.supply, 0);
         require!(

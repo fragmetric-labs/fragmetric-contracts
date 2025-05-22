@@ -11473,6 +11473,11 @@
       "code": 6094,
       "name": "FundExceededMaxPricingSourcesError",
       "msg": "fund: exceeded max pricing sources"
+    },
+    {
+      "code": 6095,
+      "name": "FundRestakingVaultAuthorityNotMatchedError",
+      "msg": "fund: restaking vault authority not matched"
     }
   ],
   "types": [
