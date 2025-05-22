@@ -1,3 +1,5 @@
+import web3 from '@solana/web3.js';
+import { VirtualVaultAccountContext } from '../../../clients/js/fragmetric-sdk/src/programs/restaking/restaking_vault_virtual';
 import type { TestSuiteContext } from '../../testutil';
 
 export function initializeFragSOL(testCtx: TestSuiteContext) {
@@ -207,6 +209,19 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
     () =>
       ctx.reward.settleReward.execute({
         mint: 'FSWSBMV5EB7J8JdafNBLZpfSCLiFwpMCqod2RpkU4RNn',
+        amount: 0n,
+      }),
+    () =>
+      ctx.reward.addReward.execute({
+        mint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
+        decimals: 9,
+        name: 'ZEUS',
+        description: 'ZEUS insentive',
+      }),
+    () => validator.skipSlots(1n),
+    () =>
+      ctx.reward.settleReward.execute({
+        mint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
         amount: 0n,
       }),
 
@@ -449,6 +464,72 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
         solAllocationCapacityAmount: MAX_U64,
         solAllocationWeight: 1n,
       }),
+
+    // initialize virtual restaking vault (FRAG)
+    () => {
+      const [virtualVaultAddr] = web3.PublicKey.findProgramAddressSync(
+        [
+          Buffer.from('virtual_vault'),
+          new web3.PublicKey(
+            restaking.knownAddresses.fragSOL.toString()
+          ).toBuffer(),
+        ],
+        new web3.PublicKey(restaking.program.address.toString())
+      );
+      const vaultContext = ctx.fund.restakingVault(
+        virtualVaultAddr.toString(),
+        '11111111111111111111111111111111'
+      );
+      if (
+        !(vaultContext && vaultContext instanceof VirtualVaultAccountContext)
+      ) {
+        throw new Error('invalid context: virtual vault not found');
+      }
+
+      return vaultContext.initializeVrtMint.execute({
+        name: 'fragSOL Virtual Vault Receeipt Token Mint',
+        symbol: 'fragVVrt',
+        uri: '',
+        description: 'fragSOL Virtual Vault Receeipt Token Mint',
+        decimals: 9,
+      });
+    },
+    () => {
+      const [virtualVaultAddr] = web3.PublicKey.findProgramAddressSync(
+        [
+          Buffer.from('virtual_vault'),
+          new web3.PublicKey(
+            restaking.knownAddresses.fragSOL.toString()
+          ).toBuffer(),
+        ],
+        new web3.PublicKey(restaking.program.address.toString())
+      );
+      console.log(`virtualVault address: ${virtualVaultAddr}`);
+      return ctx.fund.addRestakingVault.execute({
+        vault: virtualVaultAddr.toString(),
+        pricingSource: {
+          __kind: 'VirtualRestakingVault',
+          address: virtualVaultAddr.toString(),
+        },
+      });
+    },
+
+    // configure reward settings
+    () => {
+      const [virtualVaultAddr] = web3.PublicKey.findProgramAddressSync(
+        [
+          Buffer.from('virtual_vault'),
+          new web3.PublicKey(
+            restaking.knownAddresses.fragSOL.toString()
+          ).toBuffer(),
+        ],
+        new web3.PublicKey(restaking.program.address.toString())
+      );
+      return ctx.fund.addRestakingVaultCompoundingReward.execute({
+        vault: virtualVaultAddr.toString(),
+        rewardTokenMint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
+      });
+    },
 
     // initialize address lookup table
     () =>

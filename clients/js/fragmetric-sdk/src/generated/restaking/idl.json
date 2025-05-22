@@ -11468,6 +11468,11 @@
       "code": 6093,
       "name": "FundSupportedTokenInUseError",
       "msg": "fund: supported token still in use"
+    },
+    {
+      "code": 6094,
+      "name": "FundRestakingVaultAuthorityNotMatchedError",
+      "msg": "fund: restaking vault authority not matched"
     }
   ],
   "types": [
@@ -15296,6 +15301,15 @@
           },
           {
             "name": "SanctumMultiValidatorSPLStakePool",
+            "fields": [
+              {
+                "name": "address",
+                "type": "pubkey"
+              }
+            ]
+          },
+          {
+            "name": "VirtualRestakingVault",
             "fields": [
               {
                 "name": "address",

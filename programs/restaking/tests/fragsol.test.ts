@@ -1,3 +1,4 @@
+import web3 from '@solana/web3.js';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { createTestSuiteContext, expectMasked } from '../../testutil';
 import { initializeFragSOL } from './fragsol.init';
@@ -61,6 +62,10 @@ describe('restaking.fragSOL test', async () => {
           },
           {
             "address": "HR1ANmDHjaEhknvsTaK48M5xZtbBiwNdXM5NTiWhAb4S",
+            "role": 0,
+          },
+          {
+            "address": "4VvjAVkgquu5prpwCaw4kHkddrEeSGdZmUTQvuLVNGNm",
             "role": 0,
           },
           {
@@ -300,6 +305,20 @@ describe('restaking.fragSOL test', async () => {
             "solAllocationWeight": 1n,
             "vault": "HR1ANmDHjaEhknvsTaK48M5xZtbBiwNdXM5NTiWhAb4S",
           },
+          {
+            "compoundingRewardTokenMints": [
+              "ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq",
+            ],
+            "delegations": [],
+            "distributingRewardTokens": [],
+            "pricingSource": {
+              "__kind": "VirtualRestakingVault",
+              "address": "4VvjAVkgquu5prpwCaw4kHkddrEeSGdZmUTQvuLVNGNm",
+            },
+            "solAllocationCapacityAmount": 0n,
+            "solAllocationWeight": 0n,
+            "vault": "4VvjAVkgquu5prpwCaw4kHkddrEeSGdZmUTQvuLVNGNm",
+          },
         ],
         "tokenSwapStrategies": [],
       }
@@ -339,6 +358,36 @@ describe('restaking.fragSOL test', async () => {
                 "id": 1,
                 "mint": "FSWSBMV5EB7J8JdafNBLZpfSCLiFwpMCqod2RpkU4RNn",
                 "name": "SWTCH",
+                "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+              },
+              "settledAmount": 0n,
+              "settlementBlocksLastRewardPoolContribution": "MASKED(/[.*C|c]ontribution?$/)",
+              "settlementBlocksLastSlot": "MASKED(/[.*S|s]lots?$/)",
+            },
+            {
+              "blocks": [
+                {
+                  "amount": 0n,
+                  "endingContribution": "MASKED(/[.*C|c]ontribution?$/)",
+                  "endingSlot": "MASKED(/[.*S|s]lots?$/)",
+                  "settledContribution": "MASKED(/[.*C|c]ontribution?$/)",
+                  "settledSlots": "MASKED(/[.*S|s]lots?$/)",
+                  "startingContribution": "MASKED(/[.*C|c]ontribution?$/)",
+                  "startingSlot": "MASKED(/[.*S|s]lots?$/)",
+                  "userSettledAmount": 0n,
+                  "userSettledContribution": "MASKED(/[.*C|c]ontribution?$/)",
+                },
+              ],
+              "claimedAmount": 0n,
+              "claimedAmountUpdatedSlot": "MASKED(/[.*S|s]lots?$/)",
+              "remainingAmount": 0n,
+              "reward": {
+                "claimable": false,
+                "decimals": 9,
+                "description": "ZEUS insentive",
+                "id": 2,
+                "mint": "ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq",
+                "name": "ZEUS",
                 "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
               },
               "settledAmount": 0n,
@@ -412,6 +461,15 @@ describe('restaking.fragSOL test', async () => {
             "id": 1,
             "mint": "FSWSBMV5EB7J8JdafNBLZpfSCLiFwpMCqod2RpkU4RNn",
             "name": "SWTCH",
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          },
+          {
+            "claimable": false,
+            "decimals": 9,
+            "description": "ZEUS insentive",
+            "id": 2,
+            "mint": "ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq",
+            "name": "ZEUS",
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
           },
         ],
@@ -488,6 +546,10 @@ describe('restaking.fragSOL test', async () => {
           },
           {
             "address": "HR1ANmDHjaEhknvsTaK48M5xZtbBiwNdXM5NTiWhAb4S",
+            "role": 0,
+          },
+          {
+            "address": "4VvjAVkgquu5prpwCaw4kHkddrEeSGdZmUTQvuLVNGNm",
             "role": 0,
           },
           {
@@ -823,6 +885,10 @@ describe('restaking.fragSOL test', async () => {
           },
           {
             "address": "HR1ANmDHjaEhknvsTaK48M5xZtbBiwNdXM5NTiWhAb4S",
+            "role": 0,
+          },
+          {
+            "address": "4VvjAVkgquu5prpwCaw4kHkddrEeSGdZmUTQvuLVNGNm",
             "role": 0,
           },
           {
@@ -1604,5 +1670,55 @@ describe('restaking.fragSOL test', async () => {
     await expect(
       ctx.fund.runCommand.executeChained(null)
     ).resolves.not.toThrow();
+  });
+
+  /** 5. virtual vault harvet/compound */
+  test('virtual vault harvest/compound', async () => {
+    const [virtualVaultAddr] = web3.PublicKey.findProgramAddressSync(
+      [
+        Buffer.from('virtual_vault'),
+        new web3.PublicKey(
+          restaking.knownAddresses.fragSOL.toString()
+        ).toBuffer(),
+      ],
+      new web3.PublicKey(restaking.program.address.toString())
+    );
+
+    // airdrop to virtual vault - zeus token vst
+    // dev) tested with zeus token not jitoSOL, because when harvesting jitoSOL from virtual vault, that jitoSOL moves to nSOL vault at restake command step
+    await validator.airdropToken(
+      virtualVaultAddr.toString(),
+      'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
+      100_000_000_000n // 100
+    );
+
+    const fund_1 = await ctx.fund.resolveAccount(true);
+
+    // run operator to harvest
+    await ctx.fund.runCommand.executeChained(null);
+
+    const fund_2 = await ctx.fund.resolveAccount(true);
+    console.log(
+      `fund_1 nSOL vault's receiptTokenOperationReservedAmount: ${fund_1.data.restakingVaults[0].receiptTokenOperationReservedAmount}`
+    );
+    console.log(
+      `fund_2 nSOL vault's receiptTokenOperationReservedAmount: ${fund_2.data.restakingVaults[0].receiptTokenOperationReservedAmount}`
+    );
+    expect(
+      fund_2.data.restakingVaults[0].receiptTokenOperationReservedAmount
+    ).toBeGreaterThanOrEqual(
+      fund_1.data.restakingVaults[0].receiptTokenOperationReservedAmount
+    );
+
+    const fund_1_fragToken = fund_1.data.supportedTokens.filter(
+      (supportedToken) =>
+        supportedToken.mint == 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq'
+    )[0];
+    const fund_2_fragToken = fund_2.data.supportedTokens.filter(
+      (supportedToken) =>
+        supportedToken.mint == 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq'
+    )[0];
+    console.log(`fund_1_fragToken:`, fund_1_fragToken);
+    console.log(`fund_2 fragToken:`, fund_2_fragToken);
   });
 });
