@@ -7,9 +7,7 @@ use anchor_spl::token_interface::Mint;
 use bytemuck::Zeroable;
 
 use crate::errors::ErrorCode;
-use crate::modules::pricing::{
-    self, PricingService, TokenPricingSource, TokenPricingSourcePod, TokenValuePod,
-};
+use crate::modules::pricing::{PricingService, TokenPricingSource, TokenValuePod};
 use crate::modules::swap::TokenSwapSource;
 use crate::utils::*;
 
@@ -384,35 +382,33 @@ impl FundAccount {
                     .into_iter()
                     .map(|normalized_token| &normalized_token.pricing_source),
             )
-            .try_for_each(|pricing_source: &TokenPricingSourcePod| {
-                match pricing_source.try_deserialize()? {
-                    Some(TokenPricingSource::SPLStakePool { address })
-                    | Some(TokenPricingSource::MarinadeStakePool { address })
-                    | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { address })
-                    | Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { address })
-                    | Some(TokenPricingSource::OrcaDEXLiquidityPool { address })
-                    | Some(TokenPricingSource::JitoRestakingVault { address })
-                    | Some(TokenPricingSource::FragmetricNormalizedTokenPool { address })
-                    | Some(TokenPricingSource::SolvBTCVault { address }) => {
-                        require_gt!(
-                            FUND_ACCOUNT_MAX_PRICING_SOURCE_ADDRESSES,
-                            self.num_pricing_source_addresses as usize,
-                            ErrorCode::FundExceededMaxPricingSourcesError
-                        );
-                        self.pricing_source_addresses[self.num_pricing_source_addresses as usize] =
-                            address;
-                        self.num_pricing_source_addresses += 1;
+            .try_for_each(|pricing_source| match pricing_source.try_deserialize()? {
+                Some(TokenPricingSource::SPLStakePool { address })
+                | Some(TokenPricingSource::MarinadeStakePool { address })
+                | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { address })
+                | Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { address })
+                | Some(TokenPricingSource::OrcaDEXLiquidityPool { address })
+                | Some(TokenPricingSource::JitoRestakingVault { address })
+                | Some(TokenPricingSource::FragmetricNormalizedTokenPool { address })
+                | Some(TokenPricingSource::SolvBTCVault { address }) => {
+                    require_gt!(
+                        FUND_ACCOUNT_MAX_PRICING_SOURCE_ADDRESSES,
+                        self.num_pricing_source_addresses as usize,
+                        ErrorCode::FundExceededMaxPricingSourcesError
+                    );
+                    self.pricing_source_addresses[self.num_pricing_source_addresses as usize] =
+                        address;
+                    self.num_pricing_source_addresses += 1;
 
-                        Ok(())
-                    }
-                    Some(TokenPricingSource::FragmetricRestakingFund { .. }) | None => {
-                        err!(ErrorCode::TokenPricingSourceAccountNotFoundError)
-                    }
-                    Some(TokenPricingSource::PeggedToken { .. }) => Ok(()),
-                    #[cfg(all(test, not(feature = "idl-build")))]
-                    Some(TokenPricingSource::Mock { .. }) => {
-                        err!(ErrorCode::TokenPricingSourceAccountNotFoundError)
-                    }
+                    Ok(())
+                }
+                Some(TokenPricingSource::FragmetricRestakingFund { .. }) | None => {
+                    err!(ErrorCode::TokenPricingSourceAccountNotFoundError)
+                }
+                Some(TokenPricingSource::PeggedToken { .. }) => Ok(()),
+                #[cfg(all(test, not(feature = "idl-build")))]
+                Some(TokenPricingSource::Mock { .. }) => {
+                    err!(ErrorCode::TokenPricingSourceAccountNotFoundError)
                 }
             })?;
 

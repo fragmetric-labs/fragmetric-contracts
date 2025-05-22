@@ -1607,6 +1607,38 @@ describe('restaking.fragSOL test', async () => {
     ).resolves.not.toThrow();
   });
 
+  test('reward settlement clears one block before block addition when block queue is full', async ()=> {
+    let rewardAccount = await ctx.reward.resolveAccount(true);
+    let rewardSettlement = rewardAccount!.data.bonusRewardPool.rewardSettlements1[0];
+
+    const prevNumSettlementBlocks = rewardSettlement.numSettlementBlocks;
+    const prevRemainingAmount = rewardSettlement.remainingAmount;
+    const fPointMint = '11111111111111111111111111111111' // fPoint
+    const remainingAmountOfFirstBlock = rewardSettlement.settlementBlocks[0].amount;
+
+    // settle up to 64 blocks to make queue full
+    for (let i = 1; i <= 64 - prevNumSettlementBlocks; i += 1) {
+      await ctx.reward.settleReward.execute({
+        isBonus: true,
+        mint: fPointMint,
+        amount: BigInt(i) * 500_000_000n
+      });
+      await validator.skipSlots(10n);
+    }
+
+    // settle one more block to trigger force_clear_settlement_block
+    await ctx.reward.settleReward.execute({
+      isBonus: true,
+      mint: fPointMint,
+      amount: 100_000_000n
+    });
+
+    rewardAccount = await ctx.reward.resolveAccount(true);
+    rewardSettlement = await rewardAccount!.data.bonusRewardPool.rewardSettlements1[0];
+    expect(rewardSettlement.remainingAmount).toEqual(prevRemainingAmount + remainingAmountOfFirstBlock);
+    expect(rewardSettlement.numSettlementBlocks).toEqual(64);
+  });
+
   test('pricing source addresses field in fund account updates correctly', async () => {
     await expectMasked(
       ctx.fund.updatePrices.execute({
