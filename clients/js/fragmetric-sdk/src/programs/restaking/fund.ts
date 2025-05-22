@@ -820,6 +820,7 @@ export class RestakingFundAccountContext extends AccountContext<
       ),
       addressLookupTables: [this.__resolveAddressLookupTable],
       instructions: [
+        getSetComputeUnitLimitInstruction({ units: 1_400_000 }),
         async (parent, args, overrides) => {
           const [normalizedTokenMint, normalizedTokenPoolAccount, data] =
             await Promise.all([
