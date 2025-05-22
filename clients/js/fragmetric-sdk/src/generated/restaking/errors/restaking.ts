@@ -202,8 +202,8 @@ export const RESTAKING_ERROR__FUND_RESTAKING_VAULT_COMPOUNDING_REWARD_TOKEN_NOT_
 export const RESTAKING_ERROR__FUND_RESTAKING_VAULT_DISTRIBUTING_REWARD_TOKEN_NOT_REGISTERED_ERROR = 0x17cc; // 6092
 /** FundSupportedTokenInUseError: fund: supported token still in use */
 export const RESTAKING_ERROR__FUND_SUPPORTED_TOKEN_IN_USE_ERROR = 0x17cd; // 6093
-/** FundRestakingVaultAuthorityNotMatchedError: fund: restaking vault authority not matched */
-export const RESTAKING_ERROR__FUND_RESTAKING_VAULT_AUTHORITY_NOT_MATCHED_ERROR = 0x17ce; // 6094
+/** FundExceededMaxPricingSourcesError: fund: exceeded max pricing sources */
+export const RESTAKING_ERROR__FUND_EXCEEDED_MAX_PRICING_SOURCES_ERROR = 0x17ce; // 6094
 
 export type RestakingError =
   | typeof RESTAKING_ERROR__CALCULATION_ARITHMETIC_EXCEPTION
@@ -213,6 +213,7 @@ export type RestakingError =
   | typeof RESTAKING_ERROR__FUND_DEPOSIT_NOT_SUPPORTED_ASSET
   | typeof RESTAKING_ERROR__FUND_DONATION_DISABLED_ERROR
   | typeof RESTAKING_ERROR__FUND_EXCEEDED_DEPOSIT_CAPACITY_AMOUNT_ERROR
+  | typeof RESTAKING_ERROR__FUND_EXCEEDED_MAX_PRICING_SOURCES_ERROR
   | typeof RESTAKING_ERROR__FUND_EXCEEDED_MAX_RESTAKING_VAULT_COMPOUNDING_REWARD_TOKENS_ERROR
   | typeof RESTAKING_ERROR__FUND_EXCEEDED_MAX_RESTAKING_VAULT_DELEGATIONS_ERROR
   | typeof RESTAKING_ERROR__FUND_EXCEEDED_MAX_RESTAKING_VAULT_DISTRIBUTING_REWARD_TOKENS_ERROR
@@ -312,6 +313,7 @@ if (process.env.NODE_ENV !== 'production') {
     [RESTAKING_ERROR__FUND_DEPOSIT_NOT_SUPPORTED_ASSET]: `fund: deposit is not supported for the given asset`,
     [RESTAKING_ERROR__FUND_DONATION_DISABLED_ERROR]: `fund: donation is currently disabled`,
     [RESTAKING_ERROR__FUND_EXCEEDED_DEPOSIT_CAPACITY_AMOUNT_ERROR]: `fund: exceeded deposit capacity amount`,
+    [RESTAKING_ERROR__FUND_EXCEEDED_MAX_PRICING_SOURCES_ERROR]: `fund: exceeded max pricing sources`,
     [RESTAKING_ERROR__FUND_EXCEEDED_MAX_RESTAKING_VAULT_COMPOUNDING_REWARD_TOKENS_ERROR]: `fund: exceeded max restaking vault compounding reward tokens`,
     [RESTAKING_ERROR__FUND_EXCEEDED_MAX_RESTAKING_VAULT_DELEGATIONS_ERROR]: `fund: exceeded max restaking vault delegations`,
     [RESTAKING_ERROR__FUND_EXCEEDED_MAX_RESTAKING_VAULT_DISTRIBUTING_REWARD_TOKENS_ERROR]: `fund: exceeded max restaking vault distributing reward tokens`,

@@ -75,6 +75,10 @@ impl<'a, 'info> FundService<'a, 'info> {
         &mut self,
         pricing_sources: &'info [AccountInfo<'info>],
     ) -> Result<events::OperatorUpdatedFundPrices> {
+        let mut fund_account = self.fund_account.load_mut()?;
+        fund_account.update_pricing_source_addresses()?;
+        drop(fund_account);
+
         self.new_pricing_service(pricing_sources, true)?;
         Ok(events::OperatorUpdatedFundPrices {
             receipt_token_mint: self.receipt_token_mint.key(),
@@ -93,9 +97,8 @@ impl<'a, 'info> FundService<'a, 'info> {
         let mut pricing_sources = Vec::with_capacity(pricing_sources_max_len);
 
         fund_account
-            .get_normalized_token()
-            .into_iter()
-            .map(|normalized_token| &normalized_token.pricing_source)
+            .get_supported_tokens_iter()
+            .map(|supported_token| &supported_token.pricing_source)
             .chain(
                 fund_account
                     .get_restaking_vaults_iter()
@@ -103,8 +106,9 @@ impl<'a, 'info> FundService<'a, 'info> {
             )
             .chain(
                 fund_account
-                    .get_supported_tokens_iter()
-                    .map(|supported_token| &supported_token.pricing_source),
+                    .get_normalized_token()
+                    .into_iter()
+                    .map(|normalized_token| &normalized_token.pricing_source),
             )
             .try_for_each(|pricing_source| match pricing_source.try_deserialize()? {
                 Some(TokenPricingSource::SPLStakePool { address })

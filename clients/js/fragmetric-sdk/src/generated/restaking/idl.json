@@ -11471,8 +11471,8 @@
     },
     {
       "code": 6094,
-      "name": "FundRestakingVaultAuthorityNotMatchedError",
-      "msg": "fund: restaking vault authority not matched"
+      "name": "FundExceededMaxPricingSourcesError",
+      "msg": "fund: exceeded max pricing sources"
     }
   ],
   "types": [
@@ -12460,7 +12460,32 @@
             "type": {
               "array": [
                 "u8",
-                16016
+                14192
+              ]
+            }
+          },
+          {
+            "name": "num_pricing_source_addresses",
+            "docs": [
+              "fund pricing source address information (support for third party integration)"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "pricing_source_addresses",
+            "type": {
+              "array": [
+                "pubkey",
+                33
+              ]
+            }
+          },
+          {
+            "name": "_reserved3",
+            "type": {
+              "array": [
+                "u8",
+                767
               ]
             }
           },

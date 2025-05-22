@@ -99,12 +99,6 @@ impl RewardSettlement {
         current_reward_pool_contribution: u128,
         current_slot: u64,
     ) -> Result<()> {
-        require_gt!(
-            REWARD_ACCOUNT_SETTLEMENT_BLOCK_MAX_LEN,
-            self.num_settlement_blocks as usize,
-            ErrorCode::RewardExceededMaxRewardSettlementBlockError
-        );
-
         // Prevent settlement block with non-positive block height
         require_gt!(
             current_slot,
@@ -119,6 +113,10 @@ impl RewardSettlement {
             ErrorCode::RewardInvalidSettlementBlockContributionException,
         );
 
+        if self.num_settlement_blocks as usize >= REWARD_ACCOUNT_SETTLEMENT_BLOCK_MAX_LEN {
+            self.force_clear_settlement_block();
+        }
+
         // push_back
         self.settlement_blocks[self.settlement_blocks_tail as usize].initialize(
             amount,
@@ -132,6 +130,15 @@ impl RewardSettlement {
         self.num_settlement_blocks += 1;
 
         Ok(())
+    }
+
+    fn force_clear_settlement_block(&mut self) {
+        let block = &self.settlement_blocks[self.settlement_blocks_head as usize];
+        self.remaining_amount += block.get_remaining_amount();
+
+        self.settlement_blocks_head =
+            (self.settlement_blocks_head + 1) % REWARD_ACCOUNT_SETTLEMENT_BLOCK_MAX_LEN as u8;
+        self.num_settlement_blocks -= 1;
     }
 
     pub fn get_unclaimed_reward_amount(&self) -> u64 {
@@ -330,5 +337,29 @@ mod tests {
             .get_settlement_blocks_iter_mut()
             .enumerate()
             .for_each(|(i, block)| assert_eq!(block.amount, 2 + i as u64 % 64));
+    }
+
+    #[test]
+    fn test_force_clear_when_block_is_full() {
+        let mut settlement = RewardSettlement::zeroed();
+        settlement.initialize(0, 0, 0, 0);
+
+        // settle 64 blocks to make full
+        for i in 0..REWARD_ACCOUNT_SETTLEMENT_BLOCK_MAX_LEN {
+            let amount = (i + 1) as u64;
+            let contribution = (i + 2) as u128;
+            let current_slot = (i + 1) as u64;
+
+            settlement
+                .settle_reward(amount, contribution, current_slot)
+                .unwrap();
+        }
+
+        // settle one more block
+        settlement.settle_reward(100, 100, 100).unwrap();
+
+        assert_eq!(settlement.remaining_amount, 1);
+        assert_eq!(settlement.settlement_blocks_head, 1);
+        assert_eq!(settlement.num_settlement_blocks, 64);
     }
 }

@@ -24,6 +24,7 @@ pub const FUND_ACCOUNT_CURRENT_VERSION: u16 = 19;
 pub const FUND_WITHDRAWAL_FEE_RATE_BPS_LIMIT: u16 = 500;
 pub const FUND_ACCOUNT_MAX_SUPPORTED_TOKENS: usize = 16;
 pub const FUND_ACCOUNT_MAX_RESTAKING_VAULTS: usize = 16;
+pub const FUND_ACCOUNT_MAX_PRICING_SOURCE_ADDRESSES: usize = 33;
 pub const FUND_ACCOUNT_MAX_TOKEN_SWAP_STRATEGIES: usize = 30;
 
 #[account(zero_copy)]
@@ -69,7 +70,13 @@ pub struct FundAccount {
     _padding4: [u8; 15],
     num_supported_tokens: u8,
     supported_tokens: [SupportedToken; FUND_ACCOUNT_MAX_SUPPORTED_TOKENS],
-    _reserved2: [u8; 16016],
+    _reserved2: [u8; 14192],
+
+    /// fund pricing source address information (support for third party integration)
+    num_pricing_source_addresses: u8,
+    pricing_source_addresses: [Pubkey; FUND_ACCOUNT_MAX_PRICING_SOURCE_ADDRESSES],
+
+    _reserved3: [u8; 767],
 
     /// optional basket of underlying assets
     normalized_token: NormalizedToken,
@@ -356,6 +363,62 @@ impl FundAccount {
                 &self.receipt_token_program,
             ),
         )
+    }
+
+    pub(super) fn update_pricing_source_addresses(&mut self) -> Result<()> {
+        self.num_pricing_source_addresses = 0;
+
+        self.supported_tokens[..self.num_supported_tokens as usize]
+            .iter()
+            .map(|supported_token| &supported_token.pricing_source)
+            .chain(
+                self.restaking_vaults[..self.num_restaking_vaults as usize]
+                    .iter()
+                    .map(|restaking_vault| &restaking_vault.receipt_token_pricing_source),
+            )
+            .chain(
+                (self.normalized_token.enabled == 1)
+                    .then_some(&self.normalized_token)
+                    .into_iter()
+                    .map(|normalized_token| &normalized_token.pricing_source),
+            )
+            .try_for_each(|pricing_source| match pricing_source.try_deserialize()? {
+                Some(TokenPricingSource::SPLStakePool { address })
+                | Some(TokenPricingSource::MarinadeStakePool { address })
+                | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { address })
+                | Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { address })
+                | Some(TokenPricingSource::OrcaDEXLiquidityPool { address })
+                | Some(TokenPricingSource::JitoRestakingVault { address })
+                | Some(TokenPricingSource::FragmetricNormalizedTokenPool { address })
+                | Some(TokenPricingSource::SolvBTCVault { address }) => {
+                    require_gt!(
+                        FUND_ACCOUNT_MAX_PRICING_SOURCE_ADDRESSES,
+                        self.num_pricing_source_addresses as usize,
+                        ErrorCode::FundExceededMaxPricingSourcesError
+                    );
+                    self.pricing_source_addresses[self.num_pricing_source_addresses as usize] =
+                        address;
+                    self.num_pricing_source_addresses += 1;
+
+                    Ok(())
+                }
+                Some(TokenPricingSource::FragmetricRestakingFund { .. }) | None => {
+                    err!(ErrorCode::TokenPricingSourceAccountNotFoundError)
+                }
+                Some(TokenPricingSource::PeggedToken { .. }) => Ok(()),
+                #[cfg(all(test, not(feature = "idl-build")))]
+                Some(TokenPricingSource::Mock { .. }) => {
+                    err!(ErrorCode::TokenPricingSourceAccountNotFoundError)
+                }
+            })?;
+
+        for index in
+            self.num_pricing_source_addresses as usize..FUND_ACCOUNT_MAX_PRICING_SOURCE_ADDRESSES
+        {
+            self.pricing_source_addresses[index] = Pubkey::default();
+        }
+
+        Ok(())
     }
 
     #[inline(always)]

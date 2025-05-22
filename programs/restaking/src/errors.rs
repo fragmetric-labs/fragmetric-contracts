@@ -291,6 +291,9 @@ pub enum ErrorCode {
     #[msg("fund: supported token still in use")]
     FundSupportedTokenInUseError,
 
+    #[msg("fund: exceeded max pricing sources")]
+    FundExceededMaxPricingSourcesError,
+
     #[msg("fund: restaking vault authority not matched")]
     FundRestakingVaultAuthorityNotMatchedError,
 }
