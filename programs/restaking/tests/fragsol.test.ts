@@ -1,8 +1,8 @@
 import * as web3 from '@solana/web3.js';
+import { PublicKey } from '@solana/web3.js';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { createTestSuiteContext, expectMasked } from '../../testutil';
 import { initializeFragSOL } from './fragsol.init';
-import { PublicKey } from '@solana/web3.js';
 
 describe('restaking.fragSOL test', async () => {
   const testCtx = initializeFragSOL(await createTestSuiteContext());
@@ -99,6 +99,26 @@ describe('restaking.fragSOL test', async () => {
         "receiptTokenDecimals": 9,
         "receiptTokenMint": "Cs29UiPhAkM2v8fZW7qCJ1UjhF1UAhgrsKj61yGGYizD",
         "receiptTokenSupply": 0n,
+        "restakingVaultReceiptTokens": [
+          {
+            "mint": "CkXLPfDG3cDawtUvnztq99HdGoQWhJceBZxqKYL2TUrg",
+            "oneReceiptTokenAsSol": 0n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 0n,
+            "operationTotalAmount": 0n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "vault": "HR1ANmDHjaEhknvsTaK48M5xZtbBiwNdXM5NTiWhAb4S",
+          },
+          {
+            "mint": "8vEunBQvD3L4aNnRPyQzfQ7pecq4tPb46PjZVKUnTP9i",
+            "oneReceiptTokenAsSol": 0n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 0n,
+            "operationTotalAmount": 0n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "vault": "ENwxFTsCAbWyjGLHnLYv7JtDs8uvkhvdmRoKCAS7SEpk",
+          },
+        ],
         "supportedAssets": [
           {
             "decimals": 9,
@@ -599,6 +619,26 @@ describe('restaking.fragSOL test', async () => {
         "receiptTokenDecimals": 9,
         "receiptTokenMint": "Cs29UiPhAkM2v8fZW7qCJ1UjhF1UAhgrsKj61yGGYizD",
         "receiptTokenSupply": 0n,
+        "restakingVaultReceiptTokens": [
+          {
+            "mint": "CkXLPfDG3cDawtUvnztq99HdGoQWhJceBZxqKYL2TUrg",
+            "oneReceiptTokenAsSol": 0n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 0n,
+            "operationTotalAmount": 0n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "vault": "HR1ANmDHjaEhknvsTaK48M5xZtbBiwNdXM5NTiWhAb4S",
+          },
+          {
+            "mint": "8vEunBQvD3L4aNnRPyQzfQ7pecq4tPb46PjZVKUnTP9i",
+            "oneReceiptTokenAsSol": 0n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 0n,
+            "operationTotalAmount": 0n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "vault": "ENwxFTsCAbWyjGLHnLYv7JtDs8uvkhvdmRoKCAS7SEpk",
+          },
+        ],
         "supportedAssets": [
           {
             "decimals": 9,
@@ -946,6 +986,26 @@ describe('restaking.fragSOL test', async () => {
         "receiptTokenDecimals": 9,
         "receiptTokenMint": "Cs29UiPhAkM2v8fZW7qCJ1UjhF1UAhgrsKj61yGGYizD",
         "receiptTokenSupply": 10803579770n,
+        "restakingVaultReceiptTokens": [
+          {
+            "mint": "CkXLPfDG3cDawtUvnztq99HdGoQWhJceBZxqKYL2TUrg",
+            "oneReceiptTokenAsSol": 0n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 0n,
+            "operationTotalAmount": 0n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "vault": "HR1ANmDHjaEhknvsTaK48M5xZtbBiwNdXM5NTiWhAb4S",
+          },
+          {
+            "mint": "8vEunBQvD3L4aNnRPyQzfQ7pecq4tPb46PjZVKUnTP9i",
+            "oneReceiptTokenAsSol": 0n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 0n,
+            "operationTotalAmount": 0n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "vault": "ENwxFTsCAbWyjGLHnLYv7JtDs8uvkhvdmRoKCAS7SEpk",
+          },
+        ],
         "supportedAssets": [
           {
             "decimals": 9,
@@ -1368,7 +1428,7 @@ describe('restaking.fragSOL test', async () => {
                     "__kind": "Execute",
                     "items": [
                       {
-                        "allocatedTokenAmount": 54345439988n,
+                        "allocatedTokenAmount": 54345439992n,
                         "tokenMint": "jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v",
                       },
                     ],
@@ -1404,15 +1464,15 @@ describe('restaking.fragSOL test', async () => {
                 "__kind": "UnstakeLST",
                 "fields": [
                   {
-                    "burntTokenAmount": 54345439988n,
+                    "burntTokenAmount": 54345439992n,
                     "deductedSolFeeAmount": 60234569n,
-                    "operationReceivableSolAmount": 60233477237n,
+                    "operationReceivableSolAmount": 60233477241n,
                     "operationReservedSolAmount": 29766522766n,
-                    "operationReservedTokenAmount": 35654560012n,
+                    "operationReservedTokenAmount": 35654560008n,
                     "tokenMint": "jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v",
-                    "totalUnstakingSolAmount": 60173242668n,
+                    "totalUnstakingSolAmount": 60173242672n,
                     "unstakedSolAmount": 1090656n,
-                    "unstakingSolAmount": 60173242668n,
+                    "unstakingSolAmount": 60173242672n,
                   },
                 ],
               },
@@ -1425,7 +1485,7 @@ describe('restaking.fragSOL test', async () => {
         "succeeded": true,
       }
     `);
-    await validator.skipEpoch();
+    await validator.skipEpoches(1n);
 
     await expectMasked(
       ctx.fund.runCommand.executeChained({
@@ -1466,18 +1526,18 @@ describe('restaking.fragSOL test', async () => {
                 "__kind": "ClaimUnstakedSOL",
                 "fields": [
                   {
-                    "claimedSolAmount": 60173242668n,
+                    "claimedSolAmount": 60173242672n,
                     "offsettedAssetReceivables": [
                       {
-                        "assetAmount": 60173242668n,
+                        "assetAmount": 60173242672n,
                         "assetTokenMint": {
                           "__option": "None",
                         },
                       },
                     ],
-                    "offsettedSolReceivableAmount": 60173242668n,
+                    "offsettedSolReceivableAmount": 60173242672n,
                     "operationReceivableSolAmount": 60234569n,
-                    "operationReservedSolAmount": 89939765434n,
+                    "operationReservedSolAmount": 89939765438n,
                     "tokenMint": "jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v",
                     "totalUnstakingSolAmount": 0n,
                     "transferredSolRevenueAmount": 0n,
@@ -1633,7 +1693,7 @@ describe('restaking.fragSOL test', async () => {
                     "__kind": "Execute",
                     "items": [
                       {
-                        "allocatedSolAmount": 50000000000n,
+                        "allocatedSolAmount": 50000000004n,
                         "tokenMint": "jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v",
                       },
                     ],
@@ -1652,11 +1712,11 @@ describe('restaking.fragSOL test', async () => {
                 "fields": [
                   {
                     "deductedSolFeeAmount": 0n,
-                    "mintedTokenAmount": 45111504812n,
+                    "mintedTokenAmount": 45111504815n,
                     "operationReceivableSolAmount": 0n,
                     "operationReservedSolAmount": 0n,
-                    "operationReservedTokenAmount": 80766064824n,
-                    "stakedSolAmount": 50000000000n,
+                    "operationReservedTokenAmount": 80766064823n,
+                    "stakedSolAmount": 50000000004n,
                     "tokenMint": "jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v",
                   },
                 ],
@@ -1671,8 +1731,9 @@ describe('restaking.fragSOL test', async () => {
       }
     `);
   });
+
   /** 4. Operation **/
-  test('operation test', async () => {
+  test('run operation cycles through multiple epoches to test cach-in/out flows including (un)stake/(un)restake', async () => {
     await user1.resolveAddress(true);
 
     for (const mint of [
@@ -1757,51 +1818,71 @@ describe('restaking.fragSOL test', async () => {
     });
 
     // to enqueue withdrawal batch and make a unrestake request from vaults
-    await expect(validator.skipEpoch()).resolves.not.toThrow();
+    await expect(validator.skipEpoches(1n)).resolves.not.toThrow();
     await expect(
       ctx.fund.runCommand.executeChained(null)
     ).resolves.not.toThrow();
 
-    // to claim unrestaked vst from vaults and make a unstake request from stake pools
-    await expect(validator.skipEpoch()).resolves.not.toThrow();
+    // to claim unrestaked vst from vaults and make a unstake request (assume no delayed unstake here) from stake pools
+    await expect(validator.skipEpoches(3n)).resolves.not.toThrow();
     await expect(
       ctx.fund.runCommand.executeChained(null)
     ).resolves.not.toThrow();
 
     // to process withdrawal batches
-    await expect(validator.skipEpoch()).resolves.not.toThrow();
+    await expect(validator.skipEpoches(1n)).resolves.not.toThrow();
     await expect(
       ctx.fund.runCommand.executeChained(null)
     ).resolves.not.toThrow();
 
-    // console.error(await ctx.resolve(true));
-    // await expect(
-    //   ctx.fund.resolveAccount(true).then(account => account?.data.sol.withdrawalLastProcessedBatchId)
-    // ).resolves.toEqual(2n);
-    // await expect(
-    //   ctx.fund.latestWithdrawalBatches.resolve(true)
-    // ).resolves.toMatchInlineSnapshot(`
-    //   [
-    //     null,
-    //   ]
-    // `);
+    await expect(
+      ctx.fund
+        .resolveAccount(true)
+        .then((account) => account?.data.sol.withdrawalLastProcessedBatchId)
+    ).resolves.toEqual(3n);
+    await expectMasked(ctx.fund.latestWithdrawalBatches.resolve(true)).resolves
+      .toMatchInlineSnapshot(`
+      [
+        {
+          "assetFeeAmount": 24690000n,
+          "assetUserAmount": 12320310001n,
+          "batchId": 3n,
+          "claimedAssetUserAmount": 0n,
+          "claimedReceiptTokenAmount": 0n,
+          "numClaimedRequests": 0n,
+          "numRequests": 1n,
+          "processedAt": "MASKED(/.*At?$/)",
+          "receiptTokenAmount": 12345000000n,
+          "receiptTokenMint": "Cs29UiPhAkM2v8fZW7qCJ1UjhF1UAhgrsKj61yGGYizD",
+          "supportedTokenMint": {
+            "__option": "None",
+          },
+          "supportedTokenProgram": {
+            "__option": "None",
+          },
+        },
+      ]
+    `);
   });
 
-  test('reward settlement clears one block before block addition when block queue is full', async ()=> {
+  /** 5. reward settlment clearing **/
+  test('reward settlement clears one block before block addition when block queue is full', async () => {
     let rewardAccount = await ctx.reward.resolveAccount(true);
-    let rewardSettlement = rewardAccount!.data.bonusRewardPool.rewardSettlements1[0];
+    let rewardSettlement =
+      rewardAccount!.data.bonusRewardPool.rewardSettlements1[0];
 
     const prevNumSettlementBlocks = rewardSettlement.numSettlementBlocks;
     const prevRemainingAmount = rewardSettlement.remainingAmount;
-    const fPointMint = '11111111111111111111111111111111' // fPoint
-    const remainingAmountOfFirstBlock = rewardSettlement.settlementBlocks[0].amount;
+    const fPointMint = '11111111111111111111111111111111'; // fPoint
+    const remainingAmountOfFirstBlock =
+      rewardSettlement.settlementBlocks[0].amount;
 
     // settle up to 64 blocks to make queue full
     for (let i = 1; i <= 64 - prevNumSettlementBlocks; i += 1) {
       await ctx.reward.settleReward.execute({
         isBonus: true,
         mint: fPointMint,
-        amount: BigInt(i) * 500_000_000n
+        amount: BigInt(i) * 500_000_000n,
       });
       await validator.skipSlots(10n);
     }
@@ -1810,21 +1891,22 @@ describe('restaking.fragSOL test', async () => {
     await ctx.reward.settleReward.execute({
       isBonus: true,
       mint: fPointMint,
-      amount: 100_000_000n
+      amount: 100_000_000n,
     });
 
     rewardAccount = await ctx.reward.resolveAccount(true);
-    rewardSettlement = await rewardAccount!.data.bonusRewardPool.rewardSettlements1[0];
-    expect(rewardSettlement.remainingAmount).toEqual(prevRemainingAmount + remainingAmountOfFirstBlock);
+    rewardSettlement =
+      await rewardAccount!.data.bonusRewardPool.rewardSettlements1[0];
+    expect(rewardSettlement.remainingAmount).toEqual(
+      prevRemainingAmount + remainingAmountOfFirstBlock
+    );
     expect(rewardSettlement.numSettlementBlocks).toEqual(64);
   });
 
+  /** 6. pricing source addresses **/
   test('pricing source addresses field in fund account updates correctly', async () => {
-    await expectMasked(
-      ctx.fund.updatePrices.execute({
-
-      })
-    ).resolves.toMatchInlineSnapshot(`
+    await expectMasked(ctx.fund.updatePrices.execute(null)).resolves
+      .toMatchInlineSnapshot(`
       {
         "args": null,
         "events": {
@@ -1842,30 +1924,38 @@ describe('restaking.fragSOL test', async () => {
 
     // 1) pricing_sourece_addresses field of fund account has correct data
     let fundAccount = await ctx.fund.resolveAccount(true);
-    let normalizedTokenPool = await ctx.normalizedTokenPool.resolveAddress(true);
+    let normalizedTokenPool =
+      await ctx.normalizedTokenPool.resolveAddress(true);
 
     // get pricing sources from fund account manually
     const getPricingSourcesManually = () => {
       const data = fundAccount!.data;
-      const supportedTokens = data.supportedTokens.slice(0, data.numSupportedTokens);
-      const restakingVaults = data.restakingVaults.slice(0, data.numRestakingVaults);
+      const supportedTokens = data.supportedTokens.slice(
+        0,
+        data.numSupportedTokens
+      );
+      const restakingVaults = data.restakingVaults.slice(
+        0,
+        data.numRestakingVaults
+      );
 
       return supportedTokens
         .filter(
           (v) => v.pricingSource.discriminant != 8 // skip pegged token
         ) // skip pegged token
         .map((v) => v.pricingSource.address)
-        .concat(
-          restakingVaults.map((v) => v.receiptTokenPricingSource.address)
-        )
+        .concat(restakingVaults.map((v) => v.receiptTokenPricingSource.address))
         .concat(normalizedTokenPool ? [normalizedTokenPool] : []);
-    }
+    };
 
     // get pricing sources from fund account field (new feature)
     const getPricingSourcesByField = () => {
       const data = fundAccount!.data;
-      return data.pricingSourceAddresses.slice(0, data.numPricingSourceAddresses);
-    }
+      return data.pricingSourceAddresses.slice(
+        0,
+        data.numPricingSourceAddresses
+      );
+    };
     expect(getPricingSourcesManually()).toEqual(getPricingSourcesByField());
 
     // 2) user can get pricing_source_addresses by parsing fund account
@@ -1875,30 +1965,43 @@ describe('restaking.fragSOL test', async () => {
     const byteData = fetchedAccount!.data;
 
     const encodedNumPricingSourceAddresses = byteData.slice(0x9000, 0x9001);
-    const numPricingSourceAddress = Buffer.from(encodedNumPricingSourceAddresses).readUInt8(0);
-    expect(numPricingSourceAddress).toEqual(fundAccount!.data.numPricingSourceAddresses);
+    const numPricingSourceAddress = Buffer.from(
+      encodedNumPricingSourceAddresses
+    ).readUInt8(0);
+    expect(numPricingSourceAddress).toEqual(
+      fundAccount!.data.numPricingSourceAddresses
+    );
 
-    const pricingSourceAddresses: string[] = []
+    const pricingSourceAddresses: string[] = [];
     const encodedPricingSourceAddresses = byteData.slice(0x9001, 0x9201);
     const ADDRESS_SIZE = 32;
     const MAX_PRICING_SOURCE_ADDRESSES = 33;
-    for (let offset = 0; offset < ADDRESS_SIZE * MAX_PRICING_SOURCE_ADDRESSES; offset += ADDRESS_SIZE) {
-      const chunk = encodedPricingSourceAddresses.slice(offset, offset + ADDRESS_SIZE);
+    for (
+      let offset = 0;
+      offset < ADDRESS_SIZE * MAX_PRICING_SOURCE_ADDRESSES;
+      offset += ADDRESS_SIZE
+    ) {
+      const chunk = encodedPricingSourceAddresses.slice(
+        offset,
+        offset + ADDRESS_SIZE
+      );
       const address = new PublicKey(chunk);
-      pricingSourceAddresses.push(address.toString())
+      pricingSourceAddresses.push(address.toString());
     }
-    expect(pricingSourceAddresses).toEqual(fundAccount!.data.pricingSourceAddresses);
+    expect(pricingSourceAddresses).toEqual(
+      fundAccount!.data.pricingSourceAddresses
+    );
 
     const prevNumPricingSourceAddresses = numPricingSourceAddress;
 
     // 3) pricing_source_addresses updates correctly after calling add_supported_token ix & remove_supported_token
     // 3-1) add bSol as supported token
     await ctx.fund.addSupportedToken.execute({
-        mint: 'bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1',
-        pricingSource: {
-          __kind: 'SPLStakePool',
-          address: 'stk9ApL5HeVAwPLr3TLhDXdZS8ptVu7zp6ov8HFDuMi',
-        },
+      mint: 'bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1',
+      pricingSource: {
+        __kind: 'SPLStakePool',
+        address: 'stk9ApL5HeVAwPLr3TLhDXdZS8ptVu7zp6ov8HFDuMi',
+      },
     });
 
     await ctx.normalizedTokenPool.addSupportedToken.execute({
@@ -1907,29 +2010,35 @@ describe('restaking.fragSOL test', async () => {
         __kind: 'SPLStakePool',
         address: 'stk9ApL5HeVAwPLr3TLhDXdZS8ptVu7zp6ov8HFDuMi',
       },
-    })   
+    });
     fundAccount = await ctx.fund.resolveAccount(true);
     normalizedTokenPool = await ctx.normalizedTokenPool.resolveAddress(true);
     expect(getPricingSourcesManually()).toEqual(getPricingSourcesByField());
-    expect(fundAccount!.data.numPricingSourceAddresses - 1).toEqual(prevNumPricingSourceAddresses);
-
+    expect(fundAccount!.data.numPricingSourceAddresses - 1).toEqual(
+      prevNumPricingSourceAddresses
+    );
 
     // 3-2) remove bSol from supported tokens
     await ctx.normalizedTokenPool.removeSupportedToken.execute({
-        mint: 'bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1'
+      mint: 'bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1',
     });
 
     await ctx.fund.removeSupportedToken.execute({
-        mint: 'bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1'
+      mint: 'bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1',
     });
 
     fundAccount = await ctx.fund.resolveAccount(true);
-    normalizedTokenPool = await ctx.normalizedTokenPool.resolveAddress(true);    
+    normalizedTokenPool = await ctx.normalizedTokenPool.resolveAddress(true);
     expect(getPricingSourcesManually()).toEqual(getPricingSourcesByField());
-    expect(fundAccount!.data.numPricingSourceAddresses).toEqual(prevNumPricingSourceAddresses);
+    expect(fundAccount!.data.numPricingSourceAddresses).toEqual(
+      prevNumPricingSourceAddresses
+    );
   });
 
-  /** 5. virtual vault harvet/compound */
+  // TODO: complete virtual vault test and SDK impl
+  // - move virtual vault config/test to fragsquare.test.ts
+  // - implement support tx template to add virtual vault
+  /** virtual vault harvest/compound */
   test.skip('virtual vault harvest/compound', async () => {
     const [virtualVaultAddr] = web3.PublicKey.findProgramAddressSync(
       [
@@ -1946,7 +2055,7 @@ describe('restaking.fragSOL test', async () => {
     await validator.airdropToken(
       virtualVaultAddr.toString(),
       'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
-      100_000_000_000n // 100
+      100_000_000_000n
     );
 
     const fund_1 = await ctx.fund.resolveAccount(true);
@@ -1964,8 +2073,8 @@ describe('restaking.fragSOL test', async () => {
       (supportedToken) =>
         supportedToken.mint == 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq'
     )[0];
-    console.log(`fund_1_fragToken:`, fund_1_fragToken);
-    console.log(`fund_2 fragToken:`, fund_2_fragToken);
+    console.error(`fund_1_fragToken:`, fund_1_fragToken);
+    console.error(`fund_2 fragToken:`, fund_2_fragToken);
   });
 
   test.skip('virtual vault harvest/distribute', async () => {
@@ -1981,7 +2090,7 @@ describe('restaking.fragSOL test', async () => {
 
     // airdrop to virtual vault - zeus token vst
     // dev) tested with zeus token not jitoSOL, because when harvesting jitoSOL from virtual vault, that jitoSOL moves to nSOL vault at restake command step
-    const rewardAmount = 100_000_000_000n; // 100_000
+    const rewardAmount = 100_000_000_000n;
     await validator.airdropToken(
       virtualVaultAddr.toString(),
       'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',

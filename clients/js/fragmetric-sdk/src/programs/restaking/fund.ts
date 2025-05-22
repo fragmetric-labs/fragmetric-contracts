@@ -1303,8 +1303,6 @@ export class RestakingFundAccountContext extends AccountContext<
             const vaultProgramFeeWallet =
               vaultContext.knownAddresses.programFeeWallet;
 
-            console.log({ vst: vaultAccount.data.supportedMint });
-
             return Promise.all([
               token.getCreateAssociatedTokenIdempotentInstructionAsync({
                 payer: createNoopSigner(payer as Address),
