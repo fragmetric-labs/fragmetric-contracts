@@ -4,6 +4,7 @@ use anchor_spl::token_interface::TokenAccount;
 
 use crate::errors::ErrorCode;
 use crate::modules::pricing::TokenPricingSource;
+use crate::modules::restaking::VirtualRestakingVaultService;
 use crate::modules::reward::{RewardAccount, RewardConfigurationService, RewardService};
 use crate::modules::swap::{OrcaDEXLiquidityPoolService, TokenSwapSource};
 use crate::utils::{AccountInfoExt, AsAccountInfo, PDASeeds};
@@ -626,6 +627,8 @@ impl HarvestRewardCommand {
             return Ok(None);
         }
 
+        let restaking_vault = fund_account.get_restaking_vault(vault)?;
+
         // Prepare based on harvest type
         let entry = match harvest_type {
             HarvestType::Compound
@@ -666,6 +669,7 @@ impl HarvestRewardCommand {
                     (fund_supported_token_reserve_account, true),
                     (*reward_token_program, false),
                     (*vault, false),
+                    (restaking_vault.receipt_token_mint, false),
                 ];
 
                 let command = Self {
@@ -716,6 +720,7 @@ impl HarvestRewardCommand {
                     (*reward_token_program, false),
                     (reward_account.key(), true),
                     (*vault, false),
+                    (restaking_vault.receipt_token_mint, false),
                 ];
 
                 let command = Self {
@@ -956,7 +961,7 @@ impl HarvestRewardCommand {
     ) -> Result<Option<HarvestRewardCommandResult>> {
         let fund_account = ctx.fund_account.load()?;
 
-        let [reward_token_mint, from_reward_token_account, fund_supported_token_reserve_account, reward_token_program, vault_account, pricing_sources @ ..] =
+        let [reward_token_mint, from_reward_token_account, fund_supported_token_reserve_account, reward_token_program, vault_account, vault_receipt_token_mint, pricing_sources @ ..] =
             accounts
         else {
             err!(error::ErrorCode::AccountNotEnoughKeys)?
@@ -1007,29 +1012,17 @@ impl HarvestRewardCommand {
                 )?
             }
             &Some(TokenPricingSource::VirtualRestakingVault { .. }) => {
-                anchor_spl::token_interface::transfer_checked(
-                    CpiContext::new_with_signer(
+                VirtualRestakingVaultService::new(vault_account, vault_receipt_token_mint)?
+                    .transfer_vault_token(
+                        &reward_token_mint,
                         reward_token_program.to_account_info(),
-                        anchor_spl::token_interface::TransferChecked {
-                            from: from_reward_token_account.to_account_info(),
-                            mint: reward_token_mint.to_account_info(),
-                            to: fund_supported_token_reserve_account.to_account_info(),
-                            authority: vault_account.to_account_info(),
-                        },
-                        &[&[
-                            b"virtual_vault",
-                            ctx.receipt_token_mint.key().as_ref(),
-                            &[255],
-                        ]],
-                    ),
-                    reward_token_amount,
-                    reward_token_mint.decimals,
-                )?
+                        from_reward_token_account.to_account_info(),
+                        fund_supported_token_reserve_account.to_account_info(),
+                        reward_token_amount,
+                    )?
             }
             _ => (),
         }
-
-        msg!("mint {} moved from from_reward_token_account {} to fund_supported_token_reserve_account {}, amount {}", reward_token_mint.key(), from_reward_token_account.key(), fund_supported_token_reserve_account.key(), reward_token_amount);
 
         let result = HarvestRewardCommandResult {
             vault: *vault,
@@ -1067,7 +1060,7 @@ impl HarvestRewardCommand {
             | Some(TokenPricingSource::SolvBTCVault { .. })
             | Some(TokenPricingSource::VirtualRestakingVault { .. }) => {
                 // Transfer & Settle
-                let [reward_token_mint, from_reward_token_account, reward_token_reserve_account, reward_token_program, reward_account, vault_account, ..] =
+                let [reward_token_mint, from_reward_token_account, reward_token_reserve_account, reward_token_program, reward_account, vault_account, vault_receipt_token_mint, ..] =
                     accounts
                 else {
                     err!(error::ErrorCode::AccountNotEnoughKeys)?
@@ -1141,24 +1134,14 @@ impl HarvestRewardCommand {
                         )?
                     }
                     Some(TokenPricingSource::VirtualRestakingVault { .. }) => {
-                        anchor_spl::token_interface::transfer_checked(
-                            CpiContext::new_with_signer(
+                        VirtualRestakingVaultService::new(vault_account, vault_receipt_token_mint)?
+                            .transfer_vault_token(
+                                &reward_token_mint,
                                 reward_token_program.to_account_info(),
-                                anchor_spl::token_interface::TransferChecked {
-                                    from: from_reward_token_account.to_account_info(),
-                                    mint: reward_token_mint.to_account_info(),
-                                    to: reward_token_reserve_account.to_account_info(),
-                                    authority: vault_account.to_account_info(),
-                                },
-                                &[&[
-                                    b"virtual_vault",
-                                    ctx.receipt_token_mint.key().as_ref(),
-                                    &[255],
-                                ]],
-                            ),
-                            available_reward_token_amount_to_harvest,
-                            reward_token_mint.decimals,
-                        )?
+                                from_reward_token_account.to_account_info(),
+                                reward_token_reserve_account.to_account_info(),
+                                available_reward_token_amount_to_harvest,
+                            )?
                     }
                     _ => (),
                 };

@@ -43,7 +43,7 @@ export class VirtualVaultAccountContext extends AccountContext<
           [
             Buffer.from('virtual_vault'),
             new web3.PublicKey(
-              this.parent.parent.parent.knownAddresses.fragSOL.toString()
+              '8vEunBQvD3L4aNnRPyQzfQ7pecq4tPb46PjZVKUnTP9i'
             ).toBuffer(),
           ],
           new web3.PublicKey(
@@ -184,7 +184,7 @@ export class VirtualVaultAccountContext extends AccountContext<
           [
             Buffer.from('virtual_vault'),
             new web3.PublicKey(
-              parent.parent.parent.parent.knownAddresses.fragSOL.toString()
+              '8vEunBQvD3L4aNnRPyQzfQ7pecq4tPb46PjZVKUnTP9i'
             ).toBuffer(),
           ],
           new web3.PublicKey(
@@ -214,7 +214,7 @@ export class VirtualVaultAccountContext extends AccountContext<
           [
             Buffer.from('virtual_vault'),
             new web3.PublicKey(
-              parent.parent.parent.parent.knownAddresses.fragSOL.toString()
+              '8vEunBQvD3L4aNnRPyQzfQ7pecq4tPb46PjZVKUnTP9i'
             ).toBuffer(),
           ],
           new web3.PublicKey(

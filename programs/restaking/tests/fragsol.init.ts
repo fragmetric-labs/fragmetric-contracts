@@ -476,7 +476,7 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
         [
           Buffer.from('virtual_vault'),
           new web3.PublicKey(
-            restaking.knownAddresses.fragSOL.toString()
+            '8vEunBQvD3L4aNnRPyQzfQ7pecq4tPb46PjZVKUnTP9i'
           ).toBuffer(),
         ],
         new web3.PublicKey(restaking.program.address.toString())
@@ -504,7 +504,7 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
         [
           Buffer.from('virtual_vault'),
           new web3.PublicKey(
-            restaking.knownAddresses.fragSOL.toString()
+            '8vEunBQvD3L4aNnRPyQzfQ7pecq4tPb46PjZVKUnTP9i'
           ).toBuffer(),
         ],
         new web3.PublicKey(restaking.program.address.toString())
@@ -525,7 +525,7 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
         [
           Buffer.from('virtual_vault'),
           new web3.PublicKey(
-            restaking.knownAddresses.fragSOL.toString()
+            '8vEunBQvD3L4aNnRPyQzfQ7pecq4tPb46PjZVKUnTP9i'
           ).toBuffer(),
         ],
         new web3.PublicKey(restaking.program.address.toString())

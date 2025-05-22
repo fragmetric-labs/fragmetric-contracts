@@ -65,7 +65,7 @@ describe('restaking.fragSOL test', async () => {
             "role": 0,
           },
           {
-            "address": "4VvjAVkgquu5prpwCaw4kHkddrEeSGdZmUTQvuLVNGNm",
+            "address": "ENwxFTsCAbWyjGLHnLYv7JtDs8uvkhvdmRoKCAS7SEpk",
             "role": 0,
           },
           {
@@ -319,11 +319,11 @@ describe('restaking.fragSOL test', async () => {
             ],
             "pricingSource": {
               "__kind": "VirtualRestakingVault",
-              "address": "4VvjAVkgquu5prpwCaw4kHkddrEeSGdZmUTQvuLVNGNm",
+              "address": "ENwxFTsCAbWyjGLHnLYv7JtDs8uvkhvdmRoKCAS7SEpk",
             },
             "solAllocationCapacityAmount": 0n,
             "solAllocationWeight": 0n,
-            "vault": "4VvjAVkgquu5prpwCaw4kHkddrEeSGdZmUTQvuLVNGNm",
+            "vault": "ENwxFTsCAbWyjGLHnLYv7JtDs8uvkhvdmRoKCAS7SEpk",
           },
         ],
         "tokenSwapStrategies": [],
@@ -555,7 +555,7 @@ describe('restaking.fragSOL test', async () => {
             "role": 0,
           },
           {
-            "address": "4VvjAVkgquu5prpwCaw4kHkddrEeSGdZmUTQvuLVNGNm",
+            "address": "ENwxFTsCAbWyjGLHnLYv7JtDs8uvkhvdmRoKCAS7SEpk",
             "role": 0,
           },
           {
@@ -894,7 +894,7 @@ describe('restaking.fragSOL test', async () => {
             "role": 0,
           },
           {
-            "address": "4VvjAVkgquu5prpwCaw4kHkddrEeSGdZmUTQvuLVNGNm",
+            "address": "ENwxFTsCAbWyjGLHnLYv7JtDs8uvkhvdmRoKCAS7SEpk",
             "role": 0,
           },
           {
@@ -1684,7 +1684,7 @@ describe('restaking.fragSOL test', async () => {
       [
         Buffer.from('virtual_vault'),
         new web3.PublicKey(
-          restaking.knownAddresses.fragSOL.toString()
+          '8vEunBQvD3L4aNnRPyQzfQ7pecq4tPb46PjZVKUnTP9i'
         ).toBuffer(),
       ],
       new web3.PublicKey(restaking.program.address.toString())
@@ -1722,7 +1722,7 @@ describe('restaking.fragSOL test', async () => {
       [
         Buffer.from('virtual_vault'),
         new web3.PublicKey(
-          restaking.knownAddresses.fragSOL.toString()
+          '8vEunBQvD3L4aNnRPyQzfQ7pecq4tPb46PjZVKUnTP9i'
         ).toBuffer(),
       ],
       new web3.PublicKey(restaking.program.address.toString())
