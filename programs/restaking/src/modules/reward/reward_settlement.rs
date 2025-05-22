@@ -99,12 +99,6 @@ impl RewardSettlement {
         current_reward_pool_contribution: u128,
         current_slot: u64,
     ) -> Result<()> {
-        require_gt!(
-            REWARD_ACCOUNT_SETTLEMENT_BLOCK_MAX_LEN,
-            self.num_settlement_blocks as usize,
-            ErrorCode::RewardExceededMaxRewardSettlementBlockError
-        );
-
         // Prevent settlement block with non-positive block height
         require_gt!(
             current_slot,
@@ -119,6 +113,10 @@ impl RewardSettlement {
             ErrorCode::RewardInvalidSettlementBlockContributionException,
         );
 
+        if self.num_settlement_blocks as usize >= REWARD_ACCOUNT_SETTLEMENT_BLOCK_MAX_LEN {
+            self.force_clear_settlement_block();
+        }
+
         // push_back
         self.settlement_blocks[self.settlement_blocks_tail as usize].initialize(
             amount,
@@ -132,6 +130,14 @@ impl RewardSettlement {
         self.num_settlement_blocks += 1;
 
         Ok(())
+    }
+
+    fn force_clear_settlement_block(&mut self) {
+        let block = &self.settlement_blocks[self.settlement_blocks_head as usize];
+        self.remaining_amount += block.get_remaining_amount();
+        
+        self.settlement_blocks_head = (self.settlement_blocks_head + 1) % REWARD_ACCOUNT_SETTLEMENT_BLOCK_MAX_LEN as u8;
+        self.num_settlement_blocks -= 1;
     }
 
     pub fn get_unclaimed_reward_amount(&self) -> u64 {
