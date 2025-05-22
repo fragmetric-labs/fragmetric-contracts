@@ -1657,17 +1657,17 @@ describe('restaking.fragSOL test', async () => {
     expect(getPricingSourcesManually()).toEqual(getPricingSourcesByField());
 
     // 2) user can get pricing_source_addresses by parsing fund account
-    // - num_pricing_source_addresses offset: 0x8fff
-    // - pricing_source_addresses offset: 0x9000
+    // - num_pricing_source_addresses offset: 0x9000
+    // - pricing_source_addresses offset: 0x9001
     const fetchedAccount = await ctx.runtime.fetchAccount(fundAccount!.address);
     const byteData = fetchedAccount!.data;
 
-    const encodedNumPricingSourceAddresses = byteData.slice(0x8fff, 0x9000);
+    const encodedNumPricingSourceAddresses = byteData.slice(0x9000, 0x9001);
     const numPricingSourceAddress = Buffer.from(encodedNumPricingSourceAddresses).readUInt8(0);
     expect(numPricingSourceAddress).toEqual(fundAccount!.data.numPricingSourceAddresses);
 
     const pricingSourceAddresses: string[] = []
-    const encodedPricingSourceAddresses = byteData.slice(0x9000, 0x9200);
+    const encodedPricingSourceAddresses = byteData.slice(0x9001, 0x9201);
     const ADDRESS_SIZE = 32;
     const MAX_PRICING_SOURCE_ADDRESSES = 33;
     for (let offset = 0; offset < ADDRESS_SIZE * MAX_PRICING_SOURCE_ADDRESSES; offset += ADDRESS_SIZE) {

@@ -72,13 +72,13 @@ pub struct FundAccount {
     _padding4: [u8; 15],
     num_supported_tokens: u8,
     supported_tokens: [SupportedToken; FUND_ACCOUNT_MAX_SUPPORTED_TOKENS],
-    _reserved2: [u8; 14191],
+    _reserved2: [u8; 14192],
 
     /// fund pricing source address information (support for third party integration)
-    pub(super) num_pricing_source_addresses: u8,
-    pub(super) pricing_source_addresses: [Pubkey; FUND_ACCOUNT_MAX_PRICING_SOURCE_ADDRESSES],
+    num_pricing_source_addresses: u8,
+    pricing_source_addresses: [Pubkey; FUND_ACCOUNT_MAX_PRICING_SOURCE_ADDRESSES],
 
-    _reserved3: [u8; 768],
+    _reserved3: [u8; 767],
 
     /// optional basket of underlying assets
     normalized_token: NormalizedToken,
