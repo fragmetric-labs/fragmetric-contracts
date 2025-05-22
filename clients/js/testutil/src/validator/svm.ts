@@ -74,17 +74,17 @@ export class SVMValidator extends TestValidator<'svm'> {
           ['--ledger', ledgerPath],
           ['--rpc-port', (18900 + (instanceNo - 1) * 3).toString()],
           ['--faucet-port', (18900 + (instanceNo - 1) * 3 + 2).toString()],
-          !options.warpSlot ? ['--faucet-sol', 1_000_000n.toString()] : [],
-          options.slotsPerEpoch && !options.warpSlot
-            ? ['--slots-per-epoch', options.slotsPerEpoch.toString()]
-            : [],
-          options.ticksPerSlot && !options.warpSlot
-            ? ['--ticks-per-slot', options.ticksPerSlot.toString()] // TODO: verify whether manipulating ticks-per-slot is appropriate
-            : [],
-          options.warpSlot
-            ? ['--warp-slot', options.warpSlot.toString()]
-            : ['--reset'],
-        ];
+        ].concat(
+          !options.warpSlot
+            ? [
+                ['--faucet-sol', 1_000_000n.toString()],
+                ['--limit-ledger-size', options.limitLedgerSize.toString()],
+                ['--slots-per-epoch', options.slotsPerEpoch.toString()],
+                ['--ticks-per-slot', options.ticksPerSlot.toString()],
+                ['--reset'],
+              ]
+            : [['--warp-slot', options.warpSlot.toString()]]
+        );
 
         if (options.mock && !options.warpSlot) {
           function resolvePath(p: string) {

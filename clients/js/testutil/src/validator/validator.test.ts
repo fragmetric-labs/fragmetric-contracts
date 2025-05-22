@@ -109,7 +109,7 @@ describe.each(['litesvm', 'svm'] as const)(
 
       const firstEpoch = await validator1.getEpoch({ commitment: 'processed' });
 
-      await validator1.skipEpoches(1n);
+      await validator1.skipEpoch();
       const secondEpoch = await validator1.getEpoch({
         commitment: 'processed',
       });

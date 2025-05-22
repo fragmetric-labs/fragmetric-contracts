@@ -1485,7 +1485,7 @@ describe('restaking.fragSOL test', async () => {
         "succeeded": true,
       }
     `);
-    await validator.skipEpoches(1n);
+    await validator.skipEpoch();
 
     await expectMasked(
       ctx.fund.runCommand.executeChained({
@@ -1818,19 +1818,20 @@ describe('restaking.fragSOL test', async () => {
     });
 
     // to enqueue withdrawal batch and make a unrestake request from vaults
-    await expect(validator.skipEpoches(1n)).resolves.not.toThrow();
+    await expect(validator.skipEpoch()).resolves.not.toThrow();
     await expect(
       ctx.fund.runCommand.executeChained(null)
     ).resolves.not.toThrow();
 
     // to claim unrestaked vst from vaults and make a unstake request (assume no delayed unstake here) from stake pools
-    await expect(validator.skipEpoches(3n)).resolves.not.toThrow();
+    await expect(validator.skipEpoch()).resolves.not.toThrow();
+    await expect(validator.skipEpoch()).resolves.not.toThrow();
     await expect(
       ctx.fund.runCommand.executeChained(null)
     ).resolves.not.toThrow();
 
     // to process withdrawal batches
-    await expect(validator.skipEpoches(1n)).resolves.not.toThrow();
+    await expect(validator.skipEpoch()).resolves.not.toThrow();
     await expect(
       ctx.fund.runCommand.executeChained(null)
     ).resolves.not.toThrow();

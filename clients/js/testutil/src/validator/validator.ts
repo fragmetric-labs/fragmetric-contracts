@@ -38,7 +38,8 @@ export interface GetSlotOptions {
 export type TestValidatorOptions<T extends TestValidatorType> = {
   type: T;
   slotsPerEpoch: bigint; // default: 432000
-  ticksPerSlot: number; // default: 16 ~= 100ms
+  ticksPerSlot: number; // default: 64 ~= 400ms
+  limitLedgerSize: number; // default: 10000
   mock?: TestValidatorMockOptions;
   debug?: boolean;
 
@@ -95,12 +96,13 @@ export abstract class TestValidator<T extends TestValidatorType> {
   static async create<T extends TestValidatorType>(
     options?: Optional<
       TestValidatorOptions<T>,
-      'slotsPerEpoch' | 'ticksPerSlot'
+      'slotsPerEpoch' | 'ticksPerSlot' | 'limitLedgerSize'
     >
   ): Promise<TestValidator<T>> {
     const resolvedOptions: TestValidatorOptions<T> = {
       slotsPerEpoch: 432000n,
-      ticksPerSlot: 16,
+      ticksPerSlot: 64,
+      limitLedgerSize: 10000,
       type: options?.type ?? ('svm' as T),
       ...options,
     };
@@ -146,20 +148,14 @@ export abstract class TestValidator<T extends TestValidatorType> {
     return (await this.getSlot(opts)) / this.options.slotsPerEpoch;
   }
 
-  async skipEpoches(epoches: bigint): Promise<void> {
+  async skipEpoch(): Promise<void> {
     const currentProcessedSlot = await this.getSlot({
       commitment: 'processed',
     });
     const remainingSlots =
-      epoches > 0n
-        ? this.options.slotsPerEpoch -
-          (currentProcessedSlot % this.options.slotsPerEpoch)
-        : 0n;
-    await this.warpToSlot(
-      currentProcessedSlot +
-        remainingSlots +
-        this.options.slotsPerEpoch * (epoches - 1n)
-    );
+      this.options.slotsPerEpoch -
+      (currentProcessedSlot % this.options.slotsPerEpoch);
+    return this.warpToSlot(currentProcessedSlot + remainingSlots);
   }
 
   abstract airdrop(pubkey: string, lamports: bigint): Promise<void>;
