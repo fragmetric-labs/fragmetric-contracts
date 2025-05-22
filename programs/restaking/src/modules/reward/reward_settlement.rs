@@ -135,8 +135,9 @@ impl RewardSettlement {
     fn force_clear_settlement_block(&mut self) {
         let block = &self.settlement_blocks[self.settlement_blocks_head as usize];
         self.remaining_amount += block.get_remaining_amount();
-        
-        self.settlement_blocks_head = (self.settlement_blocks_head + 1) % REWARD_ACCOUNT_SETTLEMENT_BLOCK_MAX_LEN as u8;
+
+        self.settlement_blocks_head =
+            (self.settlement_blocks_head + 1) % REWARD_ACCOUNT_SETTLEMENT_BLOCK_MAX_LEN as u8;
         self.num_settlement_blocks -= 1;
     }
 
@@ -349,7 +350,9 @@ mod tests {
             let contribution = (i + 2) as u128;
             let current_slot = (i + 1) as u64;
 
-            settlement.settle_reward(amount, contribution, current_slot).unwrap();
+            settlement
+                .settle_reward(amount, contribution, current_slot)
+                .unwrap();
         }
 
         // settle one more block
