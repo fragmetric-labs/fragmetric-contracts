@@ -1705,11 +1705,11 @@ describe('restaking.fragSOL test', async () => {
 
     const fund_2 = await ctx.fund.resolveAccount(true);
 
-    const fund_1_fragToken = fund_1.data.supportedTokens.filter(
+    const fund_1_fragToken = fund_1?.data.supportedTokens.filter(
       (supportedToken) =>
         supportedToken.mint == 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq'
     )[0];
-    const fund_2_fragToken = fund_2.data.supportedTokens.filter(
+    const fund_2_fragToken = fund_2?.data.supportedTokens.filter(
       (supportedToken) =>
         supportedToken.mint == 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq'
     )[0];
@@ -1743,8 +1743,8 @@ describe('restaking.fragSOL test', async () => {
     await ctx.fund.runCommand.executeChained(null);
 
     const globalReward_2 = await ctx.reward.resolve(true);
-    expect(globalReward_2.basePool.settlements[1].blocks[0].amount).toEqual(
-      globalReward_1.basePool.settlements[1].blocks[0].amount + rewardAmount
+    expect(globalReward_2?.basePool.settlements[1].blocks[0].amount).toEqual(
+      globalReward_1?.basePool.settlements[1].blocks[0].amount! + rewardAmount
     );
   });
 });
