@@ -226,7 +226,8 @@ impl SelfExecutable for RestakeVSTCommand {
                                 ),
                             ));
                         }
-                        Some(TokenPricingSource::SolvBTCVault { .. }) => {
+                        Some(TokenPricingSource::SolvBTCVault { .. })
+                        | Some(TokenPricingSource::VirtualRestakingVault { .. }) => {
                             // TODO/v0.7.0: deal with solv vault if needed
                             remaining_items =
                                 Some(items.into_iter().skip(1).copied().collect::<Vec<_>>());
@@ -349,7 +350,8 @@ impl SelfExecutable for RestakeVSTCommand {
                             FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
                                 .update_asset_values(&mut pricing_service, true)?;
                         }
-                        Some(TokenPricingSource::SolvBTCVault { .. }) => {
+                        Some(TokenPricingSource::SolvBTCVault { .. })
+                        | Some(TokenPricingSource::VirtualRestakingVault { .. }) => {
                             // TODO/v0.7.0: deal with solv vault if needed
                             remaining_items =
                                 Some(items.into_iter().skip(1).copied().collect::<Vec<_>>());
@@ -398,7 +400,8 @@ impl SelfExecutable for RestakeVSTCommand {
                                 JitoRestakingVaultService::find_accounts_to_new(address)?,
                             )
                         }
-                        Some(TokenPricingSource::SolvBTCVault { .. }) => {
+                        Some(TokenPricingSource::SolvBTCVault { .. })
+                        | Some(TokenPricingSource::VirtualRestakingVault { .. }) => {
                             // TODO/v0.7.0: deal with solv vault if needed
                             RestakeVSTCommand {
                                 state: RestakeVSTCommandState::Prepare {

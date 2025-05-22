@@ -70,7 +70,8 @@ impl RestakingVault {
     ) -> Result<()> {
         match receipt_token_pricing_source {
             TokenPricingSource::JitoRestakingVault { .. }
-            | TokenPricingSource::SolvBTCVault { .. } => {}
+            | TokenPricingSource::SolvBTCVault { .. }
+            | TokenPricingSource::VirtualRestakingVault { .. } => {}
             // otherwise fails
             TokenPricingSource::SPLStakePool { .. }
             | TokenPricingSource::MarinadeStakePool { .. }

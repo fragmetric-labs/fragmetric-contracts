@@ -1,8 +1,10 @@
 pub mod jito_restaking_vault_service;
 pub mod jito_restaking_vault_value_provider;
+pub mod virtual_restaking_vault_service;
 
 pub use jito_restaking_vault_service::*;
 pub use jito_restaking_vault_value_provider::*;
+pub use virtual_restaking_vault_service::*;
 
 use anchor_lang::prelude::*;
 
@@ -32,6 +34,12 @@ pub(in crate::modules) fn validate_vault(
         &SOLV_PROGRAM_ID => Ok(TokenPricingSource::SolvBTCVault {
             address: vault_account.key(),
         }),
+        owner if owner == &System::id() => {
+            VirtualRestakingVaultService::validate_vault(vault_account, vault_receipt_token_mint)?;
+            Ok(TokenPricingSource::VirtualRestakingVault {
+                address: vault_account.key(),
+            })
+        }
         _ => err!(error::ErrorCode::AccountOwnedByWrongProgram)?,
     }
 }

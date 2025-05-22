@@ -290,4 +290,7 @@ pub enum ErrorCode {
 
     #[msg("fund: supported token still in use")]
     FundSupportedTokenInUseError,
+
+    #[msg("fund: restaking vault authority not matched")]
+    FundRestakingVaultAuthorityNotMatchedError,
 }
