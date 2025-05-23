@@ -3,12 +3,12 @@ use anchor_spl::{associated_token, token_interface::Mint};
 
 use crate::errors::ErrorCode;
 
-pub struct VirtualRestakingVaultService<'info> {
+pub struct VirtualVaultService<'info> {
     vault_account: &'info AccountInfo<'info>,
     vault_receipt_token_mint: &'info AccountInfo<'info>,
 }
 
-impl<'info> VirtualRestakingVaultService<'info> {
+impl<'info> VirtualVaultService<'info> {
     pub fn new(
         vault_account: &'info AccountInfo<'info>,
         vault_receipt_token_mint: &'info AccountInfo<'info>,

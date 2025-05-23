@@ -58,7 +58,7 @@ impl SupportedToken {
             // otherwise fails
             TokenPricingSource::JitoRestakingVault { .. }
             | TokenPricingSource::SolvBTCVault { .. }
-            | TokenPricingSource::VirtualRestakingVault { .. }
+            | TokenPricingSource::VirtualVault { .. }
             | TokenPricingSource::FragmetricNormalizedTokenPool { .. }
             | TokenPricingSource::FragmetricRestakingFund { .. } => {
                 err!(ErrorCode::FundNotSupportedTokenError)?

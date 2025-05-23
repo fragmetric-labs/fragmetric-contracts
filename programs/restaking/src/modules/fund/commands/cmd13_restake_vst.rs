@@ -227,7 +227,7 @@ impl SelfExecutable for RestakeVSTCommand {
                             ));
                         }
                         Some(TokenPricingSource::SolvBTCVault { .. })
-                        | Some(TokenPricingSource::VirtualRestakingVault { .. }) => {
+                        | Some(TokenPricingSource::VirtualVault { .. }) => {
                             // TODO/v0.7.0: deal with solv vault if needed
                             remaining_items =
                                 Some(items.into_iter().skip(1).copied().collect::<Vec<_>>());
@@ -351,7 +351,7 @@ impl SelfExecutable for RestakeVSTCommand {
                                 .update_asset_values(&mut pricing_service, true)?;
                         }
                         Some(TokenPricingSource::SolvBTCVault { .. })
-                        | Some(TokenPricingSource::VirtualRestakingVault { .. }) => {
+                        | Some(TokenPricingSource::VirtualVault { .. }) => {
                             // TODO/v0.7.0: deal with solv vault if needed
                             remaining_items =
                                 Some(items.into_iter().skip(1).copied().collect::<Vec<_>>());
@@ -401,7 +401,7 @@ impl SelfExecutable for RestakeVSTCommand {
                             )
                         }
                         Some(TokenPricingSource::SolvBTCVault { .. })
-                        | Some(TokenPricingSource::VirtualRestakingVault { .. }) => {
+                        | Some(TokenPricingSource::VirtualVault { .. }) => {
                             // TODO/v0.7.0: deal with solv vault if needed
                             RestakeVSTCommand {
                                 state: RestakeVSTCommandState::Prepare {

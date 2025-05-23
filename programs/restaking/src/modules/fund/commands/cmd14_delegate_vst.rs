@@ -118,7 +118,7 @@ impl DelegateVSTCommand {
                 command.with_required_accounts(required_accounts)
             }
             Some(TokenPricingSource::SolvBTCVault { .. })
-            | Some(TokenPricingSource::VirtualRestakingVault { .. }) => {
+            | Some(TokenPricingSource::VirtualVault { .. }) => {
                 // TODO/v0.7.0: deal with solv vault if needed
                 command.without_required_accounts()
             }
@@ -226,7 +226,7 @@ impl DelegateVSTCommand {
                 Ok((None, Some(entry)))
             }
             Some(TokenPricingSource::SolvBTCVault { .. })
-            | Some(TokenPricingSource::VirtualRestakingVault { .. }) => {
+            | Some(TokenPricingSource::VirtualVault { .. }) => {
                 // TODO/v0.7.0: deal with solv vault if needed
                 Ok((
                     None,
@@ -359,7 +359,7 @@ impl DelegateVSTCommand {
                 }
             }
             Some(TokenPricingSource::SolvBTCVault { .. })
-            | Some(TokenPricingSource::VirtualRestakingVault { .. }) => {
+            | Some(TokenPricingSource::VirtualVault { .. }) => {
                 // TODO/v0.7.0: deal with solv vault if needed
                 Ok((
                     None,

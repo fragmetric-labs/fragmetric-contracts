@@ -136,7 +136,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
                         | Some(TokenPricingSource::FragmetricRestakingFund { .. })
                         | Some(TokenPricingSource::SolvBTCVault { .. })
-                        | Some(TokenPricingSource::VirtualRestakingVault { .. })
+                        | Some(TokenPricingSource::VirtualVault { .. })
                         | None => {
                             err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
                         }
@@ -155,7 +155,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                     {
                         Some(TokenPricingSource::JitoRestakingVault { address })
                         | Some(TokenPricingSource::SolvBTCVault { address })
-                        | Some(TokenPricingSource::VirtualRestakingVault { address }) => {
+                        | Some(TokenPricingSource::VirtualVault { address }) => {
                             required_accounts.push((*address, false));
                         }
                         // otherwise fails
@@ -225,7 +225,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                             | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
                             | Some(TokenPricingSource::FragmetricRestakingFund { .. })
                             | Some(TokenPricingSource::SolvBTCVault { .. })
-                            | Some(TokenPricingSource::VirtualRestakingVault { .. })
+                            | Some(TokenPricingSource::VirtualVault { .. })
                             | None => err!(
                                 errors::ErrorCode::FundOperationCommandExecutionFailedException
                             ),
@@ -244,7 +244,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         {
                             Some(TokenPricingSource::JitoRestakingVault { .. })
                             | Some(TokenPricingSource::SolvBTCVault { .. })
-                            | Some(TokenPricingSource::VirtualRestakingVault { .. }) => {
+                            | Some(TokenPricingSource::VirtualVault { .. }) => {
                                 Ok(count + 1)
                             }
                             // otherwise fails
@@ -323,7 +323,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
                         | Some(TokenPricingSource::FragmetricRestakingFund { .. })
                         | Some(TokenPricingSource::SolvBTCVault { .. })
-                        | Some(TokenPricingSource::VirtualRestakingVault { .. })
+                        | Some(TokenPricingSource::VirtualVault { .. })
                         | None => {
                             err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
                         }
@@ -357,7 +357,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                             JitoRestakingVaultService::get_max_cycle_fee(account)?
                         }
                         Some(TokenPricingSource::SolvBTCVault { address })
-                        | Some(TokenPricingSource::VirtualRestakingVault { address }) => {
+                        | Some(TokenPricingSource::VirtualVault { address }) => {
                             let account = restaking_vault_pricing_sources[i];
                             require_keys_eq!(account.key(), *address);
                             // TODO/v0.7.0: deal with solv vault if needed

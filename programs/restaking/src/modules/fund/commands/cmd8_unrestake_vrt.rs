@@ -486,7 +486,7 @@ impl UnrestakeVRTCommand {
                 ))
             }
             Some(TokenPricingSource::SolvBTCVault { .. })
-            | Some(TokenPricingSource::VirtualRestakingVault { .. }) => {
+            | Some(TokenPricingSource::VirtualVault { .. }) => {
                 // TODO/v0.7.0: deal with solv vault if needed
                 Ok((
                     None,
@@ -634,7 +634,7 @@ impl UnrestakeVRTCommand {
                 }
             }
             Some(TokenPricingSource::SolvBTCVault { .. })
-            | Some(TokenPricingSource::VirtualRestakingVault { .. }) => {
+            | Some(TokenPricingSource::VirtualVault { .. }) => {
                 // TODO/v0.7.0: deal with solv vault if needed
                 None
             }

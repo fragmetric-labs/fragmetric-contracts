@@ -225,7 +225,7 @@ impl UnstakeLSTCommand {
                             | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
                             | Some(TokenPricingSource::FragmetricRestakingFund { .. })
                             | Some(TokenPricingSource::SolvBTCVault { .. })
-                            | Some(TokenPricingSource::VirtualRestakingVault { .. })
+                            | Some(TokenPricingSource::VirtualVault { .. })
                             | None => {
                                 err!(ErrorCode::FundOperationCommandExecutionFailedException)?
                             }
@@ -303,7 +303,7 @@ impl UnstakeLSTCommand {
             | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
             | Some(TokenPricingSource::PeggedToken { .. })
             | Some(TokenPricingSource::SolvBTCVault { .. })
-            | Some(TokenPricingSource::VirtualRestakingVault { .. })
+            | Some(TokenPricingSource::VirtualVault { .. })
             | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
             #[cfg(all(test, not(feature = "idl-build")))]
             Some(TokenPricingSource::Mock { .. }) => {
@@ -376,7 +376,7 @@ impl UnstakeLSTCommand {
             | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
             | Some(TokenPricingSource::PeggedToken { .. })
             | Some(TokenPricingSource::SolvBTCVault { .. })
-            | Some(TokenPricingSource::VirtualRestakingVault { .. })
+            | Some(TokenPricingSource::VirtualVault { .. })
             | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
             #[cfg(all(test, not(feature = "idl-build")))]
             Some(TokenPricingSource::Mock { .. }) => {
@@ -459,7 +459,7 @@ impl UnstakeLSTCommand {
             | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
             | Some(TokenPricingSource::PeggedToken { .. })
             | Some(TokenPricingSource::SolvBTCVault { .. })
-            | Some(TokenPricingSource::VirtualRestakingVault { .. })
+            | Some(TokenPricingSource::VirtualVault { .. })
             | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
             #[cfg(all(test, not(feature = "idl-build")))]
             Some(TokenPricingSource::Mock { .. }) => {
@@ -641,7 +641,7 @@ impl UnstakeLSTCommand {
             | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
             | Some(TokenPricingSource::PeggedToken { .. })
             | Some(TokenPricingSource::SolvBTCVault { .. })
-            | Some(TokenPricingSource::VirtualRestakingVault { .. })
+            | Some(TokenPricingSource::VirtualVault { .. })
             | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
             #[cfg(all(test, not(feature = "idl-build")))]
             Some(TokenPricingSource::Mock { .. }) => {
