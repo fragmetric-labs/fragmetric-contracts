@@ -3,6 +3,7 @@
 import { initializeFragBTC } from '../restaking/tests/fragbtc.init';
 import { initializeFragJTO } from '../restaking/tests/fragjto.init';
 import { initializeFragSOL } from '../restaking/tests/fragsol.init';
+import { initializeFragSquare } from '../restaking/tests/fragsquare.init';
 import { initializeCBBTCVault } from '../solv/tests/cbbtc.init';
 import { initializeWBTCVault } from '../solv/tests/wbtc.init';
 import { initializeZBTCVault } from '../solv/tests/zbtc.init';
@@ -26,6 +27,10 @@ createTestSuiteContext({ validator: 'litesvm' })
             .then(() => {
               ctx.sdk.logger.start('Initialize fragBTC...');
               return initializeFragBTC(ctx).initializationTasks;
+            })
+            .then(async () => {
+              ctx.sdk.logger.start('Initialize fragSquare...');
+              return (await initializeFragSquare(ctx)).initializationTasks;
             })
             .then(() => {});
         }
