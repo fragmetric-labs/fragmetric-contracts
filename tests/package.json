@@ -1,9 +1,0 @@
-{
-  "private": true,
-  "type": "module",
-  "mocha": {
-    "node-option": [
-      "import=tsx"
-    ]
-  }
-}
