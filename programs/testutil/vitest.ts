@@ -35,6 +35,7 @@ export async function masked(
     /.*At?$/,
     'signature',
     /[.*C|c]ontribution?$/,
+    '__lookupTableAddress',
     ...(options?.extraKeys ?? []),
   ];
   const values = options?.values ?? [
@@ -67,7 +68,8 @@ export async function masked(
         );
 
         if (masked) {
-          result[key] = `MASKED(${masked.toString()})`;
+          result[key] =
+            `MASKED(${masked.toString()}${val === undefined || val === null || val === '' ? ':EMPTY' : ''})`;
         } else {
           result[key] = walk(val, [...path, key]);
         }

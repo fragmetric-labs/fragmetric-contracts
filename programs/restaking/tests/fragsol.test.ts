@@ -1,5 +1,4 @@
-import * as web3 from '@solana/web3.js';
-import { PublicKey } from '@solana/web3.js';
+import { getAddressDecoder } from '@solana/kit';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { createTestSuiteContext, expectMasked } from '../../testutil';
 import { initializeFragSOL } from './fragsol.init';
@@ -50,9 +49,9 @@ describe('restaking.fragSOL test', async () => {
   });
 
   test('restaking.fragSOL.resolve', async () => {
-    await expect(ctx.resolve(true)).resolves.toMatchInlineSnapshot(`
+    await expectMasked(ctx.resolve(true)).resolves.toMatchInlineSnapshot(`
       {
-        "__lookupTableAddress": "G45gQa12Uwvnrp2Yb9oWTSwZSEHZWL71QDWvyLz23bNc",
+        "__lookupTableAddress": "MASKED(__lookupTableAddress)",
         "__pricingSources": [
           {
             "address": "Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb",
@@ -76,10 +75,6 @@ describe('restaking.fragSOL test', async () => {
           },
           {
             "address": "HR1ANmDHjaEhknvsTaK48M5xZtbBiwNdXM5NTiWhAb4S",
-            "role": 0,
-          },
-          {
-            "address": "ENwxFTsCAbWyjGLHnLYv7JtDs8uvkhvdmRoKCAS7SEpk",
             "role": 0,
           },
           {
@@ -109,15 +104,6 @@ describe('restaking.fragSOL test', async () => {
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
             "vault": "HR1ANmDHjaEhknvsTaK48M5xZtbBiwNdXM5NTiWhAb4S",
           },
-          {
-            "mint": "8vEunBQvD3L4aNnRPyQzfQ7pecq4tPb46PjZVKUnTP9i",
-            "oneReceiptTokenAsSol": 0n,
-            "operationReceivableAmount": 0n,
-            "operationReservedAmount": 0n,
-            "operationTotalAmount": 0n,
-            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
-            "vault": "ENwxFTsCAbWyjGLHnLYv7JtDs8uvkhvdmRoKCAS7SEpk",
-          },
         ],
         "supportedAssets": [
           {
@@ -132,7 +118,7 @@ describe('restaking.fragSOL test', async () => {
             "program": null,
             "withdrawable": true,
             "withdrawableValueAsReceiptTokenAmount": 0n,
-            "withdrawalLastBatchProcessedAt": 1970-01-01T00:00:00.000Z,
+            "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
             "withdrawalResidualMicroAssetAmount": 0n,
             "withdrawalUserReservedAmount": 0n,
           },
@@ -148,7 +134,7 @@ describe('restaking.fragSOL test', async () => {
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
             "withdrawable": false,
             "withdrawableValueAsReceiptTokenAmount": 0n,
-            "withdrawalLastBatchProcessedAt": 1970-01-01T00:00:00.000Z,
+            "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
             "withdrawalResidualMicroAssetAmount": 0n,
             "withdrawalUserReservedAmount": 0n,
           },
@@ -164,7 +150,7 @@ describe('restaking.fragSOL test', async () => {
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
             "withdrawable": false,
             "withdrawableValueAsReceiptTokenAmount": 0n,
-            "withdrawalLastBatchProcessedAt": 1970-01-01T00:00:00.000Z,
+            "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
             "withdrawalResidualMicroAssetAmount": 0n,
             "withdrawalUserReservedAmount": 0n,
           },
@@ -349,26 +335,6 @@ describe('restaking.fragSOL test', async () => {
             "solAllocationWeight": 1n,
             "vault": "HR1ANmDHjaEhknvsTaK48M5xZtbBiwNdXM5NTiWhAb4S",
           },
-          {
-            "compoundingRewardTokenMints": [],
-            "delegations": [],
-            "distributingRewardTokens": [
-              {
-                "harvestThresholdIntervalSeconds": 0n,
-                "harvestThresholdMaxAmount": 18446744073709551615n,
-                "harvestThresholdMinAmount": 0n,
-                "lastHarvestedAt": 0n,
-                "mint": "ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq",
-              },
-            ],
-            "pricingSource": {
-              "__kind": "VirtualRestakingVault",
-              "address": "ENwxFTsCAbWyjGLHnLYv7JtDs8uvkhvdmRoKCAS7SEpk",
-            },
-            "solAllocationCapacityAmount": 0n,
-            "solAllocationWeight": 0n,
-            "vault": "ENwxFTsCAbWyjGLHnLYv7JtDs8uvkhvdmRoKCAS7SEpk",
-          },
         ],
         "tokenSwapStrategies": [],
       }
@@ -408,36 +374,6 @@ describe('restaking.fragSOL test', async () => {
                 "id": 1,
                 "mint": "FSWSBMV5EB7J8JdafNBLZpfSCLiFwpMCqod2RpkU4RNn",
                 "name": "SWTCH",
-                "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
-              },
-              "settledAmount": 0n,
-              "settlementBlocksLastRewardPoolContribution": "MASKED(/[.*C|c]ontribution?$/)",
-              "settlementBlocksLastSlot": "MASKED(/[.*S|s]lots?$/)",
-            },
-            {
-              "blocks": [
-                {
-                  "amount": 0n,
-                  "endingContribution": "MASKED(/[.*C|c]ontribution?$/)",
-                  "endingSlot": "MASKED(/[.*S|s]lots?$/)",
-                  "settledContribution": "MASKED(/[.*C|c]ontribution?$/)",
-                  "settledSlots": "MASKED(/[.*S|s]lots?$/)",
-                  "startingContribution": "MASKED(/[.*C|c]ontribution?$/)",
-                  "startingSlot": "MASKED(/[.*S|s]lots?$/)",
-                  "userSettledAmount": 0n,
-                  "userSettledContribution": "MASKED(/[.*C|c]ontribution?$/)",
-                },
-              ],
-              "claimedAmount": 0n,
-              "claimedAmountUpdatedSlot": "MASKED(/[.*S|s]lots?$/)",
-              "remainingAmount": 0n,
-              "reward": {
-                "claimable": true,
-                "decimals": 6,
-                "description": "ZEUS insentive",
-                "id": 2,
-                "mint": "ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq",
-                "name": "ZEUS",
                 "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
               },
               "settledAmount": 0n,
@@ -513,15 +449,6 @@ describe('restaking.fragSOL test', async () => {
             "name": "SWTCH",
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
           },
-          {
-            "claimable": true,
-            "decimals": 6,
-            "description": "ZEUS insentive",
-            "id": 2,
-            "mint": "ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq",
-            "name": "ZEUS",
-            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
-          },
         ],
       }
     `);
@@ -566,9 +493,9 @@ describe('restaking.fragSOL test', async () => {
       })
     ).resolves.not.toThrow();
 
-    await expect(ctx.resolve(true)).resolves.toMatchInlineSnapshot(`
+    await expectMasked(ctx.resolve(true)).resolves.toMatchInlineSnapshot(`
       {
-        "__lookupTableAddress": "G45gQa12Uwvnrp2Yb9oWTSwZSEHZWL71QDWvyLz23bNc",
+        "__lookupTableAddress": "MASKED(__lookupTableAddress)",
         "__pricingSources": [
           {
             "address": "Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb",
@@ -599,10 +526,6 @@ describe('restaking.fragSOL test', async () => {
             "role": 0,
           },
           {
-            "address": "ENwxFTsCAbWyjGLHnLYv7JtDs8uvkhvdmRoKCAS7SEpk",
-            "role": 0,
-          },
-          {
             "address": "GVqitNXDVx1PdG47PMNeNEoHSEnVNqybW7E8NckmSJ2R",
             "role": 0,
           },
@@ -629,15 +552,6 @@ describe('restaking.fragSOL test', async () => {
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
             "vault": "HR1ANmDHjaEhknvsTaK48M5xZtbBiwNdXM5NTiWhAb4S",
           },
-          {
-            "mint": "8vEunBQvD3L4aNnRPyQzfQ7pecq4tPb46PjZVKUnTP9i",
-            "oneReceiptTokenAsSol": 0n,
-            "operationReceivableAmount": 0n,
-            "operationReservedAmount": 0n,
-            "operationTotalAmount": 0n,
-            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
-            "vault": "ENwxFTsCAbWyjGLHnLYv7JtDs8uvkhvdmRoKCAS7SEpk",
-          },
         ],
         "supportedAssets": [
           {
@@ -652,7 +566,7 @@ describe('restaking.fragSOL test', async () => {
             "program": null,
             "withdrawable": true,
             "withdrawableValueAsReceiptTokenAmount": 0n,
-            "withdrawalLastBatchProcessedAt": 1970-01-01T00:00:00.000Z,
+            "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
             "withdrawalResidualMicroAssetAmount": 0n,
             "withdrawalUserReservedAmount": 0n,
           },
@@ -668,7 +582,7 @@ describe('restaking.fragSOL test', async () => {
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
             "withdrawable": false,
             "withdrawableValueAsReceiptTokenAmount": 0n,
-            "withdrawalLastBatchProcessedAt": 1970-01-01T00:00:00.000Z,
+            "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
             "withdrawalResidualMicroAssetAmount": 0n,
             "withdrawalUserReservedAmount": 0n,
           },
@@ -684,7 +598,7 @@ describe('restaking.fragSOL test', async () => {
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
             "withdrawable": false,
             "withdrawableValueAsReceiptTokenAmount": 0n,
-            "withdrawalLastBatchProcessedAt": 1970-01-01T00:00:00.000Z,
+            "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
             "withdrawalResidualMicroAssetAmount": 0n,
             "withdrawalUserReservedAmount": 0n,
           },
@@ -937,9 +851,9 @@ describe('restaking.fragSOL test', async () => {
       }
     `);
 
-    await expect(ctx.resolve(true)).resolves.toMatchInlineSnapshot(`
+    await expectMasked(ctx.resolve(true)).resolves.toMatchInlineSnapshot(`
       {
-        "__lookupTableAddress": "G45gQa12Uwvnrp2Yb9oWTSwZSEHZWL71QDWvyLz23bNc",
+        "__lookupTableAddress": "MASKED(__lookupTableAddress)",
         "__pricingSources": [
           {
             "address": "Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb",
@@ -963,10 +877,6 @@ describe('restaking.fragSOL test', async () => {
           },
           {
             "address": "HR1ANmDHjaEhknvsTaK48M5xZtbBiwNdXM5NTiWhAb4S",
-            "role": 0,
-          },
-          {
-            "address": "ENwxFTsCAbWyjGLHnLYv7JtDs8uvkhvdmRoKCAS7SEpk",
             "role": 0,
           },
           {
@@ -996,15 +906,6 @@ describe('restaking.fragSOL test', async () => {
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
             "vault": "HR1ANmDHjaEhknvsTaK48M5xZtbBiwNdXM5NTiWhAb4S",
           },
-          {
-            "mint": "8vEunBQvD3L4aNnRPyQzfQ7pecq4tPb46PjZVKUnTP9i",
-            "oneReceiptTokenAsSol": 0n,
-            "operationReceivableAmount": 0n,
-            "operationReservedAmount": 0n,
-            "operationTotalAmount": 0n,
-            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
-            "vault": "ENwxFTsCAbWyjGLHnLYv7JtDs8uvkhvdmRoKCAS7SEpk",
-          },
         ],
         "supportedAssets": [
           {
@@ -1019,7 +920,7 @@ describe('restaking.fragSOL test', async () => {
             "program": null,
             "withdrawable": true,
             "withdrawableValueAsReceiptTokenAmount": 10803579770n,
-            "withdrawalLastBatchProcessedAt": 1970-01-01T00:00:00.000Z,
+            "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
             "withdrawalResidualMicroAssetAmount": 0n,
             "withdrawalUserReservedAmount": 0n,
           },
@@ -1035,7 +936,7 @@ describe('restaking.fragSOL test', async () => {
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
             "withdrawable": false,
             "withdrawableValueAsReceiptTokenAmount": 5803579770n,
-            "withdrawalLastBatchProcessedAt": 1970-01-01T00:00:00.000Z,
+            "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
             "withdrawalResidualMicroAssetAmount": 0n,
             "withdrawalUserReservedAmount": 0n,
           },
@@ -1051,7 +952,7 @@ describe('restaking.fragSOL test', async () => {
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
             "withdrawable": false,
             "withdrawableValueAsReceiptTokenAmount": 0n,
-            "withdrawalLastBatchProcessedAt": 1970-01-01T00:00:00.000Z,
+            "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
             "withdrawalResidualMicroAssetAmount": 0n,
             "withdrawalUserReservedAmount": 0n,
           },
@@ -1966,15 +1867,15 @@ describe('restaking.fragSOL test', async () => {
     const byteData = fetchedAccount!.data;
 
     const encodedNumPricingSourceAddresses = byteData.slice(0x9000, 0x9001);
-    const numPricingSourceAddress = Buffer.from(
+    const numPricingSourceAddresses = Buffer.from(
       encodedNumPricingSourceAddresses
     ).readUInt8(0);
-    expect(numPricingSourceAddress).toEqual(
+    expect(numPricingSourceAddresses).toEqual(
       fundAccount!.data.numPricingSourceAddresses
     );
 
     const pricingSourceAddresses: string[] = [];
-    const encodedPricingSourceAddresses = byteData.slice(0x9001, 0x9201);
+    const encodedPricingSourceAddresses = byteData.slice(0x9001, 0x9421);
     const ADDRESS_SIZE = 32;
     const MAX_PRICING_SOURCE_ADDRESSES = 33;
     for (
@@ -1986,14 +1887,14 @@ describe('restaking.fragSOL test', async () => {
         offset,
         offset + ADDRESS_SIZE
       );
-      const address = new PublicKey(chunk);
-      pricingSourceAddresses.push(address.toString());
+      const address = getAddressDecoder().decode(chunk);
+      pricingSourceAddresses.push(address);
     }
     expect(pricingSourceAddresses).toEqual(
       fundAccount!.data.pricingSourceAddresses
     );
 
-    const prevNumPricingSourceAddresses = numPricingSourceAddress;
+    const prevNumPricingSourceAddresses = numPricingSourceAddresses;
 
     // 3) pricing_source_addresses updates correctly after calling add_supported_token ix & remove_supported_token
     // 3-1) add bSol as supported token
@@ -2033,79 +1934,6 @@ describe('restaking.fragSOL test', async () => {
     expect(getPricingSourcesManually()).toEqual(getPricingSourcesByField());
     expect(fundAccount!.data.numPricingSourceAddresses).toEqual(
       prevNumPricingSourceAddresses
-    );
-  });
-
-  // TODO: complete virtual vault test and SDK impl
-  // - move virtual vault config/test to fragsquare.test.ts
-  // - implement support tx template to add virtual vault
-  /** virtual vault harvest/compound */
-  test.skip('virtual vault harvest/compound', async () => {
-    const [virtualVaultAddr] = web3.PublicKey.findProgramAddressSync(
-      [
-        Buffer.from('virtual_vault'),
-        new web3.PublicKey(
-          '8vEunBQvD3L4aNnRPyQzfQ7pecq4tPb46PjZVKUnTP9i'
-        ).toBuffer(),
-      ],
-      new web3.PublicKey(restaking.program.address.toString())
-    );
-
-    // airdrop to virtual vault - zeus token vst
-    // dev) tested with zeus token not jitoSOL, because when harvesting jitoSOL from virtual vault, that jitoSOL moves to nSOL vault at restake command step
-    await validator.airdropToken(
-      virtualVaultAddr.toString(),
-      'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
-      100_000_000_000n
-    );
-
-    const fund_1 = await ctx.fund.resolveAccount(true);
-
-    // run operator to harvest
-    await ctx.fund.runCommand.executeChained(null);
-
-    const fund_2 = await ctx.fund.resolveAccount(true);
-
-    const fund_1_fragToken = fund_1?.data.supportedTokens.filter(
-      (supportedToken) =>
-        supportedToken.mint == 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq'
-    )[0];
-    const fund_2_fragToken = fund_2?.data.supportedTokens.filter(
-      (supportedToken) =>
-        supportedToken.mint == 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq'
-    )[0];
-    console.error(`fund_1_fragToken:`, fund_1_fragToken);
-    console.error(`fund_2 fragToken:`, fund_2_fragToken);
-  });
-
-  test.skip('virtual vault harvest/distribute', async () => {
-    const [virtualVaultAddr] = web3.PublicKey.findProgramAddressSync(
-      [
-        Buffer.from('virtual_vault'),
-        new web3.PublicKey(
-          '8vEunBQvD3L4aNnRPyQzfQ7pecq4tPb46PjZVKUnTP9i'
-        ).toBuffer(),
-      ],
-      new web3.PublicKey(restaking.program.address.toString())
-    );
-
-    // airdrop to virtual vault - zeus token vst
-    // dev) tested with zeus token not jitoSOL, because when harvesting jitoSOL from virtual vault, that jitoSOL moves to nSOL vault at restake command step
-    const rewardAmount = 100_000_000_000n;
-    await validator.airdropToken(
-      virtualVaultAddr.toString(),
-      'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
-      rewardAmount
-    );
-
-    const globalReward_1 = await ctx.reward.resolve(true);
-
-    // run operator to harvest
-    await ctx.fund.runCommand.executeChained(null);
-
-    const globalReward_2 = await ctx.reward.resolve(true);
-    expect(globalReward_2?.basePool.settlements[1].blocks[0].amount).toEqual(
-      globalReward_1?.basePool.settlements[1].blocks[0].amount! + rewardAmount
     );
   });
 });

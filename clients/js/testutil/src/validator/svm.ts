@@ -199,10 +199,10 @@ export class SVMValidator extends TestValidator<'svm'> {
                 });
                 resolved = true;
                 if (stderr) stderr.pause();
-                if (!options.debug) {
-                  stdout?.pause();
-                  break;
-                }
+                // if (!options.debug) { // do we need to print processing logs for DEBUG=1?
+                stdout?.pause();
+                break;
+                // }
               }
             }
           }
@@ -307,8 +307,8 @@ export class SVMValidator extends TestValidator<'svm'> {
     return res.value;
   }
 
-  async getSlot(opts: GetSlotOptions = {}): Promise<bigint> {
-    const commitment = opts.commitment ?? 'finalized';
+  async getSlot(opts?: GetSlotOptions): Promise<bigint> {
+    const commitment = opts?.commitment ?? 'confirmed';
     return this.rpc.getSlot({ commitment }).send();
   }
 

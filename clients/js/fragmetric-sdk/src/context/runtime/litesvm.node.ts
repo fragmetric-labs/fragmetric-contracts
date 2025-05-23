@@ -309,7 +309,7 @@ function createLiteSVMRPC(svm: LiteSVM): RuntimeRPC {
         transactionCount: null,
       };
     },
-    getSlot() {
+    getSlot(config) {
       return svm.getClock().slot;
     },
     getSignatureStatuses(signatures) {

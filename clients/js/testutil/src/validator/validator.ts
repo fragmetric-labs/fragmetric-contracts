@@ -32,7 +32,7 @@ import path from 'path';
 export type TestValidatorType = 'svm' | 'litesvm';
 export type Commitment = 'processed' | 'confirmed' | 'finalized';
 export interface GetSlotOptions {
-  commitment?: Commitment;
+  commitment?: Commitment; // default: confirmed
 }
 
 export type TestValidatorOptions<T extends TestValidatorType> = {

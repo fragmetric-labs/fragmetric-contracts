@@ -105,9 +105,9 @@ describe('restaking.fragBTC test', async () => {
   });
 
   test(`restaking.fragBTC.resolve`, async () => {
-    await expect(ctx.resolve(true)).resolves.toMatchInlineSnapshot(`
+    await expectMasked(ctx.resolve(true)).resolves.toMatchInlineSnapshot(`
       {
-        "__lookupTableAddress": "G45gQa12Uwvnrp2Yb9oWTSwZSEHZWL71QDWvyLz23bNc",
+        "__lookupTableAddress": "MASKED(__lookupTableAddress)",
         "__pricingSources": [
           {
             "address": "4yp9YAXCJsKWMDZq2Q4j4amktvJGXBCpr3Lmv2cYBrb8",
@@ -175,7 +175,7 @@ describe('restaking.fragBTC test', async () => {
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
             "withdrawable": true,
             "withdrawableValueAsReceiptTokenAmount": 0n,
-            "withdrawalLastBatchProcessedAt": 1970-01-01T00:00:00.000Z,
+            "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
             "withdrawalResidualMicroAssetAmount": 0n,
             "withdrawalUserReservedAmount": 0n,
           },
@@ -191,7 +191,7 @@ describe('restaking.fragBTC test', async () => {
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
             "withdrawable": true,
             "withdrawableValueAsReceiptTokenAmount": 0n,
-            "withdrawalLastBatchProcessedAt": 1970-01-01T00:00:00.000Z,
+            "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
             "withdrawalResidualMicroAssetAmount": 0n,
             "withdrawalUserReservedAmount": 0n,
           },
@@ -207,7 +207,7 @@ describe('restaking.fragBTC test', async () => {
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
             "withdrawable": true,
             "withdrawableValueAsReceiptTokenAmount": 0n,
-            "withdrawalLastBatchProcessedAt": 1970-01-01T00:00:00.000Z,
+            "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
             "withdrawalResidualMicroAssetAmount": 0n,
             "withdrawalUserReservedAmount": 0n,
           },
@@ -548,9 +548,9 @@ describe('restaking.fragBTC test', async () => {
       }
     `);
 
-    await expect(ctx.resolve(true)).resolves.toMatchInlineSnapshot(`
+    await expectMasked(ctx.resolve(true)).resolves.toMatchInlineSnapshot(`
       {
-        "__lookupTableAddress": "G45gQa12Uwvnrp2Yb9oWTSwZSEHZWL71QDWvyLz23bNc",
+        "__lookupTableAddress": "MASKED(__lookupTableAddress)",
         "__pricingSources": [
           {
             "address": "4yp9YAXCJsKWMDZq2Q4j4amktvJGXBCpr3Lmv2cYBrb8",
@@ -618,7 +618,7 @@ describe('restaking.fragBTC test', async () => {
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
             "withdrawable": true,
             "withdrawableValueAsReceiptTokenAmount": 100000000n,
-            "withdrawalLastBatchProcessedAt": 1970-01-01T00:00:00.000Z,
+            "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
             "withdrawalResidualMicroAssetAmount": 0n,
             "withdrawalUserReservedAmount": 0n,
           },
@@ -634,7 +634,7 @@ describe('restaking.fragBTC test', async () => {
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
             "withdrawable": true,
             "withdrawableValueAsReceiptTokenAmount": 0n,
-            "withdrawalLastBatchProcessedAt": 1970-01-01T00:00:00.000Z,
+            "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
             "withdrawalResidualMicroAssetAmount": 0n,
             "withdrawalUserReservedAmount": 0n,
           },
@@ -650,7 +650,7 @@ describe('restaking.fragBTC test', async () => {
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
             "withdrawable": true,
             "withdrawableValueAsReceiptTokenAmount": 0n,
-            "withdrawalLastBatchProcessedAt": 1970-01-01T00:00:00.000Z,
+            "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
             "withdrawalResidualMicroAssetAmount": 0n,
             "withdrawalUserReservedAmount": 0n,
           },
@@ -1032,9 +1032,9 @@ describe('restaking.fragBTC test', async () => {
       }
     `);
 
-    await expect(ctx.resolve(true)).resolves.toMatchInlineSnapshot(`
+    await expectMasked(ctx.resolve(true)).resolves.toMatchInlineSnapshot(`
       {
-        "__lookupTableAddress": "G45gQa12Uwvnrp2Yb9oWTSwZSEHZWL71QDWvyLz23bNc",
+        "__lookupTableAddress": "MASKED(__lookupTableAddress)",
         "__pricingSources": [
           {
             "address": "4yp9YAXCJsKWMDZq2Q4j4amktvJGXBCpr3Lmv2cYBrb8",
@@ -1102,7 +1102,7 @@ describe('restaking.fragBTC test', async () => {
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
             "withdrawable": true,
             "withdrawableValueAsReceiptTokenAmount": 100000000n,
-            "withdrawalLastBatchProcessedAt": 1970-01-01T00:00:00.000Z,
+            "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
             "withdrawalResidualMicroAssetAmount": 0n,
             "withdrawalUserReservedAmount": 0n,
           },
@@ -1118,7 +1118,7 @@ describe('restaking.fragBTC test', async () => {
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
             "withdrawable": true,
             "withdrawableValueAsReceiptTokenAmount": 100000000n,
-            "withdrawalLastBatchProcessedAt": 1970-01-01T00:00:00.000Z,
+            "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
             "withdrawalResidualMicroAssetAmount": 0n,
             "withdrawalUserReservedAmount": 0n,
           },
@@ -1134,7 +1134,7 @@ describe('restaking.fragBTC test', async () => {
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
             "withdrawable": true,
             "withdrawableValueAsReceiptTokenAmount": 100000000n,
-            "withdrawalLastBatchProcessedAt": 1970-01-01T00:00:00.000Z,
+            "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
             "withdrawalResidualMicroAssetAmount": 0n,
             "withdrawalUserReservedAmount": 0n,
           },
