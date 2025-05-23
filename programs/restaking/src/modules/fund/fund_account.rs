@@ -393,7 +393,7 @@ impl FundAccount {
                 | Some(TokenPricingSource::JitoRestakingVault { address })
                 | Some(TokenPricingSource::FragmetricNormalizedTokenPool { address })
                 | Some(TokenPricingSource::SolvBTCVault { address })
-                | Some(TokenPricingSource::VirtualRestakingVault { address }) => {
+                | Some(TokenPricingSource::VirtualVault { address }) => {
                     require_gt!(
                         FUND_ACCOUNT_MAX_PRICING_SOURCE_ADDRESSES,
                         self.num_pricing_source_addresses as usize,

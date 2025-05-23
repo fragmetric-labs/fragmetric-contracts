@@ -4,7 +4,7 @@ use anchor_spl::token_interface::TokenAccount;
 
 use crate::errors::ErrorCode;
 use crate::modules::pricing::TokenPricingSource;
-use crate::modules::restaking::VirtualRestakingVaultService;
+use crate::modules::restaking::VirtualVaultService;
 use crate::modules::reward::{RewardAccount, RewardConfigurationService, RewardService};
 use crate::modules::swap::{OrcaDEXLiquidityPoolService, TokenSwapSource};
 use crate::utils::{AccountInfoExt, AsAccountInfo, PDASeeds};
@@ -279,7 +279,7 @@ impl HarvestRewardCommand {
 
         let entry = match receipt_token_pricing_source {
             Some(TokenPricingSource::JitoRestakingVault { .. })
-            | Some(TokenPricingSource::VirtualRestakingVault { .. }) => {
+            | Some(TokenPricingSource::VirtualVault { .. }) => {
                 // We need to check vault's token account whether
                 // the account is delegated to fund account or not.
                 // Although we do not know whether the token
@@ -354,7 +354,7 @@ impl HarvestRewardCommand {
         let entry = match receipt_token_pricing_source {
             Some(TokenPricingSource::JitoRestakingVault { .. })
             | Some(TokenPricingSource::SolvBTCVault { .. })
-            | Some(TokenPricingSource::VirtualRestakingVault { .. }) => {
+            | Some(TokenPricingSource::VirtualVault { .. }) => {
                 // We need to check vault's token account whether
                 // the account is delegated to fund account or not.
                 // Although we do not know whether the token
@@ -487,7 +487,7 @@ impl HarvestRewardCommand {
             match harvest_type {
                 HarvestType::Compound => match receipt_token_pricing_source {
                     Some(TokenPricingSource::JitoRestakingVault { .. })
-                    | Some(TokenPricingSource::VirtualRestakingVault { .. }) => self
+                    | Some(TokenPricingSource::VirtualVault { .. }) => self
                         .create_execute_command_from_vault_ata(
                             ctx,
                             harvest_type,
@@ -516,7 +516,7 @@ impl HarvestRewardCommand {
                 HarvestType::Distribute => match receipt_token_pricing_source {
                     Some(TokenPricingSource::JitoRestakingVault { .. })
                     | Some(TokenPricingSource::SolvBTCVault { .. })
-                    | Some(TokenPricingSource::VirtualRestakingVault { .. }) => self
+                    | Some(TokenPricingSource::VirtualVault { .. }) => self
                         .create_execute_command_from_vault_ata(
                             ctx,
                             harvest_type,
@@ -603,7 +603,7 @@ impl HarvestRewardCommand {
         // Token account is not delegated to fund account, so move on to next item
         if !matches!(
             receipt_token_pricing_source,
-            Some(TokenPricingSource::VirtualRestakingVault { .. })
+            Some(TokenPricingSource::VirtualVault { .. })
         ) && !vault_reward_token_account
             .delegate
             .contains(&ctx.fund_account.key())
@@ -616,7 +616,7 @@ impl HarvestRewardCommand {
             | &Some(TokenPricingSource::SolvBTCVault { .. }) => vault_reward_token_account
                 .amount
                 .min(vault_reward_token_account.delegated_amount),
-            &Some(TokenPricingSource::VirtualRestakingVault { .. }) => {
+            &Some(TokenPricingSource::VirtualVault { .. }) => {
                 vault_reward_token_account.amount
             }
             _ => 0,
@@ -813,7 +813,7 @@ impl HarvestRewardCommand {
                 .try_deserialize()?;
             match receipt_token_pricing_source {
                 Some(TokenPricingSource::JitoRestakingVault { .. })
-                | Some(TokenPricingSource::VirtualRestakingVault { .. }) => {
+                | Some(TokenPricingSource::VirtualVault { .. }) => {
                     // Transfer
                     self.execute_transfer(
                         ctx,
@@ -984,7 +984,7 @@ impl HarvestRewardCommand {
             &Some(TokenPricingSource::JitoRestakingVault { .. }) => from_reward_token_account
                 .amount
                 .min(from_reward_token_account.delegated_amount),
-            &Some(TokenPricingSource::VirtualRestakingVault { .. }) => {
+            &Some(TokenPricingSource::VirtualVault { .. }) => {
                 from_reward_token_account.amount
             }
             _ => 0,
@@ -1011,8 +1011,8 @@ impl HarvestRewardCommand {
                     reward_token_mint.decimals,
                 )?
             }
-            &Some(TokenPricingSource::VirtualRestakingVault { .. }) => {
-                VirtualRestakingVaultService::new(vault_account, vault_receipt_token_mint)?
+            &Some(TokenPricingSource::VirtualVault { .. }) => {
+                VirtualVaultService::new(vault_account, vault_receipt_token_mint)?
                     .transfer_vault_token(
                         &reward_token_mint,
                         reward_token_program.to_account_info(),
@@ -1058,7 +1058,7 @@ impl HarvestRewardCommand {
         let result = (|| match receipt_token_pricing_source {
             Some(TokenPricingSource::JitoRestakingVault { .. })
             | Some(TokenPricingSource::SolvBTCVault { .. })
-            | Some(TokenPricingSource::VirtualRestakingVault { .. }) => {
+            | Some(TokenPricingSource::VirtualVault { .. }) => {
                 // Transfer & Settle
                 let [reward_token_mint, from_reward_token_account, reward_token_reserve_account, reward_token_program, reward_account, vault_account, vault_receipt_token_mint, ..] =
                     accounts
@@ -1098,7 +1098,7 @@ impl HarvestRewardCommand {
                     | Some(TokenPricingSource::SolvBTCVault { .. }) => from_reward_token_account
                         .amount
                         .min(from_reward_token_account.delegated_amount),
-                    Some(TokenPricingSource::VirtualRestakingVault { .. }) => {
+                    Some(TokenPricingSource::VirtualVault { .. }) => {
                         from_reward_token_account.amount
                     }
                     _ => 0,
@@ -1133,8 +1133,8 @@ impl HarvestRewardCommand {
                             reward_token_mint.decimals,
                         )?
                     }
-                    Some(TokenPricingSource::VirtualRestakingVault { .. }) => {
-                        VirtualRestakingVaultService::new(vault_account, vault_receipt_token_mint)?
+                    Some(TokenPricingSource::VirtualVault { .. }) => {
+                        VirtualVaultService::new(vault_account, vault_receipt_token_mint)?
                             .transfer_vault_token(
                                 &reward_token_mint,
                                 reward_token_program.to_account_info(),
