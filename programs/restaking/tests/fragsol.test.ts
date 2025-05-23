@@ -1,5 +1,5 @@
+import { getAddressDecoder } from '@solana/kit';
 import * as web3 from '@solana/web3.js';
-import { PublicKey } from '@solana/web3.js';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { createTestSuiteContext, expectMasked } from '../../testutil';
 import { initializeFragSOL } from './fragsol.init';
@@ -1973,10 +1973,14 @@ describe('restaking.fragSOL test', async () => {
       fundAccount!.data.numPricingSourceAddresses
     );
 
-    const pricingSourceAddresses: string[] = [];
-    const encodedPricingSourceAddresses = byteData.slice(0x9001, 0x9201);
     const ADDRESS_SIZE = 32;
     const MAX_PRICING_SOURCE_ADDRESSES = 33;
+    const pricingSourceAddresses: string[] = [];
+    const encodedPricingSourceAddresses = byteData.slice(
+      0x9001,
+      0x9001 + ADDRESS_SIZE * MAX_PRICING_SOURCE_ADDRESSES
+    );
+
     for (
       let offset = 0;
       offset < ADDRESS_SIZE * MAX_PRICING_SOURCE_ADDRESSES;
@@ -1986,7 +1990,7 @@ describe('restaking.fragSOL test', async () => {
         offset,
         offset + ADDRESS_SIZE
       );
-      const address = new PublicKey(chunk);
+      const address = getAddressDecoder().decode(chunk);
       pricingSourceAddresses.push(address.toString());
     }
     expect(pricingSourceAddresses).toEqual(
