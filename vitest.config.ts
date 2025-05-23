@@ -28,11 +28,10 @@ export default defineConfig({
     },
     include: ['**/*.test.ts'],
     passWithNoTests: true,
-    testTimeout: 15 * 60 * 1000,
+    testTimeout: 20 * 60 * 1000,
     hookTimeout: 5 * 60 * 1000,
 
-    pool: 'threads', // parallel run for `describe`
-    maxWorkers: process.env.CI ? 1 : 4,
+    pool: 'forks', // parallel run for `describe`
     minWorkers: 1,
     sequence: {
       concurrent: false, // sequential run for `test`

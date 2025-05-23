@@ -27,7 +27,7 @@ export async function createTestSuiteContext(config?: {
 }) {
   const resolvedConfig = {
     slotsPerEpoch: 432000n,
-    ticksPerSlot: 64 / 4,
+    ticksPerSlot: 64 / 16,
     validator:
       process.env.RUNTIME?.toLowerCase() == 'svm'
         ? ('svm' as const)
@@ -129,13 +129,29 @@ export async function createTestSuiteContext(config?: {
   const rpcConfig =
     resolvedConfig.validator == 'litesvm'
       ? {
-          accountCacheTTLSeconds: 1,
           accountDeduplicationIntervalSeconds: 0,
+          accountCacheTTLSeconds: 1,
           accountBatchIntervalMilliseconds: 0,
           blockhashCacheTTLMilliseconds: 50,
           blockhashBatchIntervalMilliseconds: 0,
         }
-      : undefined;
+      : {
+        // default is 2s
+        accountDeduplicationIntervalSeconds: 2,
+        // default is 10s
+        accountCacheTTLSeconds: 10,
+        // default is 50ms
+        accountBatchIntervalMilliseconds: 50,
+        // default is 100req
+        accountBatchMaxSize: 100,
+
+        // default is 250ms
+        blockhashCacheTTLMilliseconds: 10,
+        // default is 50ms
+        blockhashBatchIntervalMilliseconds: 10,
+        // default is 100req
+        blockhashBatchMaxSize: 100,
+      };
   const transactionConfig = {
     feePayer: feePayer,
     signers: [

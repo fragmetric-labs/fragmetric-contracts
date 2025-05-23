@@ -81,10 +81,9 @@ export class RestakingFundAddressLookupTableAccountContext extends AddressLookup
                 ]
               : await (async () => {
                   {
-                    let recentSlot = await this.runtime.rpc.getSlot().send();
-                    if (this.runtime.cluster == 'local') {
-                      recentSlot = 0n;
-                    }
+                    const recentSlot = await this.runtime.rpc
+                      .getSlot({ commitment: 'finalized' })
+                      .send();
                     const ix = await alt.getCreateLookupTableInstructionAsync({
                       payer: createNoopSigner(payer! as Address),
                       authority: createNoopSigner(admin),

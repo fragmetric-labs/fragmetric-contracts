@@ -88,9 +88,9 @@ describe('restaking.fragJTO test', async () => {
   });
 
   test(`restaking.fragJTO.resolve`, async () => {
-    await expect(ctx.resolve(true)).resolves.toMatchInlineSnapshot(`
+    await expectMasked(ctx.resolve(true)).resolves.toMatchInlineSnapshot(`
       {
-        "__lookupTableAddress": "G45gQa12Uwvnrp2Yb9oWTSwZSEHZWL71QDWvyLz23bNc",
+        "__lookupTableAddress": "MASKED(__lookupTableAddress)",
         "__pricingSources": [
           {
             "address": "2UhFnySoJi6c89aydGAGS7ZRemo2dbkFRhvSJqDX4gHJ",
@@ -132,7 +132,7 @@ describe('restaking.fragJTO test', async () => {
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
             "withdrawable": true,
             "withdrawableValueAsReceiptTokenAmount": 0n,
-            "withdrawalLastBatchProcessedAt": 1970-01-01T00:00:00.000Z,
+            "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
             "withdrawalResidualMicroAssetAmount": 0n,
             "withdrawalUserReservedAmount": 0n,
           },

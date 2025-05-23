@@ -174,23 +174,28 @@ export class SVMValidator extends TestValidator<'svm'> {
           reject(new Error(`${cmdString}\n${data.toString()}`));
         });
         let resolved = false;
+        let processingDebugLogPrintCount = 0;
         stdout = childProcess.stdout.on('data', async (data) => {
           const logs = data.toString().trim().split('\n');
           for (const log of logs) {
-            logger(log);
             if (log.startsWith('Error: ')) {
+              logger(log);
               stderr.destroy();
               stdout?.destroy();
               reject(new Error(`${cmdString}\n${data.toString()}`));
               break;
             } else if (log.startsWith(rpcURLPrefix)) {
+              logger(log);
               rpcURL = log.substring(rpcURLPrefix.length).trim();
             } else if (log.includes(rpcSubscriptionsURLPrefix)) {
+              logger(log);
               rpcSubscriptionsURL = log
                 .substring(rpcSubscriptionsURLPrefix.length)
                 .trim();
             } else if (log.includes(processingLogPrefix)) {
               if (!resolved) {
+                logger(log);
+
                 resolve({
                   process: childProcess,
                   ledgerPath,
@@ -202,6 +207,10 @@ export class SVMValidator extends TestValidator<'svm'> {
                 if (!options.debug) {
                   stdout?.pause();
                   break;
+                }
+              } else {
+                if (processingDebugLogPrintCount++ % 10 == 0) {
+                  logger(log);
                 }
               }
             }
@@ -307,8 +316,8 @@ export class SVMValidator extends TestValidator<'svm'> {
     return res.value;
   }
 
-  async getSlot(opts: GetSlotOptions = {}): Promise<bigint> {
-    const commitment = opts.commitment ?? 'finalized';
+  async getSlot(opts?: GetSlotOptions): Promise<bigint> {
+    const commitment = opts?.commitment ?? 'confirmed';
     return this.rpc.getSlot({ commitment }).send();
   }
 

@@ -69,7 +69,7 @@ export async function signMessageWithEd25519Keypair(
   keypair: CryptoKeyPair,
   data: ReadonlyUint8Array
 ) {
-  if (!polyfillInstalled) {
+  if (!polyfillInstalled && typeof process == 'undefined') {
     polyfill.install();
     polyfillInstalled = true;
   }
