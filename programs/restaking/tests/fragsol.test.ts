@@ -362,7 +362,7 @@ describe('restaking.fragSOL test', async () => {
               },
             ],
             "pricingSource": {
-              "__kind": "VirtualRestakingVault",
+              "__kind": "VirtualVault",
               "address": "ENwxFTsCAbWyjGLHnLYv7JtDs8uvkhvdmRoKCAS7SEpk",
             },
             "solAllocationCapacityAmount": 0n,
@@ -2078,7 +2078,7 @@ describe('restaking.fragSOL test', async () => {
     console.error(`fund_2 fragToken:`, fund_2_fragToken);
   });
 
-  test.skip('virtual vault harvest/distribute', async () => {
+  test('virtual vault harvest/distribute', async () => {
     const [virtualVaultAddr] = web3.PublicKey.findProgramAddressSync(
       [
         Buffer.from('virtual_vault'),

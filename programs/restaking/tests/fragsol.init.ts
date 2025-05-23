@@ -1,5 +1,5 @@
 import * as web3 from '@solana/web3.js';
-import { VirtualVaultAccountContext } from '../../../clients/js/fragmetric-sdk/src/programs/restaking/restaking_vault_virtual';
+import { VirtualVaultAccountContext } from '../../../clients/js/fragmetric-sdk/src/programs/restaking/virtual_vault';
 import type { TestSuiteContext } from '../../testutil';
 
 export function initializeFragSOL(testCtx: TestSuiteContext) {
@@ -486,7 +486,7 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
         solAllocationWeight: 1n,
       }),
 
-    // initialize virtual restaking vault (FRAG)
+    // initialize virtual vault
     () => {
       const vaultContext = ctx.fund.restakingVault(
         virtualVaultAddr.toString(),
@@ -499,6 +499,7 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
       }
 
       return vaultContext.initializeVrtMint.execute({
+        mint: '8vEunBQvD3L4aNnRPyQzfQ7pecq4tPb46PjZVKUnTP9i',
         name: 'fragSOL Virtual Vault Receeipt Token Mint',
         symbol: 'fragVVrt',
         uri: '',
@@ -510,9 +511,11 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
       ctx.fund.addRestakingVault.execute({
         vault: virtualVaultAddr.toString(),
         pricingSource: {
-          __kind: 'VirtualRestakingVault',
+          __kind: 'VirtualVault',
           address: virtualVaultAddr.toString(),
         },
+        vstMint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
+        vrtMint: '8vEunBQvD3L4aNnRPyQzfQ7pecq4tPb46PjZVKUnTP9i',
       }),
 
     // configure reward settings

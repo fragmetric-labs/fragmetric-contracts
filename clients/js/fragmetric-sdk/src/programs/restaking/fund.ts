@@ -36,7 +36,7 @@ import { RestakingFundWrapAccountContext } from './fund_wrap';
 import { RestakingProgram } from './program';
 import { RestakingReceiptTokenMintAccountContext } from './receipt_token_mint';
 import { JitoVaultAccountContext } from './restaking_vault_jito';
-import { VirtualVaultAccountContext } from './restaking_vault_virtual';
+import { VirtualVaultAccountContext } from './virtual_vault';
 
 export class RestakingFundAccountContext extends AccountContext<
   RestakingReceiptTokenMintAccountContext,
@@ -1230,7 +1230,7 @@ export class RestakingFundAccountContext extends AccountContext<
           __kind: v.picklist([
             'JitoRestakingVault',
             'SolvBTCVault',
-            'VirtualRestakingVault',
+            'VirtualVault',
           ]),
           address: v.string(),
         }) as v.GenericSchema<
@@ -1239,6 +1239,8 @@ export class RestakingFundAccountContext extends AccountContext<
           }
         >
       ),
+      vstMint: v.nullish(v.string()),
+      vrtMint: v.nullish(v.string()),
     }),
     {
       description: 'add a new restaking vault',
@@ -1394,7 +1396,7 @@ export class RestakingFundAccountContext extends AccountContext<
               // }),
               ix,
             ]);
-          } else if (args.pricingSource.__kind == 'VirtualRestakingVault') {
+          } else if (args.pricingSource.__kind == 'VirtualVault') {
             const vaultContext = parent.restakingVault(
               args.vault,
               '11111111111111111111111111111111'
@@ -1408,14 +1410,16 @@ export class RestakingFundAccountContext extends AccountContext<
               throw new Error('invalid context: virtual vault not found');
             }
 
+            if (!args.vstMint || !args.vrtMint) {
+              throw new Error('invalid context: vst or vrt mint not found');
+            }
+
             const ix =
               await restaking.getFundManagerInitializeFundRestakingVaultInstructionAsync(
                 {
                   vaultAccount: args.vault as Address,
-                  vaultReceiptTokenMint:
-                    '8vEunBQvD3L4aNnRPyQzfQ7pecq4tPb46PjZVKUnTP9i' as Address,
-                  vaultSupportedTokenMint:
-                    'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq' as Address, // zeus token
+                  vaultReceiptTokenMint: args.vrtMint as Address,
+                  vaultSupportedTokenMint: args.vstMint as Address,
                   fundManager: createNoopSigner(fundManager),
                   receiptTokenMint: data.receiptTokenMint,
                   program: this.program.address,
@@ -1437,25 +1441,25 @@ export class RestakingFundAccountContext extends AccountContext<
             return Promise.all([
               token.getCreateAssociatedTokenIdempotentInstructionAsync({
                 payer: createNoopSigner(payer as Address),
-                mint: '8vEunBQvD3L4aNnRPyQzfQ7pecq4tPb46PjZVKUnTP9i' as Address, // vrt
+                mint: args.vrtMint as Address,
                 owner: fundReserve,
                 tokenProgram: token.TOKEN_PROGRAM_ADDRESS,
               }),
               token.getCreateAssociatedTokenIdempotentInstructionAsync({
                 payer: createNoopSigner(payer as Address),
-                mint: '8vEunBQvD3L4aNnRPyQzfQ7pecq4tPb46PjZVKUnTP9i' as Address, // vrt
+                mint: args.vrtMint as Address,
                 owner: args.vault as Address,
                 tokenProgram: token.TOKEN_PROGRAM_ADDRESS,
               }),
               token.getCreateAssociatedTokenIdempotentInstructionAsync({
                 payer: createNoopSigner(payer as Address),
-                mint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq' as Address, // vst, zeus token
+                mint: args.vstMint as Address,
                 owner: fundReserve,
                 tokenProgram: token.TOKEN_PROGRAM_ADDRESS,
               }),
               token.getCreateAssociatedTokenIdempotentInstructionAsync({
                 payer: createNoopSigner(payer as Address),
-                mint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq' as Address, // vst, zeus token
+                mint: args.vstMint as Address,
                 owner: args.vault as Address,
                 tokenProgram: token.TOKEN_PROGRAM_ADDRESS,
               }),
