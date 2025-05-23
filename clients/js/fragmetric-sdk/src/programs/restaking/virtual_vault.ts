@@ -23,7 +23,7 @@ export class VirtualVaultAccountContext extends AccountContext<
   RestakingFundAccountContext,
   Account<None>
 > {
-  public resolve(noCache = false) {
+  public resolve(noCache = false, vrtMint?: string) {
     return this.__deduplicated(
       {
         method: 'resolve',
@@ -38,12 +38,15 @@ export class VirtualVaultAccountContext extends AccountContext<
         if (!fund) {
           return null;
         }
+        if (!vrtMint) {
+          throw new Error('invalid context: vrt mint should be provided');
+        }
 
         const [virtualVaultAddr] = web3.PublicKey.findProgramAddressSync(
           [
             Buffer.from('virtual_vault'),
             new web3.PublicKey(
-              '8vEunBQvD3L4aNnRPyQzfQ7pecq4tPb46PjZVKUnTP9i'
+              vrtMint
             ).toBuffer(),
           ],
           new web3.PublicKey(
@@ -76,6 +79,7 @@ export class VirtualVaultAccountContext extends AccountContext<
   readonly initializeVrtMint = new TransactionTemplateContext(
     this,
     v.object({
+      mint: v.string(),
       name: v.string(),
       symbol: v.string(),
       uri: v.string(),
@@ -104,19 +108,19 @@ export class VirtualVaultAccountContext extends AccountContext<
             system.getCreateAccountInstruction({
               payer: createNoopSigner(payer as Address),
               newAccount: createNoopSigner(
-                '8vEunBQvD3L4aNnRPyQzfQ7pecq4tPb46PjZVKUnTP9i' as Address
+                args.mint as Address
               ),
               lamports: rent,
               space,
               programAddress: token.TOKEN_PROGRAM_ADDRESS,
             }),
             token.getInitializeMintInstruction({
-              mint: '8vEunBQvD3L4aNnRPyQzfQ7pecq4tPb46PjZVKUnTP9i' as Address, // vrt
+              mint: args.mint as Address,
               decimals: 9,
               mintAuthority: payer as Address,
             }),
             token.getSetAuthorityInstruction({
-              owned: '8vEunBQvD3L4aNnRPyQzfQ7pecq4tPb46PjZVKUnTP9i' as Address, // vrt
+              owned: args.mint as Address,
               owner: payer as Address,
               authorityType: token.AuthorityType.MintTokens,
               newAuthority: null, // set mint authority to None
@@ -124,61 +128,6 @@ export class VirtualVaultAccountContext extends AccountContext<
           ];
         },
       ],
-    }
-  );
-
-  readonly supportedToken = TokenAccountContext.fromAssociatedTokenSeeds(
-    this,
-    async (parent) => {
-      const [fund] = await Promise.all([parent.parent.resolveAccount(true)]);
-      if (fund) {
-        const [virtualVaultAddr] = web3.PublicKey.findProgramAddressSync(
-          [
-            Buffer.from('virtual_vault'),
-            new web3.PublicKey(
-              '8vEunBQvD3L4aNnRPyQzfQ7pecq4tPb46PjZVKUnTP9i'
-            ).toBuffer(),
-          ],
-          new web3.PublicKey(
-            parent.parent.parent.parent.program.address.toString()
-          )
-        );
-        const vault = fund.data.restakingVaults.filter(
-          (restakingVault) =>
-            restakingVault.vault == virtualVaultAddr.toString()
-        )[0];
-        return {
-          owner: virtualVaultAddr.toString(),
-          mint: vault.supportedTokenMint,
-        };
-      }
-      return null;
-    }
-  );
-
-  readonly receiptTokenMint = new TokenMintAccountContext(
-    this,
-    async (parent) => {
-      const [fund] = await Promise.all([parent.parent.resolveAccount(true)]);
-      if (fund) {
-        const [virtualVaultAddr] = web3.PublicKey.findProgramAddressSync(
-          [
-            Buffer.from('virtual_vault'),
-            new web3.PublicKey(
-              '8vEunBQvD3L4aNnRPyQzfQ7pecq4tPb46PjZVKUnTP9i'
-            ).toBuffer(),
-          ],
-          new web3.PublicKey(
-            parent.parent.parent.parent.program.address.toString()
-          )
-        );
-        const vault = fund.data.restakingVaults.filter(
-          (restakingVault) =>
-            restakingVault.vault == virtualVaultAddr.toString()
-        )[0];
-        return vault.receiptTokenMint;
-      }
-      return null;
     }
   );
 }
