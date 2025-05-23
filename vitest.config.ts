@@ -32,7 +32,6 @@ export default defineConfig({
     hookTimeout: 5 * 60 * 1000,
 
     pool: 'forks', // parallel run for `describe`
-    maxWorkers: process.env.RUNTIME?.toLowerCase() == 'svm' ? 1 : 4,
     minWorkers: 1,
     sequence: {
       concurrent: false, // sequential run for `test`

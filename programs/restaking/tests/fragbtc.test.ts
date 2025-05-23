@@ -2012,6 +2012,7 @@ describe('restaking.fragBTC test', async () => {
     );
 
     // now settle occurs but not fully settled
+    await validator.skipSlots(1n);
     await ctx.fund.runCommand.executeChained({
       forceResetCommand: 'HarvestReward',
       operator: restaking.knownAddresses.fundManager,
@@ -2031,6 +2032,7 @@ describe('restaking.fragBTC test', async () => {
     ).toEqual(300_000_000n);
 
     // 4. now fully settled
+    await validator.skipSlots(1n);
     await ctx.fund.runCommand.executeChained({
       forceResetCommand: 'HarvestReward',
       operator: restaking.knownAddresses.fundManager,
