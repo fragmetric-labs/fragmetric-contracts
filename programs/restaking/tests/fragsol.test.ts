@@ -1874,10 +1874,14 @@ describe('restaking.fragSOL test', async () => {
       fundAccount!.data.numPricingSourceAddresses
     );
 
-    const pricingSourceAddresses: string[] = [];
-    const encodedPricingSourceAddresses = byteData.slice(0x9001, 0x9421);
     const ADDRESS_SIZE = 32;
     const MAX_PRICING_SOURCE_ADDRESSES = 33;
+    const pricingSourceAddresses: string[] = [];
+    const encodedPricingSourceAddresses = byteData.slice(
+      0x9001,
+      0x9001 + ADDRESS_SIZE * MAX_PRICING_SOURCE_ADDRESSES
+    );
+
     for (
       let offset = 0;
       offset < ADDRESS_SIZE * MAX_PRICING_SOURCE_ADDRESSES;
