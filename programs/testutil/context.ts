@@ -25,13 +25,15 @@ export async function createTestSuiteContext(config?: {
   ticksPerSlot?: number;
   useDistSDK?: boolean;
 }) {
+  const validatorByEnvVar =
+    process.env.RUNTIME?.toLowerCase() == 'svm'
+      ? ('svm' as const)
+      : ('litesvm' as const);
+
   const resolvedConfig = {
     slotsPerEpoch: 432000n,
-    ticksPerSlot: 64 / 16,
-    validator:
-      process.env.RUNTIME?.toLowerCase() == 'svm'
-        ? ('svm' as const)
-        : ('litesvm' as const),
+    ticksPerSlot: 64 / 32,
+    validator: validatorByEnvVar,
     debug: !!process.env.DEBUG,
     useDistSDK: !!process.env.CI,
     ...config,
@@ -129,29 +131,29 @@ export async function createTestSuiteContext(config?: {
   const rpcConfig =
     resolvedConfig.validator == 'litesvm'
       ? {
-          accountDeduplicationIntervalSeconds: 0,
+          accountDeduplicationIntervalSeconds: 1,
           accountCacheTTLSeconds: 1,
-          accountBatchIntervalMilliseconds: 0,
+          accountBatchIntervalMilliseconds: 1,
           blockhashCacheTTLMilliseconds: 50,
-          blockhashBatchIntervalMilliseconds: 0,
+          blockhashBatchIntervalMilliseconds: 1,
         }
       : {
-        // default is 2s
-        accountDeduplicationIntervalSeconds: 2,
-        // default is 10s
-        accountCacheTTLSeconds: 10,
-        // default is 50ms
-        accountBatchIntervalMilliseconds: 50,
-        // default is 100req
-        accountBatchMaxSize: 100,
+          // default is 2s
+          accountDeduplicationIntervalSeconds: 0,
+          // default is 10s
+          accountCacheTTLSeconds: 0,
+          // default is 50ms
+          accountBatchIntervalMilliseconds: 0,
+          // default is 100req
+          accountBatchMaxSize: 0,
 
-        // default is 250ms
-        blockhashCacheTTLMilliseconds: 10,
-        // default is 50ms
-        blockhashBatchIntervalMilliseconds: 10,
-        // default is 100req
-        blockhashBatchMaxSize: 100,
-      };
+          // default is 250ms
+          blockhashCacheTTLMilliseconds: 0,
+          // default is 50ms
+          blockhashBatchIntervalMilliseconds: 0,
+          // default is 100req
+          blockhashBatchMaxSize: 0,
+        };
   const transactionConfig = {
     feePayer: feePayer,
     signers: [
@@ -165,6 +167,7 @@ export async function createTestSuiteContext(config?: {
       }),
     ],
     executionHooks: executionHooks,
+    maxRetriesOnBlockErrors: resolvedConfig.validator == 'litesvm' ? 0 : 100,
   };
 
   const restaking = sdk.RestakingProgram.connect(validator.runtime, {

@@ -34,6 +34,7 @@ import {
   signTransactionMessageWithSigners,
   Slot,
   SOLANA_ERROR__INVALID_NONCE,
+  SolanaError,
   TransactionSendingSigner,
   TransactionSigner,
 } from '@solana/kit';
@@ -313,12 +314,44 @@ export class TransactionTemplateContext<
       // validate args first
       argsResolved = (this.args ? v.parse(this.args, args) : null) as ARGS;
 
-      const signature = await this.sendAndConfirm(
-        args,
-        overrides,
-        config,
-        options
-      );
+      let signature: Signature;
+      let retriesOnBlockErrors = 0;
+      while (true) {
+        try {
+          signature = await this.sendAndConfirm(
+            args,
+            overrides,
+            config,
+            options
+          );
+          break;
+        } catch (err) {
+          if (
+            retriesOnBlockErrors <
+            this.runtime.options.transaction.maxRetriesOnBlockErrors
+          ) {
+            if (err instanceof SolanaError) {
+              const blockError =
+                /network has progressed|blockhash not found|already been processed/i;
+              const causeMsg = err.cause?.toString() || '';
+              const msg = `${err.message}${causeMsg ? ` - ${causeMsg}` : ''}`;
+              if (blockError.test(msg)) {
+                console.error(
+                  `Dangerously retrying the same transaction (${retriesOnBlockErrors}): ${msg}`
+                );
+                retriesOnBlockErrors++;
+                await new Promise((resolve) =>
+                  setTimeout(resolve, Math.floor(Math.random() * 400) + 100)
+                );
+                continue;
+              }
+            }
+          }
+
+          throw err;
+        }
+      }
+
       hooks.forEach((hook) =>
         hook?.onSignature?.(this, signature, argsResolved!)
       );

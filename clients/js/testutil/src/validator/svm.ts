@@ -209,7 +209,7 @@ export class SVMValidator extends TestValidator<'svm'> {
                   break;
                 }
               } else {
-                if (processingDebugLogPrintCount++ % 10 == 0) {
+                if (processingDebugLogPrintCount++ % 16 == 0) {
                   logger(log);
                 }
               }

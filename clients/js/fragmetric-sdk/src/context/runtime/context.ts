@@ -63,8 +63,12 @@ export type RuntimeContextOptions<
     // set global compute unit budget
     computeBudget: TransactionTemplateOverrides<P, any>['computeBudget'];
 
-    // default is confirmed level
+    // default is confirmed
     confirmationCommitment: Commitment;
+
+    // automatically retries a transaction when it fails with block hash expiration or already sent tx and more.
+    // never use this option in a production environment, it is for fast block-producing test validators.
+    maxRetriesOnBlockErrors: number;
   };
   debug: boolean;
 };
@@ -164,6 +168,8 @@ export class RuntimeContext extends Context<null> implements Runtime {
           options?.transaction?.signers?.[0] ??
           undefined,
         computeBudget: options?.transaction?.computeBudget ?? undefined,
+        maxRetriesOnBlockErrors:
+          options?.transaction?.maxRetriesOnBlockErrors ?? 0,
       },
       debug: options?.debug == true,
     };
