@@ -373,7 +373,10 @@ export abstract class TestValidator<T extends TestValidatorType> {
       });
       await sendAndConfirm(tx, {
         commitment: 'confirmed',
+        skipPreflight: true,
+        maxRetries: 5n,
       });
+      await new Promise((resolve) => setTimeout(resolve, 1000));
     }
   }
 }

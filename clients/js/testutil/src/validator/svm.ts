@@ -78,6 +78,7 @@ export class SVMValidator extends TestValidator<'svm'> {
           !options.warpSlot
             ? [
                 ['--faucet-sol', 1_000_000n.toString()],
+                ['--faucet-time-slice-secs', '0'],
                 ['--limit-ledger-size', options.limitLedgerSize.toString()],
                 ['--slots-per-epoch', options.slotsPerEpoch.toString()],
                 ['--ticks-per-slot', options.ticksPerSlot.toString()],
@@ -282,7 +283,9 @@ export class SVMValidator extends TestValidator<'svm'> {
 
   async airdrop(pubkey: string, lamports: bigint): Promise<void> {
     const signature = await this.rpc
-      .requestAirdrop(pubkey as Address, lamports as Lamports)
+      .requestAirdrop(pubkey as Address, lamports as Lamports, {
+        commitment: 'confirmed',
+      })
       .send();
     const abortController = new AbortController();
     const signatureNotifications = await this.rpcSubscriptions
@@ -302,6 +305,10 @@ export class SVMValidator extends TestValidator<'svm'> {
       }
     }
     clearTimeout(timeoutTimer);
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    if (this.options.debug) {
+      this.logger(`AIRDROP ${lamports} TO ${pubkey}`);
+    }
   }
 
   async getAccount(

@@ -454,6 +454,141 @@ describe('restaking.fragSOL test', async () => {
     `);
   });
 
+  test('pricing source addresses field in fund account updates correctly', async () => {
+    await expectMasked(ctx.fund.updatePrices.execute(null)).resolves
+      .toMatchInlineSnapshot(`
+      {
+        "args": null,
+        "events": {
+          "operatorUpdatedFundPrices": {
+            "fundAccount": "7xraTDZ4QWgvgJ5SCZp4hyJN2XEfyGRySQjdG49iZfU8",
+            "receiptTokenMint": "Cs29UiPhAkM2v8fZW7qCJ1UjhF1UAhgrsKj61yGGYizD",
+          },
+          "unknown": [],
+        },
+        "signature": "MASKED(signature)",
+        "slot": "MASKED(/[.*S|s]lots?$/)",
+        "succeeded": true,
+      }
+    `);
+
+    // 1) pricing_sourece_addresses field of fund account has correct data
+    let fundAccount = await ctx.fund.resolveAccount(true);
+    let normalizedTokenPool =
+      await ctx.normalizedTokenPool.resolveAddress(true);
+
+    // get pricing sources from fund account manually
+    const getPricingSourcesManually = () => {
+      const data = fundAccount!.data;
+      const supportedTokens = data.supportedTokens.slice(
+        0,
+        data.numSupportedTokens
+      );
+      const restakingVaults = data.restakingVaults.slice(
+        0,
+        data.numRestakingVaults
+      );
+
+      return supportedTokens
+        .filter(
+          (v) => v.pricingSource.discriminant != 8 // skip pegged token
+        ) // skip pegged token
+        .map((v) => v.pricingSource.address)
+        .concat(restakingVaults.map((v) => v.receiptTokenPricingSource.address))
+        .concat(normalizedTokenPool ? [normalizedTokenPool] : []);
+    };
+
+    // get pricing sources from fund account field (new feature)
+    const getPricingSourcesByField = () => {
+      const data = fundAccount!.data;
+      return data.pricingSourceAddresses.slice(
+        0,
+        data.numPricingSourceAddresses
+      );
+    };
+    expect(getPricingSourcesManually()).toEqual(getPricingSourcesByField());
+
+    // 2) user can get pricing_source_addresses by parsing fund account
+    // - num_pricing_source_addresses offset: 0x9000
+    // - pricing_source_addresses offset: 0x9001
+    const fetchedAccount = await ctx.runtime.fetchAccount(fundAccount!.address);
+    const byteData = fetchedAccount!.data;
+
+    const encodedNumPricingSourceAddresses = byteData.slice(0x9000, 0x9001);
+    const numPricingSourceAddresses = Buffer.from(
+      encodedNumPricingSourceAddresses
+    ).readUInt8(0);
+    expect(numPricingSourceAddresses).toEqual(
+      fundAccount!.data.numPricingSourceAddresses
+    );
+
+    const ADDRESS_SIZE = 32;
+    const MAX_PRICING_SOURCE_ADDRESSES = 33;
+    const pricingSourceAddresses: string[] = [];
+    const encodedPricingSourceAddresses = byteData.slice(
+      0x9001,
+      0x9001 + ADDRESS_SIZE * MAX_PRICING_SOURCE_ADDRESSES
+    );
+
+    for (
+      let offset = 0;
+      offset < ADDRESS_SIZE * MAX_PRICING_SOURCE_ADDRESSES;
+      offset += ADDRESS_SIZE
+    ) {
+      const chunk = encodedPricingSourceAddresses.slice(
+        offset,
+        offset + ADDRESS_SIZE
+      );
+      const address = getAddressDecoder().decode(chunk);
+      pricingSourceAddresses.push(address);
+    }
+    expect(pricingSourceAddresses).toEqual(
+      fundAccount!.data.pricingSourceAddresses
+    );
+
+    const prevNumPricingSourceAddresses = numPricingSourceAddresses;
+
+    // 3) pricing_source_addresses updates correctly after calling add_supported_token ix & remove_supported_token
+    // 3-1) add bSol as supported token
+    await ctx.fund.addSupportedToken.execute({
+      mint: 'bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1',
+      pricingSource: {
+        __kind: 'SPLStakePool',
+        address: 'stk9ApL5HeVAwPLr3TLhDXdZS8ptVu7zp6ov8HFDuMi',
+      },
+    });
+
+    await ctx.normalizedTokenPool.addSupportedToken.execute({
+      mint: 'bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1',
+      pricingSource: {
+        __kind: 'SPLStakePool',
+        address: 'stk9ApL5HeVAwPLr3TLhDXdZS8ptVu7zp6ov8HFDuMi',
+      },
+    });
+    fundAccount = await ctx.fund.resolveAccount(true);
+    normalizedTokenPool = await ctx.normalizedTokenPool.resolveAddress(true);
+    expect(getPricingSourcesManually()).toEqual(getPricingSourcesByField());
+    expect(fundAccount!.data.numPricingSourceAddresses - 1).toEqual(
+      prevNumPricingSourceAddresses
+    );
+
+    // 3-2) remove bSol from supported tokens
+    await ctx.normalizedTokenPool.removeSupportedToken.execute({
+      mint: 'bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1',
+    });
+
+    await ctx.fund.removeSupportedToken.execute({
+      mint: 'bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1',
+    });
+
+    fundAccount = await ctx.fund.resolveAccount(true);
+    normalizedTokenPool = await ctx.normalizedTokenPool.resolveAddress(true);
+    expect(getPricingSourcesManually()).toEqual(getPricingSourcesByField());
+    expect(fundAccount!.data.numPricingSourceAddresses).toEqual(
+      prevNumPricingSourceAddresses
+    );
+  });
+
   test('remove supported tokens', async () => {
     await expect(
       ctx.fund.addSupportedToken.execute({
@@ -1765,179 +1900,5 @@ describe('restaking.fragSOL test', async () => {
         },
       ]
     `);
-  });
-
-  /** 5. reward settlment clearing **/
-  test('reward settlement clears one block before block addition when block queue is full', async () => {
-    let rewardAccount = await ctx.reward.resolveAccount(true);
-    let rewardSettlement =
-      rewardAccount!.data.bonusRewardPool.rewardSettlements1[0];
-
-    const prevNumSettlementBlocks = rewardSettlement.numSettlementBlocks;
-    const prevRemainingAmount = rewardSettlement.remainingAmount;
-    const fPointMint = '11111111111111111111111111111111'; // fPoint
-    const remainingAmountOfFirstBlock =
-      rewardSettlement.settlementBlocks[0].amount;
-
-    // settle up to 64 blocks to make queue full
-    for (let i = 1; i <= 64 - prevNumSettlementBlocks; i += 1) {
-      await ctx.reward.settleReward.execute({
-        isBonus: true,
-        mint: fPointMint,
-        amount: BigInt(i) * 500_000_000n,
-      });
-      await validator.skipSlots(10n);
-    }
-
-    // settle one more block to trigger force_clear_settlement_block
-    await ctx.reward.settleReward.execute({
-      isBonus: true,
-      mint: fPointMint,
-      amount: 100_000_000n,
-    });
-
-    rewardAccount = await ctx.reward.resolveAccount(true);
-    rewardSettlement =
-      rewardAccount!.data.bonusRewardPool.rewardSettlements1[0];
-    expect(rewardSettlement.remainingAmount).toEqual(
-      prevRemainingAmount + remainingAmountOfFirstBlock
-    );
-    expect(rewardSettlement.numSettlementBlocks).toEqual(64);
-  });
-
-  /** 6. pricing source addresses **/
-  test('pricing source addresses field in fund account updates correctly', async () => {
-    await expectMasked(ctx.fund.updatePrices.execute(null)).resolves
-      .toMatchInlineSnapshot(`
-      {
-        "args": null,
-        "events": {
-          "operatorUpdatedFundPrices": {
-            "fundAccount": "7xraTDZ4QWgvgJ5SCZp4hyJN2XEfyGRySQjdG49iZfU8",
-            "receiptTokenMint": "Cs29UiPhAkM2v8fZW7qCJ1UjhF1UAhgrsKj61yGGYizD",
-          },
-          "unknown": [],
-        },
-        "signature": "MASKED(signature)",
-        "slot": "MASKED(/[.*S|s]lots?$/)",
-        "succeeded": true,
-      }
-    `);
-
-    // 1) pricing_sourece_addresses field of fund account has correct data
-    let fundAccount = await ctx.fund.resolveAccount(true);
-    let normalizedTokenPool =
-      await ctx.normalizedTokenPool.resolveAddress(true);
-
-    // get pricing sources from fund account manually
-    const getPricingSourcesManually = () => {
-      const data = fundAccount!.data;
-      const supportedTokens = data.supportedTokens.slice(
-        0,
-        data.numSupportedTokens
-      );
-      const restakingVaults = data.restakingVaults.slice(
-        0,
-        data.numRestakingVaults
-      );
-
-      return supportedTokens
-        .filter(
-          (v) => v.pricingSource.discriminant != 8 // skip pegged token
-        ) // skip pegged token
-        .map((v) => v.pricingSource.address)
-        .concat(restakingVaults.map((v) => v.receiptTokenPricingSource.address))
-        .concat(normalizedTokenPool ? [normalizedTokenPool] : []);
-    };
-
-    // get pricing sources from fund account field (new feature)
-    const getPricingSourcesByField = () => {
-      const data = fundAccount!.data;
-      return data.pricingSourceAddresses.slice(
-        0,
-        data.numPricingSourceAddresses
-      );
-    };
-    expect(getPricingSourcesManually()).toEqual(getPricingSourcesByField());
-
-    // 2) user can get pricing_source_addresses by parsing fund account
-    // - num_pricing_source_addresses offset: 0x9000
-    // - pricing_source_addresses offset: 0x9001
-    const fetchedAccount = await ctx.runtime.fetchAccount(fundAccount!.address);
-    const byteData = fetchedAccount!.data;
-
-    const encodedNumPricingSourceAddresses = byteData.slice(0x9000, 0x9001);
-    const numPricingSourceAddresses = Buffer.from(
-      encodedNumPricingSourceAddresses
-    ).readUInt8(0);
-    expect(numPricingSourceAddresses).toEqual(
-      fundAccount!.data.numPricingSourceAddresses
-    );
-
-    const ADDRESS_SIZE = 32;
-    const MAX_PRICING_SOURCE_ADDRESSES = 33;
-    const pricingSourceAddresses: string[] = [];
-    const encodedPricingSourceAddresses = byteData.slice(
-      0x9001,
-      0x9001 + ADDRESS_SIZE * MAX_PRICING_SOURCE_ADDRESSES
-    );
-
-    for (
-      let offset = 0;
-      offset < ADDRESS_SIZE * MAX_PRICING_SOURCE_ADDRESSES;
-      offset += ADDRESS_SIZE
-    ) {
-      const chunk = encodedPricingSourceAddresses.slice(
-        offset,
-        offset + ADDRESS_SIZE
-      );
-      const address = getAddressDecoder().decode(chunk);
-      pricingSourceAddresses.push(address);
-    }
-    expect(pricingSourceAddresses).toEqual(
-      fundAccount!.data.pricingSourceAddresses
-    );
-
-    const prevNumPricingSourceAddresses = numPricingSourceAddresses;
-
-    // 3) pricing_source_addresses updates correctly after calling add_supported_token ix & remove_supported_token
-    // 3-1) add bSol as supported token
-    await ctx.fund.addSupportedToken.execute({
-      mint: 'bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1',
-      pricingSource: {
-        __kind: 'SPLStakePool',
-        address: 'stk9ApL5HeVAwPLr3TLhDXdZS8ptVu7zp6ov8HFDuMi',
-      },
-    });
-
-    await ctx.normalizedTokenPool.addSupportedToken.execute({
-      mint: 'bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1',
-      pricingSource: {
-        __kind: 'SPLStakePool',
-        address: 'stk9ApL5HeVAwPLr3TLhDXdZS8ptVu7zp6ov8HFDuMi',
-      },
-    });
-    fundAccount = await ctx.fund.resolveAccount(true);
-    normalizedTokenPool = await ctx.normalizedTokenPool.resolveAddress(true);
-    expect(getPricingSourcesManually()).toEqual(getPricingSourcesByField());
-    expect(fundAccount!.data.numPricingSourceAddresses - 1).toEqual(
-      prevNumPricingSourceAddresses
-    );
-
-    // 3-2) remove bSol from supported tokens
-    await ctx.normalizedTokenPool.removeSupportedToken.execute({
-      mint: 'bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1',
-    });
-
-    await ctx.fund.removeSupportedToken.execute({
-      mint: 'bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1',
-    });
-
-    fundAccount = await ctx.fund.resolveAccount(true);
-    normalizedTokenPool = await ctx.normalizedTokenPool.resolveAddress(true);
-    expect(getPricingSourcesManually()).toEqual(getPricingSourcesByField());
-    expect(fundAccount!.data.numPricingSourceAddresses).toEqual(
-      prevNumPricingSourceAddresses
-    );
   });
 });

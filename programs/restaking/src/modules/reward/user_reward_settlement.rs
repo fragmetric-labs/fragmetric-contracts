@@ -88,7 +88,7 @@ impl UserRewardSettlement {
         Ok(())
     }
 
-    /// We known ending_slot >= last_updated_slot,
+    /// We know ending_slot >= last_updated_slot,
     /// and starting_slot = last_settled_slot.
     /// So there are only two cases:
     /// case 1(last_updated_slot < last_settled_slot): updated...[starting...ending)

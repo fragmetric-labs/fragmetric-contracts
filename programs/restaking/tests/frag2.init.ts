@@ -72,19 +72,6 @@ export async function initializeFrag2(testCtx: TestSuiteContext) {
       }),
     () =>
       ctx.reward.addReward.execute({
-        mint: 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5',
-        decimals: 9,
-        name: 'frag',
-        description: 'FRAG yield',
-      }),
-    () => validator.skipSlots(1n),
-    () =>
-      ctx.reward.settleReward.execute({
-        mint: 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5',
-        amount: 0n,
-      }),
-    () =>
-      ctx.reward.addReward.execute({
         mint: 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF',
         decimals: 9,
         name: 'fragvote',

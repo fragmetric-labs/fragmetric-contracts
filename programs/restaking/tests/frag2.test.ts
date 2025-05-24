@@ -189,40 +189,10 @@ describe('restaking.frag2 test', async () => {
               "claimedAmountUpdatedSlot": "MASKED(/[.*S|s]lots?$/)",
               "remainingAmount": 0n,
               "reward": {
-                "claimable": false,
-                "decimals": 9,
-                "description": "FRAG yield",
-                "id": 0,
-                "mint": "FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5",
-                "name": "frag",
-                "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
-              },
-              "settledAmount": 0n,
-              "settlementBlocksLastRewardPoolContribution": "MASKED(/[.*C|c]ontribution?$/)",
-              "settlementBlocksLastSlot": "MASKED(/[.*S|s]lots?$/)",
-            },
-            {
-              "blocks": [
-                {
-                  "amount": 0n,
-                  "endingContribution": "MASKED(/[.*C|c]ontribution?$/)",
-                  "endingSlot": "MASKED(/[.*S|s]lots?$/)",
-                  "settledContribution": "MASKED(/[.*C|c]ontribution?$/)",
-                  "settledSlots": "MASKED(/[.*S|s]lots?$/)",
-                  "startingContribution": "MASKED(/[.*C|c]ontribution?$/)",
-                  "startingSlot": "MASKED(/[.*S|s]lots?$/)",
-                  "userSettledAmount": 0n,
-                  "userSettledContribution": "MASKED(/[.*C|c]ontribution?$/)",
-                },
-              ],
-              "claimedAmount": 0n,
-              "claimedAmountUpdatedSlot": "MASKED(/[.*S|s]lots?$/)",
-              "remainingAmount": 0n,
-              "reward": {
                 "claimable": true,
                 "decimals": 9,
                 "description": "Governance vote distribution",
-                "id": 1,
+                "id": 0,
                 "mint": "FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF",
                 "name": "fragvote",
                 "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
@@ -252,19 +222,10 @@ describe('restaking.frag2 test', async () => {
         "receiptTokenMint": "DCoj5m7joWjP9T3iPH22q7bDBoGkgUX4ffoL1eQZstwk",
         "rewards": [
           {
-            "claimable": false,
-            "decimals": 9,
-            "description": "FRAG yield",
-            "id": 0,
-            "mint": "FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5",
-            "name": "frag",
-            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
-          },
-          {
             "claimable": true,
             "decimals": 9,
             "description": "Governance vote distribution",
-            "id": 1,
+            "id": 0,
             "mint": "FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF",
             "name": "fragvote",
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
@@ -510,7 +471,7 @@ describe('restaking.frag2 test', async () => {
   });
 
   test('virtual vault harvest/distribute', async () => {
-    const voteRewardAmount = 100_000_000n; // 100
+    const voteRewardAmount = 100_000_000n;
     await validator.airdropToken(
       '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
       'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF',
@@ -528,8 +489,227 @@ describe('restaking.frag2 test', async () => {
     const globalReward_2 = await ctx.reward.resolve(true);
 
     expect(
-      globalReward_2!.basePool.settlements[1].blocks[0].amount -
-        globalReward_1!.basePool.settlements[1].blocks[0].amount
+      globalReward_2!.basePool.settlements[0].blocks[0].amount -
+        globalReward_1!.basePool.settlements[0].blocks[0].amount
     ).toEqual(voteRewardAmount);
+  });
+
+  /** 3. reward settlement with clearing **/
+  test('reward settlement clears one block before block addition when block queue is full', async () => {
+    // ensure a few blocks filled
+    await validator.airdropToken(
+      (await ctx.reward.reserve.resolveAddress())!,
+      'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF',
+      1000_000_000_000n
+    );
+    await ctx.reward.settleReward.execute({
+      mint: 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF',
+      amount: 100_000_000n,
+    });
+
+    const user1ReceiptTokenAmount = await user1.receiptToken
+      .resolve(true)
+      .then((res) => res!.amount);
+
+    // ensure a new user deposits same amount with old user
+    const res = await user2.deposit.execute(
+      {
+        assetMint: 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5',
+        assetAmount: 10_000_000_000n,
+      },
+      {
+        signers: [signer2],
+      }
+    );
+    expect(
+      res.events?.userDepositedToFund?.mintedReceiptTokenAmount
+    ).toBeGreaterThanOrEqual(user1ReceiptTokenAmount);
+    const user2OverMintedAmount =
+      res.events!.userDepositedToFund!.mintedReceiptTokenAmount -
+      user1ReceiptTokenAmount;
+    await user2.requestWithdrawal.execute(
+      {
+        assetMint: 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5',
+        receiptTokenAmount: user2OverMintedAmount,
+      },
+      {
+        signers: [signer2],
+      }
+    );
+
+    const user2ReceiptTokenAmount = await user2.receiptToken
+      .resolve(true)
+      .then((res) => res!.amount);
+    expect(user2ReceiptTokenAmount).toEqual(user1ReceiptTokenAmount);
+
+    // prepare fresh contribution accounting between two users
+    await ctx.reward.settleReward.execute({
+      mint: 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF',
+      amount: 0n,
+    });
+
+    // settle new fresh 64 blocks to clear stale blocks
+    let globalReward = (await ctx.reward.resolve(true))!;
+    expect(globalReward.basePool.settlements[0].reward.mint).toEqual(
+      'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF'
+    );
+
+    const remainingAmount =
+      globalReward.basePool.settlements[0].remainingAmount;
+    const clearingAmount = globalReward.basePool.settlements[0].blocks.reduce(
+      (acc, block) => acc + block.amount,
+      0n
+    );
+
+    for (let i = 0; i < 64; i++) {
+      await validator.skipSlots(10n);
+      await ctx.reward.settleReward.execute({
+        mint: 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF',
+        amount: 100_000_000n,
+      });
+    }
+
+    globalReward = (await ctx.reward.resolve(true))!;
+    expect(globalReward.basePool.settlements[0].remainingAmount).toEqual(
+      remainingAmount + clearingAmount
+    );
+    expect(globalReward.basePool.settlements[0].blocks.length).toEqual(64);
+
+    // only the old user lost the reward for the stale blocks portion.
+    await user1.reward.claim.execute(
+      {
+        mint: 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF',
+        amount: null,
+        recipient: null,
+      },
+      {
+        signers: [signer1],
+      }
+    );
+    await expectMasked(user1.reward.resolve(true)).resolves
+      .toMatchInlineSnapshot(`
+      {
+        "basePool": {
+          "contribution": "MASKED(/[.*C|c]ontribution?$/)",
+          "settlements": [
+            {
+              "claimedAmount": 3200000000n,
+              "reward": {
+                "claimable": true,
+                "decimals": 9,
+                "description": "Governance vote distribution",
+                "id": 0,
+                "mint": "FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF",
+                "name": "fragvote",
+                "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+              },
+              "settledAmount": 3200000000n,
+              "settledContribution": "MASKED(/[.*C|c]ontribution?$/)",
+              "settledSlot": "MASKED(/[.*S|s]lots?$/)",
+            },
+          ],
+          "tokenAllocatedAmount": {
+            "records": [
+              {
+                "amount": 5000000000n,
+                "contributionAccrualRate": 1,
+              },
+            ],
+            "totalAmount": 5000000000n,
+          },
+          "updatedSlot": "MASKED(/[.*S|s]lots?$/)",
+        },
+        "bonusPool": {
+          "contribution": "MASKED(/[.*C|c]ontribution?$/)",
+          "settlements": [],
+          "tokenAllocatedAmount": {
+            "records": [
+              {
+                "amount": 5000000000n,
+                "contributionAccrualRate": 1,
+              },
+            ],
+            "totalAmount": 5000000000n,
+          },
+          "updatedSlot": "MASKED(/[.*S|s]lots?$/)",
+        },
+        "delegate": null,
+        "receiptTokenMint": "DCoj5m7joWjP9T3iPH22q7bDBoGkgUX4ffoL1eQZstwk",
+        "user": "FrhgfmDgXvzCmx2zpoYkJN2Xmx3djpQji8eZNzpZEWYY",
+      }
+    `);
+
+    await user2.reward.claim.execute(
+      {
+        mint: 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF',
+        amount: null,
+        recipient: null,
+      },
+      {
+        signers: [signer2],
+      }
+    );
+    await expectMasked(user2.reward.resolve(true)).resolves
+      .toMatchInlineSnapshot(`
+      {
+        "basePool": {
+          "contribution": "MASKED(/[.*C|c]ontribution?$/)",
+          "settlements": [
+            {
+              "claimedAmount": 3200000000n,
+              "reward": {
+                "claimable": true,
+                "decimals": 9,
+                "description": "Governance vote distribution",
+                "id": 0,
+                "mint": "FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF",
+                "name": "fragvote",
+                "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+              },
+              "settledAmount": 3200000000n,
+              "settledContribution": "MASKED(/[.*C|c]ontribution?$/)",
+              "settledSlot": "MASKED(/[.*S|s]lots?$/)",
+            },
+          ],
+          "tokenAllocatedAmount": {
+            "records": [
+              {
+                "amount": 5000000000n,
+                "contributionAccrualRate": 1,
+              },
+            ],
+            "totalAmount": 5000000000n,
+          },
+          "updatedSlot": "MASKED(/[.*S|s]lots?$/)",
+        },
+        "bonusPool": {
+          "contribution": "MASKED(/[.*C|c]ontribution?$/)",
+          "settlements": [],
+          "tokenAllocatedAmount": {
+            "records": [
+              {
+                "amount": 5000000000n,
+                "contributionAccrualRate": 1,
+              },
+            ],
+            "totalAmount": 5000000000n,
+          },
+          "updatedSlot": "MASKED(/[.*S|s]lots?$/)",
+        },
+        "delegate": null,
+        "receiptTokenMint": "DCoj5m7joWjP9T3iPH22q7bDBoGkgUX4ffoL1eQZstwk",
+        "user": "8Ghhx1z1VCgLZAeFRjJhLy4kq15GrQzrZk71qKSok3vk",
+      }
+    `);
+
+    expect(
+      globalReward.basePool.settlements[0]
+        .settlementBlocksLastRewardPoolContribution
+    ).toEqual(
+      user1.reward.account!.data.baseUserRewardPool.rewardSettlements1[0]
+        .totalSettledContribution +
+        user2.reward.account!.data.baseUserRewardPool.rewardSettlements1[0]
+          .totalSettledContribution
+    );
   });
 });
