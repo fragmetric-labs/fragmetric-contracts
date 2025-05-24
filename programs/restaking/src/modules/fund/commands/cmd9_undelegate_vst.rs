@@ -122,8 +122,8 @@ impl UndelegateVSTCommand {
                 let required_accounts = JitoRestakingVaultService::find_accounts_to_new(address)?;
                 command.with_required_accounts(required_accounts)
             }
-            Some(TokenPricingSource::SolvBTCVault { .. })
-            | Some(TokenPricingSource::VirtualVault { .. }) => {
+            Some(TokenPricingSource::VirtualVault { .. }) => command.without_required_accounts(),
+            Some(TokenPricingSource::SolvBTCVault { .. }) => {
                 // TODO/v0.7.0: deal with solv vault if needed
                 command.without_required_accounts()
             }
@@ -229,8 +229,11 @@ impl UndelegateVSTCommand {
 
                 Ok((None, Some(entry)))
             }
-            Some(TokenPricingSource::SolvBTCVault { .. })
-            | Some(TokenPricingSource::VirtualVault { .. }) => {
+            Some(TokenPricingSource::VirtualVault { .. }) => Ok((
+                None,
+                self.create_prepare_command(ctx, vaults[1..].to_vec())?,
+            )),
+            Some(TokenPricingSource::SolvBTCVault { .. }) => {
                 // TODO/v0.7.0: deal with solv vault if needed
                 Ok((
                     None,
