@@ -38,7 +38,7 @@ jobs:
   ci:
     if: ${{ github.event_name != 'workflow_dispatch' && !contains(github.event.head_commit.message, '[skip ci]') }}
     name: build and test
-    runs-on: macos-latest # arch: arm64
+    runs-on: macos-latest-xlarge # arch: arm64 (M1)
     steps:
       # checkout
       - uses: actions/checkout@v4

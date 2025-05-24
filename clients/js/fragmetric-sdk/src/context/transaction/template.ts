@@ -341,7 +341,7 @@ export class TransactionTemplateContext<
                 );
                 retriesOnBlockErrors++;
                 await new Promise((resolve) =>
-                  setTimeout(resolve, Math.floor(Math.random() * 400) + 100)
+                  setTimeout(resolve, Math.floor(Math.random() * 5000) + 1000)
                 );
                 continue;
               }
