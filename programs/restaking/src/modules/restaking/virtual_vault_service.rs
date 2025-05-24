@@ -23,7 +23,7 @@ impl<'info> VirtualVaultService<'info> {
 
     pub fn validate_vault(
         vault_account: &AccountInfo,
-        vault_receipt_token_mint: &AccountInfo,
+        vault_receipt_token_mint: &'info AccountInfo<'info>,
         fund_account: &AccountInfo,
     ) -> Result<()> {
         // validate vault address
@@ -40,10 +40,7 @@ impl<'info> VirtualVaultService<'info> {
 
         // validate vrt mint
         let vault_receipt_token_mint_data =
-            Mint::try_deserialize(&mut &vault_receipt_token_mint.data.borrow()[..])?;
-        // TODO: lifetime error occurs
-        // let vault_receipt_token_mint_data =
-        //     InterfaceAccount::<Mint>::try_from(vault_receipt_token_mint)?;
+            InterfaceAccount::<Mint>::try_from(vault_receipt_token_mint)?;
 
         require_eq!(vault_receipt_token_mint_data.supply, 0);
         require!(

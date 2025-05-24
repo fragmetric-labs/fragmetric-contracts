@@ -15,10 +15,10 @@ use crate::modules::pricing::TokenPricingSource;
 /// Validate vault account based on the owner(vault program).
 ///
 /// returns pricing source
-pub(in crate::modules) fn validate_vault(
+pub(in crate::modules) fn validate_vault<'info>(
     vault_account: &AccountInfo,
     vault_supported_token_mint: &AccountInfo,
-    vault_receipt_token_mint: &AccountInfo,
+    vault_receipt_token_mint: &'info AccountInfo<'info>,
     fund_account: &AccountInfo,
 ) -> Result<TokenPricingSource> {
     match vault_account.owner {
