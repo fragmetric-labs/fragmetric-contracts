@@ -11,8 +11,6 @@ import * as web3 from '@solana/web3.js';
 import * as v from 'valibot';
 import {
   AccountContext,
-  TokenAccountContext,
-  TokenMintAccountContext,
   TransactionTemplateContext,
   transformAddressResolverVariant,
 } from '../../context';
@@ -45,9 +43,7 @@ export class VirtualVaultAccountContext extends AccountContext<
         const [virtualVaultAddr] = web3.PublicKey.findProgramAddressSync(
           [
             Buffer.from('virtual_vault'),
-            new web3.PublicKey(
-              vrtMint
-            ).toBuffer(),
+            new web3.PublicKey(vrtMint).toBuffer(),
           ],
           new web3.PublicKey(
             this.parent.parent.parent.program.address.toString()
@@ -107,9 +103,7 @@ export class VirtualVaultAccountContext extends AccountContext<
           return [
             system.getCreateAccountInstruction({
               payer: createNoopSigner(payer as Address),
-              newAccount: createNoopSigner(
-                args.mint as Address
-              ),
+              newAccount: createNoopSigner(args.mint as Address),
               lamports: rent,
               space,
               programAddress: token.TOKEN_PROGRAM_ADDRESS,
