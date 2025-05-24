@@ -113,7 +113,7 @@ export async function createTestSuiteContext(config?: {
   await validator.airdrop(feePayer, 1_000_000_000_000n);
 
   const sdk: SDK = await import(
-    config?.useDistSDK
+    resolvedConfig.useDistSDK
       ? '@fragmetric-labs/sdk'
       : '../../clients/js/fragmetric-sdk/src'
   );

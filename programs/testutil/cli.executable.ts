@@ -1,9 +1,9 @@
 #!/usr/bin/env pnpm tsx --no-warnings=ExperimentalWarning
 
+import { initializeFrag2 } from '../restaking/tests/frag2.init';
 import { initializeFragBTC } from '../restaking/tests/fragbtc.init';
 import { initializeFragJTO } from '../restaking/tests/fragjto.init';
 import { initializeFragSOL } from '../restaking/tests/fragsol.init';
-import { initializeFragSquare } from '../restaking/tests/fragsquare.init';
 import { initializeCBBTCVault } from '../solv/tests/cbbtc.init';
 import { initializeWBTCVault } from '../solv/tests/wbtc.init';
 import { initializeZBTCVault } from '../solv/tests/zbtc.init';
@@ -29,8 +29,8 @@ createTestSuiteContext({ validator: 'litesvm' })
               return initializeFragBTC(ctx).initializationTasks;
             })
             .then(async () => {
-              ctx.sdk.logger.start('Initialize fragSquare...');
-              return (await initializeFragSquare(ctx)).initializationTasks;
+              ctx.sdk.logger.start('Initialize frag2...');
+              return (await initializeFrag2(ctx)).initializationTasks;
             })
             .then(() => {});
         }

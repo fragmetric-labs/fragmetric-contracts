@@ -1,3 +1,4 @@
+import * as orca from '@orca-so/whirlpools-client';
 import * as token from '@solana-program/token';
 import {
   AccountInfoBase,
@@ -6,6 +7,7 @@ import {
   Address,
   Base64EncodedBytes,
   getBase64Decoder,
+  Lamports,
   some,
 } from '@solana/kit';
 import { MAX_U64 } from '../../../context/constants';
@@ -13,13 +15,98 @@ import * as jitoVault from '../../../generated/jito_vault';
 import { RestakingProgram } from '../program';
 
 export function createMockTool(program: RestakingProgram) {
+  const localFundManager =
+    '5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx' as Address;
+
   return async (key: string) => {
     let account:
       | AccountInfoWithPubkey<
           AccountInfoBase & AccountInfoWithBase64EncodedData
         >
       | undefined = undefined;
-    if (key == 'fragsol_jito_nsol_vrt_mint') {
+    if (key == 'frag') {
+      account = {
+        pubkey: 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5' as Address,
+        account: {
+          owner: token.TOKEN_PROGRAM_ADDRESS,
+          executable: false,
+          lamports: 1461600n as Lamports,
+          rentEpoch: MAX_U64,
+          space: 82n,
+          data: [
+            getBase64Decoder().decode(
+              token.getMintEncoder().encode({
+                mintAuthority: null,
+                supply: 1_000_000_000_000_000_000n,
+                decimals: 9,
+                isInitialized: true,
+                freezeAuthority: null,
+              })
+            ) as Base64EncodedBytes,
+            'base64',
+          ],
+        },
+      };
+    } else if (key == 'fragvote') {
+      account = {
+        pubkey: 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF' as Address,
+        account: {
+          owner: token.TOKEN_PROGRAM_ADDRESS,
+          executable: false,
+          lamports: 1461600n as Lamports,
+          rentEpoch: MAX_U64,
+          space: 82n,
+          data: [
+            getBase64Decoder().decode(
+              token.getMintEncoder().encode({
+                mintAuthority: localFundManager,
+                supply: 1_000_000_000_000_000_000n,
+                decimals: 9,
+                isInitialized: true,
+                freezeAuthority: null,
+              })
+            ) as Base64EncodedBytes,
+            'base64',
+          ],
+        },
+      };
+    } else if (key == 'frag_orca_dex_liqudity_pool') {
+      const tokenMintA =
+        'So11111111111111111111111111111111111111112' as Address;
+      const tokenMintB =
+        'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5' as Address;
+      const src = await orca.fetchWhirlpool(
+        program.runtime.rpc,
+        'Hp53XEtt4S8SvPCXarsLSdGfZBuUr5mMmZmX2DRNXQKp' as Address // SOL/JitoSOL
+      );
+
+      const [whirlpool] = await orca.getWhirlpoolAddress(
+        src.data.whirlpoolsConfig,
+        tokenMintA,
+        tokenMintB,
+        src.data.tickSpacing
+      );
+      account = {
+        pubkey: whirlpool,
+        account: {
+          owner: src.programAddress,
+          executable: src.executable,
+          lamports: src.lamports,
+          rentEpoch: MAX_U64,
+          space: src.space,
+          data: [
+            getBase64Decoder().decode(
+              orca.getWhirlpoolEncoder().encode({
+                ...src.data,
+                tokenMintA,
+                tokenMintB,
+              })
+            ) as Base64EncodedBytes,
+            'base64',
+          ],
+        },
+      };
+    } else if (key == 'fragsol_jito_nsol_vrt_mint') {
       const src = await token.fetchMint(
         program.runtime.rpc,
         'CkXLPfDG3cDawtUvnztq99HdGoQWhJceBZxqKYL2TUrg' as Address
@@ -138,8 +225,6 @@ export function createMockTool(program: RestakingProgram) {
         program.runtime.rpc,
         'BmJvUzoiiNBRx3v2Gqsix9WvVtw8FaztrfBHQyqpMbTd' as Address
       );
-      const localFundManager =
-        '5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx' as Address;
       Object.assign(src.data, {
         ...src.data,
         additionalAssetsNeedUnstaking: 0n,
