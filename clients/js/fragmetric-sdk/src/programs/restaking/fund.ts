@@ -6,6 +6,7 @@ import {
   Account,
   AccountRole,
   Address,
+  BaseAccount,
   createNoopSigner,
   EncodedAccount,
   getAddressEncoder,
@@ -36,7 +37,7 @@ import { RestakingFundWrapAccountContext } from './fund_wrap';
 import { RestakingProgram } from './program';
 import { RestakingReceiptTokenMintAccountContext } from './receipt_token_mint';
 import { JitoVaultAccountContext } from './restaking_vault_jito';
-import { VirtualVaultAccountContext } from './virtual_vault';
+import { VirtualVaultAccountContext } from './restaking_vault_virtual';
 
 export class RestakingFundAccountContext extends AccountContext<
   RestakingReceiptTokenMintAccountContext,
@@ -195,7 +196,10 @@ export class RestakingFundAccountContext extends AccountContext<
 
   readonly restakingVaults = new IterativeAccountContext<
     any,
-    AccountContext<any, Account<jitoVault.Vault | solv.VaultAccount>>
+    AccountContext<
+      any,
+      Account<jitoVault.Vault | solv.VaultAccount | BaseAccount>
+    >
   >(
     this,
     async (parent: RestakingFundAccountContext) => {
@@ -218,25 +222,31 @@ export class RestakingFundAccountContext extends AccountContext<
   );
 
   get jitoRestakingVaults(): JitoVaultAccountContext[] | undefined {
-    return this.restakingVaults.account?.filter(
+    return this.restakingVaults.children.filter(
       (v) => v instanceof JitoVaultAccountContext
     );
   }
 
   get solvBTCVaults(): SolvVaultAccountContext[] | undefined {
-    return this.restakingVaults.account?.filter(
+    return this.restakingVaults.children.filter(
       (v) => v instanceof SolvVaultAccountContext
     );
   }
 
-  restakingVault(vault: string, program: string) {
+  get virtualVaults(): VirtualVaultAccountContext[] | undefined {
+    return this.restakingVaults.children.filter(
+      (v) => v instanceof VirtualVaultAccountContext
+    );
+  }
+
+  restakingVault(vault: string | null, program: string) {
     switch (program) {
       case jitoVault.JITO_VAULT_PROGRAM_ADDRESS:
-        return new JitoVaultAccountContext(this, vault);
+        return new JitoVaultAccountContext(this, vault!);
       case this.__solvBTCVaultProgram.address:
-        return this.__solvBTCVaultProgram.vault(vault);
-      case '11111111111111111111111111111111':
-        return new VirtualVaultAccountContext(this, vault);
+        return this.__solvBTCVaultProgram.vault(vault!);
+      case system.SYSTEM_PROGRAM_ADDRESS:
+        return new VirtualVaultAccountContext(this);
     }
   }
 
@@ -1239,8 +1249,6 @@ export class RestakingFundAccountContext extends AccountContext<
           }
         >
       ),
-      vstMint: v.nullish(v.string()),
-      vrtMint: v.nullish(v.string()),
     }),
     {
       description: 'add a new restaking vault',
@@ -1398,28 +1406,35 @@ export class RestakingFundAccountContext extends AccountContext<
             ]);
           } else if (args.pricingSource.__kind == 'VirtualVault') {
             const vaultContext = parent.restakingVault(
-              args.vault,
-              '11111111111111111111111111111111'
+              null,
+              system.SYSTEM_PROGRAM_ADDRESS
             );
+            const vault = (await vaultContext?.resolveAddress())!;
+            const vrtMint =
+              (await vaultContext?.receiptTokenMint.resolveAddress())!;
             if (
               !(
+                vault &&
+                vrtMint &&
                 vaultContext &&
                 vaultContext instanceof VirtualVaultAccountContext
               )
             ) {
               throw new Error('invalid context: virtual vault not found');
             }
-
-            if (!args.vstMint || !args.vrtMint) {
-              throw new Error('invalid context: vst or vrt mint not found');
+            if (args.vault != vault || args.pricingSource.address != vault) {
+              throw new Error(
+                'invalid context: virtual vault address is deterministic: use ' +
+                  vault
+              );
             }
 
             const ix =
               await restaking.getFundManagerInitializeFundRestakingVaultInstructionAsync(
                 {
-                  vaultAccount: args.vault as Address,
-                  vaultReceiptTokenMint: args.vrtMint as Address,
-                  vaultSupportedTokenMint: args.vstMint as Address,
+                  vaultAccount: vault,
+                  vaultReceiptTokenMint: vrtMint,
+                  vaultSupportedTokenMint: vrtMint, // use same VRRT - notes no cash-in flow
                   fundManager: createNoopSigner(fundManager),
                   receiptTokenMint: data.receiptTokenMint,
                   program: this.program.address,
@@ -1432,35 +1447,32 @@ export class RestakingFundAccountContext extends AccountContext<
               ix.accounts.push(accountMeta);
             }
             ix.accounts.push({
-              address: args.pricingSource.address as Address,
+              address: vault,
               role: AccountRole.READONLY,
             });
 
             const fundReserve = ix.accounts[3].address;
 
+            const rent = await this.runtime.rpc
+              .getMinimumBalanceForRentExemption(BigInt(0n))
+              .send();
             return Promise.all([
+              // to make the vault account look alive
+              system.getTransferSolInstruction({
+                source: createNoopSigner(payer as Address),
+                destination: vault,
+                amount: rent,
+              }),
               token.getCreateAssociatedTokenIdempotentInstructionAsync({
                 payer: createNoopSigner(payer as Address),
-                mint: args.vrtMint as Address,
+                mint: vrtMint,
                 owner: fundReserve,
                 tokenProgram: token.TOKEN_PROGRAM_ADDRESS,
               }),
               token.getCreateAssociatedTokenIdempotentInstructionAsync({
                 payer: createNoopSigner(payer as Address),
-                mint: args.vrtMint as Address,
-                owner: args.vault as Address,
-                tokenProgram: token.TOKEN_PROGRAM_ADDRESS,
-              }),
-              token.getCreateAssociatedTokenIdempotentInstructionAsync({
-                payer: createNoopSigner(payer as Address),
-                mint: args.vstMint as Address,
-                owner: fundReserve,
-                tokenProgram: token.TOKEN_PROGRAM_ADDRESS,
-              }),
-              token.getCreateAssociatedTokenIdempotentInstructionAsync({
-                payer: createNoopSigner(payer as Address),
-                mint: args.vstMint as Address,
-                owner: args.vault as Address,
+                mint: vrtMint,
+                owner: vault,
                 tokenProgram: token.TOKEN_PROGRAM_ADDRESS,
               }),
               ix,
