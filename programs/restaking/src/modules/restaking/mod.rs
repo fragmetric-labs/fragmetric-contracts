@@ -19,6 +19,7 @@ pub(in crate::modules) fn validate_vault(
     vault_account: &AccountInfo,
     vault_supported_token_mint: &AccountInfo,
     vault_receipt_token_mint: &AccountInfo,
+    fund_account: &AccountInfo,
 ) -> Result<TokenPricingSource> {
     match vault_account.owner {
         &JITO_VAULT_PROGRAM_ID => {
@@ -36,7 +37,11 @@ pub(in crate::modules) fn validate_vault(
             address: vault_account.key(),
         }),
         &system_program::ID => {
-            VirtualVaultService::validate_vault(vault_account, vault_receipt_token_mint)?;
+            VirtualVaultService::validate_vault(
+                vault_account,
+                vault_receipt_token_mint,
+                fund_account,
+            )?;
             Ok(TokenPricingSource::VirtualVault {
                 address: vault_account.key(),
             })

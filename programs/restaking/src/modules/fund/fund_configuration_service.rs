@@ -273,6 +273,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
             vault,
             vault_supported_token_mint.as_ref(),
             vault_receipt_token_mint.as_ref(),
+            self.fund_account.as_ref(),
         )?;
 
         let mut fund_account = self.fund_account.load_mut()?;

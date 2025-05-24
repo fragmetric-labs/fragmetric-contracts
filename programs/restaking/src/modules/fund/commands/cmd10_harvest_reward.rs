@@ -616,9 +616,7 @@ impl HarvestRewardCommand {
             | &Some(TokenPricingSource::SolvBTCVault { .. }) => vault_reward_token_account
                 .amount
                 .min(vault_reward_token_account.delegated_amount),
-            &Some(TokenPricingSource::VirtualVault { .. }) => {
-                vault_reward_token_account.amount
-            }
+            &Some(TokenPricingSource::VirtualVault { .. }) => vault_reward_token_account.amount,
             _ => 0,
         };
 
@@ -984,9 +982,7 @@ impl HarvestRewardCommand {
             &Some(TokenPricingSource::JitoRestakingVault { .. }) => from_reward_token_account
                 .amount
                 .min(from_reward_token_account.delegated_amount),
-            &Some(TokenPricingSource::VirtualVault { .. }) => {
-                from_reward_token_account.amount
-            }
+            &Some(TokenPricingSource::VirtualVault { .. }) => from_reward_token_account.amount,
             _ => 0,
         };
 
@@ -1018,6 +1014,7 @@ impl HarvestRewardCommand {
                         reward_token_program.to_account_info(),
                         from_reward_token_account.to_account_info(),
                         fund_supported_token_reserve_account.to_account_info(),
+                        ctx.fund_account.to_account_info(),
                         reward_token_amount,
                     )?
             }
@@ -1140,6 +1137,7 @@ impl HarvestRewardCommand {
                                 reward_token_program.to_account_info(),
                                 from_reward_token_account.to_account_info(),
                                 reward_token_reserve_account.to_account_info(),
+                                ctx.fund_account.to_account_info(),
                                 available_reward_token_amount_to_harvest,
                             )?
                     }
