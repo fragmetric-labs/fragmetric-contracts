@@ -136,7 +136,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
                         | Some(TokenPricingSource::FragmetricRestakingFund { .. })
                         | Some(TokenPricingSource::SolvBTCVault { .. })
-                        | Some(TokenPricingSource::VirtualRestakingVault { .. })
+                        | Some(TokenPricingSource::VirtualVault { .. })
                         | None => {
                             err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
                         }
@@ -155,7 +155,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                     {
                         Some(TokenPricingSource::JitoRestakingVault { address })
                         | Some(TokenPricingSource::SolvBTCVault { address })
-                        | Some(TokenPricingSource::VirtualRestakingVault { address }) => {
+                        | Some(TokenPricingSource::VirtualVault { address }) => {
                             required_accounts.push((*address, false));
                         }
                         // otherwise fails
@@ -225,7 +225,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                             | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
                             | Some(TokenPricingSource::FragmetricRestakingFund { .. })
                             | Some(TokenPricingSource::SolvBTCVault { .. })
-                            | Some(TokenPricingSource::VirtualRestakingVault { .. })
+                            | Some(TokenPricingSource::VirtualVault { .. })
                             | None => err!(
                                 errors::ErrorCode::FundOperationCommandExecutionFailedException
                             ),
@@ -244,9 +244,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         {
                             Some(TokenPricingSource::JitoRestakingVault { .. })
                             | Some(TokenPricingSource::SolvBTCVault { .. })
-                            | Some(TokenPricingSource::VirtualRestakingVault { .. }) => {
-                                Ok(count + 1)
-                            }
+                            | Some(TokenPricingSource::VirtualVault { .. }) => Ok(count + 1),
                             // otherwise fails
                             Some(TokenPricingSource::SPLStakePool { .. })
                             | Some(TokenPricingSource::MarinadeStakePool { .. })
@@ -323,7 +321,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
                         | Some(TokenPricingSource::FragmetricRestakingFund { .. })
                         | Some(TokenPricingSource::SolvBTCVault { .. })
-                        | Some(TokenPricingSource::VirtualRestakingVault { .. })
+                        | Some(TokenPricingSource::VirtualVault { .. })
                         | None => {
                             err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
                         }
@@ -356,8 +354,12 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                             require_keys_eq!(account.key(), *address);
                             JitoRestakingVaultService::get_max_cycle_fee(account)?
                         }
-                        Some(TokenPricingSource::SolvBTCVault { address })
-                        | Some(TokenPricingSource::VirtualRestakingVault { address }) => {
+                        Some(TokenPricingSource::VirtualVault { address }) => {
+                            let account = restaking_vault_pricing_sources[i];
+                            require_keys_eq!(account.key(), *address);
+                            (0, 0)
+                        }
+                        Some(TokenPricingSource::SolvBTCVault { address }) => {
                             let account = restaking_vault_pricing_sources[i];
                             require_keys_eq!(account.key(), *address);
                             // TODO/v0.7.0: deal with solv vault if needed

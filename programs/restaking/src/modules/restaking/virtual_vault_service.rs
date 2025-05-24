@@ -3,12 +3,12 @@ use anchor_spl::{associated_token, token_interface::Mint};
 
 use crate::errors::ErrorCode;
 
-pub struct VirtualRestakingVaultService<'info> {
+pub struct VirtualVaultService<'info> {
     vault_account: &'info AccountInfo<'info>,
     vault_receipt_token_mint: &'info AccountInfo<'info>,
 }
 
-impl<'info> VirtualRestakingVaultService<'info> {
+impl<'info> VirtualVaultService<'info> {
     pub fn new(
         vault_account: &'info AccountInfo<'info>,
         vault_receipt_token_mint: &'info AccountInfo<'info>,
@@ -23,15 +23,24 @@ impl<'info> VirtualRestakingVaultService<'info> {
 
     pub fn validate_vault(
         vault_account: &AccountInfo,
-        vault_receipt_token_mint: &AccountInfo,
+        vault_receipt_token_mint: &'info AccountInfo<'info>,
+        fund_account: &AccountInfo,
     ) -> Result<()> {
+        // validate vault address
+        let (vault_address, _) = Pubkey::find_program_address(
+            &[
+                Self::VIRTUAL_VAULT_SEEDS,
+                vault_receipt_token_mint.key().as_ref(),
+                fund_account.key.as_ref(),
+            ],
+            &crate::ID,
+        );
+        require_keys_eq!(*vault_account.key, vault_address);
         require_keys_eq!(*vault_account.owner, System::id());
 
+        // validate vrt mint
         let vault_receipt_token_mint_data =
-            Mint::try_deserialize(&mut &vault_receipt_token_mint.data.borrow()[..])?;
-        // TODO: lifetime error occurs
-        // let vault_receipt_token_mint_data =
-        //     InterfaceAccount::<Mint>::try_from(vault_receipt_token_mint)?;
+            InterfaceAccount::<Mint>::try_from(vault_receipt_token_mint)?;
 
         require_eq!(vault_receipt_token_mint_data.supply, 0);
         require!(
@@ -46,21 +55,23 @@ impl<'info> VirtualRestakingVaultService<'info> {
 
     pub fn transfer_vault_token(
         &self,
-        mint: &InterfaceAccount<'info, Mint>,
+        token_mint: &InterfaceAccount<'info, Mint>,
         token_program: AccountInfo<'info>,
         from_vault_token_account: AccountInfo<'info>,
         to_token_account: AccountInfo<'info>,
+        fund_account: AccountInfo<'info>,
         amount: u64,
     ) -> Result<()> {
         require_keys_eq!(
             from_vault_token_account.key(),
-            self.get_vault_token_account_address(&mint.key(), token_program.key)
+            self.get_vault_token_account_address(&token_mint.key(), token_program.key)
         );
 
         let (_, virtual_vault_bump) = Pubkey::find_program_address(
             &[
                 Self::VIRTUAL_VAULT_SEEDS,
                 self.vault_receipt_token_mint.key().as_ref(),
+                fund_account.key.as_ref(),
             ],
             &crate::ID,
         );
@@ -70,18 +81,19 @@ impl<'info> VirtualRestakingVaultService<'info> {
                 token_program,
                 anchor_spl::token_interface::TransferChecked {
                     from: from_vault_token_account,
-                    mint: mint.to_account_info(),
+                    mint: token_mint.to_account_info(),
                     to: to_token_account,
                     authority: self.vault_account.clone(),
                 },
                 &[&[
                     Self::VIRTUAL_VAULT_SEEDS,
                     self.vault_receipt_token_mint.key().as_ref(),
+                    fund_account.key.as_ref(),
                     &[virtual_vault_bump],
                 ]],
             ),
             amount,
-            mint.decimals,
+            token_mint.decimals,
         )
     }
 

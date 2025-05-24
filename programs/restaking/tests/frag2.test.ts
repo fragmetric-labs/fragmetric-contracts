@@ -1,0 +1,535 @@
+import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { createTestSuiteContext, expectMasked } from '../../testutil';
+import { initializeFrag2 } from './frag2.init';
+
+describe('restaking.frag2 test', async () => {
+  const testCtx = await initializeFrag2(await createTestSuiteContext());
+
+  beforeAll(() => testCtx.initializationTasks);
+  afterAll(() => testCtx.validator.quit());
+
+  const { validator, feePayer, restaking, initializationTasks } = testCtx;
+  const ctx = restaking.frag2;
+
+  const [signer1, signer2] = await Promise.all([
+    validator
+      .newSigner('frag2DepositTestSigner1', 100_000_000_000n)
+      .then(async (signer) => {
+        await Promise.all([
+          validator.airdropToken(
+            signer.address,
+            'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5',
+            100_000_000_000n
+          ),
+        ]);
+        return signer;
+      }),
+    validator
+      .newSigner('frag2DepositTestSigner2', 100_000_000_000n)
+      .then(async (signer) => {
+        await Promise.all([
+          validator.airdropToken(
+            signer.address,
+            'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5',
+            100_000_000_000n
+          ),
+        ]);
+        return signer;
+      }),
+  ]);
+  const user1 = ctx.user(signer1);
+  const user2 = ctx.user(signer2);
+
+  /** 1. configuration */
+  test('restaking.frag2 initializationTasks snapshot', async () => {
+    await expectMasked(initializationTasks).resolves.toMatchSnapshot();
+  });
+
+  test('restaking.frag2.resolve', async () => {
+    await expectMasked(ctx.resolve(true)).resolves.toMatchInlineSnapshot(`
+      {
+        "__lookupTableAddress": "MASKED(__lookupTableAddress)",
+        "__pricingSources": [
+          {
+            "address": "4YH3gwg84qRHrPabYj4f7NMVawG5Wd6gM7ZDciuCckTo",
+            "role": 0,
+          },
+          {
+            "address": "6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK",
+            "role": 0,
+          },
+        ],
+        "depositResidualMicroReceiptTokenAmount": 0n,
+        "metadata": null,
+        "normalizedToken": null,
+        "oneReceiptTokenAsSOL": 0n,
+        "receiptTokenDecimals": 9,
+        "receiptTokenMint": "DCoj5m7joWjP9T3iPH22q7bDBoGkgUX4ffoL1eQZstwk",
+        "receiptTokenSupply": 0n,
+        "restakingVaultReceiptTokens": [
+          {
+            "mint": "VVRTiZKXoPdME1ssmRdzowNG2VFVFG6Rmy9VViXaWa8",
+            "oneReceiptTokenAsSol": 0n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 0n,
+            "operationTotalAmount": 0n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "vault": "6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK",
+          },
+        ],
+        "supportedAssets": [
+          {
+            "decimals": 9,
+            "depositable": true,
+            "mint": "FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5",
+            "oneTokenAsReceiptToken": 0n,
+            "oneTokenAsSol": 1203870769n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 0n,
+            "operationTotalAmount": 0n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "withdrawable": true,
+            "withdrawableValueAsReceiptTokenAmount": 0n,
+            "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
+            "withdrawalResidualMicroAssetAmount": 0n,
+            "withdrawalUserReservedAmount": 0n,
+          },
+        ],
+        "wrappedTokenMint": null,
+      }
+    `);
+  });
+
+  test('restaking.frag2.fund.resolve', async () => {
+    await expect(ctx.fund.resolve(true)).resolves.toMatchInlineSnapshot(`
+      {
+        "assetStrategies": [
+          {
+            "solAccumulatedDepositAmount": 0n,
+            "solAccumulatedDepositCapacityAmount": 18446744073709551615n,
+            "solDepositable": false,
+            "solWithdrawable": false,
+            "solWithdrawalNormalReserveMaxAmount": 18446744073709551615n,
+            "solWithdrawalNormalReserveRateBps": 0,
+          },
+          {
+            "solAllocationCapacityAmount": 18446744073709551615n,
+            "solAllocationWeight": 0n,
+            "tokenAccumulatedDepositAmount": 0n,
+            "tokenAccumulatedDepositCapacityAmount": 18446744073709551615n,
+            "tokenDepositable": true,
+            "tokenMint": "FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5",
+            "tokenRebalancingAmount": 0n,
+            "tokenWithdrawable": true,
+            "tokenWithdrawalNormalReserveMaxAmount": 18446744073709551615n,
+            "tokenWithdrawalNormalReserveRateBps": 0,
+          },
+        ],
+        "generalStrategy": {
+          "depositEnabled": true,
+          "donationEnabled": false,
+          "transferEnabled": true,
+          "withdrawalBatchThresholdSeconds": 1n,
+          "withdrawalEnabled": true,
+          "withdrawalFeeRateBps": 20,
+        },
+        "restakingVaultStrategies": [
+          {
+            "compoundingRewardTokenMints": [
+              "FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5",
+            ],
+            "delegations": [],
+            "distributingRewardTokens": [
+              {
+                "harvestThresholdIntervalSeconds": 0n,
+                "harvestThresholdMaxAmount": 18446744073709551615n,
+                "harvestThresholdMinAmount": 0n,
+                "lastHarvestedAt": 0n,
+                "mint": "FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF",
+              },
+            ],
+            "pricingSource": {
+              "__kind": "VirtualVault",
+              "address": "6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK",
+            },
+            "solAllocationCapacityAmount": 0n,
+            "solAllocationWeight": 0n,
+            "vault": "6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK",
+          },
+        ],
+        "tokenSwapStrategies": [],
+      }
+    `);
+  });
+
+  test('restaking.frag2.reward.resolve', async () => {
+    await expectMasked(ctx.reward.resolve(true)).resolves
+      .toMatchInlineSnapshot(`
+      {
+        "basePool": {
+          "contribution": "MASKED(/[.*C|c]ontribution?$/)",
+          "customContributionAccrualRateEnabled": false,
+          "initialSlot": "MASKED(/[.*S|s]lots?$/)",
+          "settlements": [
+            {
+              "blocks": [
+                {
+                  "amount": 0n,
+                  "endingContribution": "MASKED(/[.*C|c]ontribution?$/)",
+                  "endingSlot": "MASKED(/[.*S|s]lots?$/)",
+                  "settledContribution": "MASKED(/[.*C|c]ontribution?$/)",
+                  "settledSlots": "MASKED(/[.*S|s]lots?$/)",
+                  "startingContribution": "MASKED(/[.*C|c]ontribution?$/)",
+                  "startingSlot": "MASKED(/[.*S|s]lots?$/)",
+                  "userSettledAmount": 0n,
+                  "userSettledContribution": "MASKED(/[.*C|c]ontribution?$/)",
+                },
+              ],
+              "claimedAmount": 0n,
+              "claimedAmountUpdatedSlot": "MASKED(/[.*S|s]lots?$/)",
+              "remainingAmount": 0n,
+              "reward": {
+                "claimable": false,
+                "decimals": 9,
+                "description": "FRAG yield",
+                "id": 0,
+                "mint": "FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5",
+                "name": "frag",
+                "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+              },
+              "settledAmount": 0n,
+              "settlementBlocksLastRewardPoolContribution": "MASKED(/[.*C|c]ontribution?$/)",
+              "settlementBlocksLastSlot": "MASKED(/[.*S|s]lots?$/)",
+            },
+            {
+              "blocks": [
+                {
+                  "amount": 0n,
+                  "endingContribution": "MASKED(/[.*C|c]ontribution?$/)",
+                  "endingSlot": "MASKED(/[.*S|s]lots?$/)",
+                  "settledContribution": "MASKED(/[.*C|c]ontribution?$/)",
+                  "settledSlots": "MASKED(/[.*S|s]lots?$/)",
+                  "startingContribution": "MASKED(/[.*C|c]ontribution?$/)",
+                  "startingSlot": "MASKED(/[.*S|s]lots?$/)",
+                  "userSettledAmount": 0n,
+                  "userSettledContribution": "MASKED(/[.*C|c]ontribution?$/)",
+                },
+              ],
+              "claimedAmount": 0n,
+              "claimedAmountUpdatedSlot": "MASKED(/[.*S|s]lots?$/)",
+              "remainingAmount": 0n,
+              "reward": {
+                "claimable": true,
+                "decimals": 9,
+                "description": "Governance vote distribution",
+                "id": 1,
+                "mint": "FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF",
+                "name": "fragvote",
+                "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+              },
+              "settledAmount": 0n,
+              "settlementBlocksLastRewardPoolContribution": "MASKED(/[.*C|c]ontribution?$/)",
+              "settlementBlocksLastSlot": "MASKED(/[.*S|s]lots?$/)",
+            },
+          ],
+          "tokenAllocatedAmount": {
+            "records": [],
+            "totalAmount": 0n,
+          },
+          "updatedSlot": "MASKED(/[.*S|s]lots?$/)",
+        },
+        "bonusPool": {
+          "contribution": "MASKED(/[.*C|c]ontribution?$/)",
+          "customContributionAccrualRateEnabled": true,
+          "initialSlot": "MASKED(/[.*S|s]lots?$/)",
+          "settlements": [],
+          "tokenAllocatedAmount": {
+            "records": [],
+            "totalAmount": 0n,
+          },
+          "updatedSlot": "MASKED(/[.*S|s]lots?$/)",
+        },
+        "receiptTokenMint": "DCoj5m7joWjP9T3iPH22q7bDBoGkgUX4ffoL1eQZstwk",
+        "rewards": [
+          {
+            "claimable": false,
+            "decimals": 9,
+            "description": "FRAG yield",
+            "id": 0,
+            "mint": "FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5",
+            "name": "frag",
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          },
+          {
+            "claimable": true,
+            "decimals": 9,
+            "description": "Governance vote distribution",
+            "id": 1,
+            "mint": "FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF",
+            "name": "fragvote",
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          },
+        ],
+      }
+    `);
+  });
+
+  /** 2. deposit */
+  test('user can deposit frag', async () => {
+    await expectMasked(
+      user1.deposit.execute(
+        {
+          assetMint: 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5',
+          assetAmount: 5_000_000_000n,
+        },
+        { signers: [signer1] }
+      )
+    ).resolves.toMatchInlineSnapshot(`
+      {
+        "args": {
+          "applyPresetComputeUnitLimit": true,
+          "assetAmount": 5000000000n,
+          "assetMint": "FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5",
+          "metadata": null,
+        },
+        "events": {
+          "unknown": [],
+          "userCreatedOrUpdatedFundAccount": {
+            "created": true,
+            "receiptTokenAmount": 0n,
+            "receiptTokenMint": "DCoj5m7joWjP9T3iPH22q7bDBoGkgUX4ffoL1eQZstwk",
+            "user": "FrhgfmDgXvzCmx2zpoYkJN2Xmx3djpQji8eZNzpZEWYY",
+            "userFundAccount": "GygWDNHDXdAnbQaDDBTrEK3jfKZ3TzPBZykmvLQkSwkf",
+          },
+          "userCreatedOrUpdatedRewardAccount": {
+            "created": true,
+            "receiptTokenAmount": 0n,
+            "receiptTokenMint": "DCoj5m7joWjP9T3iPH22q7bDBoGkgUX4ffoL1eQZstwk",
+            "user": "FrhgfmDgXvzCmx2zpoYkJN2Xmx3djpQji8eZNzpZEWYY",
+            "userRewardAccount": "EQn7pu4AaD8anmMHuzMxDnuTxUYGY98cfEBzosGMu9SJ",
+          },
+          "userDepositedToFund": {
+            "contributionAccrualRate": {
+              "__option": "None",
+            },
+            "depositedAmount": 5000000000n,
+            "fundAccount": "4aQn7zN3sAYYbTjaJPRv9i9v2UipV2Lc49yYCW4Da5BZ",
+            "mintedReceiptTokenAmount": 5000000000n,
+            "receiptTokenMint": "DCoj5m7joWjP9T3iPH22q7bDBoGkgUX4ffoL1eQZstwk",
+            "supportedTokenMint": {
+              "__option": "Some",
+              "value": "FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5",
+            },
+            "updatedUserRewardAccounts": [
+              "EQn7pu4AaD8anmMHuzMxDnuTxUYGY98cfEBzosGMu9SJ",
+            ],
+            "user": "FrhgfmDgXvzCmx2zpoYkJN2Xmx3djpQji8eZNzpZEWYY",
+            "userFundAccount": "GygWDNHDXdAnbQaDDBTrEK3jfKZ3TzPBZykmvLQkSwkf",
+            "userReceiptTokenAccount": "H8zqWqrcdyTaBcpegwQCFPAgKUz2jnJfWn4NH2XW5sJE",
+            "userSupportedTokenAccount": {
+              "__option": "Some",
+              "value": "FKhVzVa7V7LABtY91H9tiYrKgKPZi4NZBh4nXGxj8PoW",
+            },
+            "walletProvider": {
+              "__option": "None",
+            },
+          },
+        },
+        "signature": "MASKED(signature)",
+        "slot": "MASKED(/[.*S|s]lots?$/)",
+        "succeeded": true,
+      }
+    `);
+
+    await expect(
+      user1.receiptToken.resolve(true).then((res) => res?.amount)
+    ).resolves.toEqual(5000000000n);
+
+    await expect(user1.resolve(true)).resolves.toMatchInlineSnapshot(`
+      {
+        "lamports": 99962596960n,
+        "maxWithdrawalRequests": 4,
+        "receiptTokenAmount": 5000000000n,
+        "receiptTokenMint": "DCoj5m7joWjP9T3iPH22q7bDBoGkgUX4ffoL1eQZstwk",
+        "supportedAssets": [
+          {
+            "amount": 95000000000n,
+            "decimals": 9,
+            "depositable": true,
+            "mint": "FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5",
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "withdrawable": true,
+          },
+        ],
+        "user": "FrhgfmDgXvzCmx2zpoYkJN2Xmx3djpQji8eZNzpZEWYY",
+        "withdrawalRequests": [],
+        "wrappedTokenAmount": 0n,
+        "wrappedTokenMint": null,
+      }
+    `);
+
+    await expectMasked(ctx.resolve(true)).resolves.toMatchInlineSnapshot(`
+      {
+        "__lookupTableAddress": "MASKED(__lookupTableAddress)",
+        "__pricingSources": [
+          {
+            "address": "4YH3gwg84qRHrPabYj4f7NMVawG5Wd6gM7ZDciuCckTo",
+            "role": 0,
+          },
+          {
+            "address": "6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK",
+            "role": 0,
+          },
+        ],
+        "depositResidualMicroReceiptTokenAmount": 0n,
+        "metadata": null,
+        "normalizedToken": null,
+        "oneReceiptTokenAsSOL": 1203870769n,
+        "receiptTokenDecimals": 9,
+        "receiptTokenMint": "DCoj5m7joWjP9T3iPH22q7bDBoGkgUX4ffoL1eQZstwk",
+        "receiptTokenSupply": 5000000000n,
+        "restakingVaultReceiptTokens": [
+          {
+            "mint": "VVRTiZKXoPdME1ssmRdzowNG2VFVFG6Rmy9VViXaWa8",
+            "oneReceiptTokenAsSol": 0n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 0n,
+            "operationTotalAmount": 0n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "vault": "6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK",
+          },
+        ],
+        "supportedAssets": [
+          {
+            "decimals": 9,
+            "depositable": true,
+            "mint": "FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5",
+            "oneTokenAsReceiptToken": 1000000000n,
+            "oneTokenAsSol": 1203870769n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 5000000000n,
+            "operationTotalAmount": 5000000000n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "withdrawable": true,
+            "withdrawableValueAsReceiptTokenAmount": 5000000000n,
+            "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
+            "withdrawalResidualMicroAssetAmount": 0n,
+            "withdrawalUserReservedAmount": 0n,
+          },
+        ],
+        "wrappedTokenMint": null,
+      }
+    `);
+  });
+
+  /** 3. virtual vault harvest/compound */
+  test('virtual vault harvest/compound', async () => {
+    const fragRewardAmount = 1_000_000_000n; // 20% of current fund NAV
+    await validator.airdropToken(
+      '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
+      'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5',
+      fragRewardAmount
+    );
+
+    const fund_1 = await ctx.fund.resolveAccount(true);
+
+    // run operator harvest
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestReward',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    const fund_2 = await ctx.fund.resolveAccount(true);
+
+    const fund_1_frag = fund_1?.data.supportedTokens.filter(
+      (supportedToken) =>
+        supportedToken.mint == 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5'
+    )[0];
+    const fund_2_frag = fund_2?.data.supportedTokens.filter(
+      (supportedToken) =>
+        supportedToken.mint == 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5'
+    )[0];
+
+    expect(
+      fund_2_frag!.token.operationReservedAmount -
+        fund_1_frag!.token.operationReservedAmount
+    ).toEqual(fragRewardAmount);
+
+    await expectMasked(ctx.resolve(true)).resolves.toMatchInlineSnapshot(`
+      {
+        "__lookupTableAddress": "MASKED(__lookupTableAddress)",
+        "__pricingSources": [
+          {
+            "address": "4YH3gwg84qRHrPabYj4f7NMVawG5Wd6gM7ZDciuCckTo",
+            "role": 0,
+          },
+          {
+            "address": "6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK",
+            "role": 0,
+          },
+        ],
+        "depositResidualMicroReceiptTokenAmount": 0n,
+        "metadata": null,
+        "normalizedToken": null,
+        "oneReceiptTokenAsSOL": 1444644923n,
+        "receiptTokenDecimals": 9,
+        "receiptTokenMint": "DCoj5m7joWjP9T3iPH22q7bDBoGkgUX4ffoL1eQZstwk",
+        "receiptTokenSupply": 5000000000n,
+        "restakingVaultReceiptTokens": [
+          {
+            "mint": "VVRTiZKXoPdME1ssmRdzowNG2VFVFG6Rmy9VViXaWa8",
+            "oneReceiptTokenAsSol": 0n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 0n,
+            "operationTotalAmount": 0n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "vault": "6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK",
+          },
+        ],
+        "supportedAssets": [
+          {
+            "decimals": 9,
+            "depositable": true,
+            "mint": "FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5",
+            "oneTokenAsReceiptToken": 833333333n,
+            "oneTokenAsSol": 1203870769n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 6000000000n,
+            "operationTotalAmount": 6000000000n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "withdrawable": true,
+            "withdrawableValueAsReceiptTokenAmount": 5000000000n,
+            "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
+            "withdrawalResidualMicroAssetAmount": 0n,
+            "withdrawalUserReservedAmount": 0n,
+          },
+        ],
+        "wrappedTokenMint": null,
+      }
+    `);
+  });
+
+  test('virtual vault harvest/distribute', async () => {
+    const voteRewardAmount = 100_000_000n; // 100
+    await validator.airdropToken(
+      '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
+      'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF',
+      voteRewardAmount
+    );
+
+    const globalReward_1 = await ctx.reward.resolve(true);
+
+    // run operator harvest
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestReward',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    const globalReward_2 = await ctx.reward.resolve(true);
+
+    expect(
+      globalReward_2!.basePool.settlements[1].blocks[0].amount -
+        globalReward_1!.basePool.settlements[1].blocks[0].amount
+    ).toEqual(voteRewardAmount);
+  });
+});

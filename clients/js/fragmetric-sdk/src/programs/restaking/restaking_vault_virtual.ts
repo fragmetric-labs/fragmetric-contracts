@@ -1,184 +1,83 @@
-import * as system from '@solana-program/system';
-import * as token from '@solana-program/token';
 import {
-  Account,
   Address,
-  createNoopSigner,
   EncodedAccount,
-  None,
+  getAddressEncoder,
+  getBytesEncoder,
+  getProgramDerivedAddress,
 } from '@solana/kit';
-import * as web3 from '@solana/web3.js';
-import * as v from 'valibot';
 import {
   AccountContext,
+  IterativeAccountContext,
   TokenAccountContext,
   TokenMintAccountContext,
-  TransactionTemplateContext,
-  transformAddressResolverVariant,
 } from '../../context';
 import { RestakingFundAccountContext } from './fund';
-import { RestakingProgram } from './program';
 
 export class VirtualVaultAccountContext extends AccountContext<
   RestakingFundAccountContext,
-  Account<None>
+  EncodedAccount
 > {
-  public resolve(noCache = false) {
-    return this.__deduplicated(
-      {
-        method: 'resolve',
-        params: [noCache],
-        alternativeParams: noCache ? null : [true],
-        intervalSeconds: noCache
-          ? 0
-          : this.__maybeRuntimeOptions?.rpc.accountDeduplicationIntervalSeconds,
-      },
-      async () => {
-        const [fund] = await Promise.all([this.parent.resolveAccount(noCache)]);
-        if (!fund) {
-          return null;
-        }
-
-        const [virtualVaultAddr] = web3.PublicKey.findProgramAddressSync(
-          [
-            Buffer.from('virtual_vault'),
-            new web3.PublicKey(
-              '8vEunBQvD3L4aNnRPyQzfQ7pecq4tPb46PjZVKUnTP9i'
-            ).toBuffer(),
-          ],
-          new web3.PublicKey(
-            this.parent.parent.parent.program.address.toString()
-          )
-        );
-        const vault = fund.data.restakingVaults.filter(
-          (restakingVault) =>
-            restakingVault.vault == virtualVaultAddr.toString()
-        )[0];
-
-        return { vault };
-      }
-    );
+  async resolve(noCache = false): Promise<any> {
+    return this.resolveAccount(noCache);
   }
 
-  protected __decodeAccount(
-    account: EncodedAccount
-  ): Account<Readonly<{ __option: 'None' }>> {
-    return {
-      address: account.address,
-      data: { __option: 'None' },
-      executable: account.executable,
-      lamports: account.lamports,
-      programAddress: account.programAddress,
-      space: account.space,
-    };
+  protected __decodeAccount(account: EncodedAccount): EncodedAccount {
+    return account;
   }
 
-  readonly initializeVrtMint = new TransactionTemplateContext(
-    this,
-    v.object({
-      name: v.string(),
-      symbol: v.string(),
-      uri: v.string(),
-      description: v.string(),
-      decimals: v.number(),
-    }),
-    {
-      description: 'initialize vrt mint',
-      instructions: [
-        async (parent, args, overrides) => {
-          const [payer] = await Promise.all([
-            transformAddressResolverVariant(
-              overrides.feePayer ??
-                this.runtime.options.transaction.feePayer ??
-                (() => Promise.resolve(null))
-            )(parent),
-          ]);
-          const admin = (this.program as RestakingProgram).knownAddresses.admin;
-
-          const space = token.getMintSize();
-          const rent = await this.runtime.rpc
-            .getMinimumBalanceForRentExemption(BigInt(space))
-            .send();
-
-          return [
-            system.getCreateAccountInstruction({
-              payer: createNoopSigner(payer as Address),
-              newAccount: createNoopSigner(
-                '8vEunBQvD3L4aNnRPyQzfQ7pecq4tPb46PjZVKUnTP9i' as Address
-              ),
-              lamports: rent,
-              space,
-              programAddress: token.TOKEN_PROGRAM_ADDRESS,
-            }),
-            token.getInitializeMintInstruction({
-              mint: '8vEunBQvD3L4aNnRPyQzfQ7pecq4tPb46PjZVKUnTP9i' as Address, // vrt
-              decimals: 9,
-              mintAuthority: payer as Address,
-            }),
-            token.getSetAuthorityInstruction({
-              owned: '8vEunBQvD3L4aNnRPyQzfQ7pecq4tPb46PjZVKUnTP9i' as Address, // vrt
-              owner: payer as Address,
-              authorityType: token.AuthorityType.MintTokens,
-              newAuthority: null, // set mint authority to None
-            }),
-          ];
-        },
-      ],
-    }
-  );
-
-  readonly supportedToken = TokenAccountContext.fromAssociatedTokenSeeds(
-    this,
-    async (parent) => {
-      const [fund] = await Promise.all([parent.parent.resolveAccount(true)]);
-      if (fund) {
-        const [virtualVaultAddr] = web3.PublicKey.findProgramAddressSync(
-          [
-            Buffer.from('virtual_vault'),
-            new web3.PublicKey(
-              '8vEunBQvD3L4aNnRPyQzfQ7pecq4tPb46PjZVKUnTP9i'
-            ).toBuffer(),
-          ],
-          new web3.PublicKey(
-            parent.parent.parent.parent.program.address.toString()
-          )
-        );
-        const vault = fund.data.restakingVaults.filter(
-          (restakingVault) =>
-            restakingVault.vault == virtualVaultAddr.toString()
-        )[0];
-        return {
-          owner: virtualVaultAddr.toString(),
-          mint: vault.supportedTokenMint,
-        };
-      }
-      return null;
-    }
-  );
+  constructor(readonly parent: RestakingFundAccountContext) {
+    super(parent, async (parent) => {
+      const fundAddress = await parent.resolveAddress();
+      const [vaultAddress] = await getProgramDerivedAddress({
+        programAddress: parent.program.address as unknown as Address,
+        seeds: [
+          getBytesEncoder().encode(Buffer.from('virtual_vault')),
+          getAddressEncoder().encode(
+            'VVRTiZKXoPdME1ssmRdzowNG2VFVFG6Rmy9VViXaWa8' as Address
+          ),
+          getAddressEncoder().encode(fundAddress!),
+        ],
+      });
+      return vaultAddress;
+    });
+  }
 
   readonly receiptTokenMint = new TokenMintAccountContext(
     this,
+    'VVRTiZKXoPdME1ssmRdzowNG2VFVFG6Rmy9VViXaWa8'
+  );
+
+  readonly rewardTokens = new IterativeAccountContext(
+    this,
     async (parent) => {
-      const [fund] = await Promise.all([parent.parent.resolveAccount(true)]);
-      if (fund) {
-        const [virtualVaultAddr] = web3.PublicKey.findProgramAddressSync(
-          [
-            Buffer.from('virtual_vault'),
-            new web3.PublicKey(
-              '8vEunBQvD3L4aNnRPyQzfQ7pecq4tPb46PjZVKUnTP9i'
-            ).toBuffer(),
-          ],
-          new web3.PublicKey(
-            parent.parent.parent.parent.program.address.toString()
-          )
+      const [self, fund] = await Promise.all([
+        parent.resolveAddress(),
+        parent.parent.resolveAccount(true),
+      ]);
+      const vaultConfig = fund?.data.restakingVaults.find(
+        (v) => v.vault == self
+      );
+      if (!(self && vaultConfig)) return null;
+
+      const rewardTokenMints = vaultConfig.compoundingRewardTokenMints
+        .slice(0, vaultConfig.numCompoundingRewardTokens)
+        .concat(
+          vaultConfig.distributingRewardTokens
+            .slice(0, vaultConfig.numDistributingRewardTokens)
+            .map((r) => r.mint)
         );
-        const vault = fund.data.restakingVaults.filter(
-          (restakingVault) =>
-            restakingVault.vault == virtualVaultAddr.toString()
-        )[0];
-        return vault.receiptTokenMint;
-      }
-      return null;
+
+      return Promise.all(
+        rewardTokenMints.map((tokenMint) => {
+          return TokenAccountContext.findAssociatedTokenAccountAddress({
+            owner: self,
+            mint: tokenMint,
+          });
+        })
+      );
+    },
+    async (parent, address) => {
+      return new TokenAccountContext(parent, address);
     }
   );
 }

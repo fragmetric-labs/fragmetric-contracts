@@ -175,6 +175,10 @@ exports[`restaking.fragSOL test > restaking.fragSOL initializationTasks snapshot
     "Program log: realloc account size: current=163840, target=163840, required=0",
     "MASKED(/^Program \\w{32,44} consumed \\d+ of \\d+ compute units$/)",
     "Program 4qEHCzsLFUnw8jmhmRSmAK5VhZVoSD1iVqukAf92yHi5 success",
+    "Program 4qEHCzsLFUnw8jmhmRSmAK5VhZVoSD1iVqukAf92yHi5 invoke [1]",
+    "Program log: Instruction: AdminUpdateFundAccountIfNeeded",
+    "Program log: realloc account size: current=163840, target=163840, required=0",
+    "Log truncated",
   ],
   [
     "Program 4qEHCzsLFUnw8jmhmRSmAK5VhZVoSD1iVqukAf92yHi5 invoke [1]",

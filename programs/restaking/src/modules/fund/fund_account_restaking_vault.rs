@@ -71,7 +71,7 @@ impl RestakingVault {
         match receipt_token_pricing_source {
             TokenPricingSource::JitoRestakingVault { .. }
             | TokenPricingSource::SolvBTCVault { .. }
-            | TokenPricingSource::VirtualRestakingVault { .. } => {}
+            | TokenPricingSource::VirtualVault { .. } => {}
             // otherwise fails
             TokenPricingSource::SPLStakePool { .. }
             | TokenPricingSource::MarinadeStakePool { .. }

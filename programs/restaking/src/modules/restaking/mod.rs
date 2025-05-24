@@ -1,10 +1,10 @@
 pub mod jito_restaking_vault_service;
 pub mod jito_restaking_vault_value_provider;
-pub mod virtual_restaking_vault_service;
+pub mod virtual_vault_service;
 
 pub use jito_restaking_vault_service::*;
 pub use jito_restaking_vault_value_provider::*;
-pub use virtual_restaking_vault_service::*;
+pub use virtual_vault_service::*;
 
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::system_program;
@@ -15,10 +15,11 @@ use crate::modules::pricing::TokenPricingSource;
 /// Validate vault account based on the owner(vault program).
 ///
 /// returns pricing source
-pub(in crate::modules) fn validate_vault(
+pub(in crate::modules) fn validate_vault<'info>(
     vault_account: &AccountInfo,
     vault_supported_token_mint: &AccountInfo,
-    vault_receipt_token_mint: &AccountInfo,
+    vault_receipt_token_mint: &'info AccountInfo<'info>,
+    fund_account: &AccountInfo,
 ) -> Result<TokenPricingSource> {
     match vault_account.owner {
         &JITO_VAULT_PROGRAM_ID => {
@@ -36,8 +37,12 @@ pub(in crate::modules) fn validate_vault(
             address: vault_account.key(),
         }),
         &system_program::ID => {
-            VirtualRestakingVaultService::validate_vault(vault_account, vault_receipt_token_mint)?;
-            Ok(TokenPricingSource::VirtualRestakingVault {
+            VirtualVaultService::validate_vault(
+                vault_account,
+                vault_receipt_token_mint,
+                fund_account,
+            )?;
+            Ok(TokenPricingSource::VirtualVault {
                 address: vault_account.key(),
             })
         }

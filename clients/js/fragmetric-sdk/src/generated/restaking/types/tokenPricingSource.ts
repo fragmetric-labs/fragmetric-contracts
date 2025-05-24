@@ -33,7 +33,7 @@ export type TokenPricingSource =
   | { __kind: 'PeggedToken'; address: Address }
   | { __kind: 'SolvBTCVault'; address: Address }
   | { __kind: 'SanctumMultiValidatorSPLStakePool'; address: Address }
-  | { __kind: 'VirtualRestakingVault'; address: Address };
+  | { __kind: 'VirtualVault'; address: Address };
 
 export type TokenPricingSourceArgs = TokenPricingSource;
 
@@ -67,10 +67,7 @@ export function getTokenPricingSourceEncoder(): Encoder<TokenPricingSourceArgs> 
       'SanctumMultiValidatorSPLStakePool',
       getStructEncoder([['address', getAddressEncoder()]]),
     ],
-    [
-      'VirtualRestakingVault',
-      getStructEncoder([['address', getAddressEncoder()]]),
-    ],
+    ['VirtualVault', getStructEncoder([['address', getAddressEncoder()]])],
   ]);
 }
 
@@ -104,10 +101,7 @@ export function getTokenPricingSourceDecoder(): Decoder<TokenPricingSource> {
       'SanctumMultiValidatorSPLStakePool',
       getStructDecoder([['address', getAddressDecoder()]]),
     ],
-    [
-      'VirtualRestakingVault',
-      getStructDecoder([['address', getAddressDecoder()]]),
-    ],
+    ['VirtualVault', getStructDecoder([['address', getAddressDecoder()]])],
   ]);
 }
 
@@ -243,16 +237,16 @@ export function tokenPricingSource(
   'SanctumMultiValidatorSPLStakePool'
 >;
 export function tokenPricingSource(
-  kind: 'VirtualRestakingVault',
+  kind: 'VirtualVault',
   data: GetDiscriminatedUnionVariantContent<
     TokenPricingSourceArgs,
     '__kind',
-    'VirtualRestakingVault'
+    'VirtualVault'
   >
 ): GetDiscriminatedUnionVariant<
   TokenPricingSourceArgs,
   '__kind',
-  'VirtualRestakingVault'
+  'VirtualVault'
 >;
 export function tokenPricingSource<
   K extends TokenPricingSourceArgs['__kind'],

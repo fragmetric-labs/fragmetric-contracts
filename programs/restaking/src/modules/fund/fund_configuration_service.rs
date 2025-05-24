@@ -12,7 +12,7 @@ use crate::modules::pricing::TokenPricingSource;
 use crate::modules::restaking;
 use crate::modules::reward;
 use crate::modules::swap::TokenSwapSource;
-use crate::utils::{AccountLoaderExt, SystemProgramExt};
+use crate::utils::{AccountLoaderExt, AsAccountInfo, SystemProgramExt};
 
 use super::*;
 
@@ -272,7 +272,8 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         let receipt_token_pricing_source = restaking::validate_vault(
             vault,
             vault_supported_token_mint.as_ref(),
-            vault_receipt_token_mint.as_ref(),
+            vault_receipt_token_mint.as_account_info(),
+            self.fund_account.as_ref(),
         )?;
 
         let mut fund_account = self.fund_account.load_mut()?;

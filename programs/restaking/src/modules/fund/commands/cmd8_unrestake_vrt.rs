@@ -485,8 +485,14 @@ impl UnrestakeVRTCommand {
                     ),
                 ))
             }
-            Some(TokenPricingSource::SolvBTCVault { .. })
-            | Some(TokenPricingSource::VirtualRestakingVault { .. }) => {
+            Some(TokenPricingSource::VirtualVault { .. }) => Ok((
+                None,
+                self.create_prepare_command_with_items(
+                    fund_account,
+                    items.iter().skip(1).copied().collect::<Vec<_>>(),
+                )?,
+            )),
+            Some(TokenPricingSource::SolvBTCVault { .. }) => {
                 // TODO/v0.7.0: deal with solv vault if needed
                 Ok((
                     None,
@@ -633,8 +639,8 @@ impl UnrestakeVRTCommand {
                     None
                 }
             }
-            Some(TokenPricingSource::SolvBTCVault { .. })
-            | Some(TokenPricingSource::VirtualRestakingVault { .. }) => {
+            Some(TokenPricingSource::VirtualVault { .. }) => None,
+            Some(TokenPricingSource::SolvBTCVault { .. }) => {
                 // TODO/v0.7.0: deal with solv vault if needed
                 None
             }

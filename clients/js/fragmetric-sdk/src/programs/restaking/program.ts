@@ -52,6 +52,11 @@ export class RestakingProgram extends ProgramContext {
         ? 'FRAGB4KZGLMy3wH1nBajP3Q17MHnecEvTPT6wb4pX5MB'
         : 'ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz'
     ),
+    frag2: address(
+      this.runtime.cluster != 'local'
+        ? 'FRAG2gPNXozPpYcn2a8zK7YdtfNXCLsioZNwZXwTQ3cP'
+        : 'DCoj5m7joWjP9T3iPH22q7bDBoGkgUX4ffoL1eQZstwk'
+    ),
   });
 
   readonly __dev = createDevTools(this);
@@ -67,4 +72,6 @@ export class RestakingProgram extends ProgramContext {
   readonly fragJTO = this.receiptTokenMint(this.knownAddresses.fragJTO);
 
   readonly fragBTC = this.receiptTokenMint(this.knownAddresses.fragBTC);
+
+  readonly frag2 = this.receiptTokenMint(this.knownAddresses.frag2);
 }
