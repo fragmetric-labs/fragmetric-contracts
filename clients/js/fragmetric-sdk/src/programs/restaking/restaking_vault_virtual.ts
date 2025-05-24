@@ -1,18 +1,30 @@
 import {
   Address,
+  EncodedAccount,
   getAddressEncoder,
   getBytesEncoder,
   getProgramDerivedAddress,
 } from '@solana/kit';
 import {
-  BaseAccountContext,
+  AccountContext,
   IterativeAccountContext,
   TokenAccountContext,
   TokenMintAccountContext,
 } from '../../context';
 import { RestakingFundAccountContext } from './fund';
 
-export class VirtualVaultAccountContext extends BaseAccountContext<RestakingFundAccountContext> {
+export class VirtualVaultAccountContext extends AccountContext<
+  RestakingFundAccountContext,
+  EncodedAccount
+> {
+  async resolve(noCache = false): Promise<any> {
+    return this.resolveAccount(noCache);
+  }
+
+  protected __decodeAccount(account: EncodedAccount): EncodedAccount {
+    return account;
+  }
+
   constructor(readonly parent: RestakingFundAccountContext) {
     super(parent, async (parent) => {
       const fundAddress = await parent.resolveAddress();

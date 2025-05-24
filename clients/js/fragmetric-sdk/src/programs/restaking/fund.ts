@@ -6,13 +6,13 @@ import {
   Account,
   AccountRole,
   Address,
-  BaseAccount,
   createNoopSigner,
   EncodedAccount,
   getAddressEncoder,
   getBytesEncoder,
   getProgramDerivedAddress,
   IAccountMeta,
+  ReadonlyUint8Array,
 } from '@solana/kit';
 import * as v from 'valibot';
 import {
@@ -198,7 +198,7 @@ export class RestakingFundAccountContext extends AccountContext<
     any,
     AccountContext<
       any,
-      Account<jitoVault.Vault | solv.VaultAccount | BaseAccount>
+      Account<jitoVault.Vault | solv.VaultAccount | ReadonlyUint8Array>
     >
   >(
     this,

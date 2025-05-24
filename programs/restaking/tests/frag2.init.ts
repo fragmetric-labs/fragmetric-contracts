@@ -1,42 +1,25 @@
-import {
-  Address,
-  getAddressEncoder,
-  getBytesEncoder,
-  getProgramDerivedAddress,
-} from '@solana/kit';
-import { VirtualVaultAccountContext } from '../../../clients/js/fragmetric-sdk/src/programs/restaking/virtual_vault';
 import { TestSuiteContext } from '../../testutil';
 
-export async function initializeFragSquare(testCtx: TestSuiteContext) {
+export async function initializeFrag2(testCtx: TestSuiteContext) {
   const { validator, restaking, sdk } = testCtx;
   const { MAX_U64 } = sdk;
 
-  const ctx = restaking.fragSquare;
-  const [vaultAddress] = await getProgramDerivedAddress({
-    programAddress: restaking.program.address as unknown as Address,
-    seeds: [
-      getBytesEncoder().encode(Buffer.from('virtual_vault')),
-      getAddressEncoder().encode(
-        '8vEunBQvD3L4aNnRPyQzfQ7pecq4tPb46PjZVKUnTP9i' as Address
-      ), // vrt
-    ],
-  });
-
+  const ctx = restaking.frag2;
   const initializationTasks = [
     // initialize receipt token mint and transfer hook metadata
     () =>
       ctx.initializeMint.execute({
-        name: 'Fragmetric Restaked FRAG',
-        symbol: 'fragSquare',
+        name: 'Fragmetric Staked FRAG',
+        symbol: 'frag2',
         uri: '',
-        description: 'Fragmetric Restaked FRAG',
+        description: 'Fragmetric Staked FRAG',
         decimals: 9,
       }),
     () => ctx.initializeOrUpdateExtraAccountMetaList.execute(null),
 
     // initialize fund account and configuration
     () =>
-      ctx.fund.initializeOrUpdateAccount.executeChained({ targetVersion: 18 }),
+      ctx.fund.initializeOrUpdateAccount.executeChained({ targetVersion: 19 }),
     () =>
       ctx.fund.updateGeneralStrategy.execute({
         depositEnabled: true,
@@ -62,15 +45,15 @@ export async function initializeFragSquare(testCtx: TestSuiteContext) {
       }),
     () =>
       ctx.fund.addSupportedToken.execute({
-        mint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+        mint: 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5',
         pricingSource: {
-          __kind: 'SPLStakePool',
-          address: 'Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb',
+          __kind: 'OrcaDEXLiquidityPool',
+          address: '4YH3gwg84qRHrPabYj4f7NMVawG5Wd6gM7ZDciuCckTo',
         },
       }),
     () =>
       ctx.fund.updateAssetStrategy.execute({
-        tokenMint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+        tokenMint: 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5',
         tokenDepositable: true,
         tokenAccumulatedDepositAmount: null,
         tokenAccumulatedDepositCapacityAmount: MAX_U64,
@@ -89,88 +72,56 @@ export async function initializeFragSquare(testCtx: TestSuiteContext) {
       }),
     () =>
       ctx.reward.addReward.execute({
-        mint: '11111111111111111111111111111111',
-        decimals: 4,
-        name: 'fPoint',
-        description: 'Airdrop point for fToken',
+        mint: 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5',
+        decimals: 9,
+        name: 'frag',
+        description: 'FRAG yield',
       }),
     () => validator.skipSlots(1n),
     () =>
       ctx.reward.settleReward.execute({
-        mint: '11111111111111111111111111111111',
+        mint: 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5',
         amount: 0n,
-        isBonus: true,
       }),
     () =>
       ctx.reward.addReward.execute({
-        mint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+        mint: 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF',
         decimals: 9,
-        name: 'JitoSOL',
-        description: 'JitoSOL insentive',
-      }),
-    () =>
-      ctx.reward.settleReward.execute({
-        mint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
-        amount: 0n,
-      }),
-    () =>
-      ctx.reward.addReward.execute({
-        mint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
-        decimals: 6,
-        name: 'ZEUS',
-        description: 'ZEUS insentive',
+        name: 'fragvote',
+        description: 'Governance vote distribution',
       }),
     () =>
       ctx.reward.updateReward.execute({
-        mint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
+        mint: 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF',
         claimable: true,
       }),
     () => validator.skipSlots(1n),
     () =>
       ctx.reward.settleReward.execute({
-        mint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
+        mint: 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF',
         amount: 0n,
       }),
 
     // initialize virtual vault
-    async () => {
-      const vaultContext = ctx.fund.restakingVault(
-        vaultAddress,
-        '11111111111111111111111111111111'
-      );
-      if (!(vaultContext && vaultContext instanceof VirtualVaultAccountContext))
-        throw new Error('invalid context: virtual vault not found');
-
-      return vaultContext.initializeVrtMint.execute({
-        mint: '8vEunBQvD3L4aNnRPyQzfQ7pecq4tPb46PjZVKUnTP9i',
-        name: 'fragSquare Virtual Vault Receipt Token Mint',
-        symbol: 'fragSquareVVrt',
-        uri: '',
-        description: 'fragSquare Virtual Vault Receipt Token Mint',
-        decimals: 9,
-      });
-    },
     () =>
       ctx.fund.addRestakingVault.execute({
-        vault: vaultAddress,
+        vault: '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
         pricingSource: {
           __kind: 'VirtualVault',
-          address: vaultAddress,
+          address: '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
         },
-        vstMint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
-        vrtMint: '8vEunBQvD3L4aNnRPyQzfQ7pecq4tPb46PjZVKUnTP9i',
       }),
 
     // configure reward settings
     () =>
       ctx.fund.addRestakingVaultCompoundingReward.execute({
-        vault: vaultAddress,
-        rewardTokenMint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+        vault: '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
+        rewardTokenMint: 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5',
       }),
     () =>
       ctx.fund.addRestakingVaultDistributingReward.execute({
-        vault: vaultAddress,
-        rewardTokenMint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
+        vault: '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
+        rewardTokenMint: 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF',
       }),
 
     // initialize address lookup table

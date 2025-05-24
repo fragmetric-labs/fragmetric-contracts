@@ -19,7 +19,7 @@ export function initializeFragBTC(testCtx: TestSuiteContext) {
     () => ctx.initializeOrUpdateExtraAccountMetaList.execute(null),
     // initialize fund account and configuration
     () =>
-      ctx.fund.initializeOrUpdateAccount.executeChained({ targetVersion: 18 }),
+      ctx.fund.initializeOrUpdateAccount.executeChained({ targetVersion: 19 }),
     () =>
       ctx.fund.updateGeneralStrategy.execute({
         depositEnabled: true,

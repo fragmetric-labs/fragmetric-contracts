@@ -1798,7 +1798,7 @@ describe('restaking.fragSOL test', async () => {
 
     rewardAccount = await ctx.reward.resolveAccount(true);
     rewardSettlement =
-      await rewardAccount!.data.bonusRewardPool.rewardSettlements1[0];
+      rewardAccount!.data.bonusRewardPool.rewardSettlements1[0];
     expect(rewardSettlement.remainingAmount).toEqual(
       prevRemainingAmount + remainingAmountOfFirstBlock
     );
