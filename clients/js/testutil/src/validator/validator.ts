@@ -20,6 +20,7 @@ import {
   setTransactionMessageFeePayer,
   setTransactionMessageLifetimeUsingBlockhash,
   signTransactionMessageWithSigners,
+  SolanaError,
   SolanaRpcApi,
   SolanaRpcSubscriptionsApi,
 } from '@solana/kit';
@@ -311,54 +312,60 @@ export abstract class TestValidator<T extends TestValidatorType> {
       }),
     ]);
 
-    const tx = await pipe(
-      createTransactionMessage({ version: 0 }),
-      async (tx) =>
-        appendTransactionMessageInstructions(
-          [
-            await token.getCreateAssociatedTokenIdempotentInstructionAsync({
-              payer: tokenFaucetSigner,
-              mint: mockMint as Address,
-              owner: pubkey as Address,
-              tokenProgram: token.TOKEN_PROGRAM_ADDRESS,
-            }),
-            token.getTransferInstruction({
-              source: src,
-              destination: dst,
-              authority: tokenFaucetSigner,
-              amount: amount,
-            }),
-          ],
-          tx
-        ),
-      async (tx) => setTransactionMessageFeePayer(tokenFaucetAddress, await tx),
-      async (tx) => {
-        if (this.runtime.type == 'litesvm') {
-          const svm = (this.runtime as TestValidatorRuntime<'litesvm'>).svm;
-          return setTransactionMessageLifetimeUsingBlockhash(
-            {
-              blockhash: svm.latestBlockhash() as Blockhash,
-              lastValidBlockHeight: svm.getClock().slot,
-            },
-            await tx
-          );
-        } else {
-          const rpc = (this.runtime as TestValidatorRuntime<'svm'>).rpc;
-          return setTransactionMessageLifetimeUsingBlockhash(
-            (await rpc.getLatestBlockhash().send()).value,
-            await tx
-          );
-        }
-      },
-      async (tx) => signTransactionMessageWithSigners(await tx)
-    );
+    const createTransaction = () => {
+      return pipe(
+        createTransactionMessage({ version: 0 }),
+        async (tx) =>
+          appendTransactionMessageInstructions(
+            [
+              await token.getCreateAssociatedTokenIdempotentInstructionAsync({
+                payer: tokenFaucetSigner,
+                mint: mockMint as Address,
+                owner: pubkey as Address,
+                tokenProgram: token.TOKEN_PROGRAM_ADDRESS,
+              }),
+              token.getTransferInstruction({
+                source: src,
+                destination: dst,
+                authority: tokenFaucetSigner,
+                amount: amount,
+              }),
+            ],
+            tx
+          ),
+        async (tx) =>
+          setTransactionMessageFeePayer(tokenFaucetAddress, await tx),
+        async (tx) => {
+          if (this.runtime.type == 'litesvm') {
+            const svm = (this.runtime as TestValidatorRuntime<'litesvm'>).svm;
+            return setTransactionMessageLifetimeUsingBlockhash(
+              {
+                blockhash: svm.latestBlockhash() as Blockhash,
+                lastValidBlockHeight: svm.getClock().slot,
+              },
+              await tx
+            );
+          } else {
+            const rpc = (this.runtime as TestValidatorRuntime<'svm'>).rpc;
+            return setTransactionMessageLifetimeUsingBlockhash(
+              (await rpc.getLatestBlockhash().send()).value,
+              await tx
+            );
+          }
+        },
+        async (tx) => signTransactionMessageWithSigners(await tx)
+      );
+    };
 
     if (this.runtime.type == 'litesvm') {
       const svm = (this.runtime as TestValidatorRuntime<'litesvm'>).svm;
-      svm.withBlockhashCheck(false); // TODO: remove it, idk why but multiple txs in short interval fails due to block hash not found
+      svm.withBlockhashCheck(false); // just turn off block hash check for short interval airdrop
       const res = svm.sendTransaction(
         web3.VersionedTransaction.deserialize(
-          Buffer.from(getBase64EncodedWireTransaction(tx), 'base64')
+          Buffer.from(
+            getBase64EncodedWireTransaction(await createTransaction()),
+            'base64'
+          )
         )
       );
       svm.withBlockhashCheck(true);
@@ -371,12 +378,39 @@ export abstract class TestValidator<T extends TestValidatorType> {
         rpc: solana.rpc,
         rpcSubscriptions: solana.rpcSubscriptions,
       });
-      await sendAndConfirm(tx, {
-        commitment: 'confirmed',
-        skipPreflight: true,
-        maxRetries: 5n,
-      });
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      let retriesOnBlockErrors = 0;
+      while (true) {
+        try {
+          await sendAndConfirm(await createTransaction(), {
+            commitment: 'confirmed',
+            skipPreflight: true,
+          });
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          break;
+        } catch (err) {
+          if (retriesOnBlockErrors < 100) {
+            if (err instanceof SolanaError) {
+              const blockError =
+                /network has progressed|blockhash not found|already been processed/i;
+              const causeMsg = err.cause?.toString() || '';
+              const msg = `${err.message}${causeMsg ? ` - ${causeMsg}` : ''}`;
+              if (blockError.test(msg)) {
+                console.error(
+                  `Retrying the same airdrop transaction (${retriesOnBlockErrors}): ${msg}`
+                );
+                retriesOnBlockErrors++;
+                await new Promise((resolve) =>
+                  setTimeout(resolve, Math.floor(Math.random() * 400) + 100)
+                );
+                continue;
+              }
+            }
+          }
+
+          throw err;
+        }
+      }
     }
   }
 }

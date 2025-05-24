@@ -204,6 +204,8 @@ export class SVMValidator extends TestValidator<'svm'> {
                   rpcSubscriptionsURL,
                 });
                 resolved = true;
+                await new Promise((resolve) => setTimeout(resolve, 5000));
+
                 if (stderr) stderr.pause();
                 if (!options.debug) {
                   stdout?.pause();
