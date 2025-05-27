@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
 use crate::errors::VaultError;
-use crate::states::{SRTExchangeRate, VaultAccount};
+use crate::states::VaultAccount;
 
 #[event_cpi]
 #[derive(Accounts)]
@@ -118,7 +118,7 @@ pub fn process_deposit(ctx: Context<SolvManagerContext>) -> Result<()> {
 pub fn process_confirm_deposit(
     ctx: Context<SolvManagerContext>,
     srt_amount: u64,
-    srt_exchange_rate: SRTExchangeRate,
+    one_srt_as_vst: u64,
 ) -> Result<()> {
     let SolvManagerContext {
         vault_account,
@@ -128,7 +128,7 @@ pub fn process_confirm_deposit(
 
     let mut vault = vault_account.load_mut()?;
 
-    vault.resolve_srt_receivables(srt_amount, srt_exchange_rate)?;
+    vault.resolve_srt_receivables(srt_amount, one_srt_as_vst)?;
 
     require_gte!(
         vault_solv_receipt_token_account.amount,
@@ -193,7 +193,7 @@ pub fn process_withdraw(
     ctx: Context<SolvManagerContext>,
     srt_amount: u64,
     vst_amount: u64,
-    srt_exchange_rate: SRTExchangeRate,
+    one_srt_as_vst: u64,
 ) -> Result<()> {
     let SolvManagerContext {
         vault_account,
@@ -205,7 +205,7 @@ pub fn process_withdraw(
 
     let mut vault = vault_account.load_mut()?;
 
-    vault.complete_withdrawal_requests(srt_amount, vst_amount, srt_exchange_rate)?;
+    vault.complete_withdrawal_requests(srt_amount, vst_amount, one_srt_as_vst)?;
 
     require_gte!(
         vault_vault_supported_token_account.amount,
