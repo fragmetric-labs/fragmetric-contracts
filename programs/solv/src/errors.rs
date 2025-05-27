@@ -20,6 +20,9 @@ pub enum VaultError {
     #[msg("solv receipt token mint mismatch")]
     SolvReceiptTokenMintMismatchError,
 
+    #[msg("invalid srt price")]
+    InvalidSRTPriceError,
+
     #[msg("exceeded max withdrawal requests")]
     ExceededMaxWithdrawalRequestsError,
 
@@ -29,6 +32,11 @@ pub enum VaultError {
     #[msg("non-delegable reward token mint")]
     NonDelegableRewardTokenMintError,
 
-    #[msg("invalid srt exchange rate")]
-    InvalidSRTExchangeRateError,
+    // TODO/phase3: deprecate
+    #[msg("deposit in progress")]
+    DepositInProgressError,
+
+    // TODO/phase3: deprecate
+    #[msg("deposit not in progress")]
+    DepositNotInProgressError,
 }
