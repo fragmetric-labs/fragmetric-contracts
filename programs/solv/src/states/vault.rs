@@ -34,8 +34,10 @@ pub struct VaultAccount {
     pub solv_manager: Pubkey,
 
     pub solv_protocol_wallet: Pubkey,
+    // TODO/phase3: deprecate
+    solv_protocol_withdrawal_fee_rate_bps: u16,
 
-    _reserved0: [u8; 336],
+    _reserved0: [u8; 334],
 
     // VRT (offset = 0x0200)
     pub vault_receipt_token_mint: Pubkey,
@@ -77,8 +79,7 @@ pub struct VaultAccount {
     // SRT (offset = 0x0600)
     pub solv_receipt_token_mint: Pubkey,
     solv_receipt_token_decimals: u8,
-    _padding3: [u8; 5],
-    srt_withdrawal_fee_rate_bps: u16,
+    _padding3: [u8; 7],
 
     /// SRT reserved amount for operation - used to withdraw VST from the solv protocol
     srt_operation_reserved_amount: u64,
@@ -273,6 +274,21 @@ impl VaultAccount {
 
     pub fn set_solv_protocol_wallet(&mut self, solv_protocol_wallet: Pubkey) -> Result<()> {
         self.solv_protocol_wallet = solv_protocol_wallet;
+
+        Ok(())
+    }
+
+    // TODO/phase3: deprecate
+    pub fn set_solv_protocol_withdrawal_fee_rate(
+        &mut self,
+        solv_protocol_withdrawal_fee_rate_bps: u16,
+    ) -> Result<()> {
+        // hard limit: 10%
+        if solv_protocol_withdrawal_fee_rate_bps >= 1_000 {
+            err!(VaultError::InvalidSolvProtocolWithdrawalFeeRateError)?;
+        }
+
+        self.solv_protocol_withdrawal_fee_rate_bps = solv_protocol_withdrawal_fee_rate_bps;
 
         Ok(())
     }
@@ -531,48 +547,58 @@ impl VaultAccount {
         }
 
         // Validate vst_amount
+        // TODO/phase3: deprecate
+        let solv_protocol_withdrawal_fee_rate =
+            SolvProtocolWithdrawalFeeRate(self.solv_protocol_withdrawal_fee_rate_bps);
+
         let srt_amount_as_vst =
             SRTExchangeRate::new(one_srt_as_vst, self.solv_receipt_token_decimals)
                 .get_srt_amount_as_vst(srt_amount, false)
                 .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
+        let vst_withdrawal_fee_amount = solv_protocol_withdrawal_fee_rate
+            .get_withdrawal_fee(srt_amount_as_vst)
+            .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
+        let vst_withrawal_amount = srt_amount_as_vst - vst_withdrawal_fee_amount;
 
-        require_gte!(vst_amount, srt_amount_as_vst);
+        require_gte!(vst_amount, vst_withrawal_amount);
 
-        let mut srt_withdrawal_reserved_amount_acc = 0;
-        let mut vst_withdrawal_reserved_amount_acc = 0;
-        let mut vst_withdrawal_total_estimated_amount_acc = 0;
-
+        let mut srt_withdrawal_reserved_amount = 0;
+        let mut vst_withdrawal_reserved_amount = 0;
+        let mut vst_withdrawal_total_estimated_amount = 0;
         for request in self
             .get_withdrawal_requests_iter_mut()
             .skip_while(|request| request.state == 2)
             .take_while(|request| request.state == 1)
         {
-            if srt_withdrawal_reserved_amount_acc + request.srt_withdrawal_locked_amount
-                > srt_amount
-            {
+            if srt_withdrawal_reserved_amount + request.srt_withdrawal_locked_amount > srt_amount {
                 break;
             }
 
             request.state = 2; // completed
 
-            srt_withdrawal_reserved_amount_acc += request.srt_withdrawal_locked_amount;
-            vst_withdrawal_reserved_amount_acc += request.vst_withdrawal_locked_amount;
-            vst_withdrawal_total_estimated_amount_acc +=
-                request.vst_withdrawal_total_estimated_amount;
+            srt_withdrawal_reserved_amount += request.srt_withdrawal_locked_amount;
+            vst_withdrawal_reserved_amount += request.vst_withdrawal_locked_amount;
+            vst_withdrawal_total_estimated_amount += request.vst_withdrawal_total_estimated_amount;
         }
 
         // Check exact amount
-        require_eq!(srt_withdrawal_reserved_amount_acc, srt_amount);
+        require_eq!(srt_withdrawal_reserved_amount, srt_amount);
 
-        let vst_withdrawal_estimated_amount_from_solv =
-            vst_withdrawal_total_estimated_amount_acc - vst_withdrawal_reserved_amount_acc;
-        let vst_withdrawal_extra_amount_from_solv =
-            vst_amount - vst_withdrawal_estimated_amount_from_solv;
+        // Apply fee
+        let vst_estimated_solv_withdrawal_amount =
+            vst_withdrawal_total_estimated_amount - vst_withdrawal_reserved_amount;
+        let vst_estimated_solv_protocol_fee_amount = solv_protocol_withdrawal_fee_rate
+            .get_withdrawal_fee(vst_estimated_solv_withdrawal_amount)
+            .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
+        let vst_actual_solv_withdrawal_amount =
+            vst_estimated_solv_withdrawal_amount - vst_estimated_solv_protocol_fee_amount;
 
-        self.vst_withdrawal_locked_amount -= vst_withdrawal_reserved_amount_acc;
-        self.vst_reserved_amount_to_claim += vst_withdrawal_total_estimated_amount_acc;
-        self.vst_extra_amount_to_claim += vst_withdrawal_extra_amount_from_solv;
-        self.vst_receivable_amount_to_claim -= vst_withdrawal_total_estimated_amount_acc;
+        self.vst_withdrawal_locked_amount -= vst_withdrawal_reserved_amount;
+        self.vst_reserved_amount_to_claim +=
+            vst_actual_solv_withdrawal_amount + vst_withdrawal_reserved_amount;
+        self.vst_extra_amount_to_claim += vst_amount - vst_actual_solv_withdrawal_amount;
+        self.vst_receivable_amount_to_claim -= vst_withdrawal_total_estimated_amount;
+
         self.set_srt_exchange_rate(one_srt_as_vst)?;
 
         Ok(())
@@ -684,6 +710,14 @@ impl SRTExchangeRate {
     }
 }
 
+struct SolvProtocolWithdrawalFeeRate(u16);
+
+impl SolvProtocolWithdrawalFeeRate {
+    fn get_withdrawal_fee(&self, vst_amount: u64) -> Option<u64> {
+        div_util(vst_amount as u128 * self.0 as u128, 10_000u64, true)
+    }
+}
+
 /// n > 0 && d > 0
 fn div_util<T1, T2>(numerator: T1, denominator: T2, round_up: bool) -> Option<u64>
 where
@@ -725,7 +759,11 @@ mod tests {
                 .sum();
 
             if vrt_withdrawal_locked_amount != self.vrt_withdrawal_locked_amount {
-                return Err(anyhow!("VRT withdrawal locked amount != ∑request(state == 0).vrt_withdrawal_requested_amount"));
+                return Err(anyhow!(
+                    "VRT withdrawal locked amount({}) != ∑request(state == 0).vrt_withdrawal_requested_amount({}",
+                    self.vrt_withdrawal_locked_amount,
+                    vrt_withdrawal_locked_amount,
+                ));
             }
 
             let vst_withdrawal_locked_amount: u64 = self
@@ -735,7 +773,11 @@ mod tests {
                 .sum();
 
             if vst_withdrawal_locked_amount != self.vst_withdrawal_locked_amount {
-                return Err(anyhow!("VST withdrawal locked amount != ∑request(state < 2).vst_withdrawal_reserved_amount"));
+                return Err(anyhow!(
+                    "VST withdrawal locked amount({}) != ∑request(state < 2).vst_withdrawal_reserved_amount({})",
+                    self.vst_withdrawal_locked_amount,
+                    vst_withdrawal_locked_amount,
+                ));
             }
 
             let srt_withdrawal_locked_amount: u64 = self
@@ -745,7 +787,11 @@ mod tests {
                 .sum();
 
             if srt_withdrawal_locked_amount != self.srt_withdrawal_locked_amount {
-                return Err(anyhow!("SRT withdrawal locked amount != ∑request(state == 0).srt_withdrawal_reserved_amount"));
+                return Err(anyhow!(
+                    "SRT withdrawal locked amount({}) != ∑request(state == 0).srt_withdrawal_reserved_amount({})",
+                    self.srt_withdrawal_locked_amount,
+                    srt_withdrawal_locked_amount,
+                ));
             }
 
             let vst_receivable_amount_to_claim: u64 = self
@@ -755,17 +801,11 @@ mod tests {
                 .sum();
 
             if vst_receivable_amount_to_claim != self.vst_receivable_amount_to_claim {
-                return Err(anyhow!("VST receivable amount to claim != ∑request(state == 1).vst_withdrawal_total_estimated_amount"));
-            }
-
-            let vst_reserved_amount_to_claim: u64 = self
-                .get_withdrawal_requests_iter()
-                .filter(|request| request.state == 2)
-                .map(|request| request.vst_withdrawal_total_estimated_amount)
-                .sum();
-
-            if vst_reserved_amount_to_claim != self.vst_reserved_amount_to_claim {
-                return Err(anyhow!("VST reserved amount to claim != ∑request(state == 2).vst_withdrawal_total_estimated_amount"));
+                return Err(anyhow!(
+                    "VST receivable amount to claim({}) != ∑request(state == 1).vst_withdrawal_total_estimated_amount({})",
+                    self.vst_receivable_amount_to_claim,
+                    vst_receivable_amount_to_claim,
+                ));
             }
 
             Ok(())
@@ -884,6 +924,7 @@ mod tests {
             .all(|request| request.state == 2));
 
         assert_eq!(vault.vst_reserved_amount_to_claim, 999_999);
+        assert_eq!(vault.vst_receivable_amount_to_claim, 0);
         assert_eq!(vault.vst_extra_amount_to_claim, 1);
     }
 
@@ -915,6 +956,7 @@ mod tests {
             .all(|request| request.state == 2));
 
         assert_eq!(vault.vst_reserved_amount_to_claim, 499_998);
+        assert_eq!(vault.vst_receivable_amount_to_claim, 500_001);
         assert_eq!(vault.vst_extra_amount_to_claim, 2);
 
         // 1 SRT = 2.18919457 => 228_395 SRT = 500_001.xxx VRT => 500_001
@@ -929,6 +971,7 @@ mod tests {
             .all(|request| request.state == 2));
 
         assert_eq!(vault.vst_reserved_amount_to_claim, 999_999);
+        assert_eq!(vault.vst_receivable_amount_to_claim, 0);
         assert_eq!(vault.vst_extra_amount_to_claim, 3);
     }
 
@@ -959,6 +1002,40 @@ mod tests {
         vault
             .complete_withdrawal_requests(456_789, 1_000_000, 218_919_457)
             .unwrap_err();
+    }
+
+    #[test]
+    fn test_withdrawal_with_fee() {
+        let mut vault: VaultAccount = VaultAccount::dummy();
+        vault.mint_vrt(1_000_000).unwrap();
+        vault.deposit_vst(1_000_000, 1_000_000).unwrap();
+        // 1 SRT = 2.18919457 => 1_000_000 VST = 456_789.xxx SRT => 456_789
+        vault.resolve_srt_receivables(456_789, 218_919_457).unwrap();
+        vault.assert_invariants().unwrap();
+
+        vault.enqueue_withdrawal_request(500_000).unwrap();
+        vault.enqueue_withdrawal_request(500_000).unwrap();
+        vault.assert_invariants().unwrap();
+
+        vault.start_withdrawal_requests().unwrap();
+        vault.assert_invariants().unwrap();
+
+        vault.set_solv_protocol_withdrawal_fee_rate(100).unwrap();
+
+        // 1 SRT = 2.18919457 => 456_789 SRT = 999_999.xxx VRT => 999_999
+        vault
+            .complete_withdrawal_requests(456_789, 990_000, 218_919_457)
+            .unwrap();
+        vault.assert_invariants().unwrap();
+
+        assert!(vault
+            .get_withdrawal_requests_iter()
+            .take(2)
+            .all(|request| request.state == 2));
+
+        assert_eq!(vault.vst_reserved_amount_to_claim, 989_999);
+        assert_eq!(vault.vst_receivable_amount_to_claim, 0);
+        assert_eq!(vault.vst_extra_amount_to_claim, 1);
     }
 
     #[test]
