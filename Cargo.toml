@@ -27,6 +27,7 @@ edition = "2021"
 [workspace.dependencies]
 anchor-lang = { version = "0.31.1", features = ["event-cpi"] }
 anchor-spl = { version = "0.31.1", features = ["memo"] }
+anyhow = "1.0.97"
 bytemuck = { version = "1", features = ["derive", "min_const_generics"] }
 jito-vault-sdk = { git = "https://github.com/jito-foundation/restaking.git", rev = "0cbf8f83012bd5d18183c45ed128302b4aee4dca" }
 jito-vault-core = { git = "https://github.com/jito-foundation/restaking.git", rev = "0cbf8f83012bd5d18183c45ed128302b4aee4dca" }
