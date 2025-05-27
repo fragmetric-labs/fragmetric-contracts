@@ -177,3 +177,17 @@ pub fn process_set_solv_protocol_wallet(ctx: Context<VaultManagerContext>) -> Re
 
     Ok(())
 }
+
+// TODO/phase3: deprecate
+pub fn process_set_solv_protocol_withdrawal_fee_rate(
+    ctx: Context<VaultManagerContext>,
+    solv_protocol_withdrawal_fee_rate_bps: u16,
+) -> Result<()> {
+    let VaultManagerContext { vault_account, .. } = ctx.accounts;
+
+    vault_account
+        .load_mut()?
+        .set_solv_protocol_withdrawal_fee_rate(solv_protocol_withdrawal_fee_rate_bps)?;
+
+    Ok(())
+}

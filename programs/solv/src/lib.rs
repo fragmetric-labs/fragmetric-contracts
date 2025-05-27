@@ -42,6 +42,14 @@ pub mod solv {
         process_set_solv_protocol_wallet(ctx)
     }
 
+    // TODO/phase3: deprecate
+    pub fn vault_manager_set_solv_protocol_withdrawal_fee_rate(
+        ctx: Context<VaultManagerContext>,
+        solv_protocol_withdrawal_fee_rate_bps: u16,
+    ) -> Result<()> {
+        process_set_solv_protocol_withdrawal_fee_rate(ctx, solv_protocol_withdrawal_fee_rate_bps)
+    }
+
     ////////////////////////////////////////////
     // VaultAdminRoleContext
     ////////////////////////////////////////////
