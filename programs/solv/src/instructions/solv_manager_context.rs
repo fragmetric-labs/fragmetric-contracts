@@ -106,6 +106,7 @@ pub fn process_deposit(ctx: Context<SolvManagerContext>) -> Result<()> {
     let srt_amount = vault.get_srt_operation_receivable_amount_for_deposit(vst_amount)?;
     vault.deposit_vst(vst_amount, srt_amount)?;
 
+    // TODO/phase3: use validation code below
     // require_gte!(
     //     vault_solv_receipt_token_account.amount,
     //     vault.get_srt_total_reserved_amount(),
@@ -201,7 +202,7 @@ pub fn process_withdraw(
         ..
     } = ctx.accounts;
 
-    // TODO/phase3: CPI call to the solv protocol - now assumes that solv protocol already sent VST to vault's ATA
+    // TODO/phase3: CPI call to the solv protocol - now assumes that solv protocol has already sent VST to vault's ATA
 
     let mut vault = vault_account.load_mut()?;
 
