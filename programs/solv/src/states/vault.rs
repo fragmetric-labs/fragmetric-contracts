@@ -40,19 +40,19 @@ pub struct VaultAccount {
     // VRT (offset = 0x0200)
     pub vault_receipt_token_mint: Pubkey,
     vault_receipt_token_decimals: u8,
-    _padding2: [u8; 7],
+    _padding1: [u8; 7],
 
     /// VRT circulating amount - equals to supply minus locked amount
     vrt_circulating_amount: u64,
     /// VRT locked amount for withdrawal - will be burned when withdrawal starts
     vrt_withdrawal_locked_amount: u64,
 
-    _reserved2: [u8; 456],
+    _reserved1: [u8; 456],
 
     // VST (offset = 0x0400)
     pub vault_supported_token_mint: Pubkey,
     vault_supported_token_decimals: u8,
-    _padding1: [u8; 7],
+    _padding2: [u8; 7],
 
     /// VST reserved amount for operation - will be deposited to the Solv protocol
     vst_operation_reserved_amount: u64,
@@ -70,12 +70,13 @@ pub struct VaultAccount {
     /// These amount will be able to claim when withdrawal is completed.
     vst_receivable_amount_to_claim: u64,
 
-    _reserved1: [u8; 432],
+    _reserved2: [u8; 432],
 
     // SRT (offset = 0x0600)
     pub solv_receipt_token_mint: Pubkey,
     solv_receipt_token_decimals: u8,
-    _padding3: [u8; 7],
+    _padding3: [u8; 5],
+    srt_withdrawal_fee_rate_bps: u16,
 
     /// SRT reserved amount for operation - used to withdraw VST from the solv protocol
     srt_operation_reserved_amount: u64,
@@ -83,11 +84,10 @@ pub struct VaultAccount {
     srt_operation_receivable_amount: u64,
     /// SRT locked amount for withdrawal - will be sent to the Solv protocol when withdrawal starts
     srt_withdrawal_locked_amount: u64,
-    /// Exchange Rate = 1 SRT as VST
-    srt_exchange_rate: SRTExchangeRate,
-    srt_withdrawal_fee_rate_bps: u16,
 
-    _reserved3: [u8; 430],
+    one_srt_as_vst: u64,
+
+    _reserved3: [u8; 440],
 
     // Withdrawal Requests (offset = 0x0800)
     withdrawal_last_created_request_id: u64,
@@ -103,14 +103,6 @@ pub struct VaultAccount {
     delegated_reward_token_mints: [Pubkey; MAX_DELEGATED_REWARD_TOKEN_MINTS],
 
     _reserved6: [u8; 3128],
-}
-
-#[repr(C)]
-#[zero_copy]
-#[derive(AnchorSerialize, AnchorDeserialize)]
-pub struct SRTExchangeRate {
-    numerator_as_vst: u64,
-    denominator_as_srt: u64,
 }
 
 #[repr(C)]
@@ -245,10 +237,7 @@ impl VaultAccount {
             // SRT
             self.solv_receipt_token_mint = solv_receipt_token_mint.key();
             self.solv_receipt_token_decimals = solv_receipt_token_mint.decimals;
-            self.srt_exchange_rate.initialize(
-                vault_supported_token_mint.decimals,
-                solv_receipt_token_mint.decimals,
-            );
+            self.one_srt_as_vst = 10u64.pow(vault_supported_token_mint.decimals as u32);
 
             // Set header
             self.data_version = 1;
@@ -292,7 +281,7 @@ impl VaultAccount {
 
     pub fn mint_vrt(&mut self, vst_amount: u64) -> Result<u64> {
         let srt_operation_reserved_amount_as_vst = self
-            .srt_exchange_rate
+            .get_srt_exchange_rate()
             .get_srt_amount_as_vst(
                 // TODO/phase3: deprecate srt_operation_receivable_amount
                 self.srt_operation_reserved_amount + self.srt_operation_receivable_amount,
@@ -337,10 +326,10 @@ impl VaultAccount {
         &mut self,
         vst_amount: u64,
         srt_amount: u64,
-        // srt_exchange_rate: SRTExchangeRate,
+        // one_srt_as_vst: u64,
     ) -> Result<()> {
         let expected_srt_amount = self
-            .srt_exchange_rate
+            .get_srt_exchange_rate()
             .get_vst_amount_as_srt(vst_amount, false)
             .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
 
@@ -349,7 +338,7 @@ impl VaultAccount {
         self.vst_operation_reserved_amount -= vst_amount;
         // TODO/phase3: deprecate srt_receivable_amount and replace with the code below
         // self.srt_operation_reserved_amount += srt_amount;
-        // self.srt_exchange_rate.refresh(srt_exchange_rate)?;
+        // self.set_one_srt_as_vst(one_srt_as_vst)?;
         require_eq!(self.srt_operation_receivable_amount, 0);
         self.srt_operation_receivable_amount = srt_amount;
         require_gt!(self.srt_operation_receivable_amount, 0);
@@ -363,25 +352,37 @@ impl VaultAccount {
 
     // TODO/phase3: deprecate
     pub fn get_srt_operation_receivable_amount_for_deposit(&self, vst_amount: u64) -> Result<u64> {
-        self.srt_exchange_rate
+        self.get_srt_exchange_rate()
             .get_vst_amount_as_srt(vst_amount, false)
             .ok_or_else(|| error!(VaultError::CalculationArithmeticException))
     }
 
+    fn get_srt_exchange_rate(&self) -> SRTExchangeRate {
+        SRTExchangeRate::new(self.one_srt_as_vst, self.solv_receipt_token_decimals)
+    }
+
+    fn set_one_srt_as_vst(&mut self, one_srt_as_vst: u64) -> Result<()> {
+        // srt price must monotonically increase
+        if self.one_srt_as_vst > one_srt_as_vst {
+            err!(VaultError::InvalidSRTExchangeRateError)?;
+        }
+
+        self.one_srt_as_vst = one_srt_as_vst;
+
+        Ok(())
+    }
+
     // TODO/phase3: deprecate
-    pub fn resolve_srt_receivables(
-        &mut self,
-        srt_amount: u64,
-        srt_exchange_rate: SRTExchangeRate,
-    ) -> Result<()> {
+    pub fn resolve_srt_receivables(&mut self, srt_amount: u64, one_srt_as_vst: u64) -> Result<()> {
         require_gt!(self.srt_operation_receivable_amount, 0);
 
-        let srt_amount_as_vst = srt_exchange_rate
-            .get_srt_amount_as_vst(srt_amount, false)
-            .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
+        let srt_amount_as_vst =
+            SRTExchangeRate::new(one_srt_as_vst, self.solv_receipt_token_decimals)
+                .get_srt_amount_as_vst(srt_amount, true) // provides a small tolerance
+                .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
 
         let srt_operation_receivable_amount_as_vst = self
-            .srt_exchange_rate
+            .get_srt_exchange_rate()
             .get_srt_amount_as_vst(self.srt_operation_receivable_amount, false)
             .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
 
@@ -389,7 +390,7 @@ impl VaultAccount {
 
         self.srt_operation_receivable_amount = 0;
         self.srt_operation_reserved_amount += srt_amount;
-        self.srt_exchange_rate.refresh(srt_exchange_rate)?;
+        self.set_one_srt_as_vst(one_srt_as_vst)?;
 
         Ok(())
     }
@@ -416,7 +417,7 @@ impl VaultAccount {
         );
 
         let vst_operation_reserved_amount_as_srt = self
-            .srt_exchange_rate
+            .get_srt_exchange_rate()
             .get_vst_amount_as_srt(self.vst_operation_reserved_amount, false)
             .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
 
@@ -463,7 +464,7 @@ impl VaultAccount {
 
         // VST estimation
         let vst_withdrawal_estimated_amount_from_srt = self
-            .srt_exchange_rate
+            .get_srt_exchange_rate()
             .get_srt_amount_as_vst(srt_withdrawal_reserved_amount, false)
             .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
         let vst_withdrawal_total_estimated_amount =
@@ -518,13 +519,14 @@ impl VaultAccount {
         &mut self,
         srt_amount: u64,
         vst_amount: u64,
-        srt_exchange_rate: SRTExchangeRate,
+        one_srt_as_vst: u64,
     ) -> Result<()> {
-        // Validate srt exchange rate
-        let srt_amount_as_vst = srt_exchange_rate
-            .get_srt_amount_as_vst(srt_amount, false)
-            .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
-        require_gte!(srt_amount_as_vst, vst_amount);
+        // Validate vst_amount
+        let srt_amount_as_vst =
+            SRTExchangeRate::new(one_srt_as_vst, self.solv_receipt_token_decimals)
+                .get_srt_amount_as_vst(srt_amount, false)
+                .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
+        require_gte!(vst_amount, srt_amount_as_vst);
 
         let mut srt_withdrawal_reserved_amount_acc = 0;
         let mut vst_withdrawal_reserved_amount_acc = 0;
@@ -561,7 +563,7 @@ impl VaultAccount {
         self.vst_reserved_amount_to_claim += vst_withdrawal_total_estimated_amount_acc;
         self.vst_extra_amount_to_claim += vst_withdrawal_extra_amount_from_solv;
         self.vst_receivable_amount_to_claim -= vst_withdrawal_total_estimated_amount_acc;
-        self.srt_exchange_rate.refresh(srt_exchange_rate)?;
+        self.set_one_srt_as_vst(one_srt_as_vst)?;
 
         Ok(())
     }
@@ -647,45 +649,33 @@ impl WithdrawalRequest {
     }
 }
 
+struct SRTExchangeRate {
+    one_srt_as_vst: u64,
+    one_srt: u64,
+}
+
 impl SRTExchangeRate {
-    fn initialize(&mut self, vault_supported_token_decimals: u8, solv_receipt_token_decimals: u8) {
-        self.numerator_as_vst = 10u64.pow(vault_supported_token_decimals as u32);
-        self.denominator_as_srt = 10u64.pow(solv_receipt_token_decimals as u32);
+    fn new(one_srt_as_vst: u64, srt_decimals: u8) -> Self {
+        Self {
+            one_srt_as_vst,
+            one_srt: 10u64.pow(srt_decimals as u32),
+        }
     }
 
     fn get_srt_amount_as_vst(&self, srt_amount: u64, round_up: bool) -> Option<u64> {
-        // NOTE: numerator and denominator are always nonzero.
         div_util(
-            srt_amount as u128 * self.numerator_as_vst as u128,
-            self.denominator_as_srt,
+            srt_amount as u128 * self.one_srt_as_vst as u128,
+            self.one_srt,
             round_up,
         )
     }
 
     fn get_vst_amount_as_srt(&self, vst_amount: u64, round_up: bool) -> Option<u64> {
-        // NOTE: numerator and denominator are always nonzero.
         div_util(
-            vst_amount as u128 * self.denominator_as_srt as u128,
-            self.numerator_as_vst,
+            vst_amount as u128 * self.one_srt as u128,
+            self.one_srt_as_vst,
             round_up,
         )
-    }
-
-    fn refresh(&mut self, other: Self) -> Result<()> {
-        if other.numerator_as_vst == 0 || other.denominator_as_srt == 0 {
-            err!(VaultError::InvalidSRTExchangeRateError)?;
-        }
-
-        // exchange rate must monotonically increase
-        if self.numerator_as_vst as u128 * other.denominator_as_srt as u128
-            > other.numerator_as_vst as u128 * self.denominator_as_srt as u128
-        {
-            err!(VaultError::InvalidSRTExchangeRateError)?;
-        }
-
-        *self = other;
-
-        Ok(())
     }
 }
 
@@ -717,7 +707,8 @@ mod tests {
             vault.vault_receipt_token_mint = Pubkey::new_unique();
             vault.vault_supported_token_mint = Pubkey::new_unique();
             vault.solv_receipt_token_mint = Pubkey::new_unique();
-            vault.srt_exchange_rate.initialize(8, 8);
+            vault.solv_receipt_token_decimals = 8;
+            vault.one_srt_as_vst = 10u64.pow(8);
             vault
         }
 
@@ -804,7 +795,7 @@ mod tests {
             let mut vault = VaultAccount::dummy();
             vault.mint_vrt(vst_amount).unwrap();
             vault.deposit_vst(vst_amount, vst_amount).unwrap();
-            vault.resolve_srt_receivables(vst_amount, SRTExchangeRate { numerator_as_vst: 1, denominator_as_srt: 1 }).unwrap();
+            vault.resolve_srt_receivables(vst_amount, 100_000_000).unwrap();
 
             assert_eq!(vault.srt_operation_receivable_amount, 0);
         }
@@ -817,13 +808,7 @@ mod tests {
 
         vault.deposit_vst(1_000_000, 1_000_000).unwrap();
         vault
-            .resolve_srt_receivables(
-                2_000_000,
-                SRTExchangeRate {
-                    numerator_as_vst: 1,
-                    denominator_as_srt: 2,
-                },
-            )
+            .resolve_srt_receivables(2_000_000, 50_000_000)
             .unwrap_err();
     }
 
@@ -833,15 +818,7 @@ mod tests {
         vault.mint_vrt(1_000_000).unwrap();
 
         vault.deposit_vst(1_000_000, 1_000_000).unwrap();
-        vault
-            .resolve_srt_receivables(
-                500_000,
-                SRTExchangeRate {
-                    numerator_as_vst: 2,
-                    denominator_as_srt: 1,
-                },
-            )
-            .unwrap();
+        vault.resolve_srt_receivables(500_000, 200_000_000).unwrap();
 
         vault.assert_invariants().unwrap();
     }
@@ -851,15 +828,8 @@ mod tests {
         let mut vault = VaultAccount::dummy();
         let vrt_supply = vault.mint_vrt(1_000_000).unwrap();
         vault.deposit_vst(1_000_000, 1_000_000).unwrap();
-        vault
-            .resolve_srt_receivables(
-                456_789,
-                SRTExchangeRate {
-                    numerator_as_vst: 1_000_000,
-                    denominator_as_srt: 456_789,
-                },
-            )
-            .unwrap();
+        // 1 SRT = 2.18919457 => 1_000_000 VST = 456_789.xxx SRT => 456_789
+        vault.resolve_srt_receivables(456_789, 218_919_457).unwrap();
         vault.assert_invariants().unwrap();
 
         let srt_amount = 456_789;
@@ -897,15 +867,9 @@ mod tests {
         assert_eq!(vault.srt_withdrawal_locked_amount, 0);
         assert_eq!(vault.vst_receivable_amount_to_claim, 999_999);
 
+        // 1 SRT = 2.18919457 => 456_789 SRT = 999_999.xxx VRT => 999_999
         vault
-            .complete_withdrawal_requests(
-                456_789,
-                1_000_000,
-                SRTExchangeRate {
-                    numerator_as_vst: 1_000_000,
-                    denominator_as_srt: 456_789,
-                },
-            )
+            .complete_withdrawal_requests(456_789, 1_000_000, 218_919_457)
             .unwrap();
         vault.assert_invariants().unwrap();
 
@@ -923,15 +887,8 @@ mod tests {
         let mut vault = VaultAccount::dummy();
         let vrt_supply = vault.mint_vrt(1_000_000).unwrap();
         vault.deposit_vst(1_000_000, 1_000_000).unwrap();
-        vault
-            .resolve_srt_receivables(
-                456_789,
-                SRTExchangeRate {
-                    numerator_as_vst: 1_000_000,
-                    denominator_as_srt: 456_789,
-                },
-            )
-            .unwrap();
+        // 1 SRT = 2.18919457 => 1_000_000 VST = 456_789.xxx SRT => 456_789
+        vault.resolve_srt_receivables(456_789, 218_919_457).unwrap();
         vault.assert_invariants().unwrap();
 
         let srt_amount = 456_789;
@@ -969,15 +926,9 @@ mod tests {
         assert_eq!(vault.srt_withdrawal_locked_amount, 0);
         assert_eq!(vault.vst_receivable_amount_to_claim, 999_999);
 
+        // 1 SRT = 2.18919457 => 228_394 SRT = 499_998.xxx VRT => 499_998
         vault
-            .complete_withdrawal_requests(
-                228_394,
-                500_000,
-                SRTExchangeRate {
-                    numerator_as_vst: 1_000_000,
-                    denominator_as_srt: 456_788,
-                },
-            )
+            .complete_withdrawal_requests(228_394, 500_000, 218_919_936)
             .unwrap();
         vault.assert_invariants().unwrap();
 
@@ -989,15 +940,9 @@ mod tests {
         assert_eq!(vault.vst_reserved_amount_to_claim, 499_998);
         assert_eq!(vault.vst_extra_amount_to_claim, 2);
 
+        // 1 SRT = 2.18919457 => 228_395 SRT = 500_001.xxx VRT => 500_001
         vault
-            .complete_withdrawal_requests(
-                228_395,
-                500_002,
-                SRTExchangeRate {
-                    numerator_as_vst: 1_000_000,
-                    denominator_as_srt: 456_788,
-                },
-            )
+            .complete_withdrawal_requests(228_395, 500_002, 218_919_936)
             .unwrap();
         vault.assert_invariants().unwrap();
 

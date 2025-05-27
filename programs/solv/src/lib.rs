@@ -8,7 +8,6 @@ mod states;
 
 use constants::*;
 use instructions::*;
-use states::*;
 
 #[program]
 pub mod solv {
@@ -85,9 +84,9 @@ pub mod solv {
     pub fn solv_manager_confirm_deposit(
         ctx: Context<SolvManagerContext>,
         srt_amount: u64,
-        srt_exchange_rate: SRTExchangeRate,
+        one_srt_as_vst: u64,
     ) -> Result<()> {
-        solv_manager_context::process_confirm_deposit(ctx, srt_amount, srt_exchange_rate)
+        solv_manager_context::process_confirm_deposit(ctx, srt_amount, one_srt_as_vst)
     }
 
     pub fn solv_manager_request_withdrawal(ctx: Context<SolvManagerContext>) -> Result<()> {
@@ -98,9 +97,9 @@ pub mod solv {
         ctx: Context<SolvManagerContext>,
         srt_amount: u64,
         vst_amount: u64,
-        srt_exchange_rate: SRTExchangeRate,
+        one_srt_as_vst: u64,
     ) -> Result<()> {
-        solv_manager_context::process_withdraw(ctx, srt_amount, vst_amount, srt_exchange_rate)
+        solv_manager_context::process_withdraw(ctx, srt_amount, vst_amount, one_srt_as_vst)
     }
 
     ////////////////////////////////////////////
