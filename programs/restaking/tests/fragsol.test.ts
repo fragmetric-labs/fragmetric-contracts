@@ -660,8 +660,14 @@ describe('restaking.fragSOL test', async () => {
         },
         "restakingVaultStrategies": [
           {
-            "compoundingRewardTokenMints": [
-              "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
+            "compoundingRewardTokens": [
+              {
+                "harvestThresholdIntervalSeconds": 0n,
+                "harvestThresholdMaxAmount": 18446744073709551615n,
+                "harvestThresholdMinAmount": 0n,
+                "lastHarvestedAt": 0n,
+                "mint": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
+              },
             ],
             "delegations": [
               {
