@@ -40,6 +40,8 @@ pub enum RestakeVSTCommandState {
     },
 }
 
+const RESTAKING_MINIMUM_DEPOSIT_LAMPORTS: u64 = 1_000_000_000;
+
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct RestakeVSTCommandResult {
     pub supported_token_mint: Pubkey,
@@ -134,11 +136,14 @@ impl SelfExecutable for RestakeVSTCommand {
                     for (index, strategy_participant) in
                         strategy.get_participants_iter().enumerate()
                     {
-                        let allocated_token_amount = pricing_service.get_sol_amount_as_token(
-                            &token_mint,
-                            strategy_participant.get_last_put_amount()?,
-                        )?;
-                        if allocated_token_amount >= 1_000_000 {
+                        let allocated_sol_amount = strategy_participant.get_last_put_amount()?;
+                        // try to deposit extra lamports to compensate for flooring errors for each token
+                        let allocated_token_amount = (pricing_service
+                            .get_sol_amount_as_token(&token_mint, allocated_sol_amount)?
+                            + 1)
+                        .min(token_amount);
+
+                        if allocated_sol_amount >= RESTAKING_MINIMUM_DEPOSIT_LAMPORTS {
                             let restaking_vault = restakable_vaults.get(index).unwrap();
                             match items
                                 .iter_mut()

@@ -359,18 +359,33 @@ export abstract class TestValidator<T extends TestValidatorType> {
 
     if (this.runtime.type == 'litesvm') {
       const svm = (this.runtime as TestValidatorRuntime<'litesvm'>).svm;
-      svm.withBlockhashCheck(false); // just turn off block hash check for short interval airdrop
-      const res = svm.sendTransaction(
-        web3.VersionedTransaction.deserialize(
-          Buffer.from(
-            getBase64EncodedWireTransaction(await createTransaction()),
-            'base64'
+      let retriesOnBlockErrors = 0;
+      while (retriesOnBlockErrors < 10) {
+        const res = svm.sendTransaction(
+          web3.VersionedTransaction.deserialize(
+            Buffer.from(
+              getBase64EncodedWireTransaction(await createTransaction()),
+              'base64'
+            )
           )
-        )
-      );
-      svm.withBlockhashCheck(true);
-      if ('err' in res) {
-        throw new Error(`failed to mint token from faucet: ${res.toString()}`);
+        );
+        svm.withBlockhashCheck(true);
+        if ('err' in res) {
+          const msg = res.toString();
+          if (msg.includes('BlockhashNotFound')) {
+            console.error(
+              `Retrying the same airdrop transaction (${retriesOnBlockErrors}): ${msg}`
+            );
+            retriesOnBlockErrors++;
+            continue;
+          }
+          await new Promise((resolve) =>
+            setTimeout(resolve, Math.floor(Math.random() * 500) + 100)
+          );
+          throw new Error(`failed to mint token from faucet: ${msg}`);
+        } else {
+          break;
+        }
       }
     } else {
       const solana = this.runtime as TestValidatorRuntime<'svm'>;
@@ -380,7 +395,7 @@ export abstract class TestValidator<T extends TestValidatorType> {
       });
 
       let retriesOnBlockErrors = 0;
-      while (true) {
+      while (retriesOnBlockErrors < 100) {
         try {
           await sendAndConfirm(await createTransaction(), {
             commitment: 'confirmed',
@@ -389,22 +404,20 @@ export abstract class TestValidator<T extends TestValidatorType> {
           await new Promise((resolve) => setTimeout(resolve, 1000));
           break;
         } catch (err) {
-          if (retriesOnBlockErrors < 100) {
-            if (err instanceof SolanaError) {
-              const blockError =
-                /network has progressed|blockhash not found|already been processed/i;
-              const causeMsg = err.cause?.toString() || '';
-              const msg = `${err.message}${causeMsg ? ` - ${causeMsg}` : ''}`;
-              if (blockError.test(msg)) {
-                console.error(
-                  `Retrying the same airdrop transaction (${retriesOnBlockErrors}): ${msg}`
-                );
-                retriesOnBlockErrors++;
-                await new Promise((resolve) =>
-                  setTimeout(resolve, Math.floor(Math.random() * 5000) + 1000)
-                );
-                continue;
-              }
+          if (err instanceof SolanaError) {
+            const blockError =
+              /network has progressed|blockhash not found|already been processed/i;
+            const causeMsg = err.cause?.toString() || '';
+            const msg = `${err.message}${causeMsg ? ` - ${causeMsg}` : ''}`;
+            if (blockError.test(msg)) {
+              console.error(
+                `Retrying the same airdrop transaction (${retriesOnBlockErrors}): ${msg}`
+              );
+              retriesOnBlockErrors++;
+              await new Promise((resolve) =>
+                setTimeout(resolve, Math.floor(Math.random() * 5000) + 1000)
+              );
+              continue;
             }
           }
 

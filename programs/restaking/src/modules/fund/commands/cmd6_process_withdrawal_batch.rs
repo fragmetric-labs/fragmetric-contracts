@@ -453,8 +453,9 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         &pricing_service,
                     )?;
 
-                    let transferred_asset_revenue_amount = fund_service
-                        .harvest_from_treasury_account(
+                    // harvest revenue from temporary treasury only if current pending batch processed
+                    let transferred_asset_revenue_amount = if processed_receipt_token_amount > 0 {
+                        fund_service.harvest_from_treasury_account(
                             ctx.operator,
                             ctx.system_program,
                             fund_treasury_account,
@@ -464,7 +465,10 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                             optional_supported_token_program.to_option(),
                             optional_fund_supported_token_treasury_account.to_option(),
                             program_supported_token_revenue_account.to_option(),
-                        )?;
+                        )?
+                    } else {
+                        0
+                    };
 
                     fund_service.update_asset_values(&mut pricing_service, true)?;
                     (

@@ -81,6 +81,8 @@ pub struct NormalizeSTCommandResult {
     pub operation_reserved_token_amount: u64,
 }
 
+const NTP_MINIMUM_DEPOSIT_LAMPORTS: u64 = 1_000_000_000;
+
 impl SelfExecutable for NormalizeSTCommand {
     fn execute<'a, 'info>(
         &self,
@@ -153,9 +155,8 @@ impl NormalizeSTCommand {
         // here, we allocate with maximum capacity to ensure that
         // the program will not run out of memory even when more
         // supported tokens are added to fund in the future.
-        let mut items = Vec::<NormalizeSTCommandItem>::with_capacity(
-            NormalizedTokenPoolAccount::MAX_SUPPORTED_TOKENS_SIZE,
-        );
+        let mut items =
+            Vec::<NormalizeSTCommandItem>::with_capacity(FUND_ACCOUNT_MAX_SUPPORTED_TOKENS);
 
         // create a strategy to reflect unstaking obligated amount for lack of reserved SOL
         let mut token_strategy =
@@ -228,7 +229,11 @@ impl NormalizeSTCommand {
                         })
                         .collect::<Result<Vec<_>>>()?,
                 );
-            vault_strategy.put(supported_token_restakable_amount_as_sol)?;
+            vault_strategy.put(
+                // try to withdraw extra lamports to compensate for flooring errors for each token
+                supported_token_restakable_amount_as_sol
+                    + normalized_token_pool_account.get_num_supported_tokens() as u64,
+            )?;
 
             let mut allocated_sol_amount_for_normalized_token_vaults = 0;
 
@@ -247,13 +252,15 @@ impl NormalizeSTCommand {
                 }
             }
 
-            if allocated_sol_amount_for_normalized_token_vaults >= 1_000_000_000 {
+            if allocated_sol_amount_for_normalized_token_vaults >= NTP_MINIMUM_DEPOSIT_LAMPORTS {
                 items.push(NormalizeSTCommandItem {
                     supported_token_mint: supported_token.mint,
-                    allocated_token_amount: pricing_service.get_sol_amount_as_token(
-                        &supported_token.mint,
-                        allocated_sol_amount_for_normalized_token_vaults,
-                    )?,
+                    allocated_token_amount: pricing_service
+                        .get_sol_amount_as_token(
+                            &supported_token.mint,
+                            allocated_sol_amount_for_normalized_token_vaults,
+                        )?
+                        .min(supported_token.token.operation_reserved_amount),
                 });
             }
         }
@@ -419,11 +426,17 @@ impl NormalizeSTCommand {
             .into(),
         );
 
-        // prepare state does not require additional accounts,
-        // so we can execute directly.
         drop(fund_account);
         FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
             .update_asset_values(&mut pricing_service, true)?;
-        self.execute_prepare(ctx, accounts, items[1..].to_vec(), result)
+
+        let command = Self {
+            state: NormalizeSTCommandState::Prepare {
+                items: items[1..].to_vec(),
+            },
+        }
+        .without_required_accounts();
+
+        Ok((result, Some(command)))
     }
 }

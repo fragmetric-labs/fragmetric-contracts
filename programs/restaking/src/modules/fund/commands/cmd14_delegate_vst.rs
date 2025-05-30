@@ -1,6 +1,7 @@
 use anchor_lang::prelude::*;
 
 use crate::errors::ErrorCode;
+use crate::modules::fund::FundService;
 use crate::modules::pricing::{PricingService, TokenPricingSource};
 use crate::modules::restaking::JitoRestakingVaultService;
 use crate::utils::PDASeeds;
@@ -55,6 +56,8 @@ pub struct DelegateVSTCommandResultDelegated {
     pub delegated_token_amount: u64,
     pub total_delegated_token_amount: u64,
 }
+
+const RESTAKING_MINIMUM_DELEGATION_LAMPORTS: u64 = 1_000_000_000;
 
 impl SelfExecutable for DelegateVSTCommand {
     fn execute<'a, 'info>(
@@ -144,7 +147,7 @@ impl DelegateVSTCommand {
     #[inline(never)]
     fn execute_prepare<'info>(
         &self,
-        ctx: &OperationCommandContext<'info, '_>,
+        ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
         vaults: &[Pubkey],
     ) -> Result<(
@@ -154,6 +157,9 @@ impl DelegateVSTCommand {
         if vaults.is_empty() {
             return Ok((None, None));
         }
+
+        let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+            .new_pricing_service(accounts.into_iter().copied(), false)?;
 
         let fund_account = ctx.fund_account.load()?;
         let restaking_vault = fund_account.get_restaking_vault(&vaults[0])?;
@@ -194,9 +200,15 @@ impl DelegateVSTCommand {
                 for (index, _) in strategy.get_participants_iter().enumerate() {
                     let allocated_token_amount =
                         strategy.get_participant_last_put_amount_by_index(index)?;
-                    items[index].allocated_supported_token_amount = allocated_token_amount;
+                    if pricing_service.get_token_amount_as_sol(
+                        &restaking_vault.supported_token_mint,
+                        allocated_token_amount,
+                    )? > RESTAKING_MINIMUM_DELEGATION_LAMPORTS
+                    {
+                        items[index].allocated_supported_token_amount = allocated_token_amount;
+                    }
                 }
-                items.retain(|item| item.allocated_supported_token_amount >= 1_000_000);
+                items.retain(|item| item.allocated_supported_token_amount > 0);
 
                 if items.is_empty() {
                     // move on to next vault

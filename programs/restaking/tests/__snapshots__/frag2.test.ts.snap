@@ -530,6 +530,15 @@ exports[`restaking.frag2 test > restaking.frag2 initializationTasks snapshot 1`]
     "Program 4qEHCzsLFUnw8jmhmRSmAK5VhZVoSD1iVqukAf92yHi5 success",
   ],
   [
+    "Program 4qEHCzsLFUnw8jmhmRSmAK5VhZVoSD1iVqukAf92yHi5 invoke [1]",
+    "Program log: Instruction: FundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThreshold",
+    "Program 4qEHCzsLFUnw8jmhmRSmAK5VhZVoSD1iVqukAf92yHi5 invoke [2]",
+    "MASKED(/^Program \\w{32,44} consumed \\d+ of \\d+ compute units$/)",
+    "Program 4qEHCzsLFUnw8jmhmRSmAK5VhZVoSD1iVqukAf92yHi5 success",
+    "MASKED(/^Program \\w{32,44} consumed \\d+ of \\d+ compute units$/)",
+    "Program 4qEHCzsLFUnw8jmhmRSmAK5VhZVoSD1iVqukAf92yHi5 success",
+  ],
+  [
     "Program ComputeBudget111111111111111111111111111111 invoke [1]",
     "Program ComputeBudget111111111111111111111111111111 success",
     "Program AddressLookupTab1e1111111111111111111111111 invoke [1]",

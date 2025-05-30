@@ -121,6 +121,11 @@ struct UnstakeResult {
     deducted_sol_fee_amount: u64,
 }
 
+// SPL stake program requires at least 1SOL for a stake account.
+// So here it assumes value of any supported LST is equal or greater than SOL.
+// ref: https://github.com/solana-program/stake/blob/f5026696559ea501211e8c7e0fd0847ce3e7391c/program/src/lib.rs#L39
+const SPL_STAKE_MINIMUM_DELEGATION_LAMPORTS: u64 = 1_000_000_000;
+
 impl SelfExecutable for UnstakeLSTCommand {
     fn execute<'a, 'info>(
         &self,
@@ -178,6 +183,8 @@ impl UnstakeLSTCommand {
         let fund_account = ctx.fund_account.load()?;
         let unstaking_obligated_amount_as_sol =
             fund_account.get_total_unstaking_obligated_amount_as_sol(&pricing_service)?;
+        let mut supported_tokens_net_operation_reserved_amount =
+            [0u64; FUND_ACCOUNT_MAX_SUPPORTED_TOKENS];
 
         if unstaking_obligated_amount_as_sol == 0 {
             Ok((None, None))
@@ -187,7 +194,8 @@ impl UnstakeLSTCommand {
             >::new(
                 fund_account
                     .get_supported_tokens_iter()
-                    .map(|supported_token| {
+                    .enumerate()
+                    .map(|(index, supported_token)| {
                         Ok(match supported_token.pricing_source.try_deserialize()? {
                             // stakable tokens
                             Some(TokenPricingSource::SPLStakePool { .. })
@@ -197,10 +205,8 @@ impl UnstakeLSTCommand {
                             })
                             | Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool {
                                 ..
-                            }) => Some(WeightedAllocationParticipant::new(
-                                supported_token.sol_allocation_weight,
-                                pricing_service.get_token_amount_as_sol(
-                                    &supported_token.mint,
+                            }) => {
+                                supported_tokens_net_operation_reserved_amount[index] =
                                     u64::try_from(
                                         fund_account
                                             .get_asset_net_operation_reserved_amount(
@@ -209,15 +215,21 @@ impl UnstakeLSTCommand {
                                                 &pricing_service,
                                             )?
                                             .max(0),
-                                    )?,
-                                )?,
-                                supported_token.sol_allocation_capacity_amount,
-                            )),
+                                    )?;
+                                WeightedAllocationParticipant::new(
+                                    supported_token.sol_allocation_weight,
+                                    pricing_service.get_token_amount_as_sol(
+                                        &supported_token.mint,
+                                        supported_tokens_net_operation_reserved_amount[index],
+                                    )? + supported_token.pending_unstaking_amount_as_sol,
+                                    supported_token.sol_allocation_capacity_amount,
+                                )
+                            }
 
                             // not stakable tokens
                             Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
                             | Some(TokenPricingSource::PeggedToken { .. }) => {
-                                Some(WeightedAllocationParticipant::new(0, 0, 0))
+                                WeightedAllocationParticipant::new(0, 0, 0)
                             }
 
                             // invalid configuration
@@ -235,13 +247,12 @@ impl UnstakeLSTCommand {
                             }
                         })
                     })
-                    .collect::<Result<Vec<Option<_>>>>()?
-                    .into_iter()
-                    .flatten(),
+                    .collect::<Result<Vec<_>>>()?
+                    .into_iter(),
             );
             unstaking_strategy.cut_greedy(
                 unstaking_obligated_amount_as_sol
-                    + fund_account.get_supported_tokens_iter().count() as u64, // try to withdraw extra lamports to compensate for flooring errors for each token
+                    .saturating_sub(fund_account.sol.operation_receivable_amount),
             )?;
 
             let mut items = Vec::with_capacity(FUND_ACCOUNT_MAX_SUPPORTED_TOKENS);
@@ -251,10 +262,12 @@ impl UnstakeLSTCommand {
                 let allocated_token_amount = pricing_service
                     .get_sol_amount_as_token(&supported_token.mint, allocated_sol_amount)?;
 
-                if allocated_token_amount >= 1_000_000 {
+                if allocated_token_amount >= SPL_STAKE_MINIMUM_DELEGATION_LAMPORTS {
                     items.push(UnstakeLSTCommandItem {
                         token_mint: supported_token.mint,
-                        allocated_token_amount,
+                        // try to withdraw extra lamports to compensate for flooring errors for each token
+                        allocated_token_amount: (allocated_token_amount + 1)
+                            .min(supported_tokens_net_operation_reserved_amount[index]),
                     });
                 }
             }
@@ -879,7 +892,7 @@ impl UnstakeLSTCommand {
         let mut pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
             .new_pricing_service(pricing_sources.iter().copied(), false)?;
 
-        // validation (expects diff <= withdraw_stake_count)
+        // fee validation
         let total_burnt_token_amount =
             unstake_command_item.allocated_token_amount - total_token_amount_to_burn;
         let expected_pool_token_fee_amount =
@@ -888,8 +901,8 @@ impl UnstakeLSTCommand {
                 total_unstaking_sol_amount + total_unstaked_sol_amount,
             )?);
         require_gte!(
-            1 + withdraw_stake_count as u64,
-            expected_pool_token_fee_amount.abs_diff(total_deducted_pool_token_fee_amount)
+            expected_pool_token_fee_amount,
+            total_deducted_pool_token_fee_amount
         );
 
         // calculate deducted fee as SOL (will be added to SOL receivable)
@@ -984,11 +997,11 @@ impl UnstakeLSTCommand {
         let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
             .new_pricing_service(pricing_sources.iter().copied(), true)?;
 
-        // validation (expects diff <= 1)
+        // fee validation
         let expected_sol_fee_amount = pricing_service
             .get_token_amount_as_sol(pool_token_mint.key, item.allocated_token_amount)?
             .saturating_sub(unstaking_sol_amount);
-        require_gte!(1, expected_sol_fee_amount.abs_diff(deducted_sol_fee_amount));
+        require_gte!(expected_sol_fee_amount, deducted_sol_fee_amount);
 
         Ok(Some(UnstakeResult {
             to_sol_account_amount: fund_reserve_account.lamports(),

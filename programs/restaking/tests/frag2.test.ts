@@ -88,6 +88,7 @@ describe('restaking.frag2 test', async () => {
             "operationReservedAmount": 0n,
             "operationTotalAmount": 0n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unstakingAmountAsSOL": 0n,
             "withdrawable": true,
             "withdrawableValueAsReceiptTokenAmount": 0n,
             "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
@@ -141,9 +142,9 @@ describe('restaking.frag2 test', async () => {
             "delegations": [],
             "distributingRewardTokens": [
               {
-                "harvestThresholdIntervalSeconds": 0n,
-                "harvestThresholdMaxAmount": 18446744073709551615n,
-                "harvestThresholdMinAmount": 0n,
+                "harvestThresholdIntervalSeconds": 1n,
+                "harvestThresholdMaxAmount": 1000000000000n,
+                "harvestThresholdMinAmount": 1000000000n,
                 "lastHarvestedAt": 0n,
                 "mint": "FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF",
               },
@@ -194,7 +195,7 @@ describe('restaking.frag2 test', async () => {
                 "description": "Governance vote distribution",
                 "id": 0,
                 "mint": "FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF",
-                "name": "fragvote",
+                "name": "FVT",
                 "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
               },
               "settledAmount": 0n,
@@ -227,7 +228,7 @@ describe('restaking.frag2 test', async () => {
             "description": "Governance vote distribution",
             "id": 0,
             "mint": "FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF",
-            "name": "fragvote",
+            "name": "FVT",
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
           },
         ],
@@ -371,6 +372,7 @@ describe('restaking.frag2 test', async () => {
             "operationReservedAmount": 5000000000n,
             "operationTotalAmount": 5000000000n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unstakingAmountAsSOL": 0n,
             "withdrawable": true,
             "withdrawableValueAsReceiptTokenAmount": 5000000000n,
             "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
@@ -458,6 +460,7 @@ describe('restaking.frag2 test', async () => {
             "operationReservedAmount": 6000000000n,
             "operationTotalAmount": 6000000000n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unstakingAmountAsSOL": 0n,
             "withdrawable": true,
             "withdrawableValueAsReceiptTokenAmount": 5000000000n,
             "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
@@ -471,7 +474,7 @@ describe('restaking.frag2 test', async () => {
   });
 
   test('virtual vault harvest/distribute', async () => {
-    const voteRewardAmount = 100_000_000n;
+    const voteRewardAmount = 1_000_000_000n;
     await validator.airdropToken(
       '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
       'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF',
@@ -600,7 +603,7 @@ describe('restaking.frag2 test', async () => {
                 "description": "Governance vote distribution",
                 "id": 0,
                 "mint": "FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF",
-                "name": "fragvote",
+                "name": "FVT",
                 "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
               },
               "settledAmount": 3200000000n,
@@ -663,7 +666,7 @@ describe('restaking.frag2 test', async () => {
                 "description": "Governance vote distribution",
                 "id": 0,
                 "mint": "FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF",
-                "name": "fragvote",
+                "name": "FVT",
                 "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
               },
               "settledAmount": 3200000000n,

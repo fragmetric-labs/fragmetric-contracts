@@ -67,6 +67,10 @@ impl std::fmt::Debug for StakeSOLCommandState {
     }
 }
 
+// SPL stake pool program requires at least 0.001SOL for a stake account, but for efficiency, here uses 1SOL as minimum stake amount.
+// ref: https://github.com/solana-program/stake-pool/blob/f8ebfd29b870d681b1fb290ebbbf4a3dddd43bc3/program/src/lib.rs#L38
+const SPL_STAKE_MINIMUM_ACTIVE_STAKE_LAMPORTS: u64 = 1_000_000_000;
+
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize)]
 pub struct StakeSOLCommandResult {
     pub token_mint: Pubkey,
@@ -182,7 +186,7 @@ impl StakeSOLCommand {
             Vec::<StakeSOLCommandItem>::with_capacity(FUND_ACCOUNT_MAX_SUPPORTED_TOKENS);
         for (i, supported_token) in fund_account.get_supported_tokens_iter().enumerate() {
             let allocated_sol_amount = strategy.get_participant_last_put_amount_by_index(i)?;
-            if allocated_sol_amount >= 1_000_000_000 {
+            if allocated_sol_amount >= SPL_STAKE_MINIMUM_ACTIVE_STAKE_LAMPORTS {
                 items.push(StakeSOLCommandItem {
                     token_mint: supported_token.mint,
                     allocated_sol_amount,
@@ -437,13 +441,13 @@ impl StakeSOLCommand {
         let mut pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
             .new_pricing_service(pricing_sources.iter().copied(), false)?;
 
-        // validation (expects diff <= 1)
+        // fee validation
         let expected_pool_token_fee_amount = pricing_service
             .get_sol_amount_as_token(pool_token_mint.key, item.allocated_sol_amount)?
             .saturating_sub(minted_pool_token_amount);
         require_gte!(
-            1,
-            expected_pool_token_fee_amount.abs_diff(deducted_pool_token_fee_amount),
+            expected_pool_token_fee_amount,
+            deducted_pool_token_fee_amount
         );
 
         // calculate deducted fee as SOL (will be added to SOL receivable)
@@ -507,13 +511,10 @@ impl StakeSOLCommand {
         let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
             .new_pricing_service(pricing_sources.iter().copied(), true)?;
 
-        // validation (expects diff <= 1)
+        // mint amount validation
         let expected_minted_pool_token_amount = pricing_service
             .get_sol_amount_as_token(pool_token_mint.key, item.allocated_sol_amount)?;
-        require_gte!(
-            1,
-            expected_minted_pool_token_amount.abs_diff(minted_pool_token_amount)
-        );
+        require_gte!(minted_pool_token_amount, expected_minted_pool_token_amount);
 
         Ok(Some((
             to_pool_token_account_amount,

@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use bytemuck::Zeroable;
 
 use crate::errors::ErrorCode;
-use crate::modules::pricing::{Asset, PricingService, TokenValue};
+use crate::modules::pricing::{Asset, PricingService, TokenValue, TokenValuePod};
 
 use super::WithdrawalRequest;
 
@@ -286,21 +286,9 @@ impl AssetState {
     }
 
     /// total asset amount from given receipt_token_value, so it includes cash, receivable, normalized, restaked assets.
-    pub fn get_total_amount(&self, receipt_token_value: &TokenValue) -> u64 {
+    pub fn get_total_amount(&self, receipt_token_value: &TokenValuePod) -> u64 {
         let (supported_token_mint, _) = self.get_token_mint_and_program().unzip();
-        receipt_token_value
-            .numerator
-            .iter()
-            .find_map(|asset| match (asset, supported_token_mint) {
-                (Asset::SOL(sol_amount), None) => Some(*sol_amount),
-                (Asset::Token(mint, _, token_amount), Some(supported_token_mint))
-                    if supported_token_mint == *mint =>
-                {
-                    Some(*token_amount)
-                }
-                _ => None,
-            })
-            .unwrap_or_default()
+        receipt_token_value.get_asset_amount(supported_token_mint.as_ref())
     }
 
     /// receipt token amount in the queued withdrawal batches for an asset.
@@ -319,7 +307,7 @@ impl AssetState {
     /// based on asset normal reserve configuration, the normal reserve amount relative to total_asset_amount of the fund.
     fn get_withdrawal_normal_reserve_amount(
         &self,
-        receipt_token_value: &TokenValue,
+        receipt_token_value: &TokenValuePod,
     ) -> Result<u64> {
         Ok(crate::utils::get_proportional_amount(
             self.get_total_amount(receipt_token_value),
@@ -334,7 +322,7 @@ impl AssetState {
     fn get_total_withdrawal_reserve_amount(
         &self,
         receipt_token_mint: &Pubkey,
-        receipt_token_value: &TokenValue,
+        receipt_token_value: &TokenValuePod,
         pricing_service: &PricingService,
         with_normal_reserve: bool,
     ) -> Result<u64> {
@@ -361,7 +349,7 @@ impl AssetState {
     pub fn get_net_operation_reserved_amount(
         &self,
         receipt_token_mint: &Pubkey,
-        receipt_token_value: &TokenValue,
+        receipt_token_value: &TokenValuePod,
         with_normal_reserve: bool,
         pricing_service: &PricingService,
     ) -> Result<i128> {

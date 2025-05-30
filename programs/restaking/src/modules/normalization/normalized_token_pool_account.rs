@@ -12,13 +12,13 @@ use crate::utils::PDASeeds;
 /// * v2: Add `normalized_token_decimals`, .., `one_normalized_token_as_sol` fields
 pub const NORMALIZED_TOKEN_POOL_ACCOUNT_CURRENT_VERSION: u16 = 2;
 
-const NORMALIZED_TOKEN_POOL_ACCOUNT_MAX_SUPPORTED_TOKENS_SIZE: usize = 30;
+const NORMALIZED_TOKEN_POOL_ACCOUNT_MAX_SUPPORTED_TOKENS_SIZE: usize = 16;
 
 #[account]
 #[derive(InitSpace)]
 pub struct NormalizedTokenPoolAccount {
-    data_version: u16,
-    bump: u8,
+    pub(super) data_version: u16,
+    pub(super) bump: u8,
     pub(crate) normalized_token_mint: Pubkey,
     pub(crate) normalized_token_program: Pubkey,
     #[max_len(NORMALIZED_TOKEN_POOL_ACCOUNT_MAX_SUPPORTED_TOKENS_SIZE)]
@@ -30,7 +30,7 @@ pub struct NormalizedTokenPoolAccount {
     pub(super) normalized_token_value_updated_slot: u64,
     pub(super) one_normalized_token_as_sol: u64,
 
-    _reserved: [u8; 128],
+    pub(super) _reserved: [u8; 128],
 }
 
 impl PDASeeds<3> for NormalizedTokenPoolAccount {
@@ -179,6 +179,10 @@ impl NormalizedTokenPoolAccount {
         Ok(())
     }
 
+    pub(crate) fn get_num_supported_tokens(&self) -> usize {
+        self.supported_tokens.len()
+    }
+
     pub(crate) fn get_supported_token(
         &self,
         supported_token_mint: &Pubkey,
@@ -232,7 +236,7 @@ pub(crate) struct NormalizedSupportedToken {
 }
 
 impl NormalizedSupportedToken {
-    fn new(
+    pub(super) fn new(
         mint: Pubkey,
         program: Pubkey,
         decimals: u8,

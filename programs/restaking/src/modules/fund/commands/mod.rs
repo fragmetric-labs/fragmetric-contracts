@@ -83,6 +83,27 @@ impl std::fmt::Debug for OperationCommand {
     }
 }
 
+impl OperationCommand {
+    pub fn type_name(&self) -> &str {
+        match self {
+            OperationCommand::Initialize(..) => "Initialize",
+            OperationCommand::EnqueueWithdrawalBatch(..) => "EnqueueWithdrawalBatch",
+            OperationCommand::ClaimUnrestakedVST(..) => "ClaimUnrestakedVST",
+            OperationCommand::DenormalizeNT(..) => "DenormalizeNT",
+            OperationCommand::ClaimUnstakedSOL(..) => "ClaimUnstakedSOL",
+            OperationCommand::ProcessWithdrawalBatch(..) => "ProcessWithdrawalBatch",
+            OperationCommand::UnstakeLST(..) => "UnstakeLST",
+            OperationCommand::UndelegateVST(..) => "UndelegateVST",
+            OperationCommand::UnrestakeVRT(..) => "UnrestakeVRT",
+            OperationCommand::HarvestReward(..) => "HarvestReward",
+            OperationCommand::StakeSOL(..) => "StakeSOL",
+            OperationCommand::NormalizeST(..) => "NormalizeST",
+            OperationCommand::RestakeVST(..) => "RestakeVST",
+            OperationCommand::DelegateVST(..) => "DelegateVST",
+        }
+    }
+}
+
 #[derive(Clone, AnchorSerialize, AnchorDeserialize)]
 pub enum OperationCommandResult {
     Initialize(InitializeCommandResult),

@@ -1,3 +1,4 @@
+import * as computeBudget from '@solana-program/compute-budget';
 import * as system from '@solana-program/system';
 import * as token from '@solana-program/token';
 import * as token2022 from '@solana-program/token-2022';
@@ -150,6 +151,7 @@ abstract class RestakingAbstractUserRewardAccountContext<
         if (!(receiptTokenMint && user)) throw new Error('invalid context');
 
         return Promise.all([
+          computeBudget.getSetComputeUnitLimitInstruction({ units: 1_400_000 }),
           restaking.getUserUpdateRewardPoolsInstructionAsync(
             {
               user: user,
@@ -227,6 +229,10 @@ abstract class RestakingAbstractUserRewardAccountContext<
         [v.string(), v.null()],
         'set recipient address (owner of ATA), set null to send to reward account owner'
       ),
+      applyPresetComputeUnitLimit: v.pipe(
+        v.nullish(v.boolean(), true),
+        v.description('apply preset CU limit')
+      ),
     }),
     {
       description: 'claim rewards',
@@ -289,6 +295,9 @@ abstract class RestakingAbstractUserRewardAccountContext<
           const recipientRewardTokenAccount = ix.accounts[1].address;
 
           return Promise.all([
+            args.applyPresetComputeUnitLimit
+              ? computeBudget.getSetComputeUnitLimitInstruction({ units: 1_400_000 })
+              : null,
             ix,
             restaking.getUserClaimRewardInstructionAsync(
               {

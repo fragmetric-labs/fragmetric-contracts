@@ -130,6 +130,7 @@ describe('restaking.fragJTO test', async () => {
             "operationReservedAmount": 0n,
             "operationTotalAmount": 0n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unstakingAmountAsSOL": 0n,
             "withdrawable": true,
             "withdrawableValueAsReceiptTokenAmount": 0n,
             "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
@@ -1035,6 +1036,7 @@ describe('restaking.fragJTO test', async () => {
     ).resolves.toMatchInlineSnapshot(`
       {
         "args": {
+          "applyPresetComputeUnitLimit": true,
           "receiptTokenAmount": 100000000000n,
           "recipient": "HFfieEFm71E1FrU7JEJbHMihh95wwyxBFTStuU8wUmie",
         },
@@ -1112,6 +1114,7 @@ describe('restaking.fragJTO test', async () => {
     ).resolves.toMatchInlineSnapshot(`
       {
         "args": {
+          "applyPresetComputeUnitLimit": true,
           "receiptTokenAmount": 100000000000n,
           "recipient": "DgMNmDjkhXvgtw5rKmcwGEUbcXRsNhnhJGnrgNhDVJTr",
         },
@@ -1191,6 +1194,7 @@ describe('restaking.fragJTO test', async () => {
     ).resolves.toMatchInlineSnapshot(`
       {
         "args": {
+          "applyPresetComputeUnitLimit": true,
           "receiptTokenAmount": 100000000000n,
           "receiptTokenAmountAsTargetBalance": false,
         },
@@ -1266,6 +1270,7 @@ describe('restaking.fragJTO test', async () => {
     ).resolves.toMatchInlineSnapshot(`
       {
         "args": {
+          "applyPresetComputeUnitLimit": true,
           "wrappedTokenAmount": 100000000000n,
         },
         "events": {
@@ -1425,6 +1430,7 @@ describe('restaking.fragJTO test', async () => {
     ).resolves.toMatchInlineSnapshot(`
       {
         "args": {
+          "applyPresetComputeUnitLimit": true,
           "receiptTokenAmount": 100000000000n,
           "recipient": "HFfieEFm71E1FrU7JEJbHMihh95wwyxBFTStuU8wUmie",
         },
@@ -1569,6 +1575,7 @@ describe('restaking.fragJTO test', async () => {
     ).resolves.toMatchInlineSnapshot(`
       {
         "args": {
+          "applyPresetComputeUnitLimit": true,
           "receiptTokenAmount": 250000000000n,
           "recipient": "DgMNmDjkhXvgtw5rKmcwGEUbcXRsNhnhJGnrgNhDVJTr",
         },

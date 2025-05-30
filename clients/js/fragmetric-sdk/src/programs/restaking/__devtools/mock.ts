@@ -13,12 +13,17 @@ import {
 import { MAX_U64 } from '../../../context/constants';
 import * as jitoVault from '../../../generated/jito_vault';
 import { RestakingProgram } from '../program';
+import {
+  getStakePoolDecoder,
+  getValidatorListDecoder,
+  getValidatorStakeAccountAddress,
+} from './mock.stake_pool';
 
 export function createMockTool(program: RestakingProgram) {
   const localFundManager =
     '5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx' as Address;
 
-  return async (key: string) => {
+  return async (key: string, ...args: string[]) => {
     let account:
       | AccountInfoWithPubkey<
           AccountInfoBase & AccountInfoWithBase64EncodedData
@@ -282,6 +287,72 @@ export function createMockTool(program: RestakingProgram) {
           ],
         },
       };
+    } else if (key == 'lst') {
+      const poolAddress = args[0];
+      if (!poolAddress) {
+        console.debug(
+          `Usage: pnpm connect -u m -e "restaking.__dev.mock('lst', 'Hr9pzexrBge3vgmBNRR8u42CNQgBXdHm4UkUN2DH4a7r', 'BNSOL')"`
+        );
+
+        throw new Error(`invalid LST pool address: ${poolAddress}`);
+      }
+      const symbol = args[1];
+      if (!symbol) {
+        throw new Error(`invalid LST symbol: ${symbol}`);
+      }
+
+      const poolSrc = await program.runtime.fetchAccount(poolAddress, true);
+      if (!poolSrc) {
+        throw new Error(`invalid LST pool: ${poolAddress}`);
+      }
+      const pool = getStakePoolDecoder().decode(poolSrc.data);
+
+      const validatorListSrc = await program.runtime.fetchAccount(
+        pool.validatorList,
+        false
+      );
+      if (!validatorListSrc) {
+        throw new Error(`invalid LST validatorList: ${pool.validatorList}`);
+      }
+
+      const validatorList = getValidatorListDecoder().decode(
+        validatorListSrc.data
+      );
+      validatorList.validators.sort((a, b) => {
+        if (b.activeStakeLamports > a.activeStakeLamports) {
+          return 1;
+        } else if (b.activeStakeLamports < a.activeStakeLamports) {
+          return -1;
+        } else {
+          return 0;
+        }
+      });
+      const validatorStakeAccountsTop5 = await Promise.all(
+        validatorList.validators.slice(0, 5).map((v) =>
+          getValidatorStakeAccountAddress({
+            program: poolSrc.programAddress,
+            voteAccount: v.voteAccountAddress,
+            pool: poolSrc.address,
+            validatorSeedSuffix: v.validatorSeedSuffix,
+          }).then(([address, _]) => address)
+        )
+      );
+
+      console.log(`
+# RUN BELOW COMMANDS
+solana -u m account ${pool.poolMint} --output json --output-file ./programs/restaking/tests/mocks/${symbol}_mint.json
+solana -u m account ${poolAddress} --output json --output-file ./programs/restaking/tests/mocks/${symbol}_stake_pool.json
+solana -u m account ${pool.managerFeeAccount} --output json --output-file ./programs/restaking/tests/mocks/${symbol}_stake_pool_manager_fee.json
+solana -u m account ${pool.reserveStake} --output json --output-file ./programs/restaking/tests/mocks/${symbol}_stake_pool_reserve_stake.json
+solana -u m account ${pool.validatorList} --output json --output-file ./programs/restaking/tests/mocks/${symbol}_stake_pool_validator_list.json
+${validatorStakeAccountsTop5
+  .map(
+    (address, i) =>
+      `solana -u m account ${address} --output json --output-file ./programs/restaking/tests/mocks/${symbol}_stake_pool_validator_stake_${i + 1}.json`
+  )
+  .join('\n')}
+      `);
+      return;
     }
     if (!account) {
       throw new Error(`invalid key: ${key}`);

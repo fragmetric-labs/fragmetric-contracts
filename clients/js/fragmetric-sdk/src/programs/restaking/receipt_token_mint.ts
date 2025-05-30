@@ -81,6 +81,7 @@ export class RestakingReceiptTokenMintAccountContext extends TokenMintAccountCon
               data.sol.operationReceivableAmount,
             operationReservedAmount: data.sol.operationReservedAmount,
             operationReceivableAmount: data.sol.operationReceivableAmount,
+            unstakingAmountAsSOL: 0n,
           },
         ]
           .concat(
@@ -107,6 +108,7 @@ export class RestakingReceiptTokenMintAccountContext extends TokenMintAccountCon
                   v.token.operationReceivableAmount,
                 operationReservedAmount: v.token.operationReservedAmount,
                 operationReceivableAmount: v.token.operationReceivableAmount,
+                unstakingAmountAsSOL: v.pendingUnstakingAmountAsSol,
               };
             })
           )
