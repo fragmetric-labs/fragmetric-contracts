@@ -27,7 +27,7 @@ import {
   type ReadonlyUint8Array,
 } from '@solana/kit';
 
-export type DistributingRewardToken = {
+export type RewardToken = {
   mint: Address;
   harvestThresholdMinAmount: bigint;
   harvestThresholdMaxAmount: bigint;
@@ -36,7 +36,7 @@ export type DistributingRewardToken = {
   reserved: ReadonlyUint8Array;
 };
 
-export type DistributingRewardTokenArgs = {
+export type RewardTokenArgs = {
   mint: Address;
   harvestThresholdMinAmount: number | bigint;
   harvestThresholdMaxAmount: number | bigint;
@@ -45,7 +45,7 @@ export type DistributingRewardTokenArgs = {
   reserved: ReadonlyUint8Array;
 };
 
-export function getDistributingRewardTokenEncoder(): Encoder<DistributingRewardTokenArgs> {
+export function getRewardTokenEncoder(): Encoder<RewardTokenArgs> {
   return getStructEncoder([
     ['mint', getAddressEncoder()],
     ['harvestThresholdMinAmount', getU64Encoder()],
@@ -56,7 +56,7 @@ export function getDistributingRewardTokenEncoder(): Encoder<DistributingRewardT
   ]);
 }
 
-export function getDistributingRewardTokenDecoder(): Decoder<DistributingRewardToken> {
+export function getRewardTokenDecoder(): Decoder<RewardToken> {
   return getStructDecoder([
     ['mint', getAddressDecoder()],
     ['harvestThresholdMinAmount', getU64Decoder()],
@@ -67,12 +67,6 @@ export function getDistributingRewardTokenDecoder(): Decoder<DistributingRewardT
   ]);
 }
 
-export function getDistributingRewardTokenCodec(): Codec<
-  DistributingRewardTokenArgs,
-  DistributingRewardToken
-> {
-  return combineCodec(
-    getDistributingRewardTokenEncoder(),
-    getDistributingRewardTokenDecoder()
-  );
+export function getRewardTokenCodec(): Codec<RewardTokenArgs, RewardToken> {
+  return combineCodec(getRewardTokenEncoder(), getRewardTokenDecoder());
 }

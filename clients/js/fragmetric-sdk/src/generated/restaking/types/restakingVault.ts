@@ -31,16 +31,16 @@ import {
   type ReadonlyUint8Array,
 } from '@solana/kit';
 import {
-  getDistributingRewardTokenDecoder,
-  getDistributingRewardTokenEncoder,
   getRestakingVaultDelegationDecoder,
   getRestakingVaultDelegationEncoder,
+  getRewardTokenDecoder,
+  getRewardTokenEncoder,
   getTokenPricingSourcePodDecoder,
   getTokenPricingSourcePodEncoder,
-  type DistributingRewardToken,
-  type DistributingRewardTokenArgs,
   type RestakingVaultDelegation,
   type RestakingVaultDelegationArgs,
+  type RewardToken,
+  type RewardTokenArgs,
   type TokenPricingSourcePod,
   type TokenPricingSourcePodArgs,
 } from '.';
@@ -69,11 +69,11 @@ export type RestakingVault = {
   /** auto-compounding */
   padding3: ReadonlyUint8Array;
   numCompoundingRewardTokens: number;
-  compoundingRewardTokenMints: Array<Address>;
+  compoundingRewardTokens: Array<RewardToken>;
   /** reward to distribute */
   padding4: ReadonlyUint8Array;
   numDistributingRewardTokens: number;
-  distributingRewardTokens: Array<DistributingRewardToken>;
+  distributingRewardTokens: Array<RewardToken>;
   reserved: ReadonlyUint8Array;
 };
 
@@ -101,11 +101,11 @@ export type RestakingVaultArgs = {
   /** auto-compounding */
   padding3: ReadonlyUint8Array;
   numCompoundingRewardTokens: number;
-  compoundingRewardTokenMints: Array<Address>;
+  compoundingRewardTokens: Array<RewardTokenArgs>;
   /** reward to distribute */
   padding4: ReadonlyUint8Array;
   numDistributingRewardTokens: number;
-  distributingRewardTokens: Array<DistributingRewardTokenArgs>;
+  distributingRewardTokens: Array<RewardTokenArgs>;
   reserved: ReadonlyUint8Array;
 };
 
@@ -134,14 +134,14 @@ export function getRestakingVaultEncoder(): Encoder<RestakingVaultArgs> {
     ['padding3', fixEncoderSize(getBytesEncoder(), 5)],
     ['numCompoundingRewardTokens', getU8Encoder()],
     [
-      'compoundingRewardTokenMints',
-      getArrayEncoder(getAddressEncoder(), { size: 10 }),
+      'compoundingRewardTokens',
+      getArrayEncoder(getRewardTokenEncoder(), { size: 4 }),
     ],
     ['padding4', fixEncoderSize(getBytesEncoder(), 7)],
     ['numDistributingRewardTokens', getU8Encoder()],
     [
       'distributingRewardTokens',
-      getArrayEncoder(getDistributingRewardTokenEncoder(), { size: 30 }),
+      getArrayEncoder(getRewardTokenEncoder(), { size: 30 }),
     ],
     ['reserved', fixEncoderSize(getBytesEncoder(), 856)],
   ]);
@@ -172,14 +172,14 @@ export function getRestakingVaultDecoder(): Decoder<RestakingVault> {
     ['padding3', fixDecoderSize(getBytesDecoder(), 5)],
     ['numCompoundingRewardTokens', getU8Decoder()],
     [
-      'compoundingRewardTokenMints',
-      getArrayDecoder(getAddressDecoder(), { size: 10 }),
+      'compoundingRewardTokens',
+      getArrayDecoder(getRewardTokenDecoder(), { size: 4 }),
     ],
     ['padding4', fixDecoderSize(getBytesDecoder(), 7)],
     ['numDistributingRewardTokens', getU8Decoder()],
     [
       'distributingRewardTokens',
-      getArrayDecoder(getDistributingRewardTokenDecoder(), { size: 30 }),
+      getArrayDecoder(getRewardTokenDecoder(), { size: 30 }),
     ],
     ['reserved', fixDecoderSize(getBytesDecoder(), 856)],
   ]);

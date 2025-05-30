@@ -140,7 +140,8 @@ export class JitoVaultAccountContext extends AccountContext<
       if (!(vault && vaultStrategy)) return null;
 
       return (await Promise.all(
-        vaultStrategy.compoundingRewardTokenMints
+        vaultStrategy.compoundingRewardTokens
+          .map((rewardToken) => rewardToken.mint)
           .concat(
             vaultStrategy.distributingRewardTokens.map(
               (rewardToken) => rewardToken.mint

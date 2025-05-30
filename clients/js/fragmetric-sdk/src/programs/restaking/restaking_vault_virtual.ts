@@ -59,8 +59,9 @@ export class VirtualVaultAccountContext extends AccountContext<
       );
       if (!(self && vaultConfig)) return null;
 
-      const rewardTokenMints = vaultConfig.compoundingRewardTokenMints
+      const rewardTokenMints = vaultConfig.compoundingRewardTokens
         .slice(0, vaultConfig.numCompoundingRewardTokens)
+        .map((r) => r.mint)
         .concat(
           vaultConfig.distributingRewardTokens
             .slice(0, vaultConfig.numDistributingRewardTokens)

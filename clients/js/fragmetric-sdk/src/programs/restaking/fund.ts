@@ -1155,11 +1155,8 @@ export class RestakingFundAccountContext extends AccountContext<
   async resolveRestakingVaultStrategies(noCache = false): Promise<
     | (restaking.FundManagerUpdateRestakingVaultStrategyInstructionDataArgs & {
         pricingSource: restaking.TokenPricingSourceArgs;
-        compoundingRewardTokenMints: Address[];
-        distributingRewardTokens: Omit<
-          restaking.DistributingRewardTokenArgs,
-          'reserved'
-        >[];
+        compoundingRewardTokens: Omit<restaking.RewardTokenArgs, 'reserved'>[];
+        distributingRewardTokens: Omit<restaking.RewardTokenArgs, 'reserved'>[];
         delegations: Omit<
           restaking.FundManagerUpdateRestakingVaultDelegationStrategyInstructionDataArgs,
           'vault'
@@ -1175,9 +1172,12 @@ export class RestakingFundAccountContext extends AccountContext<
       .map((item) => {
         const strategy: restaking.FundManagerUpdateRestakingVaultStrategyInstructionDataArgs & {
           pricingSource: restaking.TokenPricingSourceArgs;
-          compoundingRewardTokenMints: Address[];
+          compoundingRewardTokens: Omit<
+            restaking.RewardTokenArgs,
+            'reserved'
+          >[];
           distributingRewardTokens: Omit<
-            restaking.DistributingRewardTokenArgs,
+            restaking.RewardTokenArgs,
             'reserved'
           >[];
           delegations: Omit<
@@ -1211,10 +1211,13 @@ export class RestakingFundAccountContext extends AccountContext<
               };
               return delegationStrategy;
             }),
-          compoundingRewardTokenMints: item.compoundingRewardTokenMints.slice(
-            0,
-            item.numCompoundingRewardTokens
-          ),
+          compoundingRewardTokens: item.compoundingRewardTokens
+            .slice(0, item.numCompoundingRewardTokens)
+            .map((compoundingRewardTokenItem) => {
+              const { reserved, ...compoundingRewardToken } =
+                compoundingRewardTokenItem;
+              return compoundingRewardToken;
+            }),
           distributingRewardTokens: item.distributingRewardTokens
             .slice(0, item.numDistributingRewardTokens)
             .map((distributingRewardTokenItem) => {
@@ -1653,7 +1656,7 @@ export class RestakingFundAccountContext extends AccountContext<
           const { delegations: partialDelegations, ...partialArgs } = args;
           const {
             pricingSource,
-            compoundingRewardTokenMints,
+            compoundingRewardTokens,
             distributingRewardTokens,
             delegations: currentDelegationStrategies,
             ...currentVaultStrategy
@@ -1862,7 +1865,7 @@ export class RestakingFundAccountContext extends AccountContext<
     }
   );
 
-  readonly updateRestakingVaultDistributingRewardHarvestThreshold =
+  readonly updateRestakingVaultRewardHarvestThreshold =
     new TransactionTemplateContext(
       this,
       v.object({
@@ -1873,7 +1876,7 @@ export class RestakingFundAccountContext extends AccountContext<
         harvestThresholdIntervalSeconds: v.bigint(),
       }),
       {
-        description: 'update distributing reward threshold',
+        description: 'update reward token threshold',
         anchorEventDecoders: getRestakingAnchorEventDecoders(
           'fundManagerUpdatedFund'
         ),
@@ -1893,10 +1896,10 @@ export class RestakingFundAccountContext extends AccountContext<
               .knownAddresses.fundManager;
 
             return Promise.all([
-              restaking.getFundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThresholdInstructionAsync(
+              restaking.getFundManagerUpdateRestakingVaultRewardTokenHarvestThresholdInstructionAsync(
                 {
                   vault: args.vault as Address,
-                  distributingRewardTokenMint: args.rewardTokenMint as Address,
+                  rewardTokenMint: args.rewardTokenMint as Address,
                   harvestThresholdMinAmount: args.harvestThresholdMinAmount,
                   harvestThresholdMaxAmount: args.harvestThresholdMaxAmount,
                   harvestThresholdIntervalSeconds:
