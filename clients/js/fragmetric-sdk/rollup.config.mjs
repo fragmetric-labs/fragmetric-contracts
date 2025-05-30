@@ -27,6 +27,10 @@ export default defineConfig([
       alias({
         entries: [
           {
+            find: './polyfills.node',
+            replacement: './polyfills.browser',
+          },
+          {
             find: './signer.node',
             replacement: './signer.browser',
           },
