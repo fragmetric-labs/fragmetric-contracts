@@ -229,7 +229,7 @@ impl HarvestRewardCommand {
                 let reward_token_mints = match harvest_type {
                     HarvestType::Compound => restaking_vault
                         .get_compounding_reward_tokens_iter()
-                        .copied()
+                        .map(|reward_token| reward_token.mint)
                         .collect(),
                     HarvestType::Distribute => restaking_vault
                         .get_distributing_reward_tokens_iter()
@@ -635,6 +635,19 @@ impl HarvestRewardCommand {
                     .is_err() =>
             {
                 // Need to swap
+
+                // harvest threshold check
+                let current_timestamp = Clock::get()?.unix_timestamp;
+
+                let available_reward_token_amount_to_harvest = restaking_vault
+                    .get_compounding_reward_token(reward_token_mint.key)?
+                    .get_available_amount_to_harvest(reward_token_amount, current_timestamp);
+
+                if available_reward_token_amount_to_harvest == 0 {
+                    // threshold unmet yet
+                    return Ok(None);
+                }
+
                 let swap_strategy = fund_account.get_token_swap_strategy(reward_token_mint.key)?;
 
                 let swap_source = swap_strategy.swap_source.try_deserialize()?;
@@ -659,6 +672,19 @@ impl HarvestRewardCommand {
             }
             HarvestType::Compound => {
                 // Just transfer
+
+                // harvest threshold check
+                let current_timestamp = Clock::get()?.unix_timestamp;
+
+                let available_reward_token_amount_to_harvest = restaking_vault
+                    .get_compounding_reward_token(reward_token_mint.key)?
+                    .get_available_amount_to_harvest(reward_token_amount, current_timestamp);
+
+                if available_reward_token_amount_to_harvest == 0 {
+                    // threshold unmet yet
+                    return Ok(None);
+                }
+
                 let fund_supported_token_reserve_account = fund_account
                     .find_supported_token_reserve_account_address(reward_token_mint.key)?;
                 let required_accounts = [
@@ -701,8 +727,7 @@ impl HarvestRewardCommand {
                 // harvest threshold check
                 let current_timestamp = Clock::get()?.unix_timestamp;
 
-                let available_reward_token_amount_to_harvest = fund_account
-                    .get_restaking_vault(vault)?
+                let available_reward_token_amount_to_harvest = restaking_vault
                     .get_distributing_reward_token(reward_token_mint.key)?
                     .get_available_amount_to_harvest(reward_token_amount, current_timestamp);
 
@@ -978,6 +1003,7 @@ impl HarvestRewardCommand {
             fund_account.find_supported_token_reserve_account_address(supported_token_mint)?
         );
 
+        let current_timestamp = Clock::get()?.unix_timestamp;
         let reward_token_amount = match receipt_token_pricing_source {
             &Some(TokenPricingSource::JitoRestakingVault { .. }) => from_reward_token_account
                 .amount
@@ -986,7 +1012,13 @@ impl HarvestRewardCommand {
             _ => 0,
         };
 
-        if reward_token_amount == 0 {
+        let available_reward_token_amount_to_harvest = fund_account
+            .get_restaking_vault(vault)?
+            .get_compounding_reward_token(&reward_token_mint.key())?
+            .get_available_amount_to_harvest(reward_token_amount, current_timestamp);
+
+        // No reward (or harvest threshold unmet), so move on to next item
+        if available_reward_token_amount_to_harvest == 0 {
             return Ok(None);
         }
 
@@ -1003,7 +1035,7 @@ impl HarvestRewardCommand {
                         },
                         &[&fund_account.get_seeds()],
                     ),
-                    reward_token_amount,
+                    available_reward_token_amount_to_harvest,
                     reward_token_mint.decimals,
                 )?
             }
@@ -1015,7 +1047,7 @@ impl HarvestRewardCommand {
                         from_reward_token_account.to_account_info(),
                         fund_supported_token_reserve_account.to_account_info(),
                         ctx.fund_account.to_account_info(),
-                        reward_token_amount,
+                        available_reward_token_amount_to_harvest,
                     )?
             }
             _ => (),
@@ -1026,7 +1058,7 @@ impl HarvestRewardCommand {
             reward_token_mint: *supported_token_mint,
             reward_token_amount,
             swapped_token_mint: None,
-            compounded_token_amount: reward_token_amount,
+            compounded_token_amount: available_reward_token_amount_to_harvest,
             distributed_token_amount: 0,
             updated_reward_account: None,
         };

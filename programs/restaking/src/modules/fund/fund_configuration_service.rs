@@ -568,23 +568,38 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         self.create_fund_manager_updated_fund_event()
     }
 
-    pub fn process_update_restaking_vault_distributing_reward_token_harvest_threshold(
+    pub fn process_update_restaking_vault_reward_token_harvest_threshold(
         &mut self,
         vault: &Pubkey,
-        distributing_reward_token_mint: &Pubkey,
+        reward_token_mint: &Pubkey,
         harvest_threshold_min_amount: u64,
         harvest_threshold_max_amount: u64,
         harvest_threshold_interval_seconds: i64,
     ) -> Result<events::FundManagerUpdatedFund> {
-        self.fund_account
-            .load_mut()?
-            .get_restaking_vault_mut(vault)?
-            .get_distributing_reward_token_mut(distributing_reward_token_mint)?
-            .update_harvest_threshold(
+        let mut fund_account = self.fund_account.load_mut()?;
+        let restaking_vault = fund_account.get_restaking_vault_mut(vault)?;
+
+        if let Ok(reward_token) =
+            restaking_vault.get_compounding_reward_token_mut(reward_token_mint)
+        {
+            reward_token.update_harvest_threshold(
                 harvest_threshold_min_amount,
                 harvest_threshold_max_amount,
                 harvest_threshold_interval_seconds,
             )?;
+        } else if let Ok(reward_token) =
+            restaking_vault.get_distributing_reward_token_mut(reward_token_mint)
+        {
+            reward_token.update_harvest_threshold(
+                harvest_threshold_min_amount,
+                harvest_threshold_max_amount,
+                harvest_threshold_interval_seconds,
+            )?;
+        } else {
+            return Err(error!(
+                ErrorCode::FundRestakingVaultRewardTokenNotRegisteredError
+            ));
+        }
 
         self.create_fund_manager_updated_fund_event()
     }

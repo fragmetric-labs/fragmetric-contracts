@@ -5,7 +5,7 @@ use crate::errors::ErrorCode;
 use crate::modules::pricing::{TokenPricingSource, TokenPricingSourcePod};
 
 pub const FUND_ACCOUNT_MAX_RESTAKING_VAULT_DELEGATIONS: usize = 30;
-pub const FUND_ACCOUNT_MAX_RESTAKING_VAULT_COMPOUNDING_REWARD_TOKENS: usize = 10;
+pub const FUND_ACCOUNT_MAX_RESTAKING_VAULT_COMPOUNDING_REWARD_TOKENS: usize = 4;
 pub const FUND_ACCOUNT_MAX_RESTAKING_VAULT_DISTRIBUTING_REWARD_TOKENS: usize = 30;
 
 #[zero_copy]
@@ -40,14 +40,14 @@ pub(super) struct RestakingVault {
     /// auto-compounding
     _padding3: [u8; 5],
     num_compounding_reward_tokens: u8,
-    compounding_reward_token_mints:
-        [Pubkey; FUND_ACCOUNT_MAX_RESTAKING_VAULT_COMPOUNDING_REWARD_TOKENS],
+    compounding_reward_tokens:
+        [RewardToken; FUND_ACCOUNT_MAX_RESTAKING_VAULT_COMPOUNDING_REWARD_TOKENS],
 
     /// reward to distribute
     _padding4: [u8; 7],
     num_distributing_reward_tokens: u8,
     distributing_reward_tokens:
-        [DistributingRewardToken; FUND_ACCOUNT_MAX_RESTAKING_VAULT_DISTRIBUTING_REWARD_TOKENS],
+        [RewardToken; FUND_ACCOUNT_MAX_RESTAKING_VAULT_DISTRIBUTING_REWARD_TOKENS],
 
     _reserved: [u8; 856],
 }
@@ -129,7 +129,7 @@ impl RestakingVault {
     ) -> Result<()> {
         if self
             .get_compounding_reward_tokens_iter()
-            .any(|reward_token| *reward_token == compounding_reward_token_mint)
+            .any(|reward_token| reward_token.mint == compounding_reward_token_mint)
         {
             err!(ErrorCode::FundRestakingVaultCompoundingRewardTokenAlreadyRegisteredError)?
         }
@@ -147,8 +147,8 @@ impl RestakingVault {
             ErrorCode::FundExceededMaxRestakingVaultCompoundingRewardTokensError
         );
 
-        self.compounding_reward_token_mints[self.num_compounding_reward_tokens as usize] =
-            compounding_reward_token_mint;
+        self.compounding_reward_tokens[self.num_compounding_reward_tokens as usize]
+            .initialize(compounding_reward_token_mint);
         self.num_compounding_reward_tokens += 1;
 
         Ok(())
@@ -160,20 +160,42 @@ impl RestakingVault {
     ) -> Result<()> {
         let matched_idx = self
             .get_compounding_reward_tokens_iter()
-            .position(|reward_token| reward_token == compounding_reward_token_mint)
+            .position(|reward_token| reward_token.mint == *compounding_reward_token_mint)
             .ok_or(ErrorCode::FundRestakingVaultCompoundingRewardTokenNotRegisteredError)?;
 
         self.num_compounding_reward_tokens -= 1;
-        self.compounding_reward_token_mints
+        self.compounding_reward_tokens
             .swap(matched_idx, self.num_compounding_reward_tokens as usize);
-        self.compounding_reward_token_mints[self.num_compounding_reward_tokens as usize] =
-            Pubkey::default();
+        self.compounding_reward_tokens[self.num_compounding_reward_tokens as usize] =
+            Zeroable::zeroed();
 
         Ok(())
     }
 
-    pub fn get_compounding_reward_tokens_iter(&self) -> impl Iterator<Item = &Pubkey> {
-        self.compounding_reward_token_mints[..self.num_compounding_reward_tokens as usize].iter()
+    pub fn get_compounding_reward_tokens_iter(&self) -> impl Iterator<Item = &RewardToken> {
+        self.compounding_reward_tokens[..self.num_compounding_reward_tokens as usize].iter()
+    }
+
+    pub fn get_compounding_reward_tokens_iter_mut(
+        &mut self,
+    ) -> impl Iterator<Item = &mut RewardToken> {
+        self.compounding_reward_tokens[..self.num_compounding_reward_tokens as usize].iter_mut()
+    }
+
+    pub fn get_compounding_reward_token(&self, mint: &Pubkey) -> Result<&RewardToken> {
+        self.get_compounding_reward_tokens_iter()
+            .find(|reward_token| reward_token.mint == *mint)
+            .ok_or_else(|| {
+                error!(ErrorCode::FundRestakingVaultCompoundingRewardTokenNotRegisteredError)
+            })
+    }
+
+    pub fn get_compounding_reward_token_mut(&mut self, mint: &Pubkey) -> Result<&mut RewardToken> {
+        self.get_compounding_reward_tokens_iter_mut()
+            .find(|reward_token| reward_token.mint == *mint)
+            .ok_or_else(|| {
+                error!(ErrorCode::FundRestakingVaultCompoundingRewardTokenNotRegisteredError)
+            })
     }
 
     pub fn add_distributing_reward_token(
@@ -189,7 +211,7 @@ impl RestakingVault {
 
         if self
             .get_compounding_reward_tokens_iter()
-            .any(|reward_token| *reward_token == distributing_reward_token_mint)
+            .any(|reward_token| reward_token.mint == distributing_reward_token_mint)
         {
             err!(ErrorCode::FundRestakingVaultCompoundingRewardTokenAlreadyRegisteredError)?
         }
@@ -225,19 +247,17 @@ impl RestakingVault {
         Ok(())
     }
 
-    pub fn get_distributing_reward_tokens_iter(
-        &self,
-    ) -> impl Iterator<Item = &DistributingRewardToken> {
+    pub fn get_distributing_reward_tokens_iter(&self) -> impl Iterator<Item = &RewardToken> {
         self.distributing_reward_tokens[..self.num_distributing_reward_tokens as usize].iter()
     }
 
     pub fn get_distributing_reward_tokens_iter_mut(
         &mut self,
-    ) -> impl Iterator<Item = &mut DistributingRewardToken> {
+    ) -> impl Iterator<Item = &mut RewardToken> {
         self.distributing_reward_tokens[..self.num_distributing_reward_tokens as usize].iter_mut()
     }
 
-    pub fn get_distributing_reward_token(&self, mint: &Pubkey) -> Result<&DistributingRewardToken> {
+    pub fn get_distributing_reward_token(&self, mint: &Pubkey) -> Result<&RewardToken> {
         self.get_distributing_reward_tokens_iter()
             .find(|reward_token| reward_token.mint == *mint)
             .ok_or_else(|| {
@@ -245,10 +265,7 @@ impl RestakingVault {
             })
     }
 
-    pub fn get_distributing_reward_token_mut(
-        &mut self,
-        mint: &Pubkey,
-    ) -> Result<&mut DistributingRewardToken> {
+    pub fn get_distributing_reward_token_mut(&mut self, mint: &Pubkey) -> Result<&mut RewardToken> {
         self.get_distributing_reward_tokens_iter_mut()
             .find(|reward_token| reward_token.mint == *mint)
             .ok_or_else(|| {
@@ -370,7 +387,7 @@ impl RestakingVaultDelegation {
 
 #[zero_copy]
 #[repr(C)]
-pub(super) struct DistributingRewardToken {
+pub(super) struct RewardToken {
     pub mint: Pubkey,
     pub harvest_threshold_min_amount: u64,
     pub harvest_threshold_max_amount: u64,
@@ -379,7 +396,7 @@ pub(super) struct DistributingRewardToken {
     _reserved: [u8; 16],
 }
 
-impl DistributingRewardToken {
+impl RewardToken {
     fn initialize(&mut self, mint: Pubkey) {
         *self = Zeroable::zeroed();
 
