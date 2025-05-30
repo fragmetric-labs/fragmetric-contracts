@@ -264,12 +264,17 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
 
         let deducted_pool_token_fee_amount = {
             let pool_account_data = self.get_pool_account_data()?;
-            pool_account_data
+            let minted_amount = pool_account_data
                 .calc_pool_tokens_for_deposit(sol_amount)
-                .and_then(|pool_token_amount| {
-                    pool_account_data.calc_pool_tokens_sol_deposit_fee(pool_token_amount)
-                })
-                .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?
+                .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+            let total_fee = pool_account_data
+                .calc_pool_tokens_sol_deposit_fee(minted_amount)
+                .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+            let referral_fee = pool_account_data
+                .calc_pool_tokens_sol_referral_fee(total_fee)
+                .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+            let manager_fee = total_fee.saturating_sub(referral_fee);
+            manager_fee
         };
 
         msg!("STAKE#spl: pool_token_mint={}, staked_sol_amount={}, deducted_pool_token_fee_amount={}, to_pool_token_account_amount={}, minted_pool_token_amount={}", self.pool_token_mint.key(), sol_amount, deducted_pool_token_fee_amount, to_pool_token_account_amount, minted_pool_token_amount);
@@ -307,7 +312,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
                 * (1.0 - (f2.numerator as f32 / f2.denominator.max(1) as f32));
         let fee_rate_bps = (fee_rate * 10_000.0).ceil();
         if fee_rate_bps > u16::MAX as f32 {
-            err!(ErrorCode::FundOperationCommandExecutionFailedException)?;
+            err!(ErrorCode::CalculationArithmeticException)?;
         }
 
         Ok((fee_rate_bps as u64, 10_000))
@@ -505,6 +510,9 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
         reserve_stake_account: &AccountInfo,
         reserve_stake_account_data: &StakeStateV2,
     ) -> Result<u64> {
+        if pool_account_data.sol_withdraw_authority.is_some() {
+            return Ok(0);
+        }
         let StakeStateV2::Initialized(meta) = reserve_stake_account_data else {
             return Err(ProgramError::from(StakePoolError::WrongStakeStake))?;
         };
@@ -628,7 +636,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
 
         let unstaking_sol_amount = to_stake_account.lamports().saturating_sub(rent_payed);
 
-        // deactive `to_stake_account` - now it's state is active since
+        // deactivate `to_stake_account` - since it's state is active now as
         // it has been splitted from active stake account
 
         let deactivate_ix = solana_program::stake::instruction::deactivate_stake(
