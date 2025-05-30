@@ -1,11 +1,12 @@
 use anchor_lang::prelude::*;
 use solv::states::VaultAccount;
 
+use crate::errors::ErrorCode;
 use crate::modules::pricing::{Asset, TokenValue, TokenValueProvider};
 
-pub struct SolvBtcVaultValueProvider;
+pub struct SolvBTCVaultValueProvider;
 
-impl TokenValueProvider for SolvBtcVaultValueProvider {
+impl TokenValueProvider for SolvBTCVaultValueProvider {
     fn resolve_underlying_assets<'info>(
         self,
         token_mint: &Pubkey,
@@ -25,7 +26,9 @@ impl TokenValueProvider for SolvBtcVaultValueProvider {
         result.numerator.extend([Asset::Token(
             vault.get_vst_mint(),
             None,
-            vault.get_vst_operation_reserved_amount(),
+            vault
+                .get_total_operation_reserved_amount_as_vst()
+                .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?,
         )]);
 
         result.denominator = vault.get_vrt_circulating_amount();
