@@ -710,7 +710,10 @@ impl VaultAccount {
         self.delegated_reward_token_mints[..self.num_delegated_reward_token_mints as usize].iter()
     }
 
-    pub fn add_delegated_reward_token_mint(&mut self, reward_token_mint: Pubkey) -> Result<()> {
+    pub(crate) fn add_delegated_reward_token_mint(
+        &mut self,
+        reward_token_mint: Pubkey,
+    ) -> Result<()> {
         // already registered delegated reward token
         if self
             .get_delegated_reward_token_mints_iter()

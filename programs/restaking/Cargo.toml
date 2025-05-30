@@ -26,8 +26,8 @@ idl-build = [
 ]
 
 # own features
-devnet = []
-mainnet = []
+devnet = ["solv/devnet"]
+mainnet = ["solv/mainnet"]
 
 [dependencies]
 anchor-lang = { workspace = true }
@@ -37,6 +37,7 @@ bytemuck = { workspace = true }
 jito-vault-sdk = { workspace = true }
 jito-vault-core = { workspace = true }
 jito-bytemuck = { workspace = true }
+solv = { path = "../solv", features = ["cpi"] }
 spl-tlv-account-resolution = { workspace = true }
 spl-transfer-hook-interface = { workspace = true }
 spl-discriminator = { workspace = true }

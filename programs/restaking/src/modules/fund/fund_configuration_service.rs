@@ -263,15 +263,15 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         &mut self,
         fund_vault_receipt_token_account: &InterfaceAccount<TokenAccount>,
 
-        vault: &UncheckedAccount,
-        vault_supported_token_mint: &InterfaceAccount<Mint>,
-        vault_receipt_token_mint: &InterfaceAccount<Mint>,
+        vault: &UncheckedAccount<'info>,
+        vault_supported_token_mint: &InterfaceAccount<'info, Mint>,
+        vault_receipt_token_mint: &InterfaceAccount<'info, Mint>,
 
         pricing_sources: &'info [AccountInfo<'info>],
     ) -> Result<events::FundManagerUpdatedFund> {
         let receipt_token_pricing_source = restaking::validate_vault(
-            vault,
-            vault_supported_token_mint.as_ref(),
+            vault.as_account_info(),
+            vault_supported_token_mint.as_account_info(),
             vault_receipt_token_mint.as_account_info(),
             self.fund_account.as_ref(),
         )?;

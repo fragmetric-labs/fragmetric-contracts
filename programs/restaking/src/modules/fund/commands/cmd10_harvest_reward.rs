@@ -612,6 +612,7 @@ impl HarvestRewardCommand {
         }
 
         let reward_token_amount = match receipt_token_pricing_source {
+            // TODO no wildcard
             &Some(TokenPricingSource::JitoRestakingVault { .. })
             | &Some(TokenPricingSource::SolvBTCVault { .. }) => vault_reward_token_account
                 .amount
@@ -848,6 +849,7 @@ impl HarvestRewardCommand {
                 }
                 Some(TokenPricingSource::SolvBTCVault { .. }) => {
                     // TODO/v0.7.0: deal with solv vault if needed
+                    // compound command needed?
                     None
                 }
                 // otherwise fails
@@ -1005,6 +1007,7 @@ impl HarvestRewardCommand {
 
         let current_timestamp = Clock::get()?.unix_timestamp;
         let reward_token_amount = match receipt_token_pricing_source {
+            // TODO no wildcard
             &Some(TokenPricingSource::JitoRestakingVault { .. }) => from_reward_token_account
                 .amount
                 .min(from_reward_token_account.delegated_amount),
@@ -1023,6 +1026,7 @@ impl HarvestRewardCommand {
         }
 
         match receipt_token_pricing_source {
+            // TODO no wildcard
             &Some(TokenPricingSource::JitoRestakingVault { .. }) => {
                 anchor_spl::token_interface::transfer_checked(
                     CpiContext::new_with_signer(
@@ -1123,6 +1127,7 @@ impl HarvestRewardCommand {
 
                 let current_timestamp = Clock::get()?.unix_timestamp;
                 let reward_token_amount = match receipt_token_pricing_source {
+                    // TODO no wildcard
                     Some(TokenPricingSource::JitoRestakingVault { .. })
                     | Some(TokenPricingSource::SolvBTCVault { .. }) => from_reward_token_account
                         .amount
@@ -1145,6 +1150,7 @@ impl HarvestRewardCommand {
                 }
 
                 match receipt_token_pricing_source {
+                    // TODO no wildcard
                     Some(TokenPricingSource::JitoRestakingVault { .. })
                     | Some(TokenPricingSource::SolvBTCVault { .. }) => {
                         anchor_spl::token_interface::transfer_checked(

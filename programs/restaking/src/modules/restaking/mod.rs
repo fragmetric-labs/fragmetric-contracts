@@ -1,9 +1,13 @@
 pub mod jito_restaking_vault_service;
 pub mod jito_restaking_vault_value_provider;
+pub mod solv_btc_vault_service;
+pub mod solv_btc_vault_value_provider;
 pub mod virtual_vault_service;
 
 pub use jito_restaking_vault_service::*;
 pub use jito_restaking_vault_value_provider::*;
+pub use solv_btc_vault_service::*;
+pub use solv_btc_vault_value_provider::*;
 pub use virtual_vault_service::*;
 
 use anchor_lang::prelude::*;
@@ -16,8 +20,8 @@ use crate::modules::pricing::TokenPricingSource;
 ///
 /// returns pricing source
 pub(in crate::modules) fn validate_vault<'info>(
-    vault_account: &AccountInfo,
-    vault_supported_token_mint: &AccountInfo,
+    vault_account: &'info AccountInfo<'info>,
+    vault_supported_token_mint: &'info AccountInfo<'info>,
     vault_receipt_token_mint: &'info AccountInfo<'info>,
     fund_account: &AccountInfo,
 ) -> Result<TokenPricingSource> {
@@ -32,10 +36,17 @@ pub(in crate::modules) fn validate_vault<'info>(
                 address: vault_account.key(),
             })
         }
-        // TODO/v0.7.0: deal with solv vault if needed
-        &SOLV_PROGRAM_ID => Ok(TokenPricingSource::SolvBTCVault {
-            address: vault_account.key(),
-        }),
+        &SOLV_PROGRAM_ID => {
+            SolvBTCVaultService::validate_vault(
+                vault_account,
+                vault_supported_token_mint,
+                vault_receipt_token_mint,
+                fund_account,
+            )?;
+            Ok(TokenPricingSource::SolvBTCVault {
+                address: vault_account.key(),
+            })
+        }
         &system_program::ID => {
             VirtualVaultService::validate_vault(
                 vault_account,
