@@ -887,7 +887,7 @@ impl FundAccount {
         self.get_asset_state(supported_token_mint)?
             .get_net_operation_reserved_amount(
                 &self.receipt_token_mint.key(),
-                &self.receipt_token_value.try_deserialize()?,
+                &self.receipt_token_value,
                 with_normal_reserve,
                 pricing_service,
             )
@@ -900,7 +900,7 @@ impl FundAccount {
     ) -> Result<u64> {
         Ok(self
             .get_asset_state(supported_token_mint)?
-            .get_total_amount(&self.receipt_token_value.try_deserialize()?))
+            .get_total_amount(&self.receipt_token_value))
     }
 
     /// get total asset amount, so it includes cash, receivable, normalized, restaked amount.

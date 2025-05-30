@@ -159,6 +159,10 @@ impl TokenPricingSourcePod {
         self.address = Pubkey::default();
     }
 
+    pub fn is_none(&self) -> bool {
+        self.discriminant == 0
+    }
+
     pub fn try_deserialize(&self) -> Result<Option<TokenPricingSource>> {
         Ok(Some(match self.discriminant {
             0 => return Ok(None),

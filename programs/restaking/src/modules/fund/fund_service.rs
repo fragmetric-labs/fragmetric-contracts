@@ -6,7 +6,7 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::errors::ErrorCode;
 use crate::events;
-use crate::modules::pricing::{Asset, PricingService, TokenPricingSource, TokenValue};
+use crate::modules::pricing::{Asset, AssetPod, PricingService, TokenPricingSource, TokenValue};
 use crate::modules::reward;
 use crate::utils::*;
 
@@ -144,7 +144,7 @@ impl<'a, 'info> FundService<'a, 'info> {
     pub(super) fn update_asset_values(
         &mut self,
         pricing_service: &mut PricingService,
-        refresh_token_price: bool,
+        refresh_token_values: bool,
     ) -> Result<()> {
         // ensure any update on fund account written before do pricing
         self.fund_account.exit(&crate::ID)?;
@@ -161,14 +161,14 @@ impl<'a, 'info> FundService<'a, 'info> {
         {
             // the values being written below are informative, only for event emission.
             let mut fund_account = self.fund_account.load_mut()?;
-            let mut receipt_token_value = TokenValue::default();
 
-            pricing_service
-                .flatten_token_value(&self.receipt_token_mint.key(), &mut receipt_token_value)?;
-            receipt_token_value.serialize_as_pod(&mut fund_account.receipt_token_value)?;
+            pricing_service.flatten_token_value_pod(
+                &self.receipt_token_mint.key(),
+                &mut fund_account.receipt_token_value,
+            )?;
             fund_account.receipt_token_value_updated_slot = self.current_slot;
 
-            if refresh_token_price {
+            if refresh_token_values {
                 for supported_token in fund_account.get_supported_tokens_iter_mut() {
                     supported_token.one_token_as_sol = pricing_service
                         .get_one_token_amount_as_sol(
@@ -214,16 +214,28 @@ impl<'a, 'info> FundService<'a, 'info> {
                 let mut total_withdrawal_requested_receipt_token_amount = 0;
 
                 // here, atomic assets of receipt_token_value should be either SOL or one of supported tokens.
-                for asset_value in &receipt_token_value.numerator {
+                let receipt_token_value = fund_account.receipt_token_value;
+                for asset_value in
+                    &receipt_token_value.numerator[..receipt_token_value.num_numerator as usize]
+                {
                     match asset_value {
-                        Asset::SOL(..) => {
+                        AssetPod {
+                            discriminant: AssetPod::DISCRIMINANT_SOL,
+                            ..
+                        } => {
                             // just count the already processing withdrawal amount
                             total_withdrawal_requested_receipt_token_amount += fund_account
                                 .sol
                                 .get_receipt_token_withdrawal_requested_amount();
                         }
-                        Asset::Token(token_mint, pricing_source, token_amount) => {
-                            match pricing_source {
+                        AssetPod {
+                            discriminant: AssetPod::DISCRIMINANT_TOKEN,
+                            token_mint,
+                            token_pricing_source,
+                            token_amount,
+                            ..
+                        } => {
+                            match token_pricing_source.try_deserialize()? {
                                 None => err!(ErrorCode::TokenPricingSourceAccountNotFoundError)?,
                                 Some(pricing_source) => {
                                     #[deny(clippy::wildcard_enum_match_arm)]
@@ -270,6 +282,7 @@ impl<'a, 'info> FundService<'a, 'info> {
                                 }
                             }
                         }
+                        _ => err!(ErrorCode::TokenPricingSourceAccountNotFoundError)?,
                     }
                 }
 
@@ -408,7 +421,11 @@ impl<'a, 'info> FundService<'a, 'info> {
         };
         let (result, next_command) = match command.execute(&mut ctx, &operation_command_accounts) {
             Ok((result, next_command)) => {
-                msg!("COMMAND#{}: {:?} passed", operation_sequence, command);
+                msg!(
+                    "COMMAND#{}: {} passed",
+                    operation_sequence,
+                    command.type_name()
+                );
                 (result, next_command)
             }
             Err(err) => {

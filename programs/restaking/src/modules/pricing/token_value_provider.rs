@@ -101,9 +101,9 @@ impl TokenValue {
 #[zero_copy]
 #[repr(C)]
 pub struct TokenValuePod {
-    numerator: [AssetPod; TOKEN_VALUE_MAX_NUMERATORS_SIZE],
-    num_numerator: u64,
-    denominator: u64,
+    pub numerator: [AssetPod; TOKEN_VALUE_MAX_NUMERATORS_SIZE],
+    pub num_numerator: u64,
+    pub denominator: u64,
 }
 
 impl TokenValuePod {
@@ -121,6 +121,84 @@ impl TokenValuePod {
             denominator: self.denominator,
         })
     }
+
+    pub fn get_asset_amount(&self, asset_mint: Option<&Pubkey>) -> u64 {
+        self.numerator[..self.num_numerator as usize]
+            .iter()
+            .find_map(|asset| match (asset, asset_mint) {
+                (
+                    AssetPod {
+                        discriminant: AssetPod::DISCRIMINANT_SOL,
+                        sol_amount,
+                        ..
+                    },
+                    None,
+                ) => Some(*sol_amount),
+                (
+                    AssetPod {
+                        discriminant: AssetPod::DISCRIMINANT_TOKEN,
+                        token_mint,
+                        token_amount,
+                        ..
+                    },
+                    Some(supported_token_mint),
+                ) if supported_token_mint == token_mint => Some(*token_amount),
+                _ => None,
+            })
+            .unwrap_or_default()
+    }
+
+    pub(super) fn add_sol(&mut self, sol_amount: u64) {
+        for asset in &mut self.numerator[..self.num_numerator as usize] {
+            if let AssetPod {
+                discriminant: AssetPod::DISCRIMINANT_SOL,
+                sol_amount: existing_sol_amount,
+                ..
+            } = asset
+            {
+                *existing_sol_amount += sol_amount;
+                return;
+            }
+        }
+
+        Asset::SOL(sol_amount).serialize_as_pod(&mut self.numerator[self.num_numerator as usize]);
+        self.num_numerator += 1;
+    }
+
+    pub(super) fn add_token(
+        &mut self,
+        token_mint: &Pubkey,
+        token_pricing_source: Option<&TokenPricingSource>,
+        token_amount: u64,
+    ) {
+        for asset in &mut self.numerator[..self.num_numerator as usize] {
+            if let AssetPod {
+                discriminant: AssetPod::DISCRIMINANT_TOKEN,
+                token_mint: existing_token_mint,
+                token_pricing_source: existing_token_pricing_source,
+                token_amount: existing_token_amount,
+                ..
+            } = asset
+            {
+                if existing_token_mint != token_mint {
+                    continue;
+                }
+
+                if existing_token_pricing_source.is_none() && token_pricing_source.is_some() {
+                    token_pricing_source
+                        .unwrap()
+                        .serialize_as_pod(existing_token_pricing_source);
+                }
+
+                *existing_token_amount += token_amount;
+                return;
+            }
+        }
+
+        Asset::Token(*token_mint, token_pricing_source.cloned(), token_amount)
+            .serialize_as_pod(&mut self.numerator[self.num_numerator as usize]);
+        self.num_numerator += 1;
+    }
 }
 
 #[derive(Clone, PartialEq, InitSpace, AnchorSerialize, AnchorDeserialize)]
@@ -136,14 +214,14 @@ impl Asset {
     pub fn serialize_as_pod(&self, pod: &mut AssetPod) {
         match self {
             Asset::SOL(sol_amount) => {
-                pod.discriminant = 1;
+                pod.discriminant = AssetPod::DISCRIMINANT_SOL;
                 pod.sol_amount = *sol_amount;
                 pod.token_amount = 0;
                 pod.token_mint = Pubkey::default();
                 pod.token_pricing_source.set_none();
             }
             Asset::Token(token_mint, token_pricing_source, token_amount) => {
-                pod.discriminant = 2;
+                pod.discriminant = AssetPod::DISCRIMINANT_TOKEN;
                 pod.sol_amount = 0;
                 pod.token_amount = *token_amount;
                 pod.token_mint = *token_mint;
@@ -161,19 +239,22 @@ impl Asset {
 #[zero_copy]
 #[repr(C)]
 pub struct AssetPod {
-    discriminant: u8,
+    pub discriminant: u8,
     _padding: [u8; 7],
-    sol_amount: u64,
-    token_amount: u64,
-    token_mint: Pubkey,
-    token_pricing_source: TokenPricingSourcePod,
+    pub sol_amount: u64,
+    pub token_amount: u64,
+    pub token_mint: Pubkey,
+    pub token_pricing_source: TokenPricingSourcePod,
 }
 
 impl AssetPod {
+    pub(crate) const DISCRIMINANT_SOL: u8 = 1;
+    pub(crate) const DISCRIMINANT_TOKEN: u8 = 2;
+
     pub fn try_deserialize(&self) -> Result<Asset> {
         Ok(match self.discriminant {
-            1 => Asset::SOL(self.sol_amount),
-            2 => Asset::Token(
+            Self::DISCRIMINANT_SOL => Asset::SOL(self.sol_amount),
+            Self::DISCRIMINANT_TOKEN => Asset::Token(
                 self.token_mint,
                 self.token_pricing_source.try_deserialize()?,
                 self.token_amount,
