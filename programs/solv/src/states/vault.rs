@@ -301,6 +301,15 @@ impl VaultAccount {
         Ok(())
     }
 
+    pub fn get_estimated_withdrawal_fee_as_vst(&self, vst_amount: u64) -> Result<u64> {
+        let estimated_withdrawal_fee_as_vst =
+            SolvProtocolWithdrawalFeeRate(self.solv_protocol_withdrawal_fee_rate_bps)
+                .get_withdrawal_fee(vst_amount)
+                .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
+
+        Ok(estimated_withdrawal_fee_as_vst)
+    }
+
     pub fn get_vrt_mint(&self) -> Pubkey {
         self.vault_receipt_token_mint
     }

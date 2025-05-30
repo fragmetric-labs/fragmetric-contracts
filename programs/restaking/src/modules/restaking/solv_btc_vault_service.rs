@@ -286,17 +286,79 @@ impl<'info> SolvBTCVaultService<'info> {
         ))
     }
 
-    // pub fn withdraw(&self) -> Result<()> {
-    //     let vault_loader = AccountLoader::<VaultAccount>::try_from(self.vault_account)?;
-    //     let vault = vault_loader.load()?;
+    /// returns [payer_vault_supported_token_amount, unrestaked_receipt_token_amount, claimed_supported_token_amount, deducted_supported_token_fee_amount]
+    pub fn withdraw(
+        &self,
+        // fixed
+        vault_receipt_token_mint: &AccountInfo<'info>,
+        vault_supported_token_mint: &AccountInfo<'info>,
+        vault_vault_receipt_token_account: &AccountInfo<'info>,
+        vault_vault_supported_token_account: &AccountInfo<'info>,
+        token_program: &AccountInfo<'info>,
+        event_authority: &AccountInfo<'info>,
 
-    //     let bump = vault.get_bump();
-    //     let signer_seeds: &[&[&[u8]]] = &[&[
-    //         VaultAccount::SEED,
-    //         vault.get_vrt_mint().key().as_ref(),
-    //         &[bump],
-    //     ]];
+        // variant
+        fund_manager: &AccountInfo<'info>,
+        fund_manager_seeds: &[&[&[u8]]],
+        payer_vault_receipt_token_account: &'info AccountInfo<'info>,
+        payer_vault_supported_token_account: &'info AccountInfo<'info>,
+        payer: &AccountInfo<'info>,
+        payer_seeds: &[&[&[u8]]],
+    ) -> Result<(u64, u64, u64, u64)> {
+        let mut signer_seeds = Vec::with_capacity(2);
+        if let Some(seeds) = fund_manager_seeds.first() {
+            signer_seeds.push(*seeds);
+        }
+        if let Some(seeds) = payer_seeds.first() {
+            signer_seeds.push(*seeds);
+        }
 
-    //     Ok(())
-    // }
+        let mut payer_vault_supported_token_account =
+            InterfaceAccount::<TokenAccount>::try_from(payer_vault_supported_token_account)?;
+        let mut payer_vault_receipt_token_account =
+            InterfaceAccount::<TokenAccount>::try_from(payer_vault_receipt_token_account)?;
+        let payer_vault_supported_token_account_amount_before =
+            payer_vault_supported_token_account.amount;
+
+        solv::cpi::fund_manager_withdraw(CpiContext::new_with_signer(
+            self.vault_program.to_account_info(),
+            solv::cpi::accounts::FundManagerContext {
+                payer: payer.to_account_info(),
+                fund_manager: fund_manager.to_account_info(),
+                vault_account: self.vault_account.to_account_info(),
+                vault_receipt_token_mint: vault_receipt_token_mint.to_account_info(),
+                vault_supported_token_mint: vault_supported_token_mint.to_account_info(),
+                payer_vault_receipt_token_account: payer_vault_receipt_token_account
+                    .to_account_info(),
+                payer_vault_supported_token_account: payer_vault_supported_token_account
+                    .to_account_info(),
+                vault_vault_receipt_token_account: vault_vault_receipt_token_account
+                    .to_account_info(),
+                vault_vault_supported_token_account: vault_vault_supported_token_account
+                    .to_account_info(),
+                token_program: token_program.to_account_info(),
+                event_authority: event_authority.to_account_info(),
+                program: self.vault_program.to_account_info(),
+            },
+            &signer_seeds,
+        ))?;
+
+        payer_vault_supported_token_account.reload()?;
+        let payer_vault_supported_token_account_amount = payer_vault_supported_token_account.amount;
+        let claimed_supported_token_amount = payer_vault_supported_token_account_amount
+            - payer_vault_supported_token_account_amount_before;
+
+        payer_vault_receipt_token_account.reload()?;
+        let deducted_supported_token_fee_amount = self
+            .vault_account
+            .load()?
+            .get_estimated_withdrawal_fee_as_vst(claimed_supported_token_amount)?;
+
+        Ok((
+            payer_vault_supported_token_account_amount,
+            0, // TODO: need to update this return value
+            claimed_supported_token_amount,
+            deducted_supported_token_fee_amount,
+        ))
+    }
 }
