@@ -573,6 +573,15 @@ describe('restaking.frag2 test', async () => {
     expect(fund_3_frag!.token.operationReservedAmount).toEqual(
       fund_2_1_frag!.token.operationReservedAmount + 400_000_000n
     );
+
+    // set back to normal state
+    await ctx.fund.updateRestakingVaultRewardHarvestThreshold.execute({
+      vault: '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
+      rewardTokenMint: 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF',
+      harvestThresholdMinAmount: 1_000_000_000n,
+      harvestThresholdMaxAmount: 1_000_000_000_000n,
+      harvestThresholdIntervalSeconds: 1n,
+    });
   });
 
   test('virtual vault harvest/distribute', async () => {

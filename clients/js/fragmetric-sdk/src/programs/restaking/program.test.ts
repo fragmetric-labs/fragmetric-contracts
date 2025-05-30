@@ -123,7 +123,7 @@ test('can traverse context graph', async () => {
     │   │   │   ├── reward                                    RestakingFundWrapRewardAccount address=undefined
     │   │   │   │   ├── updatePools                           TransactionTemplate args=null, events=userUpdatedRewardPool, description=manually triggers contribution synchronization for the user reward po
     │   │   │   │   ├── initializeOrUpdateAccount             TransactionTemplate args=null, events=userCreatedOrUpdatedRewardAccount, description=initialize or update user reward account
-    │   │   │   │   ├── claim                                 TransactionTemplate args=delegate,isBonus,mint,amount,recipient, events=userClaimedReward, description=claim rewards
+    │   │   │   │   ├── claim                                 TransactionTemplate args=delegate,isBonus,mint,amount,recipient,applyPresetComputeUnitLimit, events=userClaimedReward, description=claim rewar
     │   │   │   │   ├── delegate                              TransactionTemplate args=delegate,newDelegate, events=userDelegatedRewardAccount, description=delegate user reward account
     │   │   │   │   └── resetDelegate                         TransactionTemplate args=null, events=userDelegatedRewardAccount, description=reset delegate of reward account (in case of either fund wrap or
     │   │   │   ├── receiptToken                              TokenAccount address=undefined, amount=undefined, mint=undefined
@@ -177,7 +177,7 @@ test('can traverse context graph', async () => {
     │   │   ├── reward                                        RestakingUserRewardAccount address=undefined
     │   │   │   ├── updatePools                               TransactionTemplate args=null, events=userUpdatedRewardPool, description=manually triggers contribution synchronization for the user reward po
     │   │   │   ├── initializeOrUpdateAccount                 TransactionTemplate args=null, events=userCreatedOrUpdatedRewardAccount, description=initialize or update user reward account
-    │   │   │   ├── claim                                     TransactionTemplate args=delegate,isBonus,mint,amount,recipient, events=userClaimedReward, description=claim rewards
+    │   │   │   ├── claim                                     TransactionTemplate args=delegate,isBonus,mint,amount,recipient,applyPresetComputeUnitLimit, events=userClaimedReward, description=claim rewar
     │   │   │   ├── delegate                                  TransactionTemplate args=delegate,newDelegate, events=userDelegatedRewardAccount, description=delegate user reward account
     │   │   │   └── resetDelegate                             TransactionTemplate args=null, events=userDelegatedRewardAccount, description=reset delegate of reward account (in case of either fund wrap or
     │   │   ├── receiptToken                                  TokenAccount address=undefined, amount=undefined, mint=undefined
@@ -185,12 +185,12 @@ test('can traverse context graph', async () => {
     │   │   ├── supportedTokens                               IterativeAccount length=undefined, types=undefined
     │   │   ├── rewardTokens                                  IterativeAccount length=undefined, types=undefined
     │   │   ├── deposit                                       TransactionTemplate args=assetMint,assetAmount,metadata,applyPresetComputeUnitLimit, events=userDepositedToFund,userCreatedOrUpdatedFundAccoun
-    │   │   ├── requestWithdrawal                             TransactionTemplate args=assetMint,receiptTokenAmount, events=userRequestedWithdrawalFromFund,userCreatedOrUpdatedFundAccount,userCreatedOrUpd
-    │   │   ├── cancelWithdrawalRequest                       TransactionTemplate args=assetMint,requestId, events=userCanceledWithdrawalRequestFromFund,userCreatedOrUpdatedFundAccount,userCreatedOrUpdate
-    │   │   ├── withdraw                                      TransactionTemplate args=assetMint,requestId, events=userWithdrewFromFund,userCreatedOrUpdatedFundAccount,userCreatedOrUpdatedRewardAccount, d
-    │   │   ├── wrap                                          TransactionTemplate args=receiptTokenAmount,receiptTokenAmountAsTargetBalance, events=userWrappedReceiptToken, description=convert receipt tok
-    │   │   ├── unwrap                                        TransactionTemplate args=wrappedTokenAmount, events=userUnwrappedReceiptToken, description=convert wrapped tokens back into receipt tokens
-    │   │   └── transfer                                      TransactionTemplate args=receiptTokenAmount,recipient, events=userTransferredReceiptToken, description=transfer receipt token
+    │   │   ├── requestWithdrawal                             TransactionTemplate args=assetMint,receiptTokenAmount,applyPresetComputeUnitLimit, events=userRequestedWithdrawalFromFund,userCreatedOrUpdated
+    │   │   ├── cancelWithdrawalRequest                       TransactionTemplate args=assetMint,requestId,applyPresetComputeUnitLimit, events=userCanceledWithdrawalRequestFromFund,userCreatedOrUpdatedFun
+    │   │   ├── withdraw                                      TransactionTemplate args=assetMint,requestId,applyPresetComputeUnitLimit, events=userWithdrewFromFund,userCreatedOrUpdatedFundAccount,userCrea
+    │   │   ├── wrap                                          TransactionTemplate args=receiptTokenAmount,receiptTokenAmountAsTargetBalance,applyPresetComputeUnitLimit, events=userWrappedReceiptToken, des
+    │   │   ├── unwrap                                        TransactionTemplate args=wrappedTokenAmount,applyPresetComputeUnitLimit, events=userUnwrappedReceiptToken, description=convert wrapped tokens 
+    │   │   └── transfer                                      TransactionTemplate args=receiptTokenAmount,recipient,applyPresetComputeUnitLimit, events=userTransferredReceiptToken, description=transfer re
     │   ├── initializeMint                                    TransactionTemplate args=name,symbol,uri,description,decimals, events=undefined, description=initialize receipt token mint
     │   └── initializeOrUpdateExtraAccountMetaList            TransactionTemplate args=null, events=undefined, description=initialize or update extra account meta list
     ├── fragJTO                                               RestakingReceiptTokenMintAccount address=undefined, supply=undefined, decimals=undefined
@@ -207,7 +207,7 @@ test('can traverse context graph', async () => {
     │   │   │   ├── reward                                    RestakingFundWrapRewardAccount address=undefined
     │   │   │   │   ├── updatePools                           TransactionTemplate args=null, events=userUpdatedRewardPool, description=manually triggers contribution synchronization for the user reward po
     │   │   │   │   ├── initializeOrUpdateAccount             TransactionTemplate args=null, events=userCreatedOrUpdatedRewardAccount, description=initialize or update user reward account
-    │   │   │   │   ├── claim                                 TransactionTemplate args=delegate,isBonus,mint,amount,recipient, events=userClaimedReward, description=claim rewards
+    │   │   │   │   ├── claim                                 TransactionTemplate args=delegate,isBonus,mint,amount,recipient,applyPresetComputeUnitLimit, events=userClaimedReward, description=claim rewar
     │   │   │   │   ├── delegate                              TransactionTemplate args=delegate,newDelegate, events=userDelegatedRewardAccount, description=delegate user reward account
     │   │   │   │   └── resetDelegate                         TransactionTemplate args=null, events=userDelegatedRewardAccount, description=reset delegate of reward account (in case of either fund wrap or
     │   │   │   ├── receiptToken                              TokenAccount address=undefined, amount=undefined, mint=undefined
@@ -261,7 +261,7 @@ test('can traverse context graph', async () => {
     │   │   ├── reward                                        RestakingUserRewardAccount address=undefined
     │   │   │   ├── updatePools                               TransactionTemplate args=null, events=userUpdatedRewardPool, description=manually triggers contribution synchronization for the user reward po
     │   │   │   ├── initializeOrUpdateAccount                 TransactionTemplate args=null, events=userCreatedOrUpdatedRewardAccount, description=initialize or update user reward account
-    │   │   │   ├── claim                                     TransactionTemplate args=delegate,isBonus,mint,amount,recipient, events=userClaimedReward, description=claim rewards
+    │   │   │   ├── claim                                     TransactionTemplate args=delegate,isBonus,mint,amount,recipient,applyPresetComputeUnitLimit, events=userClaimedReward, description=claim rewar
     │   │   │   ├── delegate                                  TransactionTemplate args=delegate,newDelegate, events=userDelegatedRewardAccount, description=delegate user reward account
     │   │   │   └── resetDelegate                             TransactionTemplate args=null, events=userDelegatedRewardAccount, description=reset delegate of reward account (in case of either fund wrap or
     │   │   ├── receiptToken                                  TokenAccount address=undefined, amount=undefined, mint=undefined
@@ -269,12 +269,12 @@ test('can traverse context graph', async () => {
     │   │   ├── supportedTokens                               IterativeAccount length=undefined, types=undefined
     │   │   ├── rewardTokens                                  IterativeAccount length=undefined, types=undefined
     │   │   ├── deposit                                       TransactionTemplate args=assetMint,assetAmount,metadata,applyPresetComputeUnitLimit, events=userDepositedToFund,userCreatedOrUpdatedFundAccoun
-    │   │   ├── requestWithdrawal                             TransactionTemplate args=assetMint,receiptTokenAmount, events=userRequestedWithdrawalFromFund,userCreatedOrUpdatedFundAccount,userCreatedOrUpd
-    │   │   ├── cancelWithdrawalRequest                       TransactionTemplate args=assetMint,requestId, events=userCanceledWithdrawalRequestFromFund,userCreatedOrUpdatedFundAccount,userCreatedOrUpdate
-    │   │   ├── withdraw                                      TransactionTemplate args=assetMint,requestId, events=userWithdrewFromFund,userCreatedOrUpdatedFundAccount,userCreatedOrUpdatedRewardAccount, d
-    │   │   ├── wrap                                          TransactionTemplate args=receiptTokenAmount,receiptTokenAmountAsTargetBalance, events=userWrappedReceiptToken, description=convert receipt tok
-    │   │   ├── unwrap                                        TransactionTemplate args=wrappedTokenAmount, events=userUnwrappedReceiptToken, description=convert wrapped tokens back into receipt tokens
-    │   │   └── transfer                                      TransactionTemplate args=receiptTokenAmount,recipient, events=userTransferredReceiptToken, description=transfer receipt token
+    │   │   ├── requestWithdrawal                             TransactionTemplate args=assetMint,receiptTokenAmount,applyPresetComputeUnitLimit, events=userRequestedWithdrawalFromFund,userCreatedOrUpdated
+    │   │   ├── cancelWithdrawalRequest                       TransactionTemplate args=assetMint,requestId,applyPresetComputeUnitLimit, events=userCanceledWithdrawalRequestFromFund,userCreatedOrUpdatedFun
+    │   │   ├── withdraw                                      TransactionTemplate args=assetMint,requestId,applyPresetComputeUnitLimit, events=userWithdrewFromFund,userCreatedOrUpdatedFundAccount,userCrea
+    │   │   ├── wrap                                          TransactionTemplate args=receiptTokenAmount,receiptTokenAmountAsTargetBalance,applyPresetComputeUnitLimit, events=userWrappedReceiptToken, des
+    │   │   ├── unwrap                                        TransactionTemplate args=wrappedTokenAmount,applyPresetComputeUnitLimit, events=userUnwrappedReceiptToken, description=convert wrapped tokens 
+    │   │   └── transfer                                      TransactionTemplate args=receiptTokenAmount,recipient,applyPresetComputeUnitLimit, events=userTransferredReceiptToken, description=transfer re
     │   ├── initializeMint                                    TransactionTemplate args=name,symbol,uri,description,decimals, events=undefined, description=initialize receipt token mint
     │   └── initializeOrUpdateExtraAccountMetaList            TransactionTemplate args=null, events=undefined, description=initialize or update extra account meta list
     ├── fragBTC                                               RestakingReceiptTokenMintAccount address=undefined, supply=undefined, decimals=undefined
@@ -291,7 +291,7 @@ test('can traverse context graph', async () => {
     │   │   │   ├── reward                                    RestakingFundWrapRewardAccount address=undefined
     │   │   │   │   ├── updatePools                           TransactionTemplate args=null, events=userUpdatedRewardPool, description=manually triggers contribution synchronization for the user reward po
     │   │   │   │   ├── initializeOrUpdateAccount             TransactionTemplate args=null, events=userCreatedOrUpdatedRewardAccount, description=initialize or update user reward account
-    │   │   │   │   ├── claim                                 TransactionTemplate args=delegate,isBonus,mint,amount,recipient, events=userClaimedReward, description=claim rewards
+    │   │   │   │   ├── claim                                 TransactionTemplate args=delegate,isBonus,mint,amount,recipient,applyPresetComputeUnitLimit, events=userClaimedReward, description=claim rewar
     │   │   │   │   ├── delegate                              TransactionTemplate args=delegate,newDelegate, events=userDelegatedRewardAccount, description=delegate user reward account
     │   │   │   │   └── resetDelegate                         TransactionTemplate args=null, events=userDelegatedRewardAccount, description=reset delegate of reward account (in case of either fund wrap or
     │   │   │   ├── receiptToken                              TokenAccount address=undefined, amount=undefined, mint=undefined
@@ -345,7 +345,7 @@ test('can traverse context graph', async () => {
     │   │   ├── reward                                        RestakingUserRewardAccount address=undefined
     │   │   │   ├── updatePools                               TransactionTemplate args=null, events=userUpdatedRewardPool, description=manually triggers contribution synchronization for the user reward po
     │   │   │   ├── initializeOrUpdateAccount                 TransactionTemplate args=null, events=userCreatedOrUpdatedRewardAccount, description=initialize or update user reward account
-    │   │   │   ├── claim                                     TransactionTemplate args=delegate,isBonus,mint,amount,recipient, events=userClaimedReward, description=claim rewards
+    │   │   │   ├── claim                                     TransactionTemplate args=delegate,isBonus,mint,amount,recipient,applyPresetComputeUnitLimit, events=userClaimedReward, description=claim rewar
     │   │   │   ├── delegate                                  TransactionTemplate args=delegate,newDelegate, events=userDelegatedRewardAccount, description=delegate user reward account
     │   │   │   └── resetDelegate                             TransactionTemplate args=null, events=userDelegatedRewardAccount, description=reset delegate of reward account (in case of either fund wrap or
     │   │   ├── receiptToken                                  TokenAccount address=undefined, amount=undefined, mint=undefined
@@ -353,12 +353,12 @@ test('can traverse context graph', async () => {
     │   │   ├── supportedTokens                               IterativeAccount length=undefined, types=undefined
     │   │   ├── rewardTokens                                  IterativeAccount length=undefined, types=undefined
     │   │   ├── deposit                                       TransactionTemplate args=assetMint,assetAmount,metadata,applyPresetComputeUnitLimit, events=userDepositedToFund,userCreatedOrUpdatedFundAccoun
-    │   │   ├── requestWithdrawal                             TransactionTemplate args=assetMint,receiptTokenAmount, events=userRequestedWithdrawalFromFund,userCreatedOrUpdatedFundAccount,userCreatedOrUpd
-    │   │   ├── cancelWithdrawalRequest                       TransactionTemplate args=assetMint,requestId, events=userCanceledWithdrawalRequestFromFund,userCreatedOrUpdatedFundAccount,userCreatedOrUpdate
-    │   │   ├── withdraw                                      TransactionTemplate args=assetMint,requestId, events=userWithdrewFromFund,userCreatedOrUpdatedFundAccount,userCreatedOrUpdatedRewardAccount, d
-    │   │   ├── wrap                                          TransactionTemplate args=receiptTokenAmount,receiptTokenAmountAsTargetBalance, events=userWrappedReceiptToken, description=convert receipt tok
-    │   │   ├── unwrap                                        TransactionTemplate args=wrappedTokenAmount, events=userUnwrappedReceiptToken, description=convert wrapped tokens back into receipt tokens
-    │   │   └── transfer                                      TransactionTemplate args=receiptTokenAmount,recipient, events=userTransferredReceiptToken, description=transfer receipt token
+    │   │   ├── requestWithdrawal                             TransactionTemplate args=assetMint,receiptTokenAmount,applyPresetComputeUnitLimit, events=userRequestedWithdrawalFromFund,userCreatedOrUpdated
+    │   │   ├── cancelWithdrawalRequest                       TransactionTemplate args=assetMint,requestId,applyPresetComputeUnitLimit, events=userCanceledWithdrawalRequestFromFund,userCreatedOrUpdatedFun
+    │   │   ├── withdraw                                      TransactionTemplate args=assetMint,requestId,applyPresetComputeUnitLimit, events=userWithdrewFromFund,userCreatedOrUpdatedFundAccount,userCrea
+    │   │   ├── wrap                                          TransactionTemplate args=receiptTokenAmount,receiptTokenAmountAsTargetBalance,applyPresetComputeUnitLimit, events=userWrappedReceiptToken, des
+    │   │   ├── unwrap                                        TransactionTemplate args=wrappedTokenAmount,applyPresetComputeUnitLimit, events=userUnwrappedReceiptToken, description=convert wrapped tokens 
+    │   │   └── transfer                                      TransactionTemplate args=receiptTokenAmount,recipient,applyPresetComputeUnitLimit, events=userTransferredReceiptToken, description=transfer re
     │   ├── initializeMint                                    TransactionTemplate args=name,symbol,uri,description,decimals, events=undefined, description=initialize receipt token mint
     │   └── initializeOrUpdateExtraAccountMetaList            TransactionTemplate args=null, events=undefined, description=initialize or update extra account meta list
     ├── frag2                                                 RestakingReceiptTokenMintAccount address=undefined, supply=undefined, decimals=undefined
@@ -375,7 +375,7 @@ test('can traverse context graph', async () => {
     │   │   │   ├── reward                                    RestakingFundWrapRewardAccount address=undefined
     │   │   │   │   ├── updatePools                           TransactionTemplate args=null, events=userUpdatedRewardPool, description=manually triggers contribution synchronization for the user reward po
     │   │   │   │   ├── initializeOrUpdateAccount             TransactionTemplate args=null, events=userCreatedOrUpdatedRewardAccount, description=initialize or update user reward account
-    │   │   │   │   ├── claim                                 TransactionTemplate args=delegate,isBonus,mint,amount,recipient, events=userClaimedReward, description=claim rewards
+    │   │   │   │   ├── claim                                 TransactionTemplate args=delegate,isBonus,mint,amount,recipient,applyPresetComputeUnitLimit, events=userClaimedReward, description=claim rewar
     │   │   │   │   ├── delegate                              TransactionTemplate args=delegate,newDelegate, events=userDelegatedRewardAccount, description=delegate user reward account
     │   │   │   │   └── resetDelegate                         TransactionTemplate args=null, events=userDelegatedRewardAccount, description=reset delegate of reward account (in case of either fund wrap or
     │   │   │   ├── receiptToken                              TokenAccount address=undefined, amount=undefined, mint=undefined
@@ -429,7 +429,7 @@ test('can traverse context graph', async () => {
     │   │   ├── reward                                        RestakingUserRewardAccount address=undefined
     │   │   │   ├── updatePools                               TransactionTemplate args=null, events=userUpdatedRewardPool, description=manually triggers contribution synchronization for the user reward po
     │   │   │   ├── initializeOrUpdateAccount                 TransactionTemplate args=null, events=userCreatedOrUpdatedRewardAccount, description=initialize or update user reward account
-    │   │   │   ├── claim                                     TransactionTemplate args=delegate,isBonus,mint,amount,recipient, events=userClaimedReward, description=claim rewards
+    │   │   │   ├── claim                                     TransactionTemplate args=delegate,isBonus,mint,amount,recipient,applyPresetComputeUnitLimit, events=userClaimedReward, description=claim rewar
     │   │   │   ├── delegate                                  TransactionTemplate args=delegate,newDelegate, events=userDelegatedRewardAccount, description=delegate user reward account
     │   │   │   └── resetDelegate                             TransactionTemplate args=null, events=userDelegatedRewardAccount, description=reset delegate of reward account (in case of either fund wrap or
     │   │   ├── receiptToken                                  TokenAccount address=undefined, amount=undefined, mint=undefined
@@ -437,12 +437,12 @@ test('can traverse context graph', async () => {
     │   │   ├── supportedTokens                               IterativeAccount length=undefined, types=undefined
     │   │   ├── rewardTokens                                  IterativeAccount length=undefined, types=undefined
     │   │   ├── deposit                                       TransactionTemplate args=assetMint,assetAmount,metadata,applyPresetComputeUnitLimit, events=userDepositedToFund,userCreatedOrUpdatedFundAccoun
-    │   │   ├── requestWithdrawal                             TransactionTemplate args=assetMint,receiptTokenAmount, events=userRequestedWithdrawalFromFund,userCreatedOrUpdatedFundAccount,userCreatedOrUpd
-    │   │   ├── cancelWithdrawalRequest                       TransactionTemplate args=assetMint,requestId, events=userCanceledWithdrawalRequestFromFund,userCreatedOrUpdatedFundAccount,userCreatedOrUpdate
-    │   │   ├── withdraw                                      TransactionTemplate args=assetMint,requestId, events=userWithdrewFromFund,userCreatedOrUpdatedFundAccount,userCreatedOrUpdatedRewardAccount, d
-    │   │   ├── wrap                                          TransactionTemplate args=receiptTokenAmount,receiptTokenAmountAsTargetBalance, events=userWrappedReceiptToken, description=convert receipt tok
-    │   │   ├── unwrap                                        TransactionTemplate args=wrappedTokenAmount, events=userUnwrappedReceiptToken, description=convert wrapped tokens back into receipt tokens
-    │   │   └── transfer                                      TransactionTemplate args=receiptTokenAmount,recipient, events=userTransferredReceiptToken, description=transfer receipt token
+    │   │   ├── requestWithdrawal                             TransactionTemplate args=assetMint,receiptTokenAmount,applyPresetComputeUnitLimit, events=userRequestedWithdrawalFromFund,userCreatedOrUpdated
+    │   │   ├── cancelWithdrawalRequest                       TransactionTemplate args=assetMint,requestId,applyPresetComputeUnitLimit, events=userCanceledWithdrawalRequestFromFund,userCreatedOrUpdatedFun
+    │   │   ├── withdraw                                      TransactionTemplate args=assetMint,requestId,applyPresetComputeUnitLimit, events=userWithdrewFromFund,userCreatedOrUpdatedFundAccount,userCrea
+    │   │   ├── wrap                                          TransactionTemplate args=receiptTokenAmount,receiptTokenAmountAsTargetBalance,applyPresetComputeUnitLimit, events=userWrappedReceiptToken, des
+    │   │   ├── unwrap                                        TransactionTemplate args=wrappedTokenAmount,applyPresetComputeUnitLimit, events=userUnwrappedReceiptToken, description=convert wrapped tokens 
+    │   │   └── transfer                                      TransactionTemplate args=receiptTokenAmount,recipient,applyPresetComputeUnitLimit, events=userTransferredReceiptToken, description=transfer re
     │   ├── initializeMint                                    TransactionTemplate args=name,symbol,uri,description,decimals, events=undefined, description=initialize receipt token mint
     │   └── initializeOrUpdateExtraAccountMetaList            TransactionTemplate args=null, events=undefined, description=initialize or update extra account meta list
     └── parent                                                Runtime type=svm, cluster=devnet"

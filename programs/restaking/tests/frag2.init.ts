@@ -111,7 +111,7 @@ export async function initializeFrag2(testCtx: TestSuiteContext) {
         rewardTokenMint: 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF',
       }),
     () =>
-      ctx.fund.updateRestakingVaultDistributingRewardHarvestThreshold.execute({
+      ctx.fund.updateRestakingVaultRewardHarvestThreshold.execute({
         vault: '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
         rewardTokenMint: 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF',
         harvestThresholdMinAmount: 1_000_000_000n,
