@@ -279,6 +279,7 @@ impl HarvestRewardCommand {
 
         let entry = match receipt_token_pricing_source {
             Some(TokenPricingSource::JitoRestakingVault { .. })
+            | Some(TokenPricingSource::SolvBTCVault { .. })
             | Some(TokenPricingSource::VirtualVault { .. }) => {
                 // We need to check vault's token account whether
                 // the account is delegated to fund account or not.
@@ -313,8 +314,6 @@ impl HarvestRewardCommand {
                 };
                 command.with_required_accounts(required_accounts)
             }
-            // TODO/v0.7.0: deal with solv vault if needed
-            Some(TokenPricingSource::SolvBTCVault { .. }) => return Ok(None),
             // otherwise fails
             Some(TokenPricingSource::SPLStakePool { .. })
             | Some(TokenPricingSource::MarinadeStakePool { .. })
@@ -487,6 +486,7 @@ impl HarvestRewardCommand {
             match harvest_type {
                 HarvestType::Compound => match receipt_token_pricing_source {
                     Some(TokenPricingSource::JitoRestakingVault { .. })
+                    | Some(TokenPricingSource::SolvBTCVault { .. })
                     | Some(TokenPricingSource::VirtualVault { .. }) => self
                         .create_execute_command_from_vault_ata(
                             ctx,
@@ -496,8 +496,6 @@ impl HarvestRewardCommand {
                             vault,
                             reward_token_mints,
                         ),
-                    // TODO/v0.7.0: deal with solv vault if needed
-                    Some(TokenPricingSource::SolvBTCVault { .. }) => Ok(None),
                     // otherwise fails
                     Some(TokenPricingSource::SPLStakePool { .. })
                     | Some(TokenPricingSource::MarinadeStakePool { .. })
@@ -812,6 +810,7 @@ impl HarvestRewardCommand {
                 .try_deserialize()?;
             match receipt_token_pricing_source {
                 Some(TokenPricingSource::JitoRestakingVault { .. })
+                | Some(TokenPricingSource::SolvBTCVault { .. })
                 | Some(TokenPricingSource::VirtualVault { .. }) => {
                     // Transfer
                     self.execute_transfer(
@@ -821,11 +820,6 @@ impl HarvestRewardCommand {
                         vault,
                         &reward_token_mints[0],
                     )?
-                }
-                Some(TokenPricingSource::SolvBTCVault { .. }) => {
-                    // TODO/v0.7.0: deal with solv vault if needed
-                    // compound command needed?
-                    None
                 }
                 // otherwise fails
                 Some(TokenPricingSource::SPLStakePool { .. })
@@ -985,6 +979,7 @@ impl HarvestRewardCommand {
             &Some(TokenPricingSource::JitoRestakingVault { .. }) => from_reward_token_account
                 .amount
                 .min(from_reward_token_account.delegated_amount),
+            &Some(TokenPricingSource::SolvBTCVault { .. }) => from_reward_token_account.amount,
             &Some(TokenPricingSource::VirtualVault { .. }) => from_reward_token_account.amount,
             _ => 0,
         };
@@ -995,7 +990,8 @@ impl HarvestRewardCommand {
 
         match receipt_token_pricing_source {
             // TODO no wildcard
-            &Some(TokenPricingSource::JitoRestakingVault { .. }) => {
+            &Some(TokenPricingSource::JitoRestakingVault { .. })
+            | &Some(TokenPricingSource::SolvBTCVault { .. }) => {
                 anchor_spl::token_interface::transfer_checked(
                     CpiContext::new_with_signer(
                         reward_token_program.to_account_info(),
