@@ -137,10 +137,15 @@ impl DenormalizeNTCommand {
                     .neg(),
             )?;
 
-            let allocated_supported_token_amount = normalized_token_pool_account
-                .get_supported_token(&supported_token.mint)?
-                .locked_amount
-                .min(withdrawal_obligated_supported_token_amount);
+            let allocated_supported_token_amount =
+                if withdrawal_obligated_supported_token_amount > 0 {
+                    normalized_token_pool_account
+                        .get_supported_token(&supported_token.mint)?
+                        .locked_amount
+                        .min(withdrawal_obligated_supported_token_amount)
+                } else {
+                    0
+                };
 
             let allocated_normalized_token_amount = if allocated_supported_token_amount > 0 {
                 pricing_service
@@ -389,8 +394,14 @@ impl DenormalizeNTCommand {
                     .into(),
                 );
 
-                drop(fund_account);
-                self.execute_prepare(ctx, accounts, items[1..].to_vec(), result)
+                let command = Self {
+                    state: DenormalizeNTCommandState::Prepare {
+                        items: items[1..].to_vec(),
+                    },
+                }
+                .without_required_accounts();
+
+                Ok((result, Some(command)))
             }
             // otherwise fails
             Some(TokenPricingSource::SPLStakePool { .. })

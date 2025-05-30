@@ -330,16 +330,16 @@ impl UnrestakeVRTCommand {
             );
 
             unrestaking_strategy.cut_greedy(
-                extra_unrestaking_obligated_amount_as_sol
-                    + unrestaking_obligated_amounts_as_sol
-                    + fund_account.get_supported_tokens_iter().count() as u64
-                    + fund_account.get_restaking_vaults_iter().count() as u64, // try to withdraw extra lamports to compensate for flooring errors for each vault & token
+                extra_unrestaking_obligated_amount_as_sol + unrestaking_obligated_amounts_as_sol,
             )?;
 
             for (p_index, p) in unrestaking_strategy.get_participants_iter().enumerate() {
                 let item = &mut items[unrestaking_strategy_vault_indexes[p_index]];
-                item.allocated_receipt_token_amount += pricing_service
-                    .get_sol_amount_as_token(&item.receipt_token_mint, p.get_last_cut_amount()?)?;
+                item.allocated_receipt_token_amount += pricing_service.get_sol_amount_as_token(
+                    &item.receipt_token_mint,
+                    // try to withdraw extra lamports to compensate for flooring errors for each vault & token
+                    p.get_last_cut_amount()? + 1,
+                )?;
             }
         }
 
@@ -350,7 +350,8 @@ impl UnrestakeVRTCommand {
             let item = &mut items[restaking_vault_index];
             item.allocated_receipt_token_amount = item
                 .allocated_receipt_token_amount
-                .saturating_sub(restaking_vault.receipt_token_operation_receivable_amount);
+                .saturating_sub(restaking_vault.receipt_token_operation_receivable_amount)
+                .min(restaking_vault.receipt_token_operation_reserved_amount);
         }
 
         items = items
