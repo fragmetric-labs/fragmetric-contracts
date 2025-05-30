@@ -43,28 +43,6 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
         solWithdrawalNormalReserveRateBps: 0,
         solWithdrawalNormalReserveMaxAmount: MAX_U64,
       }),
-    // NOTE: bSOL is no longer supported
-    // () =>
-    //   ctx.fund.addSupportedToken.execute({
-    //     mint: 'bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1',
-    //     pricingSource: {
-    //       __kind: 'SPLStakePool',
-    //       address: 'stk9ApL5HeVAwPLr3TLhDXdZS8ptVu7zp6ov8HFDuMi',
-    //     },
-    //   }),
-    // () =>
-    //   ctx.fund.updateAssetStrategy.execute({
-    //     tokenMint: 'bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1',
-    //     tokenDepositable: false,
-    //     tokenAccumulatedDepositAmount: null,
-    //     tokenAccumulatedDepositCapacityAmount: MAX_U64,
-    //     tokenWithdrawable: false,
-    //     tokenWithdrawalNormalReserveRateBps: 0,
-    //     tokenWithdrawalNormalReserveMaxAmount: MAX_U64,
-    //     tokenRebalancingAmount: 0n,
-    //     solAllocationWeight: 0n,
-    //     solAllocationCapacityAmount: MAX_U64,
-    //   }),
     () =>
       ctx.fund.addSupportedToken.execute({
         mint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
@@ -97,14 +75,14 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
     () =>
       ctx.fund.updateAssetStrategy.execute({
         tokenMint: 'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So',
-        tokenDepositable: false,
+        tokenDepositable: true,
         tokenAccumulatedDepositAmount: null,
         tokenAccumulatedDepositCapacityAmount: MAX_U64,
         tokenWithdrawable: false,
         tokenWithdrawalNormalReserveRateBps: 0,
         tokenWithdrawalNormalReserveMaxAmount: MAX_U64,
         tokenRebalancingAmount: 0n,
-        solAllocationWeight: 0n,
+        solAllocationWeight: 1n,
         solAllocationCapacityAmount: MAX_U64,
       }),
     () =>
@@ -118,14 +96,14 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
     () =>
       ctx.fund.updateAssetStrategy.execute({
         tokenMint: 'BNso1VUJnh4zcfpZa6986Ea66P6TCp59hvtNJ8b1X85',
-        tokenDepositable: false,
+        tokenDepositable: true,
         tokenAccumulatedDepositAmount: null,
         tokenAccumulatedDepositCapacityAmount: MAX_U64,
         tokenWithdrawable: false,
         tokenWithdrawalNormalReserveRateBps: 0,
         tokenWithdrawalNormalReserveMaxAmount: MAX_U64,
         tokenRebalancingAmount: 0n,
-        solAllocationWeight: 0n,
+        solAllocationWeight: 1n,
         solAllocationCapacityAmount: MAX_U64,
       }),
     () =>
@@ -146,7 +124,7 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
         tokenWithdrawalNormalReserveRateBps: 0,
         tokenWithdrawalNormalReserveMaxAmount: MAX_U64,
         tokenRebalancingAmount: 0n,
-        solAllocationWeight: 0n,
+        solAllocationWeight: 1n,
         solAllocationCapacityAmount: MAX_U64,
       }),
     () =>
@@ -160,14 +138,245 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
     () =>
       ctx.fund.updateAssetStrategy.execute({
         tokenMint: 'jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v',
-        tokenDepositable: false,
+        tokenDepositable: true,
         tokenAccumulatedDepositAmount: null,
         tokenAccumulatedDepositCapacityAmount: MAX_U64,
         tokenWithdrawable: false,
         tokenWithdrawalNormalReserveRateBps: 0,
         tokenWithdrawalNormalReserveMaxAmount: MAX_U64,
         tokenRebalancingAmount: 0n,
-        solAllocationWeight: 0n,
+        solAllocationWeight: 1n,
+        solAllocationCapacityAmount: MAX_U64,
+      }),
+    () =>
+      ctx.fund.addSupportedToken.execute({
+        mint: 'bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1',
+        pricingSource: {
+          __kind: 'SPLStakePool',
+          address: 'stk9ApL5HeVAwPLr3TLhDXdZS8ptVu7zp6ov8HFDuMi',
+        },
+      }),
+    () =>
+      ctx.fund.updateAssetStrategy.execute({
+        tokenMint: 'bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1',
+        tokenDepositable: true,
+        tokenAccumulatedDepositAmount: null,
+        tokenAccumulatedDepositCapacityAmount: MAX_U64,
+        tokenWithdrawable: false,
+        tokenWithdrawalNormalReserveRateBps: 0,
+        tokenWithdrawalNormalReserveMaxAmount: MAX_U64,
+        tokenRebalancingAmount: 0n,
+        solAllocationWeight: 1n,
+        solAllocationCapacityAmount: MAX_U64,
+      }),
+    () =>
+      ctx.fund.addSupportedToken.execute({
+        mint: 'Dso1bDeDjCQxTrWHqUUi63oBvV7Mdm6WaobLbQ7gnPQ',
+        pricingSource: {
+          __kind: 'SanctumSingleValidatorSPLStakePool',
+          address: '9mhGNSPArRMHpLDMSmxAvuoizBqtBGqYdT8WGuqgxNdn',
+        },
+      }),
+    () =>
+      ctx.fund.updateAssetStrategy.execute({
+        tokenMint: 'Dso1bDeDjCQxTrWHqUUi63oBvV7Mdm6WaobLbQ7gnPQ',
+        tokenDepositable: true,
+        tokenAccumulatedDepositAmount: null,
+        tokenAccumulatedDepositCapacityAmount: MAX_U64,
+        tokenWithdrawable: false,
+        tokenWithdrawalNormalReserveRateBps: 0,
+        tokenWithdrawalNormalReserveMaxAmount: MAX_U64,
+        tokenRebalancingAmount: 0n,
+        solAllocationWeight: 1n,
+        solAllocationCapacityAmount: MAX_U64,
+      }),
+    () =>
+      ctx.fund.addSupportedToken.execute({
+        mint: 'FRAGME9aN7qzxkHPmVP22tDhG87srsR9pr5SY9XdRd9R',
+        pricingSource: {
+          __kind: 'SanctumSingleValidatorSPLStakePool',
+          address: 'LUKAypUYCVCptMKuN7ug3NGyRFz6p3SvKLHEXudS56X',
+        },
+      }),
+    () =>
+      ctx.fund.updateAssetStrategy.execute({
+        tokenMint: 'FRAGME9aN7qzxkHPmVP22tDhG87srsR9pr5SY9XdRd9R',
+        tokenDepositable: true,
+        tokenAccumulatedDepositAmount: null,
+        tokenAccumulatedDepositCapacityAmount: MAX_U64,
+        tokenWithdrawable: false,
+        tokenWithdrawalNormalReserveRateBps: 0,
+        tokenWithdrawalNormalReserveMaxAmount: MAX_U64,
+        tokenRebalancingAmount: 0n,
+        solAllocationWeight: 1n,
+        solAllocationCapacityAmount: MAX_U64,
+      }),
+    () =>
+      ctx.fund.addSupportedToken.execute({
+        mint: 'he1iusmfkpAdwvxLNGV8Y1iSbj4rUy6yMhEA3fotn9A',
+        pricingSource: {
+          __kind: 'SanctumSingleValidatorSPLStakePool',
+          address: '3wK2g8ZdzAH8FJ7PKr2RcvGh7V9VYson5hrVsJM5Lmws',
+        },
+      }),
+    () =>
+      ctx.fund.updateAssetStrategy.execute({
+        tokenMint: 'he1iusmfkpAdwvxLNGV8Y1iSbj4rUy6yMhEA3fotn9A',
+        tokenDepositable: true,
+        tokenAccumulatedDepositAmount: null,
+        tokenAccumulatedDepositCapacityAmount: MAX_U64,
+        tokenWithdrawable: false,
+        tokenWithdrawalNormalReserveRateBps: 0,
+        tokenWithdrawalNormalReserveMaxAmount: MAX_U64,
+        tokenRebalancingAmount: 0n,
+        solAllocationWeight: 1n,
+        solAllocationCapacityAmount: MAX_U64,
+      }),
+    () =>
+      ctx.fund.addSupportedToken.execute({
+        mint: 'roxDFxTFHufJBFy3PgzZcgz6kwkQNPZpi9RfpcAv4bu',
+        pricingSource: {
+          __kind: 'SanctumSingleValidatorSPLStakePool',
+          address: 'BuMRVW5uUQqJmguCk4toGh7DB3CcJt6dk64JiUMdYS22',
+        },
+      }),
+    () =>
+      ctx.fund.updateAssetStrategy.execute({
+        tokenMint: 'roxDFxTFHufJBFy3PgzZcgz6kwkQNPZpi9RfpcAv4bu',
+        tokenDepositable: true,
+        tokenAccumulatedDepositAmount: null,
+        tokenAccumulatedDepositCapacityAmount: MAX_U64,
+        tokenWithdrawable: false,
+        tokenWithdrawalNormalReserveRateBps: 0,
+        tokenWithdrawalNormalReserveMaxAmount: MAX_U64,
+        tokenRebalancingAmount: 0n,
+        solAllocationWeight: 1n,
+        solAllocationCapacityAmount: MAX_U64,
+      }),
+    () =>
+      ctx.fund.addSupportedToken.execute({
+        mint: 'sctmadV2fcLtrxjzYhTZzwAGjXUXKtYSBrrM36EtdcY',
+        pricingSource: {
+          __kind: 'SanctumSingleValidatorSPLStakePool',
+          address: '8iax3u8PEcP6VhBtLLG7QAoSrCp7fUbCJtmHPrqHxdas',
+        },
+      }),
+    () =>
+      ctx.fund.updateAssetStrategy.execute({
+        tokenMint: 'sctmadV2fcLtrxjzYhTZzwAGjXUXKtYSBrrM36EtdcY',
+        tokenDepositable: true,
+        tokenAccumulatedDepositAmount: null,
+        tokenAccumulatedDepositCapacityAmount: MAX_U64,
+        tokenWithdrawable: false,
+        tokenWithdrawalNormalReserveRateBps: 0,
+        tokenWithdrawalNormalReserveMaxAmount: MAX_U64,
+        tokenRebalancingAmount: 0n,
+        solAllocationWeight: 1n,
+        solAllocationCapacityAmount: MAX_U64,
+      }),
+    () =>
+      ctx.fund.addSupportedToken.execute({
+        mint: 'BonK1YhkXEGLZzwtcvRTip3gAL9nCeQD7ppZBLXhtTs',
+        pricingSource: {
+          __kind: 'SanctumSingleValidatorSPLStakePool',
+          address: 'ArAQfbzsdotoKB5jJcZa3ajQrrPcWr2YQoDAEAiFxJAC',
+        },
+      }),
+    () =>
+      ctx.fund.updateAssetStrategy.execute({
+        tokenMint: 'BonK1YhkXEGLZzwtcvRTip3gAL9nCeQD7ppZBLXhtTs',
+        tokenDepositable: true,
+        tokenAccumulatedDepositAmount: null,
+        tokenAccumulatedDepositCapacityAmount: MAX_U64,
+        tokenWithdrawable: false,
+        tokenWithdrawalNormalReserveRateBps: 0,
+        tokenWithdrawalNormalReserveMaxAmount: MAX_U64,
+        tokenRebalancingAmount: 0n,
+        solAllocationWeight: 1n,
+        solAllocationCapacityAmount: MAX_U64,
+      }),
+    () =>
+      ctx.fund.addSupportedToken.execute({
+        mint: 'vSoLxydx6akxyMD9XEcPvGYNGq6Nn66oqVb3UkGkei7',
+        pricingSource: {
+          __kind: 'SPLStakePool',
+          address: 'Fu9BYC6tWBo1KMKaP3CFoKfRhqv9akmy3DuYwnCyWiyC',
+        },
+      }),
+    () =>
+      ctx.fund.updateAssetStrategy.execute({
+        tokenMint: 'vSoLxydx6akxyMD9XEcPvGYNGq6Nn66oqVb3UkGkei7',
+        tokenDepositable: true,
+        tokenAccumulatedDepositAmount: null,
+        tokenAccumulatedDepositCapacityAmount: MAX_U64,
+        tokenWithdrawable: false,
+        tokenWithdrawalNormalReserveRateBps: 0,
+        tokenWithdrawalNormalReserveMaxAmount: MAX_U64,
+        tokenRebalancingAmount: 0n,
+        solAllocationWeight: 1n,
+        solAllocationCapacityAmount: MAX_U64,
+      }),
+    () =>
+      ctx.fund.addSupportedToken.execute({
+        mint: 'HUBsveNpjo5pWqNkH57QzxjQASdTVXcSK7bVKTSZtcSX',
+        pricingSource: {
+          __kind: 'SanctumSingleValidatorSPLStakePool',
+          address: 'ECRqn7gaNASuvTyC5xfCUjehWZCSowMXstZiM5DNweyB',
+        },
+      }),
+    () =>
+      ctx.fund.updateAssetStrategy.execute({
+        tokenMint: 'HUBsveNpjo5pWqNkH57QzxjQASdTVXcSK7bVKTSZtcSX',
+        tokenDepositable: true,
+        tokenAccumulatedDepositAmount: null,
+        tokenAccumulatedDepositCapacityAmount: MAX_U64,
+        tokenWithdrawable: false,
+        tokenWithdrawalNormalReserveRateBps: 0,
+        tokenWithdrawalNormalReserveMaxAmount: MAX_U64,
+        tokenRebalancingAmount: 0n,
+        solAllocationWeight: 1n,
+        solAllocationCapacityAmount: MAX_U64,
+      }),
+    () =>
+      ctx.fund.addSupportedToken.execute({
+        mint: 'picobAEvs6w7QEknPce34wAE4gknZA9v5tTonnmHYdX',
+        pricingSource: {
+          __kind: 'SanctumSingleValidatorSPLStakePool',
+          address: '8Dv3hNYcEWEaa4qVx9BTN1Wfvtha1z8cWDUXb7KVACVe',
+        },
+      }),
+    () =>
+      ctx.fund.updateAssetStrategy.execute({
+        tokenMint: 'picobAEvs6w7QEknPce34wAE4gknZA9v5tTonnmHYdX',
+        tokenDepositable: true,
+        tokenAccumulatedDepositAmount: null,
+        tokenAccumulatedDepositCapacityAmount: MAX_U64,
+        tokenWithdrawable: false,
+        tokenWithdrawalNormalReserveRateBps: 0,
+        tokenWithdrawalNormalReserveMaxAmount: MAX_U64,
+        tokenRebalancingAmount: 0n,
+        solAllocationWeight: 1n,
+        solAllocationCapacityAmount: MAX_U64,
+      }),
+    () =>
+      ctx.fund.addSupportedToken.execute({
+        mint: 'strng7mqqc1MBJJV6vMzYbEqnwVGvKKGKedeCvtktWA',
+        pricingSource: {
+          __kind: 'SanctumSingleValidatorSPLStakePool',
+          address: 'GZDX5JYXDzCEDL3kybhjN7PSixL4ams3M2G4CvWmMmm5',
+        },
+      }),
+    () =>
+      ctx.fund.updateAssetStrategy.execute({
+        tokenMint: 'strng7mqqc1MBJJV6vMzYbEqnwVGvKKGKedeCvtktWA',
+        tokenDepositable: true,
+        tokenAccumulatedDepositAmount: null,
+        tokenAccumulatedDepositCapacityAmount: MAX_U64,
+        tokenWithdrawable: false,
+        tokenWithdrawalNormalReserveRateBps: 0,
+        tokenWithdrawalNormalReserveMaxAmount: MAX_U64,
+        tokenRebalancingAmount: 0n,
+        solAllocationWeight: 1n,
         solAllocationCapacityAmount: MAX_U64,
       }),
 
@@ -224,15 +433,6 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
       ctx.fund.initializeNormalizedToken.execute({
         mint: '4noNmx2RpxK4zdr68Fq1CYM5VhN4yjgGZEFyuB7t2pBX',
       }),
-    // NOTE: bSOL is no longer supported
-    // () =>
-    //   ctx.normalizedTokenPool.addSupportedToken.execute({
-    //     mint: 'bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1',
-    //     pricingSource: {
-    //       __kind: 'SPLStakePool',
-    //       address: 'stk9ApL5HeVAwPLr3TLhDXdZS8ptVu7zp6ov8HFDuMi',
-    //     },
-    //   }),
     () =>
       ctx.normalizedTokenPool.addSupportedToken.execute({
         mint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
@@ -273,6 +473,108 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
           address: '8VpRhuxa7sUUepdY3kQiTmX9rS5vx4WgaXiAnXq4KCtr',
         },
       }),
+    () =>
+      ctx.normalizedTokenPool.addSupportedToken.execute({
+        mint: 'bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1',
+        pricingSource: {
+          __kind: 'SPLStakePool',
+          address: 'stk9ApL5HeVAwPLr3TLhDXdZS8ptVu7zp6ov8HFDuMi',
+        },
+      }),
+    () =>
+      ctx.normalizedTokenPool.addSupportedToken.execute({
+        mint: 'Dso1bDeDjCQxTrWHqUUi63oBvV7Mdm6WaobLbQ7gnPQ',
+        pricingSource: {
+          __kind: 'SanctumSingleValidatorSPLStakePool',
+          address: '9mhGNSPArRMHpLDMSmxAvuoizBqtBGqYdT8WGuqgxNdn',
+        },
+      }),
+    () =>
+      ctx.normalizedTokenPool.addSupportedToken.execute({
+        mint: 'FRAGME9aN7qzxkHPmVP22tDhG87srsR9pr5SY9XdRd9R',
+        pricingSource: {
+          __kind: 'SanctumSingleValidatorSPLStakePool',
+          address: 'LUKAypUYCVCptMKuN7ug3NGyRFz6p3SvKLHEXudS56X',
+        },
+      }),
+    () =>
+      ctx.normalizedTokenPool.addSupportedToken.execute({
+        mint: 'he1iusmfkpAdwvxLNGV8Y1iSbj4rUy6yMhEA3fotn9A',
+        pricingSource: {
+          __kind: 'SanctumSingleValidatorSPLStakePool',
+          address: '3wK2g8ZdzAH8FJ7PKr2RcvGh7V9VYson5hrVsJM5Lmws',
+        },
+      }),
+    () =>
+      ctx.normalizedTokenPool.addSupportedToken.execute({
+        mint: 'roxDFxTFHufJBFy3PgzZcgz6kwkQNPZpi9RfpcAv4bu',
+        pricingSource: {
+          __kind: 'SanctumSingleValidatorSPLStakePool',
+          address: 'BuMRVW5uUQqJmguCk4toGh7DB3CcJt6dk64JiUMdYS22',
+        },
+      }),
+    () =>
+      ctx.normalizedTokenPool.addSupportedToken.execute({
+        mint: 'sctmadV2fcLtrxjzYhTZzwAGjXUXKtYSBrrM36EtdcY',
+        pricingSource: {
+          __kind: 'SanctumSingleValidatorSPLStakePool',
+          address: '8iax3u8PEcP6VhBtLLG7QAoSrCp7fUbCJtmHPrqHxdas',
+        },
+      }),
+
+    () =>
+      ctx.normalizedTokenPool.addSupportedToken.execute({
+        mint: 'BonK1YhkXEGLZzwtcvRTip3gAL9nCeQD7ppZBLXhtTs',
+        pricingSource: {
+          __kind: 'SanctumSingleValidatorSPLStakePool',
+          address: 'ArAQfbzsdotoKB5jJcZa3ajQrrPcWr2YQoDAEAiFxJAC',
+        },
+      }),
+    () =>
+      ctx.normalizedTokenPool.addSupportedToken.execute({
+        mint: 'vSoLxydx6akxyMD9XEcPvGYNGq6Nn66oqVb3UkGkei7',
+        pricingSource: {
+          __kind: 'SPLStakePool',
+          address: 'Fu9BYC6tWBo1KMKaP3CFoKfRhqv9akmy3DuYwnCyWiyC',
+        },
+      }),
+    () =>
+      ctx.normalizedTokenPool.addSupportedToken.execute({
+        mint: 'HUBsveNpjo5pWqNkH57QzxjQASdTVXcSK7bVKTSZtcSX',
+        pricingSource: {
+          __kind: 'SanctumSingleValidatorSPLStakePool',
+          address: 'ECRqn7gaNASuvTyC5xfCUjehWZCSowMXstZiM5DNweyB',
+        },
+      }),
+    () =>
+      ctx.normalizedTokenPool.addSupportedToken.execute({
+        mint: 'picobAEvs6w7QEknPce34wAE4gknZA9v5tTonnmHYdX',
+        pricingSource: {
+          __kind: 'SanctumSingleValidatorSPLStakePool',
+          address: '8Dv3hNYcEWEaa4qVx9BTN1Wfvtha1z8cWDUXb7KVACVe',
+        },
+      }),
+    () =>
+      ctx.normalizedTokenPool.addSupportedToken.execute({
+        mint: 'strng7mqqc1MBJJV6vMzYbEqnwVGvKKGKedeCvtktWA',
+        pricingSource: {
+          __kind: 'SanctumSingleValidatorSPLStakePool',
+          address: 'GZDX5JYXDzCEDL3kybhjN7PSixL4ams3M2G4CvWmMmm5',
+        },
+      }),
+
+    // initialize address lookup table (1)
+    () =>
+      ctx.fund.addressLookupTable
+        .resolveFrequentlyUsedAddresses()
+        .then((addresses) =>
+          ctx.fund.addressLookupTable.initializeOrUpdateAccount.executeChained({
+            addresses,
+          })
+        ),
+    // wait for two slots to activate ALT (1)
+    () => validator.skipSlots(2n),
+
     // initialize wrapped token mint and configuration
     () =>
       ctx.wrappedTokenMint.initializeMint.execute({
@@ -455,7 +757,8 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
         solAllocationCapacityAmount: MAX_U64,
         solAllocationWeight: 1n,
       }),
-    // initialize address lookup table
+
+    // initialize address lookup table (2)
     () =>
       ctx.fund.addressLookupTable
         .resolveFrequentlyUsedAddresses()
@@ -464,8 +767,7 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
             addresses,
           })
         ),
-
-    // wait for two slots to activate ALT
+    // wait for two slots to activate ALT (2)
     () => validator.skipSlots(2n),
   ].reduce(
     async (prevLogs, task) => {

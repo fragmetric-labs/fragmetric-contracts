@@ -9,10 +9,10 @@ export async function initializeFrag2(testCtx: TestSuiteContext) {
     // initialize receipt token mint and transfer hook metadata
     () =>
       ctx.initializeMint.execute({
-        name: 'Fragmetric Staked FRAG',
-        symbol: 'frag2',
-        uri: '',
-        description: 'Fragmetric Staked FRAG',
+        name: 'Fragmetric Squared',
+        symbol: 'FRAG²',
+        uri: 'https://quicknode.quicknode-ipfs.com/ipfs/Qma5yojojfZWATCRfHQnMn3iYyhko8RN7otKMWtnGspw2b',
+        description: '',
         decimals: 9,
       }),
     () => ctx.initializeOrUpdateExtraAccountMetaList.execute(null),
@@ -48,7 +48,7 @@ export async function initializeFrag2(testCtx: TestSuiteContext) {
         mint: 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5',
         pricingSource: {
           __kind: 'OrcaDEXLiquidityPool',
-          address: '4YH3gwg84qRHrPabYj4f7NMVawG5Wd6gM7ZDciuCckTo',
+          address: '4YH3gwg84qRHrPabYj4f7NMVawG5Wd6gM7ZDciuCckTo', // devnet: 7ro9kTyLX5sdKeQbw68fQB3ZZRpmoCRshoACngemey3b
         },
       }),
     () =>
@@ -74,7 +74,7 @@ export async function initializeFrag2(testCtx: TestSuiteContext) {
       ctx.reward.addReward.execute({
         mint: 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF',
         decimals: 9,
-        name: 'fragvote',
+        name: 'FVT',
         description: 'Governance vote distribution',
       }),
     () =>
@@ -109,6 +109,14 @@ export async function initializeFrag2(testCtx: TestSuiteContext) {
       ctx.fund.addRestakingVaultDistributingReward.execute({
         vault: '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
         rewardTokenMint: 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF',
+      }),
+    () =>
+      ctx.fund.updateRestakingVaultDistributingRewardHarvestThreshold.execute({
+        vault: '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
+        rewardTokenMint: 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF',
+        harvestThresholdMinAmount: 1_000_000_000n,
+        harvestThresholdMaxAmount: 1_000_000_000_000n,
+        harvestThresholdIntervalSeconds: 1n,
       }),
 
     // initialize address lookup table
