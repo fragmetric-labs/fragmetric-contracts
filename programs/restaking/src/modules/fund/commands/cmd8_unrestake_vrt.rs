@@ -1,14 +1,15 @@
 use std::cell::Ref;
+use std::iter::Peekable;
 use std::ops::Neg;
 
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token;
 
-use crate::errors;
 use crate::modules::normalization::NormalizedTokenPoolAccount;
 use crate::modules::pricing::TokenPricingSource;
 use crate::modules::restaking::JitoRestakingVaultService;
-use crate::utils::AccountInfoExt;
+use crate::utils::{AccountInfoExt, PDASeeds};
+use crate::{errors, modules::restaking::SolvBTCVaultService};
 
 use super::{
     FundAccount, FundService, OperationCommandContext, OperationCommandEntry,
@@ -22,7 +23,7 @@ pub struct UnrestakeVRTCommand {
     state: UnrestakeVRTCommandState,
 }
 
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Copy)]
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct UnrestakeVSTCommandItem {
     vault: Pubkey,
     receipt_token_mint: Pubkey,
@@ -356,52 +357,70 @@ impl UnrestakeVRTCommand {
                 .min(restaking_vault.receipt_token_operation_reserved_amount);
         }
 
-        items = items
+        let items = items
             .iter()
             .filter(|item| item.allocated_receipt_token_amount >= 1_000_000)
-            .copied()
-            .collect();
+            .cloned()
+            .peekable();
 
         drop(fund_account);
         FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
             .update_asset_values(&mut pricing_service, true)?;
 
-        let fund_account = ctx.fund_account.load()?;
-
-        Ok((
-            None,
-            self.create_prepare_command_with_items(fund_account, items)?,
-        ))
+        Ok((None, self.create_prepare_command_with_items(ctx, items)?))
     }
 
     fn create_prepare_command_with_items<'info>(
         &self,
-        fund_account: Ref<FundAccount>,
-        items: Vec<UnrestakeVSTCommandItem>,
+        ctx: &OperationCommandContext,
+        mut items: Peekable<impl Iterator<Item = UnrestakeVSTCommandItem>>,
     ) -> Result<Option<OperationCommandEntry>> {
-        Ok(if items.len() > 0 {
+        Ok(if let Some(item) = items.peek() {
             Some(
-                match fund_account
-                    .get_restaking_vault(&items[0].vault)?
+                match ctx
+                    .fund_account
+                    .load()?
+                    .get_restaking_vault(&item.vault)?
                     .receipt_token_pricing_source
                     .try_deserialize()?
                 {
                     Some(TokenPricingSource::JitoRestakingVault { address }) => {
                         UnrestakeVRTCommand {
-                            state: UnrestakeVRTCommandState::Prepare { items },
+                            state: UnrestakeVRTCommandState::Prepare {
+                                items: items.collect(),
+                            },
                         }
                         .with_required_accounts(
                             JitoRestakingVaultService::find_accounts_to_new(address)?,
                         )
                     }
-                    Some(TokenPricingSource::SolvBTCVault { .. }) => {
-                        // TODO/v0.7.0: deal with solv vault if needed - where is match arm constraints gone here?
-                        UnrestakeVRTCommand {
-                            state: UnrestakeVRTCommandState::Prepare { items },
-                        }
-                        .without_required_accounts()
+                    Some(TokenPricingSource::SolvBTCVault { address }) => UnrestakeVRTCommand {
+                        state: UnrestakeVRTCommandState::Prepare {
+                            items: items.collect(),
+                        },
                     }
-                    _ => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
+                    .with_required_accounts(SolvBTCVaultService::find_accounts_to_new(address)?),
+                    Some(TokenPricingSource::VirtualVault { .. }) => {
+                        // no unrestaking on virtual vault
+                        let _ = items.next();
+                        return self.create_prepare_command_with_items(ctx, items);
+                    }
+                    // otherwise fails
+                    Some(TokenPricingSource::SPLStakePool { .. })
+                    | Some(TokenPricingSource::MarinadeStakePool { .. })
+                    | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. })
+                    | Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { .. })
+                    | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+                    | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+                    | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+                    | Some(TokenPricingSource::PeggedToken { .. })
+                    | None => {
+                        err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+                    }
+                    #[cfg(all(test, not(feature = "idl-build")))]
+                    Some(TokenPricingSource::Mock { .. }) => {
+                        err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
+                    }
                 },
             )
         } else {
@@ -413,7 +432,7 @@ impl UnrestakeVRTCommand {
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
-        items: &Vec<UnrestakeVSTCommandItem>,
+        items: &[UnrestakeVSTCommandItem],
     ) -> Result<(
         Option<OperationCommandResult>,
         Option<OperationCommandEntry>,
@@ -430,12 +449,10 @@ impl UnrestakeVRTCommand {
             .try_deserialize()?
         {
             Some(TokenPricingSource::JitoRestakingVault { address }) => {
-                require_keys_eq!(address, item.vault);
-                let [vault_program, vault_config, vault_account, _remaining_accounts @ ..] =
-                    accounts
-                else {
+                let [vault_program, vault_config, vault_account, ..] = accounts else {
                     err!(ErrorCode::AccountNotEnoughKeys)?
                 };
+                require_keys_eq!(address, vault_account.key());
 
                 let vault_service =
                     JitoRestakingVaultService::new(vault_program, vault_config, vault_account)?;
@@ -481,7 +498,7 @@ impl UnrestakeVRTCommand {
                     Some(
                         UnrestakeVRTCommand {
                             state: UnrestakeVRTCommandState::Execute {
-                                items: items.clone(),
+                                items: items.to_vec(),
                             },
                         }
                         .with_required_accounts(required_accounts),
@@ -490,19 +507,41 @@ impl UnrestakeVRTCommand {
             }
             Some(TokenPricingSource::VirtualVault { .. }) => Ok((
                 None,
-                self.create_prepare_command_with_items(
-                    fund_account,
-                    items.iter().skip(1).copied().collect::<Vec<_>>(),
-                )?,
+                self.create_prepare_command_with_items(ctx, items[1..].iter().cloned().peekable())?,
             )),
-            Some(TokenPricingSource::SolvBTCVault { .. }) => {
-                // TODO/v0.7.0: deal with solv vault if needed
+            Some(TokenPricingSource::SolvBTCVault { address }) => {
+                let [vault_program, vault_account, ..] = accounts else {
+                    err!(ErrorCode::AccountNotEnoughKeys)?
+                };
+                require_keys_eq!(address, vault_account.key());
+
+                let vault_service = SolvBTCVaultService::new(vault_program, vault_account)?;
+                let required_accounts =
+                    vault_service.find_accounts_to_request_withdrawal()?.chain([
+                        (
+                            fund_account
+                                .find_vault_supported_token_reserve_account_address(&address)?,
+                            true,
+                        ),
+                        (
+                            fund_account.find_vault_receipt_token_reserve_account_address(
+                                &restaking_vault.vault,
+                            )?,
+                            true,
+                        ),
+                        (fund_account.get_reserve_account_address()?, false),
+                    ]);
+
                 Ok((
                     None,
-                    self.create_prepare_command_with_items(
-                        fund_account,
-                        items.iter().skip(1).copied().collect::<Vec<_>>(),
-                    )?,
+                    Some(
+                        UnrestakeVRTCommand {
+                            state: UnrestakeVRTCommandState::Execute {
+                                items: items.to_vec(),
+                            },
+                        }
+                        .with_required_accounts(required_accounts),
+                    ),
                 ))
             }
             // invalid configuration
@@ -526,7 +565,7 @@ impl UnrestakeVRTCommand {
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
-        items: &Vec<UnrestakeVSTCommandItem>,
+        items: &[UnrestakeVSTCommandItem],
     ) -> Result<(
         Option<OperationCommandResult>,
         Option<OperationCommandEntry>,
@@ -544,12 +583,12 @@ impl UnrestakeVRTCommand {
             .try_deserialize()?
         {
             Some(TokenPricingSource::JitoRestakingVault { address }) => {
-                require_keys_eq!(address, item.vault);
                 let [vault_program, vault_config, vault_account, token_program, associated_token, system_program, vault_receipt_token_mint, fund_vault_receipt_token_reserve_account, fund_reserve_account, remaining_accounts @ ..] =
                     accounts
                 else {
                     err!(ErrorCode::AccountNotEnoughKeys)?
                 };
+                require_keys_eq!(address, vault_account.key());
                 let withdrawal_ticket_candidate_accounts = {
                     if remaining_accounts.len() < 15 {
                         err!(ErrorCode::AccountNotEnoughKeys)?
@@ -643,9 +682,57 @@ impl UnrestakeVRTCommand {
                 }
             }
             Some(TokenPricingSource::VirtualVault { .. }) => None,
-            Some(TokenPricingSource::SolvBTCVault { .. }) => {
-                // TODO/v0.7.0: deal with solv vault if needed
-                None
+            Some(TokenPricingSource::SolvBTCVault { address }) => {
+                let [vault_program, vault_account, vault_receipt_token_mint, vault_supported_token_mint, vault_vault_receipt_token_account, vault_vault_supported_token_account, token_program, event_authority, fund_vault_supported_token_account, fund_vault_receipt_token_account, fund_reserve, ..] =
+                    accounts
+                else {
+                    err!(ErrorCode::AccountNotEnoughKeys)?
+                };
+                require_keys_eq!(address, vault_account.key());
+
+                let vault_service = SolvBTCVaultService::new(vault_program, vault_account)?;
+                let (fund_vault_receipt_token_account_amount, enqueued_vault_receipt_token_amount) =
+                    vault_service.request_withdrawal(
+                        vault_receipt_token_mint,
+                        vault_supported_token_mint,
+                        vault_vault_receipt_token_account,
+                        vault_vault_supported_token_account,
+                        token_program,
+                        event_authority,
+                        ctx.fund_account.as_ref(),
+                        &[&fund_account.get_seeds()],
+                        fund_vault_receipt_token_account,
+                        fund_vault_supported_token_account,
+                        fund_reserve,
+                        &[&fund_account.get_reserve_account_seeds()],
+                        item.allocated_receipt_token_amount,
+                    )?;
+
+                drop(fund_account);
+
+                let mut fund_account = ctx.fund_account.load_mut()?;
+                let restaking_vault = fund_account.get_restaking_vault_mut(&item.vault)?;
+                restaking_vault.receipt_token_operation_reserved_amount -=
+                    enqueued_vault_receipt_token_amount;
+                restaking_vault.receipt_token_operation_receivable_amount +=
+                    enqueued_vault_receipt_token_amount;
+                require_gte!(
+                    fund_vault_receipt_token_account_amount,
+                    restaking_vault.receipt_token_operation_reserved_amount
+                );
+
+                Some(
+                    UnrestakeVRTCommandResult {
+                        vault: item.vault,
+                        token_mint: item.receipt_token_mint,
+                        unrestaking_token_amount: enqueued_vault_receipt_token_amount,
+                        total_unrestaking_token_amount: restaking_vault
+                            .receipt_token_operation_receivable_amount,
+                        operation_reserved_token_amount: restaking_vault
+                            .receipt_token_operation_reserved_amount,
+                    }
+                    .into(),
+                )
             }
             // invalid configuration
             Some(TokenPricingSource::SPLStakePool { .. })
@@ -663,11 +750,9 @@ impl UnrestakeVRTCommand {
             }
         };
 
-        let items = items.iter().skip(1).copied().collect::<Vec<_>>();
-        let fund_account = ctx.fund_account.load()?;
         Ok((
             result,
-            self.create_prepare_command_with_items(fund_account, items)?,
+            self.create_prepare_command_with_items(ctx, items[1..].iter().cloned().peekable())?,
         ))
     }
 }

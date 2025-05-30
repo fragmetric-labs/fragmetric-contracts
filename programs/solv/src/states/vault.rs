@@ -22,25 +22,25 @@ pub struct VaultAccount {
 
     /// Vault manager ensures that the vault account remains up to date.
     /// Initially, all managers are set to vault manager.
-    pub vault_manager: Pubkey,
+    pub(crate) vault_manager: Pubkey,
     /// Reward manager determines who can harvest rewards,
     /// accumulated in the vault's ATA.
-    pub reward_manager: Pubkey,
+    pub(crate) reward_manager: Pubkey,
     /// Fund manager is responsible for depositing and withdrawing VST
     /// in the vault, which directly affects the vault's TVL.
-    pub fund_manager: Pubkey,
+    pub(crate) fund_manager: Pubkey,
     /// Solv manager operates the vault to interact with the Solv protocol,
     /// expecting to earn yield.
-    pub solv_manager: Pubkey,
+    pub(crate) solv_manager: Pubkey,
 
-    pub solv_protocol_wallet: Pubkey,
+    pub(crate) solv_protocol_wallet: Pubkey,
     // TODO/phase3: deprecate
     solv_protocol_withdrawal_fee_rate_bps: u16,
 
     _reserved0: [u8; 334],
 
     // VRT (offset = 0x0200)
-    pub vault_receipt_token_mint: Pubkey,
+    pub(crate) vault_receipt_token_mint: Pubkey,
     vault_receipt_token_decimals: u8,
     _padding1: [u8; 7],
 
@@ -52,7 +52,7 @@ pub struct VaultAccount {
     _reserved1: [u8; 456],
 
     // VST (offset = 0x0400)
-    pub vault_supported_token_mint: Pubkey,
+    pub(crate) vault_supported_token_mint: Pubkey,
     vault_supported_token_decimals: u8,
     _padding2: [u8; 7],
 
@@ -77,7 +77,7 @@ pub struct VaultAccount {
     _reserved2: [u8; 432],
 
     // SRT (offset = 0x0600)
-    pub solv_receipt_token_mint: Pubkey,
+    pub(crate) solv_receipt_token_mint: Pubkey,
     solv_receipt_token_decimals: u8,
     _padding3: [u8; 7],
 
@@ -159,7 +159,7 @@ impl VaultAccount {
         ]
     }
 
-    pub fn initialize(
+    pub(crate) fn initialize(
         &mut self,
         vault_manager: &Signer,
         vault_receipt_token_mint: &Account<Mint>,
@@ -184,7 +184,7 @@ impl VaultAccount {
         )
     }
 
-    pub fn update_if_needed(
+    pub(crate) fn update_if_needed(
         &mut self,
         vault_manager: &Signer,
         vault_receipt_token_mint: &Account<Mint>,
@@ -248,38 +248,42 @@ impl VaultAccount {
         Ok(())
     }
 
-    pub fn set_vault_manager(&mut self, vault_manager: Pubkey) -> Result<()> {
+    pub(crate) fn set_vault_manager(&mut self, vault_manager: Pubkey) -> Result<()> {
         self.vault_manager = vault_manager;
 
         Ok(())
     }
 
-    pub fn set_reward_manager(&mut self, reward_manager: Pubkey) -> Result<()> {
+    pub(crate) fn set_reward_manager(&mut self, reward_manager: Pubkey) -> Result<()> {
         self.reward_manager = reward_manager;
 
         Ok(())
     }
 
-    pub fn set_fund_manager(&mut self, fund_manager: Pubkey) -> Result<()> {
+    pub fn get_fund_manager(&self) -> Pubkey {
+        self.fund_manager
+    }
+
+    pub(crate) fn set_fund_manager(&mut self, fund_manager: Pubkey) -> Result<()> {
         self.fund_manager = fund_manager;
 
         Ok(())
     }
 
-    pub fn set_solv_manager(&mut self, solv_manager: Pubkey) -> Result<()> {
+    pub(crate) fn set_solv_manager(&mut self, solv_manager: Pubkey) -> Result<()> {
         self.solv_manager = solv_manager;
 
         Ok(())
     }
 
-    pub fn set_solv_protocol_wallet(&mut self, solv_protocol_wallet: Pubkey) -> Result<()> {
+    pub(crate) fn set_solv_protocol_wallet(&mut self, solv_protocol_wallet: Pubkey) -> Result<()> {
         self.solv_protocol_wallet = solv_protocol_wallet;
 
         Ok(())
     }
 
     // TODO/phase3: deprecate
-    pub fn set_solv_protocol_withdrawal_fee_rate(
+    pub(crate) fn set_solv_protocol_withdrawal_fee_rate(
         &mut self,
         solv_protocol_withdrawal_fee_rate_bps: u16,
     ) -> Result<()> {
@@ -293,18 +297,18 @@ impl VaultAccount {
         Ok(())
     }
 
-    pub fn mint_vrt(&mut self, vst_amount: u64) -> Result<u64> {
-        let srt_operation_reserved_amount_as_vst = self
-            .get_srt_exchange_rate()
-            .get_srt_amount_as_vst(
-                // TODO/phase3: deprecate srt_operation_receivable_amount
-                self.srt_operation_reserved_amount + self.srt_operation_receivable_amount,
-                false,
-            )
-            .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
+    pub fn get_vrt_mint(&self) -> Pubkey {
+        self.vault_receipt_token_mint
+    }
 
-        let total_operation_reserved_amount_as_vst =
-            self.vst_operation_reserved_amount + srt_operation_reserved_amount_as_vst;
+    pub fn get_vrt_circulating_amount(&self) -> u64 {
+        self.vrt_circulating_amount
+    }
+
+    pub(crate) fn mint_vrt(&mut self, vst_amount: u64) -> Result<u64> {
+        let total_operation_reserved_amount_as_vst = self
+            .get_total_operation_reserved_amount_as_vst()
+            .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
 
         let vrt_amount =
             if self.vrt_circulating_amount == 0 || total_operation_reserved_amount_as_vst == 0 {
@@ -325,6 +329,24 @@ impl VaultAccount {
         Ok(vrt_amount)
     }
 
+    pub fn get_total_operation_reserved_amount_as_vst(&self) -> Option<u64> {
+        let srt_operation_reserved_amount_as_vst =
+            self.get_srt_exchange_rate().get_srt_amount_as_vst(
+                // TODO/phase3: deprecate srt_operation_receivable_amount
+                self.srt_operation_reserved_amount + self.srt_operation_receivable_amount,
+                false,
+            )?;
+
+        let total_operation_reserved_amount_as_vst =
+            self.vst_operation_reserved_amount + srt_operation_reserved_amount_as_vst;
+
+        Some(total_operation_reserved_amount_as_vst)
+    }
+
+    pub fn get_vst_mint(&self) -> Pubkey {
+        self.vault_supported_token_mint
+    }
+
     pub fn get_vst_total_reserved_amount(&self) -> u64 {
         self.vst_operation_reserved_amount
             + self.vst_withdrawal_locked_amount
@@ -341,7 +363,10 @@ impl VaultAccount {
     }
 
     // TODO/phase3: deprecate
-    pub fn get_srt_operation_receivable_amount_for_deposit(&self, vst_amount: u64) -> Result<u64> {
+    pub(crate) fn get_srt_operation_receivable_amount_for_deposit(
+        &self,
+        vst_amount: u64,
+    ) -> Result<u64> {
         self.get_srt_exchange_rate()
             .get_vst_amount_as_srt(vst_amount, false)
             .ok_or_else(|| error!(VaultError::CalculationArithmeticException))
@@ -362,7 +387,7 @@ impl VaultAccount {
         Ok(())
     }
 
-    pub fn deposit_vst(
+    pub(crate) fn deposit_vst(
         &mut self,
         vst_amount: u64,
         srt_amount: u64,
@@ -390,12 +415,16 @@ impl VaultAccount {
     }
 
     // TODO/phase3: deprecate
-    fn is_deposit_in_progress(&self) -> bool {
+    pub fn is_deposit_in_progress(&self) -> bool {
         self.srt_operation_receivable_amount > 0
     }
 
     // TODO/phase3: deprecate
-    pub fn resolve_srt_receivables(&mut self, srt_amount: u64, one_srt_as_vst: u64) -> Result<()> {
+    pub(crate) fn resolve_srt_receivables(
+        &mut self,
+        srt_amount: u64,
+        one_srt_as_vst: u64,
+    ) -> Result<()> {
         if !self.is_deposit_in_progress() {
             err!(VaultError::DepositNotInProgressError)?;
         }
@@ -429,7 +458,7 @@ impl VaultAccount {
         self.withdrawal_requests[..self.num_withdrawal_requests as usize].iter_mut()
     }
 
-    pub fn enqueue_withdrawal_request(&mut self, vrt_amount: u64) -> Result<()> {
+    pub(crate) fn enqueue_withdrawal_request(&mut self, vrt_amount: u64) -> Result<()> {
         // TODO/phase3: deprecate
         if self.is_deposit_in_progress() {
             err!(VaultError::DepositInProgressError)?;
@@ -514,7 +543,7 @@ impl VaultAccount {
     }
 
     /// returns (vrt_amount_to_burn, srt_amount_to_withdraw)
-    pub fn start_withdrawal_requests(&mut self) -> Result<(u64, u64)> {
+    pub(crate) fn start_withdrawal_requests(&mut self) -> Result<(u64, u64)> {
         let vrt_amount_to_burn = self.vrt_withdrawal_locked_amount;
         let srt_amount_to_withdraw = self.srt_withdrawal_locked_amount;
 
@@ -535,7 +564,7 @@ impl VaultAccount {
         Ok((vrt_amount_to_burn, srt_amount_to_withdraw))
     }
 
-    pub fn complete_withdrawal_requests(
+    pub(crate) fn complete_withdrawal_requests(
         &mut self,
         srt_amount: u64,
         vst_amount: u64,
@@ -605,7 +634,7 @@ impl VaultAccount {
     }
 
     /// returns claimed_vst_amount
-    pub fn claim_vst(&mut self) -> Result<u64> {
+    pub(crate) fn claim_vst(&mut self) -> Result<u64> {
         let vst_amount = self.vst_reserved_amount_to_claim + self.vst_extra_amount_to_claim;
 
         // Clear completed withdrawal requests
@@ -628,7 +657,10 @@ impl VaultAccount {
         self.delegated_reward_token_mints[..self.num_delegated_reward_token_mints as usize].iter()
     }
 
-    pub fn add_delegated_reward_token_mint(&mut self, reward_token_mint: Pubkey) -> Result<()> {
+    pub(crate) fn add_delegated_reward_token_mint(
+        &mut self,
+        reward_token_mint: Pubkey,
+    ) -> Result<()> {
         // already registered delegated reward token
         if self
             .get_delegated_reward_token_mints_iter()
