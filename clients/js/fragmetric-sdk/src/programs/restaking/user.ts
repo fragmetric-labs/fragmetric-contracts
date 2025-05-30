@@ -1,4 +1,4 @@
-import { getSetComputeUnitLimitInstruction } from '@solana-program/compute-budget';
+import * as computeBudget from '@solana-program/compute-budget';
 import * as token from '@solana-program/token';
 import * as token2022 from '@solana-program/token-2022';
 import {
@@ -314,7 +314,7 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
 
           return Promise.all([
             args.applyPresetComputeUnitLimit
-              ? getSetComputeUnitLimitInstruction({ units: 1_400_000 })
+              ? computeBudget.getSetComputeUnitLimitInstruction({ units: 1_400_000 })
               : null,
             token.getCreateAssociatedTokenIdempotentInstructionAsync({
               payer: createNoopSigner(user),
@@ -426,6 +426,10 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
         v.bigint(),
         v.description('receipt token amount to withdraw')
       ),
+      applyPresetComputeUnitLimit: v.pipe(
+        v.nullish(v.boolean(), true),
+        v.description('apply preset CU limit')
+      ),
     }),
     {
       description:
@@ -445,6 +449,9 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
           if (!(data && user)) throw new Error('invalid context');
 
           return Promise.all([
+            args.applyPresetComputeUnitLimit
+              ? computeBudget.getSetComputeUnitLimitInstruction({ units: 1_400_000 })
+              : null,
             restaking.getUserCreateFundAccountIdempotentInstructionAsync(
               {
                 user: createNoopSigner(user),
@@ -506,6 +513,10 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
         )
       ),
       requestId: v.pipe(v.bigint(), v.description('withdrawal request id')),
+      applyPresetComputeUnitLimit: v.pipe(
+        v.nullish(v.boolean(), true),
+        v.description('apply preset CU limit')
+      ),
     }),
     {
       description: 'cancel a pending withdrawal request',
@@ -524,6 +535,9 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
           if (!(data && user)) throw new Error('invalid context');
 
           return Promise.all([
+            args.applyPresetComputeUnitLimit
+              ? computeBudget.getSetComputeUnitLimitInstruction({ units: 1_400_000 })
+              : null,
             token.getCreateAssociatedTokenIdempotentInstructionAsync({
               payer: createNoopSigner(user),
               mint: data.receiptTokenMint,
@@ -591,6 +605,10 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
         )
       ),
       requestId: v.pipe(v.bigint(), v.description('withdrawal request id')),
+      applyPresetComputeUnitLimit: v.pipe(
+        v.nullish(v.boolean(), true),
+        v.description('apply preset CU limit')
+      ),
     }),
     {
       description: 'claim redeemed assets from a processed withdrawal request',
@@ -617,6 +635,9 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
           if (!request) throw new Error('invalid context: request not found');
 
           return Promise.all([
+            args.applyPresetComputeUnitLimit
+              ? computeBudget.getSetComputeUnitLimitInstruction({ units: 1_400_000 })
+              : null,
             args.assetMint
               ? token.getCreateAssociatedTokenIdempotentInstructionAsync({
                   payer: createNoopSigner(user),
@@ -704,6 +725,10 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
           'to use receiptTokenAmount as the desired target balance and wraps only the lacking amount'
         )
       ),
+      applyPresetComputeUnitLimit: v.pipe(
+        v.nullish(v.boolean(), true),
+        v.description('apply preset CU limit')
+      ),
     }),
     {
       description: 'convert receipt tokens into wrapped tokens',
@@ -721,6 +746,9 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
             throw new Error('invalid context');
 
           return Promise.all([
+            args.applyPresetComputeUnitLimit
+              ? computeBudget.getSetComputeUnitLimitInstruction({ units: 1_400_000 })
+              : null,
             token.getCreateAssociatedTokenIdempotentInstructionAsync({
               payer: createNoopSigner(user),
               mint: data.wrappedTokenMint,
@@ -764,6 +792,10 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
         v.bigint(),
         v.description('wrapped token amount to unwrap')
       ),
+      applyPresetComputeUnitLimit: v.pipe(
+        v.nullish(v.boolean(), true),
+        v.description('apply preset CU limit')
+      ),
     }),
     {
       description: 'convert wrapped tokens back into receipt tokens',
@@ -781,6 +813,9 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
             throw new Error('invalid context');
 
           return Promise.all([
+            args.applyPresetComputeUnitLimit
+              ? computeBudget.getSetComputeUnitLimitInstruction({ units: 1_400_000 })
+              : null,
             token.getCreateAssociatedTokenIdempotentInstructionAsync({
               payer: createNoopSigner(user),
               mint: data.receiptTokenMint,
@@ -820,6 +855,10 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
       recipient: v.pipe(
         v.string(),
         v.description('recipient address to derive destination token account')
+      ),
+      applyPresetComputeUnitLimit: v.pipe(
+        v.nullish(v.boolean(), true),
+        v.description('apply preset CU limit')
       ),
     }),
     {
@@ -917,6 +956,9 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
           }
 
           return Promise.all([
+            args.applyPresetComputeUnitLimit
+              ? computeBudget.getSetComputeUnitLimitInstruction({ units: 1_400_000 })
+              : null,
             token.getCreateAssociatedTokenIdempotentInstructionAsync({
               payer: createNoopSigner(user),
               mint: receiptTokenMint.address,

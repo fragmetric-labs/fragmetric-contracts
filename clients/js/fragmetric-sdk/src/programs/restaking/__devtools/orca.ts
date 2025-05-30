@@ -10,12 +10,13 @@ import { RestakingProgram } from '../program';
 
 export function createOrcaTool(program: RestakingProgram) {
   return {
-    // e.g. create fake SOL/zBTC pool on devnet
+    // e.g. create WSOL/FRAG pool on devnet ... FLOOR(SQRT(180/0.5) * 2^64)
     // restaking.__dev.orca.createPool.execute({
-    //   mintA: 'FaKEZbaAE42h7aCSzzUMKP8woZYBXh43v5bPzqb8CyH',
-    //   mintB: 'So11111111111111111111111111111111111111112',
-    //   tickSpacing: 16,
-    //   initialSqrtPrice: 1_506_170_346_543_264_150_413n,
+    //   mintA: 'So11111111111111111111111111111111111111112',
+    //   mintB: 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5',
+    //   tickSpacing: 64,
+    //   initialSqrtPrice: 350_002_360_122_810_953_091n,
+    //   feePayer: restaking.program.knownAddresses.admin,
     // })
     createPool: new TransactionTemplateContext(
       program,

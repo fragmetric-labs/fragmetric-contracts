@@ -74,6 +74,7 @@ export class JitoVaultAccountContext extends AccountContext<
         : 'BGTtt2wdTdhLyFQwSGbNriLZiCxXKBbm29bDvYZ4jD6G') as Address,
       'Switchboard'
     );
+    map.set('9KUp9bG7nYvSYy5iHqdHnfapS4cV8QfHmKhjqMsdK8n4' as Address, 'Ping');
     return map;
   }
 
