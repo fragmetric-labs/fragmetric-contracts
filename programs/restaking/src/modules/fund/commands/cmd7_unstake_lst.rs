@@ -221,7 +221,7 @@ impl UnstakeLSTCommand {
                                     pricing_service.get_token_amount_as_sol(
                                         &supported_token.mint,
                                         supported_tokens_net_operation_reserved_amount[index],
-                                    )?,
+                                    )? + supported_token.pending_unstaking_amount_as_sol,
                                     supported_token.sol_allocation_capacity_amount,
                                 )
                             }
@@ -250,7 +250,10 @@ impl UnstakeLSTCommand {
                     .collect::<Result<Vec<_>>>()?
                     .into_iter(),
             );
-            unstaking_strategy.cut_greedy(unstaking_obligated_amount_as_sol)?;
+            unstaking_strategy.cut_greedy(
+                unstaking_obligated_amount_as_sol
+                    .saturating_sub(fund_account.sol.operation_receivable_amount),
+            )?;
 
             let mut items = Vec::with_capacity(FUND_ACCOUNT_MAX_SUPPORTED_TOKENS);
             for (index, supported_token) in fund_account.get_supported_tokens_iter().enumerate() {

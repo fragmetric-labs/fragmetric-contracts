@@ -146,7 +146,7 @@ impl UnrestakeVRTCommand {
         for (supported_token_index, supported_token) in
             fund_account.get_supported_tokens_iter().enumerate()
         {
-            // reflect ready to unstake amount of this supported token
+            // reflect already unstaked, unstaking amount of this supported token
             let unstaking_reserved_amount_as_sol = pricing_service.get_token_amount_as_sol(
                 &supported_token.mint,
                 u64::try_from(
@@ -156,6 +156,7 @@ impl UnrestakeVRTCommand {
                             false,
                             &pricing_service,
                         )?
+                        .saturating_add(supported_token.pending_unstaking_amount_as_sol as i128)
                         .max(0),
                 )?,
             )?;
@@ -330,7 +331,8 @@ impl UnrestakeVRTCommand {
             );
 
             unrestaking_strategy.cut_greedy(
-                extra_unrestaking_obligated_amount_as_sol + unrestaking_obligated_amounts_as_sol,
+                (extra_unrestaking_obligated_amount_as_sol + unrestaking_obligated_amounts_as_sol)
+                    .saturating_sub(fund_account.sol.operation_receivable_amount),
             )?;
 
             for (p_index, p) in unrestaking_strategy.get_participants_iter().enumerate() {
