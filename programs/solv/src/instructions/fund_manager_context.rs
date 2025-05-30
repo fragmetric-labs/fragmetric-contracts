@@ -7,6 +7,7 @@ use crate::states::VaultAccount;
 #[event_cpi]
 #[derive(Accounts)]
 pub struct FundManagerContext<'info> {
+    pub payer: Signer<'info>,
     pub fund_manager: Signer<'info>,
 
     #[account(
@@ -26,15 +27,15 @@ pub struct FundManagerContext<'info> {
     #[account(
         mut,
         associated_token::mint = vault_receipt_token_mint,
-        associated_token::authority = fund_manager,
+        associated_token::authority = payer,
     )]
-    pub fund_manager_vault_receipt_token_account: Account<'info, TokenAccount>,
+    pub payer_vault_receipt_token_account: Account<'info, TokenAccount>,
     #[account(
         mut,
         associated_token::mint = vault_supported_token_mint,
-        associated_token::authority = fund_manager,
+        associated_token::authority = payer,
     )]
-    pub fund_manager_vault_supported_token_account: Account<'info, TokenAccount>,
+    pub payer_vault_supported_token_account: Account<'info, TokenAccount>,
 
     #[account(
         mut,
@@ -54,12 +55,12 @@ pub struct FundManagerContext<'info> {
 
 pub fn process_deposit(ctx: Context<FundManagerContext>, vst_amount: u64) -> Result<()> {
     let FundManagerContext {
-        fund_manager,
+        payer,
         vault_account,
         vault_receipt_token_mint,
         vault_supported_token_mint,
-        fund_manager_vault_receipt_token_account,
-        fund_manager_vault_supported_token_account,
+        payer_vault_receipt_token_account,
+        payer_vault_supported_token_account,
         vault_vault_supported_token_account,
         token_program,
         ..
@@ -73,10 +74,10 @@ pub fn process_deposit(ctx: Context<FundManagerContext>, vst_amount: u64) -> Res
         CpiContext::new(
             token_program.to_account_info(),
             anchor_spl::token::TransferChecked {
-                from: fund_manager_vault_supported_token_account.to_account_info(),
+                from: payer_vault_supported_token_account.to_account_info(),
                 mint: vault_supported_token_mint.to_account_info(),
                 to: vault_vault_supported_token_account.to_account_info(),
-                authority: fund_manager.to_account_info(),
+                authority: payer.to_account_info(),
             },
         ),
         vst_amount,
@@ -89,7 +90,7 @@ pub fn process_deposit(ctx: Context<FundManagerContext>, vst_amount: u64) -> Res
                 token_program.to_account_info(),
                 anchor_spl::token::MintTo {
                     mint: vault_receipt_token_mint.to_account_info(),
-                    to: fund_manager_vault_receipt_token_account.to_account_info(),
+                    to: payer_vault_receipt_token_account.to_account_info(),
                     authority: vault_account.to_account_info(),
                 },
                 &[&vault_account.load()?.get_seeds()],
@@ -103,10 +104,10 @@ pub fn process_deposit(ctx: Context<FundManagerContext>, vst_amount: u64) -> Res
 
 pub fn process_request_withdrawal(ctx: Context<FundManagerContext>, vrt_amount: u64) -> Result<()> {
     let FundManagerContext {
-        fund_manager,
+        payer,
         vault_account,
         vault_receipt_token_mint,
-        fund_manager_vault_receipt_token_account,
+        payer_vault_receipt_token_account,
         vault_vault_receipt_token_account,
         token_program,
         ..
@@ -122,10 +123,10 @@ pub fn process_request_withdrawal(ctx: Context<FundManagerContext>, vrt_amount: 
         CpiContext::new(
             token_program.to_account_info(),
             anchor_spl::token::TransferChecked {
-                from: fund_manager_vault_receipt_token_account.to_account_info(),
+                from: payer_vault_receipt_token_account.to_account_info(),
                 mint: vault_receipt_token_mint.to_account_info(),
                 to: vault_vault_receipt_token_account.to_account_info(),
-                authority: fund_manager.to_account_info(),
+                authority: payer.to_account_info(),
             },
         ),
         vrt_amount,
@@ -139,7 +140,7 @@ pub fn process_withdraw(ctx: Context<FundManagerContext>) -> Result<()> {
     let FundManagerContext {
         vault_account,
         vault_supported_token_mint,
-        fund_manager_vault_supported_token_account,
+        payer_vault_supported_token_account,
         vault_vault_supported_token_account,
         token_program,
         ..
@@ -154,7 +155,7 @@ pub fn process_withdraw(ctx: Context<FundManagerContext>) -> Result<()> {
                 anchor_spl::token::TransferChecked {
                     from: vault_vault_supported_token_account.to_account_info(),
                     mint: vault_supported_token_mint.to_account_info(),
-                    to: fund_manager_vault_supported_token_account.to_account_info(),
+                    to: payer_vault_supported_token_account.to_account_info(),
                     authority: vault_account.to_account_info(),
                 },
                 &[&vault_account.load()?.get_seeds()],
