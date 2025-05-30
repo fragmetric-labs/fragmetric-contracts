@@ -43,6 +43,19 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
         solWithdrawalNormalReserveRateBps: 0,
         solWithdrawalNormalReserveMaxAmount: MAX_U64,
       }),
+
+    // initialize address lookup table (1)
+    () =>
+      ctx.fund.addressLookupTable
+        .resolveFrequentlyUsedAddresses()
+        .then((addresses) =>
+          ctx.fund.addressLookupTable.initializeOrUpdateAccount.executeChained({
+            addresses,
+          })
+        ),
+    // wait for two slots to activate ALT (1)
+    () => validator.skipSlots(2n),
+
     () =>
       ctx.fund.addSupportedToken.execute({
         mint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
@@ -211,6 +224,7 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
         solAllocationWeight: 1n,
         solAllocationCapacityAmount: MAX_U64,
       }),
+
     () =>
       ctx.fund.addSupportedToken.execute({
         mint: 'he1iusmfkpAdwvxLNGV8Y1iSbj4rUy6yMhEA3fotn9A',
@@ -563,7 +577,7 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
         },
       }),
 
-    // initialize address lookup table (1)
+    // initialize address lookup table (2)
     () =>
       ctx.fund.addressLookupTable
         .resolveFrequentlyUsedAddresses()
@@ -572,7 +586,7 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
             addresses,
           })
         ),
-    // wait for two slots to activate ALT (1)
+    // wait for two slots to activate ALT (2)
     () => validator.skipSlots(2n),
 
     // initialize wrapped token mint and configuration
@@ -758,7 +772,7 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
         solAllocationWeight: 1n,
       }),
 
-    // initialize address lookup table (2)
+    // initialize address lookup table (3)
     () =>
       ctx.fund.addressLookupTable
         .resolveFrequentlyUsedAddresses()
@@ -767,7 +781,7 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
             addresses,
           })
         ),
-    // wait for two slots to activate ALT (2)
+    // wait for two slots to activate ALT (3)
     () => validator.skipSlots(2n),
   ].reduce(
     async (prevLogs, task) => {

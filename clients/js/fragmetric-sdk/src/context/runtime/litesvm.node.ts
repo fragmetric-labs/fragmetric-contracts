@@ -245,6 +245,14 @@ function createLiteSVMRPC(svm: LiteSVM): RuntimeRPC {
     sendTransaction(base64EncodedWireTransaction, config) {
       assertBase64Encoding(config);
 
+      const tx = web3Compat.toLegacyVersionedTransaction(
+        base64EncodedWireTransaction as Base64EncodedWireTransaction
+      );
+      const txSize = tx.serialize().length;
+      if (txSize > 1232) {
+        throw new Error(`transaction too large: ${base64EncodedWireTransaction.length}/${txSize} bytes (max: encoded/raw 1644/1232)`)
+      }
+
       try {
         rpcMethods.simulateTransaction(base64EncodedWireTransaction, {
           ...config,
@@ -256,9 +264,6 @@ function createLiteSVMRPC(svm: LiteSVM): RuntimeRPC {
         }
       }
 
-      const tx = web3Compat.toLegacyVersionedTransaction(
-        base64EncodedWireTransaction as Base64EncodedWireTransaction
-      );
       const res = svm.sendTransaction(tx);
 
       const signature = getBase58Decoder().decode(

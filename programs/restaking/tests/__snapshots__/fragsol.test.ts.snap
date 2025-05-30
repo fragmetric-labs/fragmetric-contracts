@@ -208,6 +208,14 @@ exports[`restaking.fragSOL test > restaking.fragSOL initializationTasks snapshot
     "Program 4qEHCzsLFUnw8jmhmRSmAK5VhZVoSD1iVqukAf92yHi5 success",
   ],
   [
+    "Program ComputeBudget111111111111111111111111111111 invoke [1]",
+    "Program ComputeBudget111111111111111111111111111111 success",
+    "Program AddressLookupTab1e1111111111111111111111111 invoke [1]",
+    "Program 11111111111111111111111111111111 invoke [2]",
+    "Program 11111111111111111111111111111111 success",
+    "Program AddressLookupTab1e1111111111111111111111111 success",
+  ],
+  [
     "Program ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL invoke [1]",
     "Program log: CreateIdempotent",
     "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [2]",
