@@ -8,8 +8,9 @@ use crate::states::VaultAccount;
 #[derive(Accounts)]
 pub struct SolvManagerContext<'info> {
     pub solv_manager: Signer<'info>,
+    /// CHECK: ..
     #[account(constraint = solv_protocol_wallet.key() != System::id())]
-    pub solv_protocol_wallet: SystemAccount<'info>,
+    pub solv_protocol_wallet: UncheckedAccount<'info>,
 
     #[account(
         mut,
