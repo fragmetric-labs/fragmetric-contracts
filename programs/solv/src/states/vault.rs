@@ -48,8 +48,10 @@ pub struct VaultAccount {
     vrt_circulating_amount: u64,
     /// VRT locked amount for withdrawal - will be burnt when withdrawal starts
     vrt_withdrawal_locked_amount: u64,
+    vrt_withdrawal_processing_amount: u64,
+    vrt_withdrawal_completed_amount: u64,
 
-    _reserved1: [u8; 456],
+    _reserved1: [u8; 440],
 
     // VST (offset = 0x0400)
     pub vault_supported_token_mint: Pubkey,
@@ -529,6 +531,7 @@ impl VaultAccount {
         }
 
         self.vst_receivable_amount_to_claim += vst_total_estimated_amount_acc;
+        self.vrt_withdrawal_processing_amount += self.vrt_withdrawal_locked_amount;
         self.vrt_withdrawal_locked_amount = 0;
         self.srt_withdrawal_locked_amount = 0;
 
@@ -562,6 +565,7 @@ impl VaultAccount {
 
         require_gte!(vst_amount, vst_withrawal_amount);
 
+        let mut vrt_withdrawal_completed_amount = 0;
         let mut srt_withdrawal_reserved_amount = 0;
         let mut vst_withdrawal_reserved_amount = 0;
         let mut vst_withdrawal_total_estimated_amount = 0;
@@ -576,6 +580,7 @@ impl VaultAccount {
 
             request.state = 2; // completed
 
+            vrt_withdrawal_completed_amount += request.vrt_withdrawal_locked_amount;
             srt_withdrawal_reserved_amount += request.srt_withdrawal_locked_amount;
             vst_withdrawal_reserved_amount += request.vst_withdrawal_locked_amount;
             vst_withdrawal_total_estimated_amount += request.vst_withdrawal_total_estimated_amount;
@@ -593,6 +598,8 @@ impl VaultAccount {
         let vst_actual_solv_withdrawal_amount =
             vst_estimated_solv_withdrawal_amount - vst_estimated_solv_protocol_fee_amount;
 
+        self.vrt_withdrawal_processing_amount -= vrt_withdrawal_completed_amount;
+        self.vrt_withdrawal_completed_amount += vrt_withdrawal_completed_amount;
         self.vst_withdrawal_locked_amount -= vst_withdrawal_reserved_amount;
         self.vst_reserved_amount_to_claim +=
             vst_actual_solv_withdrawal_amount + vst_withdrawal_reserved_amount;
