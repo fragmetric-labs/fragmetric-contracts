@@ -27,11 +27,11 @@ impl TokenValueProvider for SolvBTCVaultValueProvider {
             vault.get_vst_mint(),
             None,
             vault
-                .get_total_operation_reserved_amount_as_vst()
+                .get_net_asset_value_as_vst()
                 .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?,
         )]);
 
-        result.denominator = vault.get_vrt_circulating_amount();
+        result.denominator = vault.get_vrt_supply();
 
         Ok(())
     }

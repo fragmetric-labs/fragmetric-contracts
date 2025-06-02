@@ -301,15 +301,6 @@ impl VaultAccount {
         Ok(())
     }
 
-    pub fn get_estimated_withdrawal_fee_as_vst(&self, vst_amount: u64) -> Result<u64> {
-        let estimated_withdrawal_fee_as_vst =
-            SolvProtocolWithdrawalFeeRate(self.solv_protocol_withdrawal_fee_rate_bps)
-                .get_withdrawal_fee(vst_amount)
-                .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
-
-        Ok(estimated_withdrawal_fee_as_vst)
-    }
-
     pub fn get_vrt_mint(&self) -> Pubkey {
         self.vault_receipt_token_mint
     }
@@ -380,6 +371,22 @@ impl VaultAccount {
 
     pub fn get_vst_operation_reserved_amount(&self) -> u64 {
         self.vst_operation_reserved_amount
+    }
+
+    pub fn get_vst_extra_amount_to_claim(&self) -> u64 {
+        self.vst_extra_amount_to_claim
+    }
+
+    pub fn get_vst_deducted_fee_amount(&self) -> u64 {
+        self.vst_deducted_fee_amount
+    }
+
+    pub fn get_vst_estimated_amount_from_last_withdrawal_request(&self) -> Result<u64> {
+        if self.num_withdrawal_requests == 0 {
+            return err!(VaultError::WithdrawalRequestQueueNotSetError);
+        }
+
+        Ok(self.withdrawal_requests[self.num_withdrawal_requests as usize  - 1].get_vset_withdrawal_total_estimated_amount())
     }
 
     pub fn get_srt_mint(&self) -> Pubkey {
@@ -771,6 +778,10 @@ impl WithdrawalRequest {
         self.vst_withdrawal_locked_amount = vst_withdrawal_reserved_amount;
         self.vst_withdrawal_total_estimated_amount = vst_withdrawal_total_estimated_amount;
         self.state = ENQUEUED;
+    }
+
+    fn get_vset_withdrawal_total_estimated_amount(&self) -> u64 {
+        self.vst_withdrawal_total_estimated_amount
     }
 }
 

@@ -393,7 +393,7 @@ impl SelfExecutable for RestakeVSTCommand {
                                 Some(items.into_iter().skip(1).copied().collect::<Vec<_>>());
                         }
                         Some(TokenPricingSource::SolvBTCVault { address }) => {
-                            let [vault_program, vault_account, vault_receipt_token_mint, vault_supported_token_mint, vault_vault_receipt_token_account, vault_vault_supported_token_account, token_program, event_authority, fund_vault_supported_token_account, fund_vault_receipt_token_account, fund_reserve, pricing_sources @ ..] =
+                            let [vault_program, vault_account, vault_receipt_token_mint, vault_supported_token_mint, vault_vault_supported_token_account, token_program, event_authority, fund_vault_supported_token_account, fund_vault_receipt_token_account, fund_reserve, pricing_sources @ ..] =
                                 accounts
                             else {
                                 err!(ErrorCode::AccountNotEnoughKeys)?
@@ -410,7 +410,6 @@ impl SelfExecutable for RestakeVSTCommand {
                             ) = vault_service.deposit(
                                 vault_receipt_token_mint,
                                 vault_supported_token_mint,
-                                vault_vault_receipt_token_account,
                                 vault_vault_supported_token_account,
                                 token_program,
                                 event_authority,
@@ -422,7 +421,6 @@ impl SelfExecutable for RestakeVSTCommand {
                                 &[&fund_account.get_reserve_account_seeds()],
                                 item.allocated_token_amount,
                             )?;
-
                             drop(fund_account);
 
                             let mut pricing_service =
@@ -431,21 +429,13 @@ impl SelfExecutable for RestakeVSTCommand {
                                         pricing_sources.into_iter().copied(),
                                         false,
                                     )?;
+                                    
                             let mut fund_account = ctx.fund_account.load_mut()?;
-                            match fund_account.get_normalized_token_mut() {
-                                Some(normalized_token)
-                                    if normalized_token.mint == item.supported_token_mint =>
-                                {
-                                    normalized_token.operation_reserved_amount -=
-                                        deposited_supported_token_amount;
-                                }
-                                _ => {
-                                    let supported_token = fund_account
-                                        .get_supported_token_mut(&item.supported_token_mint)?;
-                                    supported_token.token.operation_reserved_amount -=
-                                        deposited_supported_token_amount;
-                                }
-                            }
+
+                            let supported_token =
+                                fund_account.get_supported_token_mut(&item.supported_token_mint)?;
+                            supported_token.token.operation_reserved_amount -=
+                                deposited_supported_token_amount;
 
                             let restaking_vault =
                                 fund_account.get_restaking_vault_mut(&item.vault)?;
