@@ -136,8 +136,14 @@ describe('restaking.frag2 test', async () => {
         },
         "restakingVaultStrategies": [
           {
-            "compoundingRewardTokenMints": [
-              "FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5",
+            "compoundingRewardTokens": [
+              {
+                "harvestThresholdIntervalSeconds": 0n,
+                "harvestThresholdMaxAmount": 18446744073709551615n,
+                "harvestThresholdMinAmount": 0n,
+                "lastHarvestedAt": 0n,
+                "mint": "FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5",
+              },
             ],
             "delegations": [],
             "distributingRewardTokens": [
@@ -471,6 +477,111 @@ describe('restaking.frag2 test', async () => {
         "wrappedTokenMint": null,
       }
     `);
+  });
+
+  test('virtual vault harvest/compound should not occur by compounding threshold', async () => {
+    const rewardTokenMint = 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5';
+
+    // 1. update reward amount threshold -> harvest would not occur
+    await ctx.fund.updateRestakingVaultRewardHarvestThreshold.execute({
+      vault: '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
+      rewardTokenMint,
+      harvestThresholdMinAmount: 600_000_000n,
+      harvestThresholdMaxAmount: 700_000_000n,
+      harvestThresholdIntervalSeconds: 1n,
+    });
+
+    await validator.airdropToken(
+      '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
+      'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5',
+      500_000_000n
+    );
+
+    const fund_2_1 = await ctx.fund.resolveAccount(true);
+
+    const fund_2_1_frag = fund_2_1?.data.supportedTokens.filter(
+      (supportedToken) =>
+        supportedToken.mint == 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5'
+    )[0];
+
+    // run operator harvest
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestReward',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    const fund_2_2 = await ctx.fund.resolveAccount(true);
+
+    const fund_2_2_frag = fund_2_2?.data.supportedTokens.filter(
+      (supportedToken) =>
+        supportedToken.mint == 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5'
+    )[0];
+
+    expect(fund_2_2_frag!.token.operationReservedAmount).toEqual(
+      fund_2_1_frag!.token.operationReservedAmount
+    );
+
+    // 2. update reward interval second threshold -> harvest would not occur
+    await ctx.fund.updateRestakingVaultRewardHarvestThreshold.execute({
+      vault: '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
+      rewardTokenMint,
+      harvestThresholdMinAmount: 200_000_000n,
+      harvestThresholdMaxAmount: 600_000_000n,
+      harvestThresholdIntervalSeconds:
+        BigInt(Math.floor(Date.now() / 1000)) + 100n,
+    });
+
+    // try to harvest reward
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestReward',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    const fund_2_3 = await ctx.fund.resolveAccount(true);
+
+    const fund_2_3_frag = fund_2_3?.data.supportedTokens.filter(
+      (supportedToken) =>
+        supportedToken.mint == 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5'
+    )[0];
+
+    expect(fund_2_3_frag!.token.operationReservedAmount).toEqual(
+      fund_2_1_frag!.token.operationReservedAmount
+    );
+
+    // 3. update reward amount threshold, but harvest now occurs
+    await ctx.fund.updateRestakingVaultRewardHarvestThreshold.execute({
+      vault: '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
+      rewardTokenMint,
+      harvestThresholdMinAmount: 200_000_000n,
+      harvestThresholdMaxAmount: 400_000_000n,
+      harvestThresholdIntervalSeconds: 0n,
+    });
+
+    // harvest occurs
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestReward',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    const fund_3 = await ctx.fund.resolveAccount(true);
+
+    const fund_3_frag = fund_3?.data.supportedTokens.filter(
+      (supportedToken) =>
+        supportedToken.mint == 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5'
+    )[0];
+
+    expect(fund_3_frag!.token.operationReservedAmount).toEqual(
+      fund_2_1_frag!.token.operationReservedAmount + 400_000_000n
+    );
+
+    // set back to normal state
+    await ctx.fund.updateRestakingVaultRewardHarvestThreshold.execute({
+      vault: '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
+      rewardTokenMint: 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF',
+      harvestThresholdMinAmount: 1_000_000_000n,
+      harvestThresholdMaxAmount: 1_000_000_000_000n,
+      harvestThresholdIntervalSeconds: 1n,
+    });
   });
 
   test('virtual vault harvest/distribute', async () => {

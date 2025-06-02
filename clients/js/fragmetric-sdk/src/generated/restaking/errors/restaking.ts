@@ -206,6 +206,8 @@ export const RESTAKING_ERROR__FUND_SUPPORTED_TOKEN_IN_USE_ERROR = 0x17cd; // 609
 export const RESTAKING_ERROR__FUND_EXCEEDED_MAX_PRICING_SOURCES_ERROR = 0x17ce; // 6094
 /** FundRestakingVaultAuthorityNotMatchedError: fund: restaking vault authority not matched */
 export const RESTAKING_ERROR__FUND_RESTAKING_VAULT_AUTHORITY_NOT_MATCHED_ERROR = 0x17cf; // 6095
+/** FundRestakingVaultRewardTokenNotRegisteredError: fund: restaking vault reward token not registered */
+export const RESTAKING_ERROR__FUND_RESTAKING_VAULT_REWARD_TOKEN_NOT_REGISTERED_ERROR = 0x17d0; // 6096
 
 export type RestakingError =
   | typeof RESTAKING_ERROR__CALCULATION_ARITHMETIC_EXCEPTION
@@ -242,6 +244,7 @@ export type RestakingError =
   | typeof RESTAKING_ERROR__FUND_RESTAKING_VAULT_NOT_FOUND_ERROR
   | typeof RESTAKING_ERROR__FUND_RESTAKING_VAULT_OPERATOR_ALREADY_REGISTERED_ERROR
   | typeof RESTAKING_ERROR__FUND_RESTAKING_VAULT_OPERATOR_NOT_FOUND_ERROR
+  | typeof RESTAKING_ERROR__FUND_RESTAKING_VAULT_REWARD_TOKEN_NOT_REGISTERED_ERROR
   | typeof RESTAKING_ERROR__FUND_SUPPORTED_TOKEN_IN_USE_ERROR
   | typeof RESTAKING_ERROR__FUND_TOKEN_SWAP_STRATEGY_ALREADY_REGISTERED
   | typeof RESTAKING_ERROR__FUND_TOKEN_SWAP_STRATEGY_NOT_FOUND_ERROR
@@ -342,6 +345,7 @@ if (process.env.NODE_ENV !== 'production') {
     [RESTAKING_ERROR__FUND_RESTAKING_VAULT_NOT_FOUND_ERROR]: `fund: restaking vault not found`,
     [RESTAKING_ERROR__FUND_RESTAKING_VAULT_OPERATOR_ALREADY_REGISTERED_ERROR]: `fund: restaking vault operator already registered`,
     [RESTAKING_ERROR__FUND_RESTAKING_VAULT_OPERATOR_NOT_FOUND_ERROR]: `fund: restaking vault operator not found`,
+    [RESTAKING_ERROR__FUND_RESTAKING_VAULT_REWARD_TOKEN_NOT_REGISTERED_ERROR]: `fund: restaking vault reward token not registered`,
     [RESTAKING_ERROR__FUND_SUPPORTED_TOKEN_IN_USE_ERROR]: `fund: supported token still in use`,
     [RESTAKING_ERROR__FUND_TOKEN_SWAP_STRATEGY_ALREADY_REGISTERED]: `fund: token swap strategy already registered`,
     [RESTAKING_ERROR__FUND_TOKEN_SWAP_STRATEGY_NOT_FOUND_ERROR]: `fund: token swap strategy not found`,

@@ -37,7 +37,7 @@ export * from './fundManagerResetWrappedTokenHolderRewardAccountDelegate';
 export * from './fundManagerSettleReward';
 export * from './fundManagerUpdateFundStrategy';
 export * from './fundManagerUpdateRestakingVaultDelegationStrategy';
-export * from './fundManagerUpdateRestakingVaultDistributingRewardTokenHarvestThreshold';
+export * from './fundManagerUpdateRestakingVaultRewardTokenHarvestThreshold';
 export * from './fundManagerUpdateRestakingVaultStrategy';
 export * from './fundManagerUpdateReward';
 export * from './fundManagerUpdateSolStrategy';

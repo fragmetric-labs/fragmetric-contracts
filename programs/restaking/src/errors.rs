@@ -296,4 +296,7 @@ pub enum ErrorCode {
 
     #[msg("fund: restaking vault authority not matched")]
     FundRestakingVaultAuthorityNotMatchedError,
+
+    #[msg("fund: restaking vault reward token not registered")]
+    FundRestakingVaultRewardTokenNotRegisteredError,
 }

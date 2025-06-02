@@ -379,10 +379,10 @@ pub mod restaking {
         Ok(())
     }
 
-    pub fn fund_manager_update_restaking_vault_distributing_reward_token_harvest_threshold(
+    pub fn fund_manager_update_restaking_vault_reward_token_harvest_threshold(
         ctx: Context<FundManagerFundContext>,
         vault: Pubkey,
-        distributing_reward_token_mint: Pubkey,
+        reward_token_mint: Pubkey,
         harvest_threshold_min_amount: u64,
         harvest_threshold_max_amount: u64,
         harvest_threshold_interval_seconds: i64,
@@ -391,9 +391,9 @@ pub mod restaking {
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account
         )?
-        .process_update_restaking_vault_distributing_reward_token_harvest_threshold(
+        .process_update_restaking_vault_reward_token_harvest_threshold(
             &vault,
-            &distributing_reward_token_mint,
+            &reward_token_mint,
             harvest_threshold_min_amount,
             harvest_threshold_max_amount,
             harvest_threshold_interval_seconds,

@@ -4451,16 +4451,16 @@
       ]
     },
     {
-      "name": "fund_manager_update_restaking_vault_distributing_reward_token_harvest_threshold",
+      "name": "fund_manager_update_restaking_vault_reward_token_harvest_threshold",
       "discriminator": [
-        14,
-        107,
-        151,
-        57,
-        181,
-        186,
-        184,
-        16
+        11,
+        69,
+        22,
+        207,
+        155,
+        145,
+        172,
+        241
       ],
       "accounts": [
         {
@@ -4534,7 +4534,7 @@
           "type": "pubkey"
         },
         {
-          "name": "distributing_reward_token_mint",
+          "name": "reward_token_mint",
           "type": "pubkey"
         },
         {
@@ -11478,6 +11478,11 @@
       "code": 6095,
       "name": "FundRestakingVaultAuthorityNotMatchedError",
       "msg": "fund: restaking vault authority not matched"
+    },
+    {
+      "code": 6096,
+      "name": "FundRestakingVaultRewardTokenNotRegisteredError",
+      "msg": "fund: restaking vault reward token not registered"
     }
   ],
   "types": [
@@ -12192,47 +12197,6 @@
           {
             "name": "expired_at",
             "type": "i64"
-          }
-        ]
-      }
-    },
-    {
-      "name": "DistributingRewardToken",
-      "serialization": "bytemuck",
-      "repr": {
-        "kind": "c"
-      },
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "mint",
-            "type": "pubkey"
-          },
-          {
-            "name": "harvest_threshold_min_amount",
-            "type": "u64"
-          },
-          {
-            "name": "harvest_threshold_max_amount",
-            "type": "u64"
-          },
-          {
-            "name": "harvest_threshold_interval_seconds",
-            "type": "i64"
-          },
-          {
-            "name": "last_harvested_at",
-            "type": "i64"
-          },
-          {
-            "name": "_reserved",
-            "type": {
-              "array": [
-                "u8",
-                16
-              ]
-            }
           }
         ]
       }
@@ -14476,11 +14440,15 @@
             "type": "u8"
           },
           {
-            "name": "compounding_reward_token_mints",
+            "name": "compounding_reward_tokens",
             "type": {
               "array": [
-                "pubkey",
-                10
+                {
+                  "defined": {
+                    "name": "RewardToken"
+                  }
+                },
+                4
               ]
             }
           },
@@ -14506,7 +14474,7 @@
               "array": [
                 {
                   "defined": {
-                    "name": "DistributingRewardToken"
+                    "name": "RewardToken"
                   }
                 },
                 30
@@ -14972,6 +14940,47 @@
           {
             "name": "user_settled_contribution",
             "type": "u128"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RewardToken",
+      "serialization": "bytemuck",
+      "repr": {
+        "kind": "c"
+      },
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "harvest_threshold_min_amount",
+            "type": "u64"
+          },
+          {
+            "name": "harvest_threshold_max_amount",
+            "type": "u64"
+          },
+          {
+            "name": "harvest_threshold_interval_seconds",
+            "type": "i64"
+          },
+          {
+            "name": "last_harvested_at",
+            "type": "i64"
+          },
+          {
+            "name": "_reserved",
+            "type": {
+              "array": [
+                "u8",
+                16
+              ]
+            }
           }
         ]
       }
