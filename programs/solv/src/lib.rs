@@ -4,7 +4,7 @@ use anchor_lang::prelude::*;
 mod constants;
 mod errors;
 mod instructions;
-mod states;
+pub mod states;
 
 use constants::*;
 use instructions::*;
@@ -31,23 +31,6 @@ pub mod solv {
         ctx: Context<VaultManagerVaultAccountUpdateContext>,
     ) -> Result<()> {
         process_update_vault_account_if_needed(ctx)
-    }
-
-    ////////////////////////////////////////////
-    // VaultManagerContext
-    ////////////////////////////////////////////
-
-    // TODO/phase3: deprecate
-    pub fn vault_manager_set_solv_protocol_wallet(ctx: Context<VaultManagerContext>) -> Result<()> {
-        process_set_solv_protocol_wallet(ctx)
-    }
-
-    // TODO/phase3: deprecate
-    pub fn vault_manager_set_solv_protocol_withdrawal_fee_rate(
-        ctx: Context<VaultManagerContext>,
-        solv_protocol_withdrawal_fee_rate_bps: u16,
-    ) -> Result<()> {
-        process_set_solv_protocol_withdrawal_fee_rate(ctx, solv_protocol_withdrawal_fee_rate_bps)
     }
 
     ////////////////////////////////////////////
@@ -92,9 +75,9 @@ pub mod solv {
     pub fn solv_manager_confirm_deposit(
         ctx: Context<SolvManagerContext>,
         srt_amount: u64,
-        one_srt_as_vst: u64,
+        one_srt_as_micro_vst: u64,
     ) -> Result<()> {
-        solv_manager_context::process_confirm_deposit(ctx, srt_amount, one_srt_as_vst)
+        solv_manager_context::process_confirm_deposit(ctx, srt_amount, one_srt_as_micro_vst)
     }
 
     pub fn solv_manager_request_withdrawal(ctx: Context<SolvManagerContext>) -> Result<()> {
@@ -105,9 +88,28 @@ pub mod solv {
         ctx: Context<SolvManagerContext>,
         srt_amount: u64,
         vst_amount: u64,
-        one_srt_as_vst: u64,
+        one_srt_as_micro_vst: u64,
     ) -> Result<()> {
-        solv_manager_context::process_withdraw(ctx, srt_amount, vst_amount, one_srt_as_vst)
+        solv_manager_context::process_withdraw(ctx, srt_amount, vst_amount, one_srt_as_micro_vst)
+    }
+
+    ////////////////////////////////////////////
+    // SolvManagerConfigurationContext
+    ////////////////////////////////////////////
+
+    // TODO/phase3: deprecate
+    pub fn vault_manager_set_solv_protocol_wallet(
+        ctx: Context<SolvManagerConfigurationContext>,
+    ) -> Result<()> {
+        process_set_solv_protocol_wallet(ctx)
+    }
+
+    // TODO/phase3: deprecate
+    pub fn vault_manager_set_solv_protocol_withdrawal_fee_rate(
+        ctx: Context<SolvManagerConfigurationContext>,
+        solv_protocol_withdrawal_fee_rate_bps: u16,
+    ) -> Result<()> {
+        process_set_solv_protocol_withdrawal_fee_rate(ctx, solv_protocol_withdrawal_fee_rate_bps)
     }
 
     ////////////////////////////////////////////

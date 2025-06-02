@@ -11,8 +11,6 @@ pub struct VaultManagerVaultAccountInitialContext<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
     pub vault_manager: Signer<'info>,
-    /// CHECK: ..
-    pub solv_protocol_wallet: UncheckedAccount<'info>,
 
     #[account(
         init,
@@ -57,15 +55,12 @@ pub struct VaultManagerVaultAccountInitialContext<'info> {
 #[derive(Accounts)]
 pub struct VaultManagerVaultAccountUpdateContext<'info> {
     pub vault_manager: Signer<'info>,
-    /// CHECK: ..
-    pub solv_protocol_wallet: UncheckedAccount<'info>,
 
     #[account(
         mut,
         seeds = [VaultAccount::SEED, vault_receipt_token_mint.key().as_ref()],
         bump = vault_account.load()?.get_bump(),
         has_one = vault_manager @ VaultError::VaultAdminMismatchError,
-        has_one = solv_protocol_wallet @ VaultError::SolvProtocolWalletMismatchError,
         constraint = vault_account.load()?.is_initialized() @ VaultError::InvalidAccountDataVersionError,
     )]
     pub vault_account: AccountLoader<'info, VaultAccount>,
@@ -75,32 +70,11 @@ pub struct VaultManagerVaultAccountUpdateContext<'info> {
     pub solv_receipt_token_mint: Account<'info, Mint>,
 }
 
-// TODO/phase3: deprecate
-#[event_cpi]
-#[derive(Accounts)]
-pub struct VaultManagerContext<'info> {
-    pub vault_manager: Signer<'info>,
-    /// CHECK: ..
-    pub solv_protocol_wallet: UncheckedAccount<'info>,
-
-    #[account(
-        mut,
-        seeds = [VaultAccount::SEED, vault_receipt_token_mint.key().as_ref()],
-        bump = vault_account.load()?.get_bump(),
-        has_one = vault_manager @ VaultError::VaultAdminMismatchError,
-        constraint = vault_account.load()?.is_latest_version() @ VaultError::InvalidAccountDataVersionError,
-    )]
-    pub vault_account: AccountLoader<'info, VaultAccount>,
-
-    pub vault_receipt_token_mint: Account<'info, Mint>,
-}
-
 pub fn process_initialize_vault_account(
     ctx: Context<VaultManagerVaultAccountInitialContext>,
 ) -> Result<()> {
     let VaultManagerVaultAccountInitialContext {
         vault_manager,
-        solv_protocol_wallet,
         vault_account,
         vault_receipt_token_mint,
         vault_supported_token_mint,
@@ -114,7 +88,6 @@ pub fn process_initialize_vault_account(
         vault_receipt_token_mint,
         vault_supported_token_mint,
         solv_receipt_token_mint,
-        solv_protocol_wallet,
         ctx.bumps.vault_account,
     )?;
 
@@ -144,7 +117,6 @@ pub fn process_update_vault_account_if_needed(
 ) -> Result<()> {
     let VaultManagerVaultAccountUpdateContext {
         vault_manager,
-        solv_protocol_wallet,
         vault_account,
         vault_receipt_token_mint,
         vault_supported_token_mint,
@@ -157,37 +129,7 @@ pub fn process_update_vault_account_if_needed(
         vault_receipt_token_mint,
         vault_supported_token_mint,
         solv_receipt_token_mint,
-        solv_protocol_wallet,
     )?;
-
-    Ok(())
-}
-
-// TODO/phase3: deprecate
-pub fn process_set_solv_protocol_wallet(ctx: Context<VaultManagerContext>) -> Result<()> {
-    let VaultManagerContext {
-        vault_account,
-        solv_protocol_wallet,
-        ..
-    } = ctx.accounts;
-
-    vault_account
-        .load_mut()?
-        .set_solv_protocol_wallet(solv_protocol_wallet.key())?;
-
-    Ok(())
-}
-
-// TODO/phase3: deprecate
-pub fn process_set_solv_protocol_withdrawal_fee_rate(
-    ctx: Context<VaultManagerContext>,
-    solv_protocol_withdrawal_fee_rate_bps: u16,
-) -> Result<()> {
-    let VaultManagerContext { vault_account, .. } = ctx.accounts;
-
-    vault_account
-        .load_mut()?
-        .set_solv_protocol_withdrawal_fee_rate(solv_protocol_withdrawal_fee_rate_bps)?;
 
     Ok(())
 }

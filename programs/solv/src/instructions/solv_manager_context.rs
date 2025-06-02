@@ -8,8 +8,8 @@ use crate::states::VaultAccount;
 #[derive(Accounts)]
 pub struct SolvManagerContext<'info> {
     pub solv_manager: Signer<'info>,
-    /// CHECK: ..
-    pub solv_protocol_wallet: UncheckedAccount<'info>,
+    #[account(constraint = solv_protocol_wallet.key() != System::id())]
+    pub solv_protocol_wallet: SystemAccount<'info>,
 
     #[account(
         mut,
@@ -23,17 +23,10 @@ pub struct SolvManagerContext<'info> {
     )]
     pub vault_account: AccountLoader<'info, VaultAccount>,
 
-    #[account(mut)]
     pub vault_receipt_token_mint: Account<'info, Mint>,
     pub vault_supported_token_mint: Account<'info, Mint>,
     pub solv_receipt_token_mint: Account<'info, Mint>,
 
-    #[account(
-        mut,
-        associated_token::mint = vault_receipt_token_mint,
-        associated_token::authority = vault_account,
-    )]
-    pub vault_vault_receipt_token_account: Account<'info, TokenAccount>,
     #[account(
         mut,
         associated_token::mint = vault_supported_token_mint,
@@ -119,7 +112,7 @@ pub fn process_deposit(ctx: Context<SolvManagerContext>) -> Result<()> {
 pub fn process_confirm_deposit(
     ctx: Context<SolvManagerContext>,
     srt_amount: u64,
-    one_srt_as_vst: u64,
+    one_srt_as_micro_vst: u64,
 ) -> Result<()> {
     let SolvManagerContext {
         vault_account,
@@ -129,7 +122,7 @@ pub fn process_confirm_deposit(
 
     let mut vault = vault_account.load_mut()?;
 
-    vault.resolve_srt_receivables(srt_amount, one_srt_as_vst)?;
+    vault.resolve_srt_receivables(srt_amount, one_srt_as_micro_vst)?;
 
     require_gte!(
         vault_solv_receipt_token_account.amount,
@@ -142,32 +135,14 @@ pub fn process_confirm_deposit(
 pub fn process_request_withdrawal(ctx: Context<SolvManagerContext>) -> Result<()> {
     let SolvManagerContext {
         vault_account,
-        vault_receipt_token_mint,
         solv_receipt_token_mint,
-        vault_vault_receipt_token_account,
         vault_solv_receipt_token_account,
         solv_protocol_wallet_solv_receipt_token_account,
         token_program,
         ..
     } = ctx.accounts;
 
-    let (vrt_amount_to_burn, srt_amount_to_withdraw) =
-        vault_account.load_mut()?.start_withdrawal_requests()?;
-
-    if vrt_amount_to_burn > 0 {
-        anchor_spl::token::burn(
-            CpiContext::new_with_signer(
-                token_program.to_account_info(),
-                anchor_spl::token::Burn {
-                    mint: vault_receipt_token_mint.to_account_info(),
-                    from: vault_vault_receipt_token_account.to_account_info(),
-                    authority: vault_account.to_account_info(),
-                },
-                &[&vault_account.load()?.get_seeds()],
-            ),
-            vrt_amount_to_burn,
-        )?;
-    }
+    let srt_amount_to_withdraw = vault_account.load_mut()?.start_withdrawal_requests()?;
 
     // TODO/phase3: CPI call to the Solv protocol - now just transfer
     if srt_amount_to_withdraw > 0 {
@@ -194,7 +169,7 @@ pub fn process_withdraw(
     ctx: Context<SolvManagerContext>,
     srt_amount: u64,
     vst_amount: u64,
-    one_srt_as_vst: u64,
+    one_srt_as_micro_vst: u64,
 ) -> Result<()> {
     let SolvManagerContext {
         vault_account,
@@ -206,12 +181,62 @@ pub fn process_withdraw(
 
     let mut vault = vault_account.load_mut()?;
 
-    vault.complete_withdrawal_requests(srt_amount, vst_amount, one_srt_as_vst)?;
+    vault.complete_withdrawal_requests(srt_amount, vst_amount, one_srt_as_micro_vst)?;
 
     require_gte!(
         vault_vault_supported_token_account.amount,
         vault.get_vst_total_reserved_amount(),
     );
+
+    Ok(())
+}
+
+// TODO/phase3: deprecate
+#[event_cpi]
+#[derive(Accounts)]
+pub struct SolvManagerConfigurationContext<'info> {
+    pub solv_manager: Signer<'info>,
+    pub solv_protocol_wallet: SystemAccount<'info>,
+
+    #[account(
+        mut,
+        seeds = [VaultAccount::SEED, vault_receipt_token_mint.key().as_ref()],
+        bump = vault_account.load()?.get_bump(),
+        has_one = solv_manager @ VaultError::VaultAdminMismatchError,
+        constraint = vault_account.load()?.is_latest_version() @ VaultError::InvalidAccountDataVersionError,
+    )]
+    pub vault_account: AccountLoader<'info, VaultAccount>,
+
+    pub vault_receipt_token_mint: Account<'info, Mint>,
+}
+
+// TODO/phase3: deprecate
+pub fn process_set_solv_protocol_wallet(
+    ctx: Context<SolvManagerConfigurationContext>,
+) -> Result<()> {
+    let SolvManagerConfigurationContext {
+        vault_account,
+        solv_protocol_wallet,
+        ..
+    } = ctx.accounts;
+
+    vault_account
+        .load_mut()?
+        .set_solv_protocol_wallet(solv_protocol_wallet.key())?;
+
+    Ok(())
+}
+
+// TODO/phase3: deprecate
+pub fn process_set_solv_protocol_withdrawal_fee_rate(
+    ctx: Context<SolvManagerConfigurationContext>,
+    solv_protocol_withdrawal_fee_rate_bps: u16,
+) -> Result<()> {
+    let SolvManagerConfigurationContext { vault_account, .. } = ctx.accounts;
+
+    vault_account
+        .load_mut()?
+        .set_solv_protocol_withdrawal_fee_rate(solv_protocol_withdrawal_fee_rate_bps)?;
 
     Ok(())
 }

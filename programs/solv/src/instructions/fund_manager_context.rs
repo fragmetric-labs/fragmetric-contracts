@@ -39,12 +39,6 @@ pub struct FundManagerContext<'info> {
 
     #[account(
         mut,
-        associated_token::mint = vault_receipt_token_mint,
-        associated_token::authority = vault_account,
-    )]
-    pub vault_vault_receipt_token_account: Account<'info, TokenAccount>,
-    #[account(
-        mut,
         associated_token::mint = vault_supported_token_mint,
         associated_token::authority = vault_account,
     )]
@@ -108,29 +102,26 @@ pub fn process_request_withdrawal(ctx: Context<FundManagerContext>, vrt_amount: 
         vault_account,
         vault_receipt_token_mint,
         payer_vault_receipt_token_account,
-        vault_vault_receipt_token_account,
         token_program,
         ..
     } = ctx.accounts;
 
     require_gt!(vrt_amount, 0);
 
-    vault_account
+    let vrt_amount = vault_account
         .load_mut()?
         .enqueue_withdrawal_request(vrt_amount)?;
 
-    anchor_spl::token::transfer_checked(
+    anchor_spl::token::burn(
         CpiContext::new(
             token_program.to_account_info(),
-            anchor_spl::token::TransferChecked {
-                from: payer_vault_receipt_token_account.to_account_info(),
+            anchor_spl::token::Burn {
                 mint: vault_receipt_token_mint.to_account_info(),
-                to: vault_vault_receipt_token_account.to_account_info(),
+                from: payer_vault_receipt_token_account.to_account_info(),
                 authority: payer.to_account_info(),
             },
         ),
         vrt_amount,
-        vault_receipt_token_mint.decimals,
     )?;
 
     Ok(())

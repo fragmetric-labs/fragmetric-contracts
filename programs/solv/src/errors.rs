@@ -11,6 +11,9 @@ pub enum VaultError {
     #[msg("vault admin mismatch")]
     VaultAdminMismatchError,
 
+    #[msg("solv protocol wallet already set")]
+    SolvProtocolWalletAlreadySetError,
+
     #[msg("solv protocol wallet mismatch")]
     SolvProtocolWalletMismatchError,
 
