@@ -296,7 +296,9 @@ abstract class RestakingAbstractUserRewardAccountContext<
 
           return Promise.all([
             args.applyPresetComputeUnitLimit
-              ? computeBudget.getSetComputeUnitLimitInstruction({ units: 1_400_000 })
+              ? computeBudget.getSetComputeUnitLimitInstruction({
+                  units: 1_400_000,
+                })
               : null,
             ix,
             restaking.getUserClaimRewardInstructionAsync(

@@ -7,6 +7,7 @@ import {
   Lamports,
   Rpc,
   RpcSubscriptions,
+  SolanaError,
   SolanaRpcApi,
   SolanaRpcSubscriptionsApi,
 } from '@solana/kit';
@@ -16,16 +17,12 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import * as stream from 'node:stream';
-import * as url from 'node:url';
-import util from 'node:util';
 import {
   GetSlotOptions,
   TestValidator,
   TestValidatorOptions,
   TestValidatorRuntime,
 } from './validator';
-
-const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
 export class SVMValidator extends TestValidator<'svm'> {
   static async initialize(
@@ -137,7 +134,7 @@ export class SVMValidator extends TestValidator<'svm'> {
                 (key, value) => {
                   if (typeof value === 'bigint') {
                     if (value > Number.MAX_SAFE_INTEGER) {
-                      return Number.MAX_SAFE_INTEGER; // TODO: how to set max rentEpoch while convert BigInt to Number ?
+                      return Number.MAX_SAFE_INTEGER; // TODO: how to set max rentEpoch while converting BigInt to Number ?
                     } else {
                       return Number(value);
                     }
@@ -284,32 +281,75 @@ export class SVMValidator extends TestValidator<'svm'> {
   }
 
   async airdrop(pubkey: string, lamports: bigint): Promise<void> {
-    const signature = await this.rpc
-      .requestAirdrop(pubkey as Address, lamports as Lamports, {
-        commitment: 'confirmed',
-      })
-      .send();
-    const abortController = new AbortController();
-    const signatureNotifications = await this.rpcSubscriptions
-      .signatureNotifications(signature)
-      .subscribe({ abortSignal: abortController.signal });
-    const timeoutTimer = setTimeout(() => {
-      if (!abortController.signal.aborted) {
-        abortController.abort(`test validator airdrop timed out: ${signature}`);
-      }
-    }, 10000);
-    for await (const res of signatureNotifications) {
-      if (res.value.err) {
-        abortController.abort();
-        throw new Error(
-          `test validator airdrop failed: ${signature}\n${util.inspect(res)}`
-        );
-      }
-    }
-    clearTimeout(timeoutTimer);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const prevLamports = (await this.rpc.getBalance(pubkey as Address).send())
+      .value;
     if (this.options.debug) {
-      this.logger(`AIRDROP ${lamports} TO ${pubkey}`);
+      this.logger(`AIRDROP ${lamports} TO ${pubkey} (${prevLamports})`);
+    }
+
+    let retriesOnBlockErrors = 0;
+    while (retriesOnBlockErrors < 100) {
+      try {
+        const signature = await this.rpc
+          .requestAirdrop(pubkey as Address, lamports as Lamports, {
+            commitment: 'confirmed',
+          })
+          .send();
+        const abortController = new AbortController();
+        const signatureNotifications = await this.rpcSubscriptions
+          .signatureNotifications(signature)
+          .subscribe({ abortSignal: abortController.signal });
+        const timeoutTimer = setTimeout(() => {
+          if (!abortController.signal.aborted) {
+            abortController.abort(`TIMEOUT`);
+            // console.error('AIRDROP CONFIRMATION TIMED OUT');
+          }
+        }, 20 * 1000);
+        for await (const res of signatureNotifications) {
+          if (res.value.err) {
+            abortController.abort();
+            throw res.value.err;
+          }
+        }
+        clearTimeout(timeoutTimer);
+
+        let retryOnSlowBalanceUpdate = 0;
+        while (retryOnSlowBalanceUpdate < 100) {
+          const currentLamports = (
+            await this.rpc.getBalance(pubkey as Address).send()
+          ).value;
+          if (currentLamports == prevLamports + lamports) {
+            return;
+          }
+
+          console.error(
+            `Rechecking the balance update from airdrop (${retryOnSlowBalanceUpdate}): ${pubkey} (${prevLamports} + ${lamports} => ${currentLamports})\nSignature: ${signature}`
+          );
+          retryOnSlowBalanceUpdate++;
+          await new Promise((resolve) =>
+            setTimeout(resolve, Math.floor(Math.random() * 5000) + 1000)
+          );
+        }
+      } catch (err) {
+        if (err instanceof SolanaError) {
+          const blockError =
+            /network has progressed|blockhash not found|already been processed/i;
+          const causeMsg = err.cause?.toString() || '';
+          const msg = `${err.message}${causeMsg ? ` - ${causeMsg}` : ''}`;
+          if (blockError.test(msg)) {
+            console.error(
+              `Retrying the same airdrop transaction (${retriesOnBlockErrors}): ${msg}`
+            );
+            retriesOnBlockErrors++;
+            await new Promise((resolve) =>
+              setTimeout(resolve, Math.floor(Math.random() * 5000) + 1000)
+            );
+            continue;
+          }
+        }
+
+        throw err;
+      }
     }
   }
 

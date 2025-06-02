@@ -314,7 +314,9 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
 
           return Promise.all([
             args.applyPresetComputeUnitLimit
-              ? computeBudget.getSetComputeUnitLimitInstruction({ units: 1_400_000 })
+              ? computeBudget.getSetComputeUnitLimitInstruction({
+                  units: 1_400_000,
+                })
               : null,
             token.getCreateAssociatedTokenIdempotentInstructionAsync({
               payer: createNoopSigner(user),
@@ -450,7 +452,9 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
 
           return Promise.all([
             args.applyPresetComputeUnitLimit
-              ? computeBudget.getSetComputeUnitLimitInstruction({ units: 1_400_000 })
+              ? computeBudget.getSetComputeUnitLimitInstruction({
+                  units: 1_400_000,
+                })
               : null,
             restaking.getUserCreateFundAccountIdempotentInstructionAsync(
               {
@@ -536,7 +540,9 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
 
           return Promise.all([
             args.applyPresetComputeUnitLimit
-              ? computeBudget.getSetComputeUnitLimitInstruction({ units: 1_400_000 })
+              ? computeBudget.getSetComputeUnitLimitInstruction({
+                  units: 1_400_000,
+                })
               : null,
             token.getCreateAssociatedTokenIdempotentInstructionAsync({
               payer: createNoopSigner(user),
@@ -636,7 +642,9 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
 
           return Promise.all([
             args.applyPresetComputeUnitLimit
-              ? computeBudget.getSetComputeUnitLimitInstruction({ units: 1_400_000 })
+              ? computeBudget.getSetComputeUnitLimitInstruction({
+                  units: 1_400_000,
+                })
               : null,
             args.assetMint
               ? token.getCreateAssociatedTokenIdempotentInstructionAsync({
@@ -747,7 +755,9 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
 
           return Promise.all([
             args.applyPresetComputeUnitLimit
-              ? computeBudget.getSetComputeUnitLimitInstruction({ units: 1_400_000 })
+              ? computeBudget.getSetComputeUnitLimitInstruction({
+                  units: 1_400_000,
+                })
               : null,
             token.getCreateAssociatedTokenIdempotentInstructionAsync({
               payer: createNoopSigner(user),
@@ -814,7 +824,9 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
 
           return Promise.all([
             args.applyPresetComputeUnitLimit
-              ? computeBudget.getSetComputeUnitLimitInstruction({ units: 1_400_000 })
+              ? computeBudget.getSetComputeUnitLimitInstruction({
+                  units: 1_400_000,
+                })
               : null,
             token.getCreateAssociatedTokenIdempotentInstructionAsync({
               payer: createNoopSigner(user),
@@ -957,7 +969,9 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
 
           return Promise.all([
             args.applyPresetComputeUnitLimit
-              ? computeBudget.getSetComputeUnitLimitInstruction({ units: 1_400_000 })
+              ? computeBudget.getSetComputeUnitLimitInstruction({
+                  units: 1_400_000,
+                })
               : null,
             token.getCreateAssociatedTokenIdempotentInstructionAsync({
               payer: createNoopSigner(user),
