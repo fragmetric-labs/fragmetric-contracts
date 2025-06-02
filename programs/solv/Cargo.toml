@@ -32,10 +32,8 @@ mainnet = []
 [dependencies]
 anchor-lang = { workspace = true }
 anchor-spl = { workspace = true }
-borsh1 = { workspace = true }
 bytemuck = { workspace = true }
 
 [dev-dependencies]
+anyhow = { workspace = true }
 proptest = { workspace = true }
-# solana-program-test = { workspace = true }
-# solana-sdk = "2.2.1"
