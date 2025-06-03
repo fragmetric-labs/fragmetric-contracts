@@ -232,13 +232,11 @@ impl VaultAccount {
                 .contains(&vault_supported_token_mint.key()),
                 true
             );
-            require_eq!(
-                vault_supported_token_mint.decimals,
-                vault_receipt_token_mint.decimals
-            );
-            require_eq!(vault_supported_token_mint.decimals, 8);
+            require_eq!(vault_receipt_token_mint.decimals, 8);
             require_eq!(vault_receipt_token_mint.supply, 0);
-
+            require_eq!(vault_supported_token_mint.decimals, 8);
+            require_eq!(solv_receipt_token_mint.decimals, 8);
+            
             // Roles - initially set to vault manager
             self.vault_manager = vault_manager.key();
             self.reward_manager = vault_manager.key();
@@ -451,7 +449,7 @@ impl VaultAccount {
         SRTExchangeRate::new(self.one_srt_as_micro_vst, self.solv_receipt_token_decimals)
     }
 
-    fn set_srt_exchange_rate(&mut self, one_srt_as_micro_vst: u64) -> Result<()> {
+    fn set_srt_exchange_rate_with_validation(&mut self, one_srt_as_micro_vst: u64) -> Result<()> {
         // srt price must monotonically increase
         if self.one_srt_as_micro_vst > one_srt_as_micro_vst {
             err!(VaultError::InvalidSRTPriceError)?;
@@ -519,7 +517,7 @@ impl VaultAccount {
         self.srt_operation_receivable_amount = 0;
         self.srt_operation_reserved_amount += srt_amount;
 
-        self.set_srt_exchange_rate(one_srt_as_micro_vst)?;
+        self.set_srt_exchange_rate_with_validation(one_srt_as_micro_vst)?;
         self.update_vrt_exchange_rate()?;
 
         Ok(())
@@ -731,7 +729,7 @@ impl VaultAccount {
         self.vst_deducted_fee_amount += vst_estimated_solv_protocol_fee_amount;
         self.vst_receivable_amount_to_claim -= vst_withdrawal_total_estimated_amount;
 
-        self.set_srt_exchange_rate(one_srt_as_micro_vst)?;
+        self.set_srt_exchange_rate_with_validation(one_srt_as_micro_vst)?;
         self.update_vrt_exchange_rate()?;
 
         Ok(())

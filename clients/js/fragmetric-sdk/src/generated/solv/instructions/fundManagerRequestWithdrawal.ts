@@ -120,18 +120,18 @@ export type FundManagerRequestWithdrawalInstruction<
 
 export type FundManagerRequestWithdrawalInstructionData = {
   discriminator: ReadonlyUint8Array;
-  amount: bigint;
+  vrtAmount: bigint;
 };
 
 export type FundManagerRequestWithdrawalInstructionDataArgs = {
-  amount: number | bigint;
+  vrtAmount: number | bigint;
 };
 
 export function getFundManagerRequestWithdrawalInstructionDataEncoder(): Encoder<FundManagerRequestWithdrawalInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
-      ['amount', getU64Encoder()],
+      ['vrtAmount', getU64Encoder()],
     ]),
     (value) => ({
       ...value,
@@ -143,7 +143,7 @@ export function getFundManagerRequestWithdrawalInstructionDataEncoder(): Encoder
 export function getFundManagerRequestWithdrawalInstructionDataDecoder(): Decoder<FundManagerRequestWithdrawalInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
-    ['amount', getU64Decoder()],
+    ['vrtAmount', getU64Decoder()],
   ]);
 }
 
@@ -181,7 +181,7 @@ export type FundManagerRequestWithdrawalAsyncInput<
   tokenProgram?: Address<TAccountTokenProgram>;
   eventAuthority?: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
-  amount: FundManagerRequestWithdrawalInstructionDataArgs['amount'];
+  vrtAmount: FundManagerRequestWithdrawalInstructionDataArgs['vrtAmount'];
 };
 
 export async function getFundManagerRequestWithdrawalInstructionAsync<
@@ -421,7 +421,7 @@ export type FundManagerRequestWithdrawalInput<
   tokenProgram?: Address<TAccountTokenProgram>;
   eventAuthority: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
-  amount: FundManagerRequestWithdrawalInstructionDataArgs['amount'];
+  vrtAmount: FundManagerRequestWithdrawalInstructionDataArgs['vrtAmount'];
 };
 
 export function getFundManagerRequestWithdrawalInstruction<

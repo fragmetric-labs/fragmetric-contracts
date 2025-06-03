@@ -19,14 +19,14 @@ import {
   type ParsedFundManagerRequestWithdrawalInstruction,
   type ParsedFundManagerWithdrawInstruction,
   type ParsedRewardManagerDelegateRewardTokenAccountInstruction,
-  type ParsedSolvManagerConfirmDepositInstruction,
-  type ParsedSolvManagerDepositInstruction,
-  type ParsedSolvManagerRequestWithdrawalInstruction,
-  type ParsedSolvManagerWithdrawInstruction,
+  type ParsedSolvManagerCompleteDepositsInstruction,
+  type ParsedSolvManagerCompleteWithdrawalRequestsInstruction,
+  type ParsedSolvManagerConfirmDepositsInstruction,
+  type ParsedSolvManagerConfirmWithdrawalRequestsInstruction,
+  type ParsedSolvManagerSetSolvProtocolWalletInstruction,
+  type ParsedSolvManagerSetSolvProtocolWithdrawalFeeRateInstruction,
   type ParsedUpdateVaultAdminRoleInstruction,
   type ParsedVaultManagerInitializeVaultAccountInstruction,
-  type ParsedVaultManagerSetSolvProtocolWalletInstruction,
-  type ParsedVaultManagerSetSolvProtocolWithdrawalFeeRateInstruction,
   type ParsedVaultManagerUpdateVaultAccountIfNeededInstruction,
 } from '../instructions';
 
@@ -63,14 +63,14 @@ export enum SolvInstruction {
   FundManagerRequestWithdrawal,
   FundManagerWithdraw,
   RewardManagerDelegateRewardTokenAccount,
-  SolvManagerConfirmDeposit,
-  SolvManagerDeposit,
-  SolvManagerRequestWithdrawal,
-  SolvManagerWithdraw,
+  SolvManagerCompleteDeposits,
+  SolvManagerCompleteWithdrawalRequests,
+  SolvManagerConfirmDeposits,
+  SolvManagerConfirmWithdrawalRequests,
+  SolvManagerSetSolvProtocolWallet,
+  SolvManagerSetSolvProtocolWithdrawalFeeRate,
   UpdateVaultAdminRole,
   VaultManagerInitializeVaultAccount,
-  VaultManagerSetSolvProtocolWallet,
-  VaultManagerSetSolvProtocolWithdrawalFeeRate,
   VaultManagerUpdateVaultAccountIfNeeded,
 }
 
@@ -137,45 +137,67 @@ export function identifySolvInstruction(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([179, 55, 33, 11, 76, 28, 193, 103])
+        new Uint8Array([8, 24, 208, 60, 113, 102, 132, 14])
       ),
       0
     )
   ) {
-    return SolvInstruction.SolvManagerConfirmDeposit;
+    return SolvInstruction.SolvManagerCompleteDeposits;
   }
   if (
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([59, 132, 252, 248, 19, 20, 156, 162])
+        new Uint8Array([247, 21, 144, 10, 185, 217, 189, 162])
       ),
       0
     )
   ) {
-    return SolvInstruction.SolvManagerDeposit;
+    return SolvInstruction.SolvManagerCompleteWithdrawalRequests;
   }
   if (
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([126, 33, 210, 18, 50, 224, 2, 145])
+        new Uint8Array([76, 147, 139, 82, 247, 78, 246, 150])
       ),
       0
     )
   ) {
-    return SolvInstruction.SolvManagerRequestWithdrawal;
+    return SolvInstruction.SolvManagerConfirmDeposits;
   }
   if (
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([6, 24, 220, 220, 119, 39, 61, 64])
+        new Uint8Array([127, 214, 165, 25, 146, 58, 240, 236])
       ),
       0
     )
   ) {
-    return SolvInstruction.SolvManagerWithdraw;
+    return SolvInstruction.SolvManagerConfirmWithdrawalRequests;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([59, 28, 215, 147, 82, 154, 62, 141])
+      ),
+      0
+    )
+  ) {
+    return SolvInstruction.SolvManagerSetSolvProtocolWallet;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([250, 221, 42, 4, 46, 132, 97, 96])
+      ),
+      0
+    )
+  ) {
+    return SolvInstruction.SolvManagerSetSolvProtocolWithdrawalFeeRate;
   }
   if (
     containsBytes(
@@ -198,28 +220,6 @@ export function identifySolvInstruction(
     )
   ) {
     return SolvInstruction.VaultManagerInitializeVaultAccount;
-  }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([145, 97, 236, 118, 219, 116, 78, 6])
-      ),
-      0
-    )
-  ) {
-    return SolvInstruction.VaultManagerSetSolvProtocolWallet;
-  }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([16, 36, 125, 205, 176, 110, 1, 249])
-      ),
-      0
-    )
-  ) {
-    return SolvInstruction.VaultManagerSetSolvProtocolWithdrawalFeeRate;
   }
   if (
     containsBytes(
@@ -256,29 +256,29 @@ export type ParsedSolvInstruction<
       instructionType: SolvInstruction.RewardManagerDelegateRewardTokenAccount;
     } & ParsedRewardManagerDelegateRewardTokenAccountInstruction<TProgram>)
   | ({
-      instructionType: SolvInstruction.SolvManagerConfirmDeposit;
-    } & ParsedSolvManagerConfirmDepositInstruction<TProgram>)
+      instructionType: SolvInstruction.SolvManagerCompleteDeposits;
+    } & ParsedSolvManagerCompleteDepositsInstruction<TProgram>)
   | ({
-      instructionType: SolvInstruction.SolvManagerDeposit;
-    } & ParsedSolvManagerDepositInstruction<TProgram>)
+      instructionType: SolvInstruction.SolvManagerCompleteWithdrawalRequests;
+    } & ParsedSolvManagerCompleteWithdrawalRequestsInstruction<TProgram>)
   | ({
-      instructionType: SolvInstruction.SolvManagerRequestWithdrawal;
-    } & ParsedSolvManagerRequestWithdrawalInstruction<TProgram>)
+      instructionType: SolvInstruction.SolvManagerConfirmDeposits;
+    } & ParsedSolvManagerConfirmDepositsInstruction<TProgram>)
   | ({
-      instructionType: SolvInstruction.SolvManagerWithdraw;
-    } & ParsedSolvManagerWithdrawInstruction<TProgram>)
+      instructionType: SolvInstruction.SolvManagerConfirmWithdrawalRequests;
+    } & ParsedSolvManagerConfirmWithdrawalRequestsInstruction<TProgram>)
+  | ({
+      instructionType: SolvInstruction.SolvManagerSetSolvProtocolWallet;
+    } & ParsedSolvManagerSetSolvProtocolWalletInstruction<TProgram>)
+  | ({
+      instructionType: SolvInstruction.SolvManagerSetSolvProtocolWithdrawalFeeRate;
+    } & ParsedSolvManagerSetSolvProtocolWithdrawalFeeRateInstruction<TProgram>)
   | ({
       instructionType: SolvInstruction.UpdateVaultAdminRole;
     } & ParsedUpdateVaultAdminRoleInstruction<TProgram>)
   | ({
       instructionType: SolvInstruction.VaultManagerInitializeVaultAccount;
     } & ParsedVaultManagerInitializeVaultAccountInstruction<TProgram>)
-  | ({
-      instructionType: SolvInstruction.VaultManagerSetSolvProtocolWallet;
-    } & ParsedVaultManagerSetSolvProtocolWalletInstruction<TProgram>)
-  | ({
-      instructionType: SolvInstruction.VaultManagerSetSolvProtocolWithdrawalFeeRate;
-    } & ParsedVaultManagerSetSolvProtocolWithdrawalFeeRateInstruction<TProgram>)
   | ({
       instructionType: SolvInstruction.VaultManagerUpdateVaultAccountIfNeeded;
     } & ParsedVaultManagerUpdateVaultAccountIfNeededInstruction<TProgram>);

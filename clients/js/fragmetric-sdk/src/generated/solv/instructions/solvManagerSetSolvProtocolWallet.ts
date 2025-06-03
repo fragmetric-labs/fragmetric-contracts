@@ -16,8 +16,6 @@ import {
   getProgramDerivedAddress,
   getStructDecoder,
   getStructEncoder,
-  getU16Decoder,
-  getU16Encoder,
   transformEncoder,
   type Address,
   type Codec,
@@ -41,16 +39,16 @@ import {
   type ResolvedAccount,
 } from '../shared';
 
-export const VAULT_MANAGER_SET_SOLV_PROTOCOL_WITHDRAWAL_FEE_RATE_DISCRIMINATOR =
-  new Uint8Array([16, 36, 125, 205, 176, 110, 1, 249]);
+export const SOLV_MANAGER_SET_SOLV_PROTOCOL_WALLET_DISCRIMINATOR =
+  new Uint8Array([59, 28, 215, 147, 82, 154, 62, 141]);
 
-export function getVaultManagerSetSolvProtocolWithdrawalFeeRateDiscriminatorBytes() {
+export function getSolvManagerSetSolvProtocolWalletDiscriminatorBytes() {
   return fixEncoderSize(getBytesEncoder(), 8).encode(
-    VAULT_MANAGER_SET_SOLV_PROTOCOL_WITHDRAWAL_FEE_RATE_DISCRIMINATOR
+    SOLV_MANAGER_SET_SOLV_PROTOCOL_WALLET_DISCRIMINATOR
   );
 }
 
-export type VaultManagerSetSolvProtocolWithdrawalFeeRateInstruction<
+export type SolvManagerSetSolvProtocolWalletInstruction<
   TProgram extends string = typeof SOLV_PROGRAM_ADDRESS,
   TAccountSolvManager extends string | IAccountMeta<string> = string,
   TAccountSolvProtocolWallet extends string | IAccountMeta<string> = string,
@@ -86,47 +84,39 @@ export type VaultManagerSetSolvProtocolWithdrawalFeeRateInstruction<
     ]
   >;
 
-export type VaultManagerSetSolvProtocolWithdrawalFeeRateInstructionData = {
+export type SolvManagerSetSolvProtocolWalletInstructionData = {
   discriminator: ReadonlyUint8Array;
-  solvProtocolWithdrawalFeeRateBps: number;
 };
 
-export type VaultManagerSetSolvProtocolWithdrawalFeeRateInstructionDataArgs = {
-  solvProtocolWithdrawalFeeRateBps: number;
-};
+export type SolvManagerSetSolvProtocolWalletInstructionDataArgs = {};
 
-export function getVaultManagerSetSolvProtocolWithdrawalFeeRateInstructionDataEncoder(): Encoder<VaultManagerSetSolvProtocolWithdrawalFeeRateInstructionDataArgs> {
+export function getSolvManagerSetSolvProtocolWalletInstructionDataEncoder(): Encoder<SolvManagerSetSolvProtocolWalletInstructionDataArgs> {
   return transformEncoder(
-    getStructEncoder([
-      ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
-      ['solvProtocolWithdrawalFeeRateBps', getU16Encoder()],
-    ]),
+    getStructEncoder([['discriminator', fixEncoderSize(getBytesEncoder(), 8)]]),
     (value) => ({
       ...value,
-      discriminator:
-        VAULT_MANAGER_SET_SOLV_PROTOCOL_WITHDRAWAL_FEE_RATE_DISCRIMINATOR,
+      discriminator: SOLV_MANAGER_SET_SOLV_PROTOCOL_WALLET_DISCRIMINATOR,
     })
   );
 }
 
-export function getVaultManagerSetSolvProtocolWithdrawalFeeRateInstructionDataDecoder(): Decoder<VaultManagerSetSolvProtocolWithdrawalFeeRateInstructionData> {
+export function getSolvManagerSetSolvProtocolWalletInstructionDataDecoder(): Decoder<SolvManagerSetSolvProtocolWalletInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
-    ['solvProtocolWithdrawalFeeRateBps', getU16Decoder()],
   ]);
 }
 
-export function getVaultManagerSetSolvProtocolWithdrawalFeeRateInstructionDataCodec(): Codec<
-  VaultManagerSetSolvProtocolWithdrawalFeeRateInstructionDataArgs,
-  VaultManagerSetSolvProtocolWithdrawalFeeRateInstructionData
+export function getSolvManagerSetSolvProtocolWalletInstructionDataCodec(): Codec<
+  SolvManagerSetSolvProtocolWalletInstructionDataArgs,
+  SolvManagerSetSolvProtocolWalletInstructionData
 > {
   return combineCodec(
-    getVaultManagerSetSolvProtocolWithdrawalFeeRateInstructionDataEncoder(),
-    getVaultManagerSetSolvProtocolWithdrawalFeeRateInstructionDataDecoder()
+    getSolvManagerSetSolvProtocolWalletInstructionDataEncoder(),
+    getSolvManagerSetSolvProtocolWalletInstructionDataDecoder()
   );
 }
 
-export type VaultManagerSetSolvProtocolWithdrawalFeeRateAsyncInput<
+export type SolvManagerSetSolvProtocolWalletAsyncInput<
   TAccountSolvManager extends string = string,
   TAccountSolvProtocolWallet extends string = string,
   TAccountVaultAccount extends string = string,
@@ -140,10 +130,9 @@ export type VaultManagerSetSolvProtocolWithdrawalFeeRateAsyncInput<
   vaultReceiptTokenMint: Address<TAccountVaultReceiptTokenMint>;
   eventAuthority?: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
-  solvProtocolWithdrawalFeeRateBps: VaultManagerSetSolvProtocolWithdrawalFeeRateInstructionDataArgs['solvProtocolWithdrawalFeeRateBps'];
 };
 
-export async function getVaultManagerSetSolvProtocolWithdrawalFeeRateInstructionAsync<
+export async function getSolvManagerSetSolvProtocolWalletInstructionAsync<
   TAccountSolvManager extends string,
   TAccountSolvProtocolWallet extends string,
   TAccountVaultAccount extends string,
@@ -152,7 +141,7 @@ export async function getVaultManagerSetSolvProtocolWithdrawalFeeRateInstruction
   TAccountProgram extends string,
   TProgramAddress extends Address = typeof SOLV_PROGRAM_ADDRESS,
 >(
-  input: VaultManagerSetSolvProtocolWithdrawalFeeRateAsyncInput<
+  input: SolvManagerSetSolvProtocolWalletAsyncInput<
     TAccountSolvManager,
     TAccountSolvProtocolWallet,
     TAccountVaultAccount,
@@ -162,7 +151,7 @@ export async function getVaultManagerSetSolvProtocolWithdrawalFeeRateInstruction
   >,
   config?: { programAddress?: TProgramAddress }
 ): Promise<
-  VaultManagerSetSolvProtocolWithdrawalFeeRateInstruction<
+  SolvManagerSetSolvProtocolWalletInstruction<
     TProgramAddress,
     TAccountSolvManager,
     TAccountSolvProtocolWallet,
@@ -194,9 +183,6 @@ export async function getVaultManagerSetSolvProtocolWithdrawalFeeRateInstruction
     keyof typeof originalAccounts,
     ResolvedAccount
   >;
-
-  // Original args.
-  const args = { ...input };
 
   // Resolve default values.
   if (!accounts.vaultAccount.value) {
@@ -235,10 +221,10 @@ export async function getVaultManagerSetSolvProtocolWithdrawalFeeRateInstruction
       getAccountMeta(accounts.program),
     ],
     programAddress,
-    data: getVaultManagerSetSolvProtocolWithdrawalFeeRateInstructionDataEncoder().encode(
-      args as VaultManagerSetSolvProtocolWithdrawalFeeRateInstructionDataArgs
+    data: getSolvManagerSetSolvProtocolWalletInstructionDataEncoder().encode(
+      {}
     ),
-  } as VaultManagerSetSolvProtocolWithdrawalFeeRateInstruction<
+  } as SolvManagerSetSolvProtocolWalletInstruction<
     TProgramAddress,
     TAccountSolvManager,
     TAccountSolvProtocolWallet,
@@ -251,7 +237,7 @@ export async function getVaultManagerSetSolvProtocolWithdrawalFeeRateInstruction
   return instruction;
 }
 
-export type VaultManagerSetSolvProtocolWithdrawalFeeRateInput<
+export type SolvManagerSetSolvProtocolWalletInput<
   TAccountSolvManager extends string = string,
   TAccountSolvProtocolWallet extends string = string,
   TAccountVaultAccount extends string = string,
@@ -265,10 +251,9 @@ export type VaultManagerSetSolvProtocolWithdrawalFeeRateInput<
   vaultReceiptTokenMint: Address<TAccountVaultReceiptTokenMint>;
   eventAuthority: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
-  solvProtocolWithdrawalFeeRateBps: VaultManagerSetSolvProtocolWithdrawalFeeRateInstructionDataArgs['solvProtocolWithdrawalFeeRateBps'];
 };
 
-export function getVaultManagerSetSolvProtocolWithdrawalFeeRateInstruction<
+export function getSolvManagerSetSolvProtocolWalletInstruction<
   TAccountSolvManager extends string,
   TAccountSolvProtocolWallet extends string,
   TAccountVaultAccount extends string,
@@ -277,7 +262,7 @@ export function getVaultManagerSetSolvProtocolWithdrawalFeeRateInstruction<
   TAccountProgram extends string,
   TProgramAddress extends Address = typeof SOLV_PROGRAM_ADDRESS,
 >(
-  input: VaultManagerSetSolvProtocolWithdrawalFeeRateInput<
+  input: SolvManagerSetSolvProtocolWalletInput<
     TAccountSolvManager,
     TAccountSolvProtocolWallet,
     TAccountVaultAccount,
@@ -286,7 +271,7 @@ export function getVaultManagerSetSolvProtocolWithdrawalFeeRateInstruction<
     TAccountProgram
   >,
   config?: { programAddress?: TProgramAddress }
-): VaultManagerSetSolvProtocolWithdrawalFeeRateInstruction<
+): SolvManagerSetSolvProtocolWalletInstruction<
   TProgramAddress,
   TAccountSolvManager,
   TAccountSolvProtocolWallet,
@@ -318,9 +303,6 @@ export function getVaultManagerSetSolvProtocolWithdrawalFeeRateInstruction<
     ResolvedAccount
   >;
 
-  // Original args.
-  const args = { ...input };
-
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
@@ -332,10 +314,10 @@ export function getVaultManagerSetSolvProtocolWithdrawalFeeRateInstruction<
       getAccountMeta(accounts.program),
     ],
     programAddress,
-    data: getVaultManagerSetSolvProtocolWithdrawalFeeRateInstructionDataEncoder().encode(
-      args as VaultManagerSetSolvProtocolWithdrawalFeeRateInstructionDataArgs
+    data: getSolvManagerSetSolvProtocolWalletInstructionDataEncoder().encode(
+      {}
     ),
-  } as VaultManagerSetSolvProtocolWithdrawalFeeRateInstruction<
+  } as SolvManagerSetSolvProtocolWalletInstruction<
     TProgramAddress,
     TAccountSolvManager,
     TAccountSolvProtocolWallet,
@@ -348,7 +330,7 @@ export function getVaultManagerSetSolvProtocolWithdrawalFeeRateInstruction<
   return instruction;
 }
 
-export type ParsedVaultManagerSetSolvProtocolWithdrawalFeeRateInstruction<
+export type ParsedSolvManagerSetSolvProtocolWalletInstruction<
   TProgram extends string = typeof SOLV_PROGRAM_ADDRESS,
   TAccountMetas extends readonly IAccountMeta[] = readonly IAccountMeta[],
 > = {
@@ -361,20 +343,17 @@ export type ParsedVaultManagerSetSolvProtocolWithdrawalFeeRateInstruction<
     eventAuthority: TAccountMetas[4];
     program: TAccountMetas[5];
   };
-  data: VaultManagerSetSolvProtocolWithdrawalFeeRateInstructionData;
+  data: SolvManagerSetSolvProtocolWalletInstructionData;
 };
 
-export function parseVaultManagerSetSolvProtocolWithdrawalFeeRateInstruction<
+export function parseSolvManagerSetSolvProtocolWalletInstruction<
   TProgram extends string,
   TAccountMetas extends readonly IAccountMeta[],
 >(
   instruction: IInstruction<TProgram> &
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
-): ParsedVaultManagerSetSolvProtocolWithdrawalFeeRateInstruction<
-  TProgram,
-  TAccountMetas
-> {
+): ParsedSolvManagerSetSolvProtocolWalletInstruction<TProgram, TAccountMetas> {
   if (instruction.accounts.length < 6) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
@@ -395,7 +374,7 @@ export function parseVaultManagerSetSolvProtocolWithdrawalFeeRateInstruction<
       eventAuthority: getNextAccount(),
       program: getNextAccount(),
     },
-    data: getVaultManagerSetSolvProtocolWithdrawalFeeRateInstructionDataDecoder().decode(
+    data: getSolvManagerSetSolvProtocolWalletInstructionDataDecoder().decode(
       instruction.data
     ),
   };

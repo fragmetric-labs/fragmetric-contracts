@@ -39,17 +39,16 @@ import {
   type ResolvedAccount,
 } from '../shared';
 
-export const SOLV_MANAGER_DEPOSIT_DISCRIMINATOR = new Uint8Array([
-  59, 132, 252, 248, 19, 20, 156, 162,
-]);
+export const SOLV_MANAGER_CONFIRM_WITHDRAWAL_REQUESTS_DISCRIMINATOR =
+  new Uint8Array([127, 214, 165, 25, 146, 58, 240, 236]);
 
-export function getSolvManagerDepositDiscriminatorBytes() {
+export function getSolvManagerConfirmWithdrawalRequestsDiscriminatorBytes() {
   return fixEncoderSize(getBytesEncoder(), 8).encode(
-    SOLV_MANAGER_DEPOSIT_DISCRIMINATOR
+    SOLV_MANAGER_CONFIRM_WITHDRAWAL_REQUESTS_DISCRIMINATOR
   );
 }
 
-export type SolvManagerDepositInstruction<
+export type SolvManagerConfirmWithdrawalRequestsInstruction<
   TProgram extends string = typeof SOLV_PROGRAM_ADDRESS,
   TAccountSolvManager extends string | IAccountMeta<string> = string,
   TAccountSolvProtocolWallet extends string | IAccountMeta<string> = string,
@@ -125,36 +124,39 @@ export type SolvManagerDepositInstruction<
     ]
   >;
 
-export type SolvManagerDepositInstructionData = {
+export type SolvManagerConfirmWithdrawalRequestsInstructionData = {
   discriminator: ReadonlyUint8Array;
 };
 
-export type SolvManagerDepositInstructionDataArgs = {};
+export type SolvManagerConfirmWithdrawalRequestsInstructionDataArgs = {};
 
-export function getSolvManagerDepositInstructionDataEncoder(): Encoder<SolvManagerDepositInstructionDataArgs> {
+export function getSolvManagerConfirmWithdrawalRequestsInstructionDataEncoder(): Encoder<SolvManagerConfirmWithdrawalRequestsInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([['discriminator', fixEncoderSize(getBytesEncoder(), 8)]]),
-    (value) => ({ ...value, discriminator: SOLV_MANAGER_DEPOSIT_DISCRIMINATOR })
+    (value) => ({
+      ...value,
+      discriminator: SOLV_MANAGER_CONFIRM_WITHDRAWAL_REQUESTS_DISCRIMINATOR,
+    })
   );
 }
 
-export function getSolvManagerDepositInstructionDataDecoder(): Decoder<SolvManagerDepositInstructionData> {
+export function getSolvManagerConfirmWithdrawalRequestsInstructionDataDecoder(): Decoder<SolvManagerConfirmWithdrawalRequestsInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
   ]);
 }
 
-export function getSolvManagerDepositInstructionDataCodec(): Codec<
-  SolvManagerDepositInstructionDataArgs,
-  SolvManagerDepositInstructionData
+export function getSolvManagerConfirmWithdrawalRequestsInstructionDataCodec(): Codec<
+  SolvManagerConfirmWithdrawalRequestsInstructionDataArgs,
+  SolvManagerConfirmWithdrawalRequestsInstructionData
 > {
   return combineCodec(
-    getSolvManagerDepositInstructionDataEncoder(),
-    getSolvManagerDepositInstructionDataDecoder()
+    getSolvManagerConfirmWithdrawalRequestsInstructionDataEncoder(),
+    getSolvManagerConfirmWithdrawalRequestsInstructionDataDecoder()
   );
 }
 
-export type SolvManagerDepositAsyncInput<
+export type SolvManagerConfirmWithdrawalRequestsAsyncInput<
   TAccountSolvManager extends string = string,
   TAccountSolvProtocolWallet extends string = string,
   TAccountVaultAccount extends string = string,
@@ -184,7 +186,7 @@ export type SolvManagerDepositAsyncInput<
   program: Address<TAccountProgram>;
 };
 
-export async function getSolvManagerDepositInstructionAsync<
+export async function getSolvManagerConfirmWithdrawalRequestsInstructionAsync<
   TAccountSolvManager extends string,
   TAccountSolvProtocolWallet extends string,
   TAccountVaultAccount extends string,
@@ -200,7 +202,7 @@ export async function getSolvManagerDepositInstructionAsync<
   TAccountProgram extends string,
   TProgramAddress extends Address = typeof SOLV_PROGRAM_ADDRESS,
 >(
-  input: SolvManagerDepositAsyncInput<
+  input: SolvManagerConfirmWithdrawalRequestsAsyncInput<
     TAccountSolvManager,
     TAccountSolvProtocolWallet,
     TAccountVaultAccount,
@@ -217,7 +219,7 @@ export async function getSolvManagerDepositInstructionAsync<
   >,
   config?: { programAddress?: TProgramAddress }
 ): Promise<
-  SolvManagerDepositInstruction<
+  SolvManagerConfirmWithdrawalRequestsInstruction<
     TProgramAddress,
     TAccountSolvManager,
     TAccountSolvProtocolWallet,
@@ -418,8 +420,10 @@ export async function getSolvManagerDepositInstructionAsync<
       getAccountMeta(accounts.program),
     ],
     programAddress,
-    data: getSolvManagerDepositInstructionDataEncoder().encode({}),
-  } as SolvManagerDepositInstruction<
+    data: getSolvManagerConfirmWithdrawalRequestsInstructionDataEncoder().encode(
+      {}
+    ),
+  } as SolvManagerConfirmWithdrawalRequestsInstruction<
     TProgramAddress,
     TAccountSolvManager,
     TAccountSolvProtocolWallet,
@@ -439,7 +443,7 @@ export async function getSolvManagerDepositInstructionAsync<
   return instruction;
 }
 
-export type SolvManagerDepositInput<
+export type SolvManagerConfirmWithdrawalRequestsInput<
   TAccountSolvManager extends string = string,
   TAccountSolvProtocolWallet extends string = string,
   TAccountVaultAccount extends string = string,
@@ -469,7 +473,7 @@ export type SolvManagerDepositInput<
   program: Address<TAccountProgram>;
 };
 
-export function getSolvManagerDepositInstruction<
+export function getSolvManagerConfirmWithdrawalRequestsInstruction<
   TAccountSolvManager extends string,
   TAccountSolvProtocolWallet extends string,
   TAccountVaultAccount extends string,
@@ -485,7 +489,7 @@ export function getSolvManagerDepositInstruction<
   TAccountProgram extends string,
   TProgramAddress extends Address = typeof SOLV_PROGRAM_ADDRESS,
 >(
-  input: SolvManagerDepositInput<
+  input: SolvManagerConfirmWithdrawalRequestsInput<
     TAccountSolvManager,
     TAccountSolvProtocolWallet,
     TAccountVaultAccount,
@@ -501,7 +505,7 @@ export function getSolvManagerDepositInstruction<
     TAccountProgram
   >,
   config?: { programAddress?: TProgramAddress }
-): SolvManagerDepositInstruction<
+): SolvManagerConfirmWithdrawalRequestsInstruction<
   TProgramAddress,
   TAccountSolvManager,
   TAccountSolvProtocolWallet,
@@ -589,8 +593,10 @@ export function getSolvManagerDepositInstruction<
       getAccountMeta(accounts.program),
     ],
     programAddress,
-    data: getSolvManagerDepositInstructionDataEncoder().encode({}),
-  } as SolvManagerDepositInstruction<
+    data: getSolvManagerConfirmWithdrawalRequestsInstructionDataEncoder().encode(
+      {}
+    ),
+  } as SolvManagerConfirmWithdrawalRequestsInstruction<
     TProgramAddress,
     TAccountSolvManager,
     TAccountSolvProtocolWallet,
@@ -610,7 +616,7 @@ export function getSolvManagerDepositInstruction<
   return instruction;
 }
 
-export type ParsedSolvManagerDepositInstruction<
+export type ParsedSolvManagerConfirmWithdrawalRequestsInstruction<
   TProgram extends string = typeof SOLV_PROGRAM_ADDRESS,
   TAccountMetas extends readonly IAccountMeta[] = readonly IAccountMeta[],
 > = {
@@ -630,17 +636,20 @@ export type ParsedSolvManagerDepositInstruction<
     eventAuthority: TAccountMetas[11];
     program: TAccountMetas[12];
   };
-  data: SolvManagerDepositInstructionData;
+  data: SolvManagerConfirmWithdrawalRequestsInstructionData;
 };
 
-export function parseSolvManagerDepositInstruction<
+export function parseSolvManagerConfirmWithdrawalRequestsInstruction<
   TProgram extends string,
   TAccountMetas extends readonly IAccountMeta[],
 >(
   instruction: IInstruction<TProgram> &
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
-): ParsedSolvManagerDepositInstruction<TProgram, TAccountMetas> {
+): ParsedSolvManagerConfirmWithdrawalRequestsInstruction<
+  TProgram,
+  TAccountMetas
+> {
   if (instruction.accounts.length < 13) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
@@ -668,7 +677,7 @@ export function parseSolvManagerDepositInstruction<
       eventAuthority: getNextAccount(),
       program: getNextAccount(),
     },
-    data: getSolvManagerDepositInstructionDataDecoder().decode(
+    data: getSolvManagerConfirmWithdrawalRequestsInstructionDataDecoder().decode(
       instruction.data
     ),
   };

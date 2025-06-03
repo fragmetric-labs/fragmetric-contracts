@@ -41,17 +41,17 @@ import {
   type ResolvedAccount,
 } from '../shared';
 
-export const SOLV_MANAGER_WITHDRAW_DISCRIMINATOR = new Uint8Array([
-  6, 24, 220, 220, 119, 39, 61, 64,
+export const SOLV_MANAGER_COMPLETE_DEPOSITS_DISCRIMINATOR = new Uint8Array([
+  8, 24, 208, 60, 113, 102, 132, 14,
 ]);
 
-export function getSolvManagerWithdrawDiscriminatorBytes() {
+export function getSolvManagerCompleteDepositsDiscriminatorBytes() {
   return fixEncoderSize(getBytesEncoder(), 8).encode(
-    SOLV_MANAGER_WITHDRAW_DISCRIMINATOR
+    SOLV_MANAGER_COMPLETE_DEPOSITS_DISCRIMINATOR
   );
 }
 
-export type SolvManagerWithdrawInstruction<
+export type SolvManagerCompleteDepositsInstruction<
   TProgram extends string = typeof SOLV_PROGRAM_ADDRESS,
   TAccountSolvManager extends string | IAccountMeta<string> = string,
   TAccountSolvProtocolWallet extends string | IAccountMeta<string> = string,
@@ -127,54 +127,50 @@ export type SolvManagerWithdrawInstruction<
     ]
   >;
 
-export type SolvManagerWithdrawInstructionData = {
+export type SolvManagerCompleteDepositsInstructionData = {
   discriminator: ReadonlyUint8Array;
   srtAmount: bigint;
-  vstAmount: bigint;
   oneSrtAsMicroVst: bigint;
 };
 
-export type SolvManagerWithdrawInstructionDataArgs = {
+export type SolvManagerCompleteDepositsInstructionDataArgs = {
   srtAmount: number | bigint;
-  vstAmount: number | bigint;
   oneSrtAsMicroVst: number | bigint;
 };
 
-export function getSolvManagerWithdrawInstructionDataEncoder(): Encoder<SolvManagerWithdrawInstructionDataArgs> {
+export function getSolvManagerCompleteDepositsInstructionDataEncoder(): Encoder<SolvManagerCompleteDepositsInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
       ['srtAmount', getU64Encoder()],
-      ['vstAmount', getU64Encoder()],
       ['oneSrtAsMicroVst', getU64Encoder()],
     ]),
     (value) => ({
       ...value,
-      discriminator: SOLV_MANAGER_WITHDRAW_DISCRIMINATOR,
+      discriminator: SOLV_MANAGER_COMPLETE_DEPOSITS_DISCRIMINATOR,
     })
   );
 }
 
-export function getSolvManagerWithdrawInstructionDataDecoder(): Decoder<SolvManagerWithdrawInstructionData> {
+export function getSolvManagerCompleteDepositsInstructionDataDecoder(): Decoder<SolvManagerCompleteDepositsInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
     ['srtAmount', getU64Decoder()],
-    ['vstAmount', getU64Decoder()],
     ['oneSrtAsMicroVst', getU64Decoder()],
   ]);
 }
 
-export function getSolvManagerWithdrawInstructionDataCodec(): Codec<
-  SolvManagerWithdrawInstructionDataArgs,
-  SolvManagerWithdrawInstructionData
+export function getSolvManagerCompleteDepositsInstructionDataCodec(): Codec<
+  SolvManagerCompleteDepositsInstructionDataArgs,
+  SolvManagerCompleteDepositsInstructionData
 > {
   return combineCodec(
-    getSolvManagerWithdrawInstructionDataEncoder(),
-    getSolvManagerWithdrawInstructionDataDecoder()
+    getSolvManagerCompleteDepositsInstructionDataEncoder(),
+    getSolvManagerCompleteDepositsInstructionDataDecoder()
   );
 }
 
-export type SolvManagerWithdrawAsyncInput<
+export type SolvManagerCompleteDepositsAsyncInput<
   TAccountSolvManager extends string = string,
   TAccountSolvProtocolWallet extends string = string,
   TAccountVaultAccount extends string = string,
@@ -202,12 +198,11 @@ export type SolvManagerWithdrawAsyncInput<
   tokenProgram?: Address<TAccountTokenProgram>;
   eventAuthority?: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
-  srtAmount: SolvManagerWithdrawInstructionDataArgs['srtAmount'];
-  vstAmount: SolvManagerWithdrawInstructionDataArgs['vstAmount'];
-  oneSrtAsMicroVst: SolvManagerWithdrawInstructionDataArgs['oneSrtAsMicroVst'];
+  srtAmount: SolvManagerCompleteDepositsInstructionDataArgs['srtAmount'];
+  oneSrtAsMicroVst: SolvManagerCompleteDepositsInstructionDataArgs['oneSrtAsMicroVst'];
 };
 
-export async function getSolvManagerWithdrawInstructionAsync<
+export async function getSolvManagerCompleteDepositsInstructionAsync<
   TAccountSolvManager extends string,
   TAccountSolvProtocolWallet extends string,
   TAccountVaultAccount extends string,
@@ -223,7 +218,7 @@ export async function getSolvManagerWithdrawInstructionAsync<
   TAccountProgram extends string,
   TProgramAddress extends Address = typeof SOLV_PROGRAM_ADDRESS,
 >(
-  input: SolvManagerWithdrawAsyncInput<
+  input: SolvManagerCompleteDepositsAsyncInput<
     TAccountSolvManager,
     TAccountSolvProtocolWallet,
     TAccountVaultAccount,
@@ -240,7 +235,7 @@ export async function getSolvManagerWithdrawInstructionAsync<
   >,
   config?: { programAddress?: TProgramAddress }
 ): Promise<
-  SolvManagerWithdrawInstruction<
+  SolvManagerCompleteDepositsInstruction<
     TProgramAddress,
     TAccountSolvManager,
     TAccountSolvProtocolWallet,
@@ -444,10 +439,10 @@ export async function getSolvManagerWithdrawInstructionAsync<
       getAccountMeta(accounts.program),
     ],
     programAddress,
-    data: getSolvManagerWithdrawInstructionDataEncoder().encode(
-      args as SolvManagerWithdrawInstructionDataArgs
+    data: getSolvManagerCompleteDepositsInstructionDataEncoder().encode(
+      args as SolvManagerCompleteDepositsInstructionDataArgs
     ),
-  } as SolvManagerWithdrawInstruction<
+  } as SolvManagerCompleteDepositsInstruction<
     TProgramAddress,
     TAccountSolvManager,
     TAccountSolvProtocolWallet,
@@ -467,7 +462,7 @@ export async function getSolvManagerWithdrawInstructionAsync<
   return instruction;
 }
 
-export type SolvManagerWithdrawInput<
+export type SolvManagerCompleteDepositsInput<
   TAccountSolvManager extends string = string,
   TAccountSolvProtocolWallet extends string = string,
   TAccountVaultAccount extends string = string,
@@ -495,12 +490,11 @@ export type SolvManagerWithdrawInput<
   tokenProgram?: Address<TAccountTokenProgram>;
   eventAuthority: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
-  srtAmount: SolvManagerWithdrawInstructionDataArgs['srtAmount'];
-  vstAmount: SolvManagerWithdrawInstructionDataArgs['vstAmount'];
-  oneSrtAsMicroVst: SolvManagerWithdrawInstructionDataArgs['oneSrtAsMicroVst'];
+  srtAmount: SolvManagerCompleteDepositsInstructionDataArgs['srtAmount'];
+  oneSrtAsMicroVst: SolvManagerCompleteDepositsInstructionDataArgs['oneSrtAsMicroVst'];
 };
 
-export function getSolvManagerWithdrawInstruction<
+export function getSolvManagerCompleteDepositsInstruction<
   TAccountSolvManager extends string,
   TAccountSolvProtocolWallet extends string,
   TAccountVaultAccount extends string,
@@ -516,7 +510,7 @@ export function getSolvManagerWithdrawInstruction<
   TAccountProgram extends string,
   TProgramAddress extends Address = typeof SOLV_PROGRAM_ADDRESS,
 >(
-  input: SolvManagerWithdrawInput<
+  input: SolvManagerCompleteDepositsInput<
     TAccountSolvManager,
     TAccountSolvProtocolWallet,
     TAccountVaultAccount,
@@ -532,7 +526,7 @@ export function getSolvManagerWithdrawInstruction<
     TAccountProgram
   >,
   config?: { programAddress?: TProgramAddress }
-): SolvManagerWithdrawInstruction<
+): SolvManagerCompleteDepositsInstruction<
   TProgramAddress,
   TAccountSolvManager,
   TAccountSolvProtocolWallet,
@@ -623,10 +617,10 @@ export function getSolvManagerWithdrawInstruction<
       getAccountMeta(accounts.program),
     ],
     programAddress,
-    data: getSolvManagerWithdrawInstructionDataEncoder().encode(
-      args as SolvManagerWithdrawInstructionDataArgs
+    data: getSolvManagerCompleteDepositsInstructionDataEncoder().encode(
+      args as SolvManagerCompleteDepositsInstructionDataArgs
     ),
-  } as SolvManagerWithdrawInstruction<
+  } as SolvManagerCompleteDepositsInstruction<
     TProgramAddress,
     TAccountSolvManager,
     TAccountSolvProtocolWallet,
@@ -646,7 +640,7 @@ export function getSolvManagerWithdrawInstruction<
   return instruction;
 }
 
-export type ParsedSolvManagerWithdrawInstruction<
+export type ParsedSolvManagerCompleteDepositsInstruction<
   TProgram extends string = typeof SOLV_PROGRAM_ADDRESS,
   TAccountMetas extends readonly IAccountMeta[] = readonly IAccountMeta[],
 > = {
@@ -666,17 +660,17 @@ export type ParsedSolvManagerWithdrawInstruction<
     eventAuthority: TAccountMetas[11];
     program: TAccountMetas[12];
   };
-  data: SolvManagerWithdrawInstructionData;
+  data: SolvManagerCompleteDepositsInstructionData;
 };
 
-export function parseSolvManagerWithdrawInstruction<
+export function parseSolvManagerCompleteDepositsInstruction<
   TProgram extends string,
   TAccountMetas extends readonly IAccountMeta[],
 >(
   instruction: IInstruction<TProgram> &
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
-): ParsedSolvManagerWithdrawInstruction<TProgram, TAccountMetas> {
+): ParsedSolvManagerCompleteDepositsInstruction<TProgram, TAccountMetas> {
   if (instruction.accounts.length < 13) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
@@ -704,7 +698,7 @@ export function parseSolvManagerWithdrawInstruction<
       eventAuthority: getNextAccount(),
       program: getNextAccount(),
     },
-    data: getSolvManagerWithdrawInstructionDataDecoder().decode(
+    data: getSolvManagerCompleteDepositsInstructionDataDecoder().decode(
       instruction.data
     ),
   };

@@ -120,16 +120,18 @@ export type FundManagerDepositInstruction<
 
 export type FundManagerDepositInstructionData = {
   discriminator: ReadonlyUint8Array;
-  amount: bigint;
+  vstAmount: bigint;
 };
 
-export type FundManagerDepositInstructionDataArgs = { amount: number | bigint };
+export type FundManagerDepositInstructionDataArgs = {
+  vstAmount: number | bigint;
+};
 
 export function getFundManagerDepositInstructionDataEncoder(): Encoder<FundManagerDepositInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
-      ['amount', getU64Encoder()],
+      ['vstAmount', getU64Encoder()],
     ]),
     (value) => ({ ...value, discriminator: FUND_MANAGER_DEPOSIT_DISCRIMINATOR })
   );
@@ -138,7 +140,7 @@ export function getFundManagerDepositInstructionDataEncoder(): Encoder<FundManag
 export function getFundManagerDepositInstructionDataDecoder(): Decoder<FundManagerDepositInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
-    ['amount', getU64Decoder()],
+    ['vstAmount', getU64Decoder()],
   ]);
 }
 
@@ -176,7 +178,7 @@ export type FundManagerDepositAsyncInput<
   tokenProgram?: Address<TAccountTokenProgram>;
   eventAuthority?: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
-  amount: FundManagerDepositInstructionDataArgs['amount'];
+  vstAmount: FundManagerDepositInstructionDataArgs['vstAmount'];
 };
 
 export async function getFundManagerDepositInstructionAsync<
@@ -416,7 +418,7 @@ export type FundManagerDepositInput<
   tokenProgram?: Address<TAccountTokenProgram>;
   eventAuthority: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
-  amount: FundManagerDepositInstructionDataArgs['amount'];
+  vstAmount: FundManagerDepositInstructionDataArgs['vstAmount'];
 };
 
 export function getFundManagerDepositInstruction<

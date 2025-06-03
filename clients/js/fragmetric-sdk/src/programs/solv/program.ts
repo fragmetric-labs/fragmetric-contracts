@@ -1,3 +1,4 @@
+import * as system from '@solana-program/system';
 import { address } from '@solana/kit';
 import {
   AccountAddressResolverVariant,
@@ -52,26 +53,53 @@ export class SolvBTCVaultProgram extends ProgramContext {
         ? 'VRTWzkPMnMu57KyGNTjREFKzNjZ4BHwzMbsbvoHEe6q'
         : '4hNFn9hWmL4xxH7PxnZntFcDyEhXx5vHu4uM5rNj4fcL'
     ),
+    solvBTC_JUP: address(
+      this.runtime.cluster != 'devnet'
+        ? 'SoLvzL3ZVjofmNB5LYFrf94QtNhMUSea4DawFhnAau8'
+        : 'SBJR1Wtx8T5H1qWSN7YUcVADz8HREhez7krVBroehUj'
+    ),
+    vaultManager: address(
+      this.runtime.cluster === 'mainnet'
+        ? 'fragSkuEpEmdoj9Bcyawk9rBdsChcVJLWHfj9JX1Gby'
+        : this.runtime.cluster === 'devnet'
+          ? 'fragkamrANLvuZYQPcmPsCATQAabkqNGH6gxqqPG3aP'
+          : '9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL'
+    ),
+    rewardManager: address(
+      this.runtime.cluster === 'mainnet'
+        ? '79AHDsvEiM4MNrv8GPysgiGPj1ZPmxviF3dw29akYC84'
+        : this.runtime.cluster == 'devnet'
+          ? '5UpLTLA7Wjqp7qdfjuTtPcUw3aVtbqFA5Mgm34mxPNg2'
+          : '5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx'
+    ),
   });
 
   vault(
     vaultAddressResolver: AccountAddressResolverVariant<SolvBTCVaultProgram>
   ) {
-    return new SolvVaultAccountContext(this, vaultAddressResolver);
+    return new SolvVaultAccountContext(this, vaultAddressResolver, {
+      // okay to set invalid seeds as this method is made for accessing already existing vaults
+      receiptTokenMint: system.SYSTEM_PROGRAM_ADDRESS,
+      supportedTokenMint: system.SYSTEM_PROGRAM_ADDRESS,
+      solvReceiptTokenMint: system.SYSTEM_PROGRAM_ADDRESS,
+    });
   }
 
   readonly zBTC = SolvVaultAccountContext.fromSeeds(this, {
     supportedTokenMint: this.knownAddresses.zBTCVST,
     receiptTokenMint: this.knownAddresses.zBTCVRT,
+    solvReceiptTokenMint: this.knownAddresses.solvBTC_JUP,
   });
 
   readonly cbBTC = SolvVaultAccountContext.fromSeeds(this, {
     supportedTokenMint: this.knownAddresses.cbBTCVST,
     receiptTokenMint: this.knownAddresses.cbBTCVRT,
+    solvReceiptTokenMint: this.knownAddresses.solvBTC_JUP,
   });
 
   readonly wBTC = SolvVaultAccountContext.fromSeeds(this, {
     supportedTokenMint: this.knownAddresses.wBTCVST,
     receiptTokenMint: this.knownAddresses.wBTCVRT,
+    solvReceiptTokenMint: this.knownAddresses.solvBTC_JUP,
   });
 }

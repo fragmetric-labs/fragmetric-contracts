@@ -231,7 +231,7 @@ export class RestakingRewardAccountContext extends AccountContext<
             parent
               .resolveAccount(true)
               .then((reward) => reward?.data.dataVersion ?? 0)
-              .catch((err) => 35),
+              .catch((err) => 0),
             transformAddressResolverVariant(
               overrides.feePayer ??
                 this.runtime.options.transaction.feePayer ??
