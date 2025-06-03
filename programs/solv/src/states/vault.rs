@@ -236,7 +236,7 @@ impl VaultAccount {
             require_eq!(vault_receipt_token_mint.supply, 0);
             require_eq!(vault_supported_token_mint.decimals, 8);
             require_eq!(solv_receipt_token_mint.decimals, 8);
-            
+
             // Roles - initially set to vault manager
             self.vault_manager = vault_manager.key();
             self.reward_manager = vault_manager.key();
@@ -305,17 +305,21 @@ impl VaultAccount {
         Ok(())
     }
 
+    pub fn get_withdrawal_fee_rate_bps(&self) -> u16 {
+        self.solv_protocol_withdrawal_fee_rate_bps
+    }
+
     // TODO/phase3: deprecate
-    pub(crate) fn set_solv_protocol_withdrawal_fee_rate(
+    pub(crate) fn set_solv_protocol_withdrawal_fee_rate_bps(
         &mut self,
-        solv_protocol_withdrawal_fee_rate_bps: u16,
+        fee_rate_bps: u16,
     ) -> Result<()> {
         // hard limit: 10%
-        if solv_protocol_withdrawal_fee_rate_bps >= 1_000 {
+        if fee_rate_bps >= 1_000 {
             err!(VaultError::InvalidSolvProtocolWithdrawalFeeRateError)?;
         }
 
-        self.solv_protocol_withdrawal_fee_rate_bps = solv_protocol_withdrawal_fee_rate_bps;
+        self.solv_protocol_withdrawal_fee_rate_bps = fee_rate_bps;
 
         Ok(())
     }
@@ -1243,7 +1247,9 @@ mod tests {
         vault.start_withdrawal_requests().unwrap();
         vault.assert_invariants().unwrap();
 
-        vault.set_solv_protocol_withdrawal_fee_rate(100).unwrap();
+        vault
+            .set_solv_protocol_withdrawal_fee_rate_bps(100)
+            .unwrap();
 
         // 1 SRT = 2.18919457342449 => 456_789 SRT = 999_999.xxx VRT => 999_999
         vault

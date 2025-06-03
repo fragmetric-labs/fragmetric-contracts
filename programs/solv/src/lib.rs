@@ -59,10 +59,7 @@ pub mod solv {
     // FundManagerContext
     ////////////////////////////////////////////
 
-    pub fn fund_manager_deposit(
-        ctx: Context<FundManagerContext>,
-        vst_amount: u64,
-    ) -> Result<()> {
+    pub fn fund_manager_deposit(ctx: Context<FundManagerContext>, vst_amount: u64) -> Result<()> {
         fund_manager_context::process_deposit(ctx, vst_amount)
     }
 
@@ -94,7 +91,9 @@ pub mod solv {
         solv_manager_context::process_complete_deposits(ctx, srt_amount, one_srt_as_micro_vst)
     }
 
-    pub fn solv_manager_confirm_withdrawal_requests(ctx: Context<SolvManagerContext>) -> Result<()> {
+    pub fn solv_manager_confirm_withdrawal_requests(
+        ctx: Context<SolvManagerContext>,
+    ) -> Result<()> {
         solv_manager_context::process_confirm_withdrawal_requests(ctx)
     }
 
@@ -104,7 +103,12 @@ pub mod solv {
         vst_amount: u64,
         one_srt_as_micro_vst: u64,
     ) -> Result<()> {
-        solv_manager_context::process_complete_withdrawal_requests(ctx, srt_amount, vst_amount, one_srt_as_micro_vst)
+        solv_manager_context::process_complete_withdrawal_requests(
+            ctx,
+            srt_amount,
+            vst_amount,
+            one_srt_as_micro_vst,
+        )
     }
 
     ////////////////////////////////////////////

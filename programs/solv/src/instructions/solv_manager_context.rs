@@ -124,7 +124,7 @@ pub fn process_complete_deposits(
     let mut vault = vault_account.load_mut()?;
 
     vault.offset_srt_receivables(srt_amount, one_srt_as_micro_vst)?;
-    
+
     require_gte!(
         vault_solv_receipt_token_account.amount,
         vault.get_srt_total_reserved_amount(),
@@ -237,7 +237,7 @@ pub fn process_set_solv_protocol_withdrawal_fee_rate(
 
     vault_account
         .load_mut()?
-        .set_solv_protocol_withdrawal_fee_rate(solv_protocol_withdrawal_fee_rate_bps)?;
+        .set_solv_protocol_withdrawal_fee_rate_bps(solv_protocol_withdrawal_fee_rate_bps)?;
 
     Ok(())
 }

@@ -124,6 +124,18 @@ impl<'info> SolvBTCVaultService<'info> {
         self.find_accounts_to_cpi()
     }
 
+    /// gives max fee/expense ratio during a cycle of circulation
+    /// returns (numerator, denominator)
+    pub fn get_max_cycle_fee(vault_account: &'info AccountInfo<'info>) -> Result<(u64, u64)> {
+        let vault_account = AccountLoader::<VaultAccount>::try_from(vault_account)?;
+        let vault = vault_account.load()?;
+
+        Ok((
+            vault.get_withdrawal_fee_rate_bps() as u64, // vault's withdrawal fee
+            10_000,
+        ))
+    }
+
     /// returns [payer_vault_receipt_token_account_amount, minted_vault_receipt_token_amount, deposited_supported_token_amount]
     #[inline(never)]
     pub fn deposit(
