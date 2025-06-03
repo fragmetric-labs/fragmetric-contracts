@@ -38,12 +38,14 @@ export class SolvVaultAccountContext extends AccountContext<
           receiptTokenMint,
           supportedTokenMint,
           supportedToken,
+          solvReceiptToken,
           rewardTokens,
         ] = await Promise.all([
           this.resolveAccount(noCache),
           this.receiptTokenMint.resolveAccount(noCache),
           this.supportedTokenMint.resolveAccount(noCache),
           this.supportedToken.resolveAccount(noCache),
+          this.solvReceiptToken.resolveAccount(noCache),
           this.rewardTokens.resolveAccount(noCache),
         ]);
         if (
@@ -51,10 +53,25 @@ export class SolvVaultAccountContext extends AccountContext<
             vault &&
             receiptTokenMint &&
             supportedTokenMint &&
-            supportedToken
+            supportedToken &&
+            solvReceiptToken
           )
-        )
+        ) {
           return null;
+        }
+
+        const withdrawalRequests = vault.data.withdrawalRequests
+          .slice(0, vault.data.numWithdrawalRequests)
+          .map(r => {
+            return {
+              id: r.requestId,
+              receiptTokenEnqueuedAmount: r.vrtWithdrawalRequestedAmount,
+              supportedTokenTotalEstimatedAmount: r.vstWithdrawalTotalEstimatedAmount,
+              supportedTokenLockedAmount: r.vstWithdrawalLockedAmount,
+              solvReceiptTokenLockedAmount: r.srtWithdrawalLockedAmount,
+              state: r.state,
+            };
+          });
 
         return {
           admin: {
@@ -68,11 +85,43 @@ export class SolvVaultAccountContext extends AccountContext<
           receiptTokenSupply: receiptTokenMint.data.supply,
           receiptTokenProgram: receiptTokenMint.programAddress,
           receiptTokenDecimals: receiptTokenMint.data.decimals,
+          oneReceiptTokenAsSupportedTokenAmount: vault.data.oneVrtAsMicroVst / 1_000_000n,
 
           supportedTokenMint: supportedTokenMint.address,
           supportedTokenProgram: supportedTokenMint.programAddress,
           supportedTokenDecimals: supportedTokenMint.data.decimals,
           supportedTokenAmount: supportedToken.data.amount,
+          supportedTokenOperationReservedAmount: vault.data.vstOperationReservedAmount,
+
+          solvProtocolWallet: vault.data.solvProtocolWallet,
+          solvProtocolWithdrawalFeeRate: vault.data.solvProtocolWithdrawalFeeRateBps / 10000,
+          solvReceiptTokenMint: vault.data.solvReceiptTokenMint,
+          solvReceiptTokenDecimals: vault.data.solvReceiptTokenDecimals,
+          solvReceiptTokenAmount: solvReceiptToken.data.amount,
+          solvReceiptTokenOperationReservedAmount: vault.data.srtOperationReservedAmount,
+          solvReceiptTokenOperationReceivableAmount: vault.data.srtOperationReceivableAmount,
+          oneSolvReceiptTokenAsSupportedTokenAmount: vault.data.oneSrtAsMicroVst / 1_000_000n,
+
+          withdrawal: {
+            enqueued: {
+              receiptTokenEnqueuedAmount: vault.data.vrtWithdrawalEnqueuedAmount,
+              supportedTokenLockedAmount: vault.data.vstWithdrawalLockedAmount,
+              solvReceiptTokenLockedAmount: vault.data.srtWithdrawalLockedAmount,
+              requests: withdrawalRequests.filter(req => req.state == 0).map(({ state , ...req}) => req),
+            },
+            processing: {
+              receiptTokenProcessingAmount: vault.data.vrtWithdrawalProcessingAmount,
+              supportedTokenReceivableAmount: vault.data.vstReceivableAmountToClaim,
+              requests: withdrawalRequests.filter(req => req.state == 1).map(({ state , ...req}) => req),
+            },
+            completed: {
+              receiptTokenProcessedAmount: vault.data.vrtWithdrawalCompletedAmount,
+              supportedTokenTotalClaimableAmount: vault.data.vstReservedAmountToClaim + vault.data.vstExtraAmountToClaim,
+              supportedTokenExtraClaimableAmount: vault.data.vstExtraAmountToClaim,
+              supportedTokenDeductedFeeAmount: vault.data.vstDeductedFeeAmount,
+              requests: withdrawalRequests.filter(req => req.state == 2).map(({ state , ...req}) => req),
+            },
+          },
 
           delegatedRewardTokens: (rewardTokens ?? [])
             .filter((token) => !!token)

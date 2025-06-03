@@ -97,6 +97,8 @@ export type VaultAccount = {
   vrtWithdrawalProcessingAmount: bigint;
   /** ∑request(state == COMPLETED).vrt_withrawal_requested_amount */
   vrtWithdrawalCompletedAmount: bigint;
+  /** informative VRT redemption rate. */
+  oneVrtAsMicroVst: bigint;
   reserved1: ReadonlyUint8Array;
   vaultSupportedTokenMint: Address;
   vaultSupportedTokenDecimals: number;
@@ -134,6 +136,7 @@ export type VaultAccount = {
   srtOperationReceivableAmount: bigint;
   /** SRT locked amount for withdrawal - will be sent to the Solv protocol when withdrawal starts */
   srtWithdrawalLockedAmount: bigint;
+  /** SRT redemption rate being used for vault net asset value appreciation. */
   oneSrtAsMicroVst: bigint;
   reserved3: ReadonlyUint8Array;
   withdrawalLastCreatedRequestId: bigint;
@@ -184,6 +187,8 @@ export type VaultAccountArgs = {
   vrtWithdrawalProcessingAmount: number | bigint;
   /** ∑request(state == COMPLETED).vrt_withrawal_requested_amount */
   vrtWithdrawalCompletedAmount: number | bigint;
+  /** informative VRT redemption rate. */
+  oneVrtAsMicroVst: number | bigint;
   reserved1: ReadonlyUint8Array;
   vaultSupportedTokenMint: Address;
   vaultSupportedTokenDecimals: number;
@@ -221,6 +226,7 @@ export type VaultAccountArgs = {
   srtOperationReceivableAmount: number | bigint;
   /** SRT locked amount for withdrawal - will be sent to the Solv protocol when withdrawal starts */
   srtWithdrawalLockedAmount: number | bigint;
+  /** SRT redemption rate being used for vault net asset value appreciation. */
   oneSrtAsMicroVst: number | bigint;
   reserved3: ReadonlyUint8Array;
   withdrawalLastCreatedRequestId: number | bigint;
@@ -255,7 +261,8 @@ export function getVaultAccountEncoder(): Encoder<VaultAccountArgs> {
       ['vrtWithdrawalEnqueuedAmount', getU64Encoder()],
       ['vrtWithdrawalProcessingAmount', getU64Encoder()],
       ['vrtWithdrawalCompletedAmount', getU64Encoder()],
-      ['reserved1', fixEncoderSize(getBytesEncoder(), 440)],
+      ['oneVrtAsMicroVst', getU64Encoder()],
+      ['reserved1', fixEncoderSize(getBytesEncoder(), 432)],
       ['vaultSupportedTokenMint', getAddressEncoder()],
       ['vaultSupportedTokenDecimals', getU8Encoder()],
       ['padding2', fixEncoderSize(getBytesEncoder(), 7)],
@@ -314,7 +321,8 @@ export function getVaultAccountDecoder(): Decoder<VaultAccount> {
     ['vrtWithdrawalEnqueuedAmount', getU64Decoder()],
     ['vrtWithdrawalProcessingAmount', getU64Decoder()],
     ['vrtWithdrawalCompletedAmount', getU64Decoder()],
-    ['reserved1', fixDecoderSize(getBytesDecoder(), 440)],
+    ['oneVrtAsMicroVst', getU64Decoder()],
+    ['reserved1', fixDecoderSize(getBytesDecoder(), 432)],
     ['vaultSupportedTokenMint', getAddressDecoder()],
     ['vaultSupportedTokenDecimals', getU8Decoder()],
     ['padding2', fixDecoderSize(getBytesDecoder(), 7)],

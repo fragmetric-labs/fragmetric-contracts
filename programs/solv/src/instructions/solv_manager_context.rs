@@ -123,7 +123,7 @@ pub fn process_confirm_deposit(
 
     let mut vault = vault_account.load_mut()?;
 
-    vault.resolve_srt_receivables(srt_amount, one_srt_as_micro_vst)?;
+    vault.offset_srt_receivables(srt_amount, one_srt_as_micro_vst)?;
 
     require_gte!(
         vault_solv_receipt_token_account.amount,

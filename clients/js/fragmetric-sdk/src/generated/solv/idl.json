@@ -4085,11 +4085,18 @@
             "type": "u64"
           },
           {
+            "name": "one_vrt_as_micro_vst",
+            "docs": [
+              "informative VRT redemption rate."
+            ],
+            "type": "u64"
+          },
+          {
             "name": "_reserved1",
             "type": {
               "array": [
                 "u8",
-                440
+                432
               ]
             }
           },
@@ -4206,6 +4213,9 @@
           },
           {
             "name": "one_srt_as_micro_vst",
+            "docs": [
+              "SRT redemption rate being used for vault net asset value appreciation."
+            ],
             "type": "u64"
           },
           {
