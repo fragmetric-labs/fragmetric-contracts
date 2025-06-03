@@ -435,8 +435,9 @@ impl ClaimUnrestakedVSTCommand {
                         {
                             fund_account.sol.operation_receivable_amount +=
                                 deducted_fee_amount_as_sol;
-                            let sol_operation_receivable_amount = fund_account.sol.operation_receivable_amount;
-                            
+                            let sol_operation_receivable_amount =
+                                fund_account.sol.operation_receivable_amount;
+
                             let normalized_token = fund_account.get_normalized_token_mut().unwrap();
                             normalized_token.operation_reserved_amount +=
                                 result_claimed_supported_token_amount;

@@ -149,14 +149,15 @@ export class SolvVaultAccountContext extends AccountContext<
     }
   ) {
     return new SolvVaultAccountContext(parent, async (parent) => {
-      const ix = await solv.getVaultManagerInitializeVaultAccountInstruction(
+      const ix = await solv.getVaultManagerInitializeVaultAccountInstructionAsync(
         {
-          receiptTokenMint: seeds.receiptTokenMint,
-          supportedTokenMint: seeds.supportedTokenMint,
+          vaultReceiptTokenMint: seeds.receiptTokenMint as Address,
+          vaultSupportedTokenMint: seeds.supportedTokenMint as Address,
+          solvReceiptTokenMint: system.SYSTEM_PROGRAM_ADDRESS,
         } as any,
         { programAddress: parent.program.address }
       );
-      return ix.accounts[7].address;
+      return ix.accounts[2].address;
     });
   }
 
@@ -233,77 +234,77 @@ export class SolvVaultAccountContext extends AccountContext<
   );
 
   /** transactions **/
-  // readonly initialize = new TransactionTemplateContext(
-  //   this,
-  //   v.object({
-  //     admin: v.string(),
-  //     receiptTokenMint: v.string(),
-  //     supportedTokenMint: v.string(),
-  //   }),
-  //   {
-  //     description: 'initialize receipt token mint and vault',
-  //     instructions: [
-  //       async (parent, args, overrides) => {
-  //         const [payer] = await Promise.all([
-  //           transformAddressResolverVariant(
-  //             overrides.feePayer ??
-  //               this.runtime.options.transaction.feePayer ??
-  //               (() => Promise.resolve(null))
-  //           )(parent),
-  //         ]);
-  //         if (!(args.receiptTokenMint && args.supportedTokenMint))
-  //           throw new Error('invalid context');
-  //
-  //         const ix = await solv.getInitializeVaultAccountInstructionAsync(
-  //           {
-  //             payer: createNoopSigner(payer! as Address),
-  //             admin: createNoopSigner(args.admin as Address),
-  //             delegateRewardTokenAdmin: createNoopSigner(args.admin as Address),
-  //             receiptTokenMint: args.receiptTokenMint as Address,
-  //             supportedTokenMint: args.supportedTokenMint as Address,
-  //             program: this.program.address,
-  //           },
-  //           {
-  //             programAddress: this.program.address,
-  //           }
-  //         );
-  //         const vault = ix.accounts[7].address;
-  //
-  //         const vrtSpace = token.getMintSize();
-  //         const vrtRent = await this.runtime.rpc
-  //           .getMinimumBalanceForRentExemption(BigInt(vrtSpace))
-  //           .send();
-  //
-  //         return Promise.all([
-  //           system.getCreateAccountInstruction({
-  //             payer: createNoopSigner(payer! as Address),
-  //             newAccount: createNoopSigner(args.receiptTokenMint as Address),
-  //             lamports: vrtRent,
-  //             space: vrtSpace,
-  //             programAddress: token.TOKEN_PROGRAM_ADDRESS,
-  //           }),
-  //           token.getInitializeMint2Instruction({
-  //             mint: args.receiptTokenMint as Address,
-  //             decimals: 8,
-  //             freezeAuthority: null,
-  //             mintAuthority: args.admin as Address,
-  //           }),
-  //           token.getCreateAssociatedTokenIdempotentInstructionAsync({
-  //             payer: createNoopSigner(payer as Address),
-  //             mint: args.receiptTokenMint as Address,
-  //             owner: vault,
-  //           }),
-  //           token.getCreateAssociatedTokenIdempotentInstructionAsync({
-  //             payer: createNoopSigner(payer as Address),
-  //             mint: args.supportedTokenMint as Address,
-  //             owner: vault,
-  //           }),
-  //           ix,
-  //         ]);
-  //       },
-  //     ],
-  //   }
-  // );
+  readonly initialize = new TransactionTemplateContext(
+    this,
+    v.object({
+      admin: v.string(),
+      receiptTokenMint: v.string(),
+      supportedTokenMint: v.string(),
+    }),
+    {
+      description: 'initialize receipt token mint and vault',
+      instructions: [
+        async (parent, args, overrides) => {
+          const [payer] = await Promise.all([
+            transformAddressResolverVariant(
+              overrides.feePayer ??
+                this.runtime.options.transaction.feePayer ??
+                (() => Promise.resolve(null))
+            )(parent),
+          ]);
+          if (!(args.receiptTokenMint && args.supportedTokenMint))
+            throw new Error('invalid context');
+
+          const ix = await solv.getVaultManagerInitializeVaultAccountInstructionAsync(
+            {
+              payer: createNoopSigner(payer! as Address),
+              admin: createNoopSigner(args.admin as Address),
+              delegateRewardTokenAdmin: createNoopSigner(args.admin as Address),
+              receiptTokenMint: args.receiptTokenMint as Address,
+              supportedTokenMint: args.supportedTokenMint as Address,
+              program: this.program.address,
+            },
+            {
+              programAddress: this.program.address,
+            }
+          );
+          const vault = ix.accounts[7].address;
+
+          const vrtSpace = token.getMintSize();
+          const vrtRent = await this.runtime.rpc
+            .getMinimumBalanceForRentExemption(BigInt(vrtSpace))
+            .send();
+
+          return Promise.all([
+            system.getCreateAccountInstruction({
+              payer: createNoopSigner(payer! as Address),
+              newAccount: createNoopSigner(args.receiptTokenMint as Address),
+              lamports: vrtRent,
+              space: vrtSpace,
+              programAddress: token.TOKEN_PROGRAM_ADDRESS,
+            }),
+            token.getInitializeMint2Instruction({
+              mint: args.receiptTokenMint as Address,
+              decimals: 8,
+              freezeAuthority: null,
+              mintAuthority: args.admin as Address,
+            }),
+            token.getCreateAssociatedTokenIdempotentInstructionAsync({
+              payer: createNoopSigner(payer as Address),
+              mint: args.receiptTokenMint as Address,
+              owner: vault,
+            }),
+            token.getCreateAssociatedTokenIdempotentInstructionAsync({
+              payer: createNoopSigner(payer as Address),
+              mint: args.supportedTokenMint as Address,
+              owner: vault,
+            }),
+            ix,
+          ]);
+        },
+      ],
+    }
+  );
 
   // readonly delegateRewardTokenAccount = new TransactionTemplateContext(
   //   this,

@@ -1,12 +1,12 @@
+use crate::constants;
+use crate::errors::VaultError;
 use anchor_lang::prelude::*;
 use anchor_spl::token::Mint;
-
-use crate::errors::VaultError;
 
 #[constant]
 /// ## Version History
 /// * v1: initial version (0x2800 = 10240 = 10KiB)
-pub const VAULT_ACCOUNT_CURRENT_VERSION: u16 = 19;
+pub const VAULT_ACCOUNT_CURRENT_VERSION: u16 = 2;
 
 pub const MAX_WITHDRAWAL_REQUESTS: usize = 80;
 pub const MAX_DELEGATED_REWARD_TOKEN_MINTS: usize = 30;
@@ -15,7 +15,7 @@ pub const MAX_DELEGATED_REWARD_TOKEN_MINTS: usize = 30;
 #[account(zero_copy)]
 pub struct VaultAccount {
     // Header (offset = 0x0008)
-    data_version: u16,
+    pub(crate) data_version: u16,
     bump: u8,
     _padding0: [u8; 5],
 
@@ -223,6 +223,22 @@ impl VaultAccount {
         bump: u8,
     ) -> Result<()> {
         if self.data_version == 0 {
+            require_eq!(
+                [
+                    constants::ZBTC_MINT_ADDRESS,
+                    constants::CBBTC_MINT_ADDRESS,
+                    constants::WBTC_MINT_ADDRESS
+                ]
+                .contains(&vault_supported_token_mint.key()),
+                true
+            );
+            require_eq!(
+                vault_supported_token_mint.decimals,
+                vault_receipt_token_mint.decimals
+            );
+            require_eq!(vault_supported_token_mint.decimals, 8);
+            require_eq!(vault_receipt_token_mint.supply, 0);
+
             // Roles - initially set to vault manager
             self.vault_manager = vault_manager.key();
             self.reward_manager = vault_manager.key();
@@ -244,8 +260,8 @@ impl VaultAccount {
             self.one_srt_as_micro_vst = 10u64.pow(vault_supported_token_mint.decimals as u32 + 6);
 
             // Set header
-            self.data_version = 1;
             self.bump = bump;
+            self.data_version = 2; // skip account version number 1, which is a totally reset version.
         }
 
         require_eq!(self.data_version, VAULT_ACCOUNT_CURRENT_VERSION);
@@ -376,11 +392,12 @@ impl VaultAccount {
             10u64.pow(self.vault_supported_token_decimals as u32 + 6)
         } else {
             div_util(
-                10u64.pow(self.vault_receipt_token_decimals as u32 + 6) as u128 * net_asset_value_as_vst as u128,
+                10u64.pow(self.vault_receipt_token_decimals as u32 + 6) as u128
+                    * net_asset_value_as_vst as u128,
                 self.vrt_supply as u128,
                 false,
             )
-                .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?
+            .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?
         };
 
         Ok(())

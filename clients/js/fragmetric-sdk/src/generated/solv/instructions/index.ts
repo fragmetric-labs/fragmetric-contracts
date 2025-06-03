@@ -6,6 +6,7 @@
  * @see https://github.com/codama-idl/codama
  */
 
+export * from './closeVaultAccountVersionOne';
 export * from './fundManagerDeposit';
 export * from './fundManagerRequestWithdrawal';
 export * from './fundManagerWithdraw';

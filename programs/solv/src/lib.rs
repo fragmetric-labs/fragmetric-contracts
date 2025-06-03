@@ -13,6 +13,17 @@ use instructions::*;
 pub mod solv {
     use super::*;
 
+    // TODO/v0.2.1: deprecate
+    ////////////////////////////////////////////
+    // CloseVaultAccountVersionOneContext
+    ////////////////////////////////////////////
+
+    pub fn close_vault_account_version_one(
+        ctx: Context<CloseVaultAccountVersionOneContext>,
+    ) -> Result<()> {
+        process_close_vault_account_version_one(ctx)
+    }
+    
     ////////////////////////////////////////////
     // VaultManagerVaultAccountInitialContext
     ////////////////////////////////////////////

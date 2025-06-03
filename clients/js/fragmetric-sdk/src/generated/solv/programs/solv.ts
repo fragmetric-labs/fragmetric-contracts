@@ -14,6 +14,7 @@ import {
   type ReadonlyUint8Array,
 } from '@solana/kit';
 import {
+  type ParsedCloseVaultAccountVersionOneInstruction,
   type ParsedFundManagerDepositInstruction,
   type ParsedFundManagerRequestWithdrawalInstruction,
   type ParsedFundManagerWithdrawInstruction,
@@ -57,6 +58,7 @@ export function identifySolvAccount(
 }
 
 export enum SolvInstruction {
+  CloseVaultAccountVersionOne,
   FundManagerDeposit,
   FundManagerRequestWithdrawal,
   FundManagerWithdraw,
@@ -76,6 +78,17 @@ export function identifySolvInstruction(
   instruction: { data: ReadonlyUint8Array } | ReadonlyUint8Array
 ): SolvInstruction {
   const data = 'data' in instruction ? instruction.data : instruction;
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([71, 53, 32, 110, 173, 58, 243, 130])
+      ),
+      0
+    )
+  ) {
+    return SolvInstruction.CloseVaultAccountVersionOne;
+  }
   if (
     containsBytes(
       data,
@@ -227,6 +240,9 @@ export function identifySolvInstruction(
 export type ParsedSolvInstruction<
   TProgram extends string = '9beGuWXNoKPKCApT6xJUm5435Fz8EMGzoTTXgkcf3zAz',
 > =
+  | ({
+      instructionType: SolvInstruction.CloseVaultAccountVersionOne;
+    } & ParsedCloseVaultAccountVersionOneInstruction<TProgram>)
   | ({
       instructionType: SolvInstruction.FundManagerDeposit;
     } & ParsedFundManagerDepositInstruction<TProgram>)

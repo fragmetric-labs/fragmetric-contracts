@@ -9,6 +9,84 @@
   },
   "instructions": [
     {
+      "name": "close_vault_account_version_one",
+      "discriminator": [
+        71,
+        53,
+        32,
+        110,
+        173,
+        58,
+        243,
+        130
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "vault_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault_receipt_token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault_receipt_token_mint"
+        },
+        {
+          "name": "event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "fund_manager_deposit",
       "discriminator": [
         247,
@@ -4411,7 +4489,7 @@
         "* v1: initial version (0x2800 = 10240 = 10KiB)"
       ],
       "type": "u16",
-      "value": "19"
+      "value": "2"
     },
     {
       "name": "WBTC_MINT_ADDRESS",
