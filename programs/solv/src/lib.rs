@@ -86,9 +86,9 @@ pub mod solv {
     pub fn solv_manager_complete_deposits(
         ctx: Context<SolvManagerContext>,
         srt_amount: u64,
-        one_srt_as_micro_vst: u64,
+        new_one_srt_as_micro_vst: u64,
     ) -> Result<()> {
-        solv_manager_context::process_complete_deposits(ctx, srt_amount, one_srt_as_micro_vst)
+        solv_manager_context::process_complete_deposits(ctx, srt_amount, new_one_srt_as_micro_vst)
     }
 
     pub fn solv_manager_confirm_withdrawal_requests(
@@ -101,13 +101,13 @@ pub mod solv {
         ctx: Context<SolvManagerContext>,
         srt_amount: u64,
         vst_amount: u64,
-        one_srt_as_micro_vst: u64,
+        old_one_srt_as_micro_vst: u64,
     ) -> Result<()> {
         solv_manager_context::process_complete_withdrawal_requests(
             ctx,
             srt_amount,
             vst_amount,
-            one_srt_as_micro_vst,
+            old_one_srt_as_micro_vst,
         )
     }
 

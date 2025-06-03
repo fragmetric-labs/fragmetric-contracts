@@ -459,6 +459,11 @@ impl VaultAccount {
             err!(VaultError::InvalidSRTPriceError)?;
         }
 
+        // TODO: deprecate this heuristic assertion
+        if one_srt_as_micro_vst - self.one_srt_as_micro_vst > self.one_srt_as_micro_vst/10 {
+            err!(VaultError::InvalidSRTPriceError)?;
+        }
+
         self.one_srt_as_micro_vst = one_srt_as_micro_vst;
 
         Ok(())
@@ -500,14 +505,14 @@ impl VaultAccount {
     pub(crate) fn offset_srt_receivables(
         &mut self,
         srt_amount: u64,
-        one_srt_as_micro_vst: u64,
+        new_one_srt_as_micro_vst: u64,
     ) -> Result<()> {
         if !self.is_deposit_in_progress() {
             err!(VaultError::DepositNotInProgressError)?;
         }
 
         let srt_amount_as_vst =
-            SRTExchangeRate::new(one_srt_as_micro_vst, self.solv_receipt_token_decimals)
+            SRTExchangeRate::new(new_one_srt_as_micro_vst, self.solv_receipt_token_decimals)
                 .get_srt_amount_as_vst(srt_amount, true) // provide a small tolerance here
                 .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
 
@@ -521,7 +526,7 @@ impl VaultAccount {
         self.srt_operation_receivable_amount = 0;
         self.srt_operation_reserved_amount += srt_amount;
 
-        self.set_srt_exchange_rate_with_validation(one_srt_as_micro_vst)?;
+        self.set_srt_exchange_rate_with_validation(new_one_srt_as_micro_vst)?;
         self.update_vrt_exchange_rate()?;
 
         Ok(())
@@ -635,7 +640,7 @@ impl VaultAccount {
     }
 
     /// returns srt_amount_to_withdraw
-    pub(crate) fn start_withdrawal_requests(&mut self) -> Result<u64> {
+    pub(crate) fn confirm_withdrawal_requests(&mut self) -> Result<u64> {
         let srt_amount_to_withdraw = self.srt_withdrawal_locked_amount;
 
         // Start
@@ -664,7 +669,7 @@ impl VaultAccount {
         &mut self,
         srt_amount: u64,
         vst_amount: u64,
-        one_srt_as_micro_vst: u64,
+        old_one_srt_as_micro_vst: u64,
     ) -> Result<()> {
         // TODO/phase3: deprecate
         if self.is_deposit_in_progress() {
@@ -677,7 +682,7 @@ impl VaultAccount {
             SolvProtocolWithdrawalFeeRate(self.solv_protocol_withdrawal_fee_rate_bps);
 
         let srt_amount_as_vst =
-            SRTExchangeRate::new(one_srt_as_micro_vst, self.solv_receipt_token_decimals)
+            SRTExchangeRate::new(old_one_srt_as_micro_vst, self.solv_receipt_token_decimals)
                 .get_srt_amount_as_vst(srt_amount, false)
                 .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
         let vst_withdrawal_fee_amount = solv_protocol_withdrawal_fee_rate
@@ -720,6 +725,7 @@ impl VaultAccount {
             .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
         let vst_estimated_solv_withdrawal_amount_without_fee =
             vst_estimated_solv_withdrawal_amount - vst_estimated_solv_protocol_fee_amount;
+        require_gte!(vst_amount, vst_estimated_solv_withdrawal_amount_without_fee);
 
         // Update accountings
         self.vrt_withdrawal_processing_amount -= vrt_withdrawal_requested_amount;
@@ -733,8 +739,11 @@ impl VaultAccount {
         self.vst_deducted_fee_amount += vst_estimated_solv_protocol_fee_amount;
         self.vst_receivable_amount_to_claim -= vst_withdrawal_total_estimated_amount;
 
-        self.set_srt_exchange_rate_with_validation(one_srt_as_micro_vst)?;
-        self.update_vrt_exchange_rate()?;
+        // TODO: deprecate this heuristic assertion, need to store estimated fee at turning into processing phase
+        require_gte!(self.one_srt_as_micro_vst, old_one_srt_as_micro_vst);
+        if self.one_srt_as_micro_vst - old_one_srt_as_micro_vst < self.one_srt_as_micro_vst/10 {
+            err!(VaultError::InvalidSRTPriceError)?;
+        }
 
         Ok(())
     }
@@ -1100,7 +1109,7 @@ mod tests {
             228_394
         );
 
-        vault.start_withdrawal_requests().unwrap();
+        vault.confirm_withdrawal_requests().unwrap();
         vault.assert_invariants().unwrap();
 
         assert!(vault
@@ -1142,7 +1151,7 @@ mod tests {
         vault.enqueue_withdrawal_request(500_000).unwrap();
         vault.assert_invariants().unwrap();
 
-        vault.start_withdrawal_requests().unwrap();
+        vault.confirm_withdrawal_requests().unwrap();
         vault.assert_invariants().unwrap();
 
         // (Expected) 1 SRT = 2.18919457342449 => 228_395 SRT = 500001.xxx VRT => 500_001
@@ -1194,7 +1203,7 @@ mod tests {
         vault.enqueue_withdrawal_request(500_000).unwrap();
         vault.assert_invariants().unwrap();
 
-        vault.start_withdrawal_requests().unwrap();
+        vault.confirm_withdrawal_requests().unwrap();
         vault.assert_invariants().unwrap();
 
         let vrt_amount = vault.mint_vrt(1_000_000).unwrap();
@@ -1244,7 +1253,7 @@ mod tests {
         vault.enqueue_withdrawal_request(500_000).unwrap();
         vault.assert_invariants().unwrap();
 
-        vault.start_withdrawal_requests().unwrap();
+        vault.confirm_withdrawal_requests().unwrap();
         vault.assert_invariants().unwrap();
 
         vault
