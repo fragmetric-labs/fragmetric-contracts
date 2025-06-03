@@ -1,5 +1,8 @@
 use anchor_lang::prelude::*;
-use anchor_spl::{token::{Mint, Token}, token_interface::TokenAccount};
+use anchor_spl::{
+    token::{Mint, Token},
+    token_interface::TokenAccount,
+};
 use solv::states::VaultAccount;
 
 use crate::constants::SOLV_PROGRAM_ID;
@@ -207,7 +210,7 @@ impl<'info> SolvBTCVaultService<'info> {
         ))
     }
 
-    /// returns [payer_vault_receipt_token_account_amount, enqueued_vault_receipt_token_amount, total_withdrawal_incompleted_vault_receipt_token_amount, payer_vault_supported_token_account_amount, expected_supported_token_amount]
+    /// returns [payer_vault_receipt_token_account_amount, enqueued_vault_receipt_token_amount, expected_supported_token_amount, total_unrestaking_vault_receipt_token_amount]
     #[inline(never)]
     pub fn request_withdrawal(
         &self,
@@ -227,12 +230,7 @@ impl<'info> SolvBTCVaultService<'info> {
         payer_seeds: &[&[&[u8]]],
 
         receipt_token_amount: u64,
-    ) -> Result<(u64, u64, u64, u64, u64)> {
-        let total_incompleted_withdrawal_vault_receipt_token_amount_before = self
-            .vault_account
-            .load()?
-            .get_vrt_withdrawal_incompleted_amount();
-
+    ) -> Result<(u64, u64, u64, u64)> {
         let mut payer_vault_receipt_token_account =
             InterfaceAccount::<TokenAccount>::try_from(payer_vault_receipt_token_account)?;
         let mut payer_vault_supported_token_account =
@@ -245,6 +243,9 @@ impl<'info> SolvBTCVaultService<'info> {
         if let Some(seeds) = payer_seeds.first() {
             signer_seeds.push(*seeds);
         }
+
+        let payer_vault_receipt_token_account_amount = payer_vault_receipt_token_account.amount;
+        let payer_vault_supported_token_account_amount = payer_vault_supported_token_account.amount;
 
         solv::cpi::fund_manager_request_withdrawal(
             CpiContext::new_with_signer(
@@ -270,41 +271,46 @@ impl<'info> SolvBTCVaultService<'info> {
             receipt_token_amount,
         )?;
 
-        payer_vault_receipt_token_account.reload()?;
-        let payer_vault_receipt_token_account_amount = payer_vault_receipt_token_account.amount;
+        payer_vault_supported_token_account.reload()?;
+        require_eq!(
+            payer_vault_supported_token_account_amount,
+            payer_vault_supported_token_account.amount
+        );
 
-        let total_incompleted_withdrawal_vault_receipt_token_amount = self
+        payer_vault_receipt_token_account.reload()?;
+        let enqueued_vault_receipt_token_amount =
+            payer_vault_receipt_token_account_amount - payer_vault_receipt_token_account.amount;
+
+        let total_unrestaking_vault_receipt_token_amount = self
             .vault_account
             .load()?
             .get_vrt_withdrawal_incompleted_amount();
-        let enqueued_vault_receipt_token_amount =
-            total_incompleted_withdrawal_vault_receipt_token_amount
-                - total_incompleted_withdrawal_vault_receipt_token_amount_before;
 
-        payer_vault_supported_token_account.reload()?;
-        let payer_vault_supported_token_account_amount = payer_vault_supported_token_account.amount;
+        let expected_supported_token_amount = if enqueued_vault_receipt_token_amount > 0 {
+            self.vault_account
+                .load()?
+                .get_vst_estimated_amount_from_last_withdrawal_request()?
+        } else {
+            0
+        };
 
-        let expected_supported_token_amount = self
-            .vault_account
-            .load()?
-            .get_vst_estimated_amount_from_last_withdrawal_request()?;
-
-        msg!("UNRESTAKE#solv: receipt_token_mint={}, enqueued_vault_receipt_token_account={}, from_vault_receipt_token_account_amount={}",
+        msg!("UNRESTAKE#solv: receipt_token_mint={}, from_vault_receipt_token_account_amount={}, enqueued_vault_receipt_token_account={}, expected_supported_token_amount={}, total_unrestaking_vault_receipt_token_amount={}",
             vault_receipt_token_mint.key,
+            payer_vault_receipt_token_account_amount,
             enqueued_vault_receipt_token_amount,
-            payer_vault_receipt_token_account_amount
+            expected_supported_token_amount,
+            total_unrestaking_vault_receipt_token_amount,
         );
 
         Ok((
             payer_vault_receipt_token_account_amount,
             enqueued_vault_receipt_token_amount,
-            total_incompleted_withdrawal_vault_receipt_token_amount,
-            payer_vault_supported_token_account_amount,
             expected_supported_token_amount,
+            total_unrestaking_vault_receipt_token_amount,
         ))
     }
 
-    /// returns [payer_vault_supported_token_amount, unrestaked_receipt_token_amount, claimed_supported_token_amount, deducted_fee_amount]
+    /// returns [payer_vault_supported_token_amount, unrestaked_receipt_token_amount, claimed_supported_token_amount, deducted_supported_token_fee_amount, total_unrestaking_vault_receipt_token_amount]
     #[inline(never)]
     pub fn withdraw(
         &self,
@@ -322,9 +328,7 @@ impl<'info> SolvBTCVaultService<'info> {
         payer_vault_supported_token_account: &'info AccountInfo<'info>,
         payer: &AccountInfo<'info>,
         payer_seeds: &[&[&[u8]]],
-
-        fund_supported_treasury_account: &AccountInfo<'info>,
-    ) -> Result<(u64, u64, u64, u64)> {
+    ) -> Result<(u64, u64, u64, u64, u64)> {
         let mut signer_seeds = Vec::with_capacity(2);
         if let Some(seeds) = fund_manager_seeds.first() {
             signer_seeds.push(*seeds);
@@ -333,19 +337,21 @@ impl<'info> SolvBTCVaultService<'info> {
             signer_seeds.push(*seeds);
         }
 
+        let mut payer_vault_receipt_token_account =
+            InterfaceAccount::<TokenAccount>::try_from(payer_vault_receipt_token_account)?;
         let mut payer_vault_supported_token_account =
             InterfaceAccount::<TokenAccount>::try_from(payer_vault_supported_token_account)?;
-        let payer_vault_receipt_token_account =
-            InterfaceAccount::<TokenAccount>::try_from(payer_vault_receipt_token_account)?;
-        let payer_vault_supported_token_account_amount_before =
+        
+        let payer_vault_receipt_token_amount = payer_vault_receipt_token_account.amount;
+        let payer_vault_supported_token_amount_before =
             payer_vault_supported_token_account.amount;
-        let payer_vault_receipt_token_withdrawal_completed_amount_before = self
-            .vault_account
-            .load()?
-            .get_vrt_withdrawal_completed_amount();
-        let deducted_supported_token_fee_amount =
-            self.vault_account.load()?.get_vst_deducted_fee_amount();
-        let extra_amount_to_claim = self.vault_account.load()?.get_vst_extra_amount_to_claim();
+        
+        
+        let vault = self.vault_account.load()?;
+        
+        let unrestaked_receipt_token_amount = vault.get_vrt_withdrawal_completed_amount();
+        let deducted_supported_token_fee_amount = vault.get_vst_deducted_fee_amount();
+        let claimed_supported_token_amount = vault.get_vst_claimable_amount();
 
         solv::cpi::fund_manager_withdraw(CpiContext::new_with_signer(
             self.vault_program.to_account_info(),
@@ -368,36 +374,16 @@ impl<'info> SolvBTCVaultService<'info> {
             &signer_seeds,
         ))?;
 
-        // send extra amount of supported tokens to treasury
-        let mint_data_ref = vault_supported_token_mint.try_borrow_data()?;
-        let mint = Mint::try_deserialize(&mut mint_data_ref.as_ref())?;
-        let decimals = mint.decimals;
-
-        anchor_spl::token_interface::transfer_checked(
-            CpiContext::new_with_signer(
-                token_program.to_account_info(),
-                anchor_spl::token_interface::TransferChecked {
-                    from: payer_vault_supported_token_account.to_account_info(),
-                    to: fund_supported_treasury_account.to_account_info(),
-                    mint: vault_supported_token_mint.to_account_info(),
-                    authority: payer.to_account_info(),
-                },
-                &signer_seeds,
-            ),
-            extra_amount_to_claim,
-            decimals,
-        )?;
-
-        let unrestaked_receipt_token_amount =
-            payer_vault_receipt_token_withdrawal_completed_amount_before;
+        payer_vault_receipt_token_account.reload()?;
+        require_eq!(payer_vault_receipt_token_account.amount, payer_vault_receipt_token_amount);
 
         payer_vault_supported_token_account.reload()?;
         let payer_vault_supported_token_account_amount = payer_vault_supported_token_account.amount;
-        let claimed_supported_token_amount = payer_vault_supported_token_account_amount
-            - payer_vault_supported_token_account_amount_before
-            - extra_amount_to_claim;
+        require_gte!(payer_vault_supported_token_account_amount - payer_vault_supported_token_amount_before, claimed_supported_token_amount);
+        
+        let total_unrestaking_vault_receipt_token_amount = vault.get_vrt_withdrawal_incompleted_amount();
 
-        msg!("CLAIM_UNRESTAKED#solv: receipt_token_mint={}, to_vault_supported_token_account_amount={}, unrestaked_receipt_token_amount={}, claimed_supported_token_amount={}, deducted_supported_token_fee_amount={}",
+        msg!("CLAIM_UNRESTAKED#solv: receipt_token_mint={}, payer_vault_supported_token_account_amount={}, unrestaked_receipt_token_amount={}, claimed_supported_token_amount={}, deducted_supported_token_fee_amount={}",
             vault_receipt_token_mint.key,
             payer_vault_supported_token_account_amount,
             unrestaked_receipt_token_amount,
@@ -410,6 +396,7 @@ impl<'info> SolvBTCVaultService<'info> {
             unrestaked_receipt_token_amount,
             claimed_supported_token_amount,
             deducted_supported_token_fee_amount,
+            total_unrestaking_vault_receipt_token_amount,
         ))
     }
 }

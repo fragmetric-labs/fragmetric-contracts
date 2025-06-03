@@ -362,7 +362,7 @@ impl VaultAccount {
         Some(self.vst_operation_reserved_amount + srt_operation_reserved_amount_as_vst)
     }
 
-    pub fn get_vst_total_reserved_amount(&self) -> u64 {
+    pub(crate) fn get_vst_total_reserved_amount(&self) -> u64 {
         self.vst_operation_reserved_amount
             + self.vst_withdrawal_locked_amount
             + self.vst_reserved_amount_to_claim
@@ -386,14 +386,13 @@ impl VaultAccount {
             return err!(VaultError::WithdrawalRequestQueueNotSetError);
         }
 
-        Ok(self.withdrawal_requests[self.num_withdrawal_requests as usize  - 1].get_vset_withdrawal_total_estimated_amount())
+        Ok(
+            self.withdrawal_requests[self.num_withdrawal_requests as usize - 1]
+                .get_vset_withdrawal_total_estimated_amount(),
+        )
     }
 
-    pub fn get_srt_mint(&self) -> Pubkey {
-        self.solv_receipt_token_mint
-    }
-
-    pub fn get_srt_total_reserved_amount(&self) -> u64 {
+    pub(crate) fn get_srt_total_reserved_amount(&self) -> u64 {
         self.srt_operation_reserved_amount + self.srt_withdrawal_locked_amount
     }
 

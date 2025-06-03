@@ -5,15 +5,12 @@ use anchor_lang::prelude::*;
 use anchor_spl::associated_token;
 
 use crate::errors;
-use crate::modules::fund::FundAccount;
+use crate::modules::fund::{FundAccount, FUND_ACCOUNT_MAX_SUPPORTED_TOKENS};
 use crate::modules::pricing::TokenPricingSource;
 use crate::modules::restaking::{JitoRestakingVaultService, SolvBTCVaultService};
 use crate::utils::PDASeeds;
 
-use super::{
-    DenormalizeNTCommand, FundService, OperationCommandContext, OperationCommandEntry,
-    OperationCommandResult, SelfExecutable, FUND_ACCOUNT_MAX_RESTAKING_VAULTS,
-};
+use super::{ClaimUnstakedSOLCommandResultAssetReceivable, DenormalizeNTCommand, FundService, OperationCommandContext, OperationCommandEntry, OperationCommandResult, SelfExecutable, FUND_ACCOUNT_MAX_RESTAKING_VAULTS};
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
 pub struct ClaimUnrestakedVSTCommand {
@@ -41,16 +38,27 @@ pub enum ClaimUnrestakedVSTCommandState {
     },
 }
 
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize)]
 pub struct ClaimUnrestakedVSTCommandResult {
     pub vault: Pubkey,
     pub receipt_token_mint: Pubkey,
-    pub supported_token_mint: Pubkey,
-    pub claimed_supported_token_amount: u64,
-    pub operation_reserved_supported_token_amount: u64,
+    pub total_unrestaking_receipt_token_amount: u64,
     pub unrestaked_receipt_token_amount: u64,
     pub deducted_receipt_token_fee_amount: u64,
-    pub total_unrestaking_receipt_token_amount: u64,
+    pub supported_token_mint: Pubkey,
+    pub claimed_supported_token_amount: u64,
+    pub transferred_supported_token_revenue_amount: u64,
+    pub offsetted_supported_token_receivable_amount: u64,
+    #[max_len(FUND_ACCOUNT_MAX_SUPPORTED_TOKENS)]
+    pub offsetted_asset_receivables: Vec<ClaimUnrestakedVSTCommandResultAssetReceivable>,
+    pub operation_reserved_supported_token_amount: u64,
+    pub operation_receivable_supported_token_amount: u64,
+}
+
+#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize)]
+pub struct ClaimUnrestakedVSTCommandResultAssetReceivable {
+    asset_token_mint: Option<Pubkey>,
+    asset_amount: u64,
 }
 
 impl SelfExecutable for ClaimUnrestakedVSTCommand {
@@ -256,12 +264,18 @@ impl ClaimUnrestakedVSTCommand {
                         ),
                         (fund_account.get_reserve_account_address()?, false),
                     ])
-                    .chain([(
-                        fund_account.find_supported_token_treasury_account_address(
-                            &vault_service.get_supported_token_mint()?,
-                        )?,
-                        true,
-                    )]);
+                    .chain([
+                        (
+                            fund_account.get_treasury_account_address()?,
+                            false,
+                        ),
+                        (
+                            fund_account.find_supported_token_treasury_account_address(
+                                &vault_service.get_supported_token_mint()?,
+                            )?,
+                            true,
+                        ),
+                    ]);
 
                 Ok((
                     None,
@@ -353,12 +367,16 @@ impl ClaimUnrestakedVSTCommand {
                         receipt_token_mint: item.receipt_token_mint,
                         supported_token_mint: item.supported_token_mint,
                         claimed_supported_token_amount: 0,
+                        transferred_supported_token_revenue_amount: 0,
+                        offsetted_supported_token_receivable_amount: 0,
+                        offsetted_asset_receivables: vec![],
                         operation_reserved_supported_token_amount: 0,
                         unrestaked_receipt_token_amount: 0,
                         deducted_receipt_token_fee_amount: 0,
                         total_unrestaking_receipt_token_amount: 0,
+                        operation_receivable_supported_token_amount: 0,
                     };
-                    let mut last_to_vault_supported_token_account_amount = 0;
+                    let mut last_to_vault_supported_token_amount = 0;
                     for (
                         _withdrawal_ticket_index,
                         withdrawal_ticket_account,
@@ -366,7 +384,7 @@ impl ClaimUnrestakedVSTCommand {
                     ) in claimable_withdrawal_ticket_accounts_list
                     {
                         let (
-                            to_vault_supported_token_account_amount,
+                            to_vault_supported_token_amount,
                             unrestaked_receipt_token_amount,
                             claimed_supported_token_amount,
                             deducted_program_fee_receipt_token_amount,
@@ -397,8 +415,8 @@ impl ClaimUnrestakedVSTCommand {
                             deducted_program_fee_receipt_token_amount
                                 + deducted_vault_fee_receipt_token_amount;
 
-                        last_to_vault_supported_token_account_amount =
-                            to_vault_supported_token_account_amount;
+                        last_to_vault_supported_token_amount =
+                            to_vault_supported_token_amount;
                     }
 
                     drop(fund_account);
@@ -430,7 +448,7 @@ impl ClaimUnrestakedVSTCommand {
                                 normalized_token.operation_reserved_amount;
 
                             require_gte!(
-                                last_to_vault_supported_token_account_amount,
+                                last_to_vault_supported_token_amount,
                                 normalized_token.operation_reserved_amount
                             );
                         }
@@ -448,7 +466,7 @@ impl ClaimUnrestakedVSTCommand {
                                 supported_token.token.operation_reserved_amount;
 
                             require_gte!(
-                                last_to_vault_supported_token_account_amount,
+                                last_to_vault_supported_token_amount,
                                 supported_token.token.operation_reserved_amount
                             );
                         }
@@ -465,7 +483,7 @@ impl ClaimUnrestakedVSTCommand {
             }
             Some(TokenPricingSource::VirtualVault { .. }) => None,
             Some(TokenPricingSource::SolvBTCVault { address }) => {
-                let [vault_program, vault_account, vault_receipt_token_mint, vault_supported_token_mint, vault_vault_supported_token_account, token_program, event_authority, fund_vault_supported_token_account, fund_vault_receipt_token_account, fund_reserve, fund_supported_treasury_account, ..] =
+                let [vault_program, vault_account, vault_receipt_token_mint, vault_supported_token_mint, vault_vault_supported_token_account, token_program, event_authority, fund_reserve_vault_supported_token_account, fund_reserve_vault_receipt_token_account, fund_reserve, fund_treasury, fund_treasury_vault_supported_token_account, ..] =
                     accounts
                 else {
                     err!(ErrorCode::AccountNotEnoughKeys)?
@@ -474,10 +492,11 @@ impl ClaimUnrestakedVSTCommand {
 
                 let vault_service = SolvBTCVaultService::new(vault_program, vault_account)?;
                 let (
-                    fund_vault_supported_token_account_amount,
+                    fund_reserve_vault_supported_token_amount,
                     unrestaked_receipt_token_amount,
                     claimed_supported_token_amount,
                     deducted_supported_token_fee_amount,
+                    total_unrestaking_receipt_token_amount,
                 ) = vault_service.withdraw(
                     vault_receipt_token_mint,
                     vault_supported_token_mint,
@@ -486,18 +505,16 @@ impl ClaimUnrestakedVSTCommand {
                     event_authority,
                     ctx.fund_account.as_ref(),
                     &[&fund_account.get_seeds()],
-                    fund_vault_receipt_token_account,
-                    fund_vault_supported_token_account,
+                    fund_reserve_vault_receipt_token_account,
+                    fund_reserve_vault_supported_token_account,
                     fund_reserve,
                     &[&fund_account.get_reserve_account_seeds()],
-                    fund_supported_treasury_account,
                 )?;
 
                 drop(fund_account);
 
-                let mut pricing_service =
-                    FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-                        .new_pricing_service(accounts.iter().copied(), false)?;
+                let mut fund_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?;
+                let mut pricing_service = fund_service.new_pricing_service(accounts.iter().copied(), false)?;
 
                 let deducted_receipt_token_fee_amount = pricing_service.get_token_amount_as_token(
                     &item.supported_token_mint,
@@ -505,37 +522,52 @@ impl ClaimUnrestakedVSTCommand {
                     &item.receipt_token_mint,
                 )?;
 
-                let mut fund_account = ctx.fund_account.load_mut()?;
+                let (transferred_supported_token_revenue_amount, offsetted_supported_token_receivable_amount, offsetted_asset_receivables) = fund_service.offset_receivables(
+                    ctx.system_program,
+                    fund_reserve,
+                    fund_treasury,
+                    Some(vault_supported_token_mint),
+                    Some(token_program),
+                    Some(fund_reserve_vault_supported_token_account),
+                    Some(fund_treasury_vault_supported_token_account),
+                    claimed_supported_token_amount,
+                    &pricing_service,
+                )?;
+                
+                fund_service.update_asset_values(&mut pricing_service, true)?;
+                
+                drop(fund_service);
 
-                let supported_token =
-                    fund_account.get_supported_token_mut(&item.supported_token_mint)?;
-
-                supported_token.token.operation_receivable_amount -= claimed_supported_token_amount;
-                supported_token.token.operation_reserved_amount += claimed_supported_token_amount;
+                let fund = ctx.fund_account.load()?;
+                let supported_token = fund.get_supported_token(&item.supported_token_mint)?;
 
                 require_gte!(
-                    fund_vault_supported_token_account_amount,
+                    fund_reserve_vault_supported_token_amount,
                     supported_token.token.operation_reserved_amount
                 );
-
-                let operation_reserved_supported_token_amount =
-                    supported_token.token.operation_reserved_amount;
-
-                drop(fund_account);
-
-                FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-                    .update_asset_values(&mut pricing_service, true)?;
 
                 Some(
                     ClaimUnrestakedVSTCommandResult {
                         vault: item.vault,
                         receipt_token_mint: item.receipt_token_mint,
-                        supported_token_mint: item.supported_token_mint,
-                        claimed_supported_token_amount,
-                        operation_reserved_supported_token_amount,
+                        total_unrestaking_receipt_token_amount,
                         unrestaked_receipt_token_amount,
                         deducted_receipt_token_fee_amount,
-                        total_unrestaking_receipt_token_amount: unrestaked_receipt_token_amount,
+                        supported_token_mint: item.supported_token_mint,
+                        claimed_supported_token_amount,
+                        transferred_supported_token_revenue_amount,
+                        offsetted_supported_token_receivable_amount,
+                        offsetted_asset_receivables: offsetted_asset_receivables
+                            .into_iter()
+                            .map(|(asset_token_mint, asset_amount)| {
+                                ClaimUnrestakedVSTCommandResultAssetReceivable {
+                                    asset_token_mint,
+                                    asset_amount,
+                                }
+                            })
+                            .collect::<Vec<_>>(),
+                        operation_reserved_supported_token_amount: supported_token.token.operation_reserved_amount,
+                        operation_receivable_supported_token_amount: supported_token.token.operation_receivable_amount,
                     }
                     .into(),
                 )
