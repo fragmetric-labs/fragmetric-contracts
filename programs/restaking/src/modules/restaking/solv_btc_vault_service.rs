@@ -341,14 +341,12 @@ impl<'info> SolvBTCVaultService<'info> {
             InterfaceAccount::<TokenAccount>::try_from(payer_vault_receipt_token_account)?;
         let mut payer_vault_supported_token_account =
             InterfaceAccount::<TokenAccount>::try_from(payer_vault_supported_token_account)?;
-        
+
         let payer_vault_receipt_token_amount = payer_vault_receipt_token_account.amount;
-        let payer_vault_supported_token_amount_before =
-            payer_vault_supported_token_account.amount;
-        
-        
+        let payer_vault_supported_token_amount_before = payer_vault_supported_token_account.amount;
+
         let vault = self.vault_account.load()?;
-        
+
         let unrestaked_receipt_token_amount = vault.get_vrt_withdrawal_completed_amount();
         let deducted_supported_token_fee_amount = vault.get_vst_deducted_fee_amount();
         let claimed_supported_token_amount = vault.get_vst_claimable_amount();
@@ -375,13 +373,20 @@ impl<'info> SolvBTCVaultService<'info> {
         ))?;
 
         payer_vault_receipt_token_account.reload()?;
-        require_eq!(payer_vault_receipt_token_account.amount, payer_vault_receipt_token_amount);
+        require_eq!(
+            payer_vault_receipt_token_account.amount,
+            payer_vault_receipt_token_amount
+        );
 
         payer_vault_supported_token_account.reload()?;
         let payer_vault_supported_token_account_amount = payer_vault_supported_token_account.amount;
-        require_gte!(payer_vault_supported_token_account_amount - payer_vault_supported_token_amount_before, claimed_supported_token_amount);
-        
-        let total_unrestaking_vault_receipt_token_amount = vault.get_vrt_withdrawal_incompleted_amount();
+        require_gte!(
+            payer_vault_supported_token_account_amount - payer_vault_supported_token_amount_before,
+            claimed_supported_token_amount
+        );
+
+        let total_unrestaking_vault_receipt_token_amount =
+            vault.get_vrt_withdrawal_incompleted_amount();
 
         msg!("CLAIM_UNRESTAKED#solv: receipt_token_mint={}, payer_vault_supported_token_account_amount={}, unrestaked_receipt_token_amount={}, claimed_supported_token_amount={}, deducted_supported_token_fee_amount={}",
             vault_receipt_token_mint.key,

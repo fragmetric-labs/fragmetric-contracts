@@ -12,6 +12,7 @@ export * from './assetState';
 export * from './claimUnrestakedVSTCommand';
 export * from './claimUnrestakedVSTCommandItem';
 export * from './claimUnrestakedVSTCommandResult';
+export * from './claimUnrestakedVSTCommandResultAssetReceivable';
 export * from './claimUnrestakedVSTCommandState';
 export * from './claimUnstakedSOLCommand';
 export * from './claimUnstakedSOLCommandResult';

@@ -2,38 +2,35 @@
   "address": "9beGuWXNoKPKCApT6xJUm5435Fz8EMGzoTTXgkcf3zAz",
   "metadata": {
     "name": "solv",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "spec": "0.1.0",
     "description": "Fragmetric SOLV BTC Vault Program",
     "repository": "https://github.com/fragmetric-labs/contracts"
   },
   "instructions": [
     {
-      "name": "delegate_vault_reward_token_account",
+      "name": "fund_manager_deposit",
       "discriminator": [
-        26,
-        32,
-        241,
-        204,
-        47,
-        71,
-        155,
-        24
+        247,
+        63,
+        63,
+        225,
+        113,
+        82,
+        62,
+        70
       ],
       "accounts": [
         {
-          "name": "admin",
+          "name": "payer",
           "signer": true
         },
         {
-          "name": "delegate"
-        },
-        {
-          "name": "receipt_token_mint"
-        },
-        {
-          "name": "token_program",
-          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+          "name": "fund_manager",
+          "signer": true,
+          "relations": [
+            "vault_account"
+          ]
         },
         {
           "name": "vault_account",
@@ -52,16 +49,203 @@
               },
               {
                 "kind": "account",
-                "path": "receipt_token_mint"
+                "path": "vault_receipt_token_mint"
               }
             ]
           }
         },
         {
-          "name": "reward_token_mint"
+          "name": "vault_receipt_token_mint",
+          "writable": true
         },
         {
-          "name": "vault_reward_token_account",
+          "name": "vault_supported_token_mint",
+          "relations": [
+            "vault_account"
+          ]
+        },
+        {
+          "name": "payer_vault_receipt_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "payer"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault_receipt_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "payer_vault_supported_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "payer"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault_supported_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "vault_vault_supported_token_account",
           "writable": true,
           "pda": {
             "seeds": [
@@ -70,8 +254,961 @@
                 "path": "vault_account"
               },
               {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
                 "kind": "account",
-                "path": "token_program"
+                "path": "vault_supported_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "fund_manager_request_withdrawal",
+      "discriminator": [
+        168,
+        154,
+        49,
+        137,
+        36,
+        97,
+        167,
+        34
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "signer": true
+        },
+        {
+          "name": "fund_manager",
+          "signer": true,
+          "relations": [
+            "vault_account"
+          ]
+        },
+        {
+          "name": "vault_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault_receipt_token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault_receipt_token_mint",
+          "writable": true
+        },
+        {
+          "name": "vault_supported_token_mint",
+          "relations": [
+            "vault_account"
+          ]
+        },
+        {
+          "name": "payer_vault_receipt_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "payer"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault_receipt_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "payer_vault_supported_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "payer"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault_supported_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "vault_vault_supported_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "vault_account"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault_supported_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "fund_manager_withdraw",
+      "discriminator": [
+        200,
+        145,
+        159,
+        50,
+        26,
+        63,
+        31,
+        186
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "signer": true
+        },
+        {
+          "name": "fund_manager",
+          "signer": true,
+          "relations": [
+            "vault_account"
+          ]
+        },
+        {
+          "name": "vault_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault_receipt_token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault_receipt_token_mint",
+          "writable": true
+        },
+        {
+          "name": "vault_supported_token_mint",
+          "relations": [
+            "vault_account"
+          ]
+        },
+        {
+          "name": "payer_vault_receipt_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "payer"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault_receipt_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "payer_vault_supported_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "payer"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault_supported_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "vault_vault_supported_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "vault_account"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault_supported_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "reward_manager_delegate_reward_token_account",
+      "discriminator": [
+        156,
+        149,
+        249,
+        160,
+        242,
+        50,
+        249,
+        162
+      ],
+      "accounts": [
+        {
+          "name": "reward_manager",
+          "signer": true,
+          "relations": [
+            "vault_account"
+          ]
+        },
+        {
+          "name": "delegate"
+        },
+        {
+          "name": "vault_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault_receipt_token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault_receipt_token_mint"
+        },
+        {
+          "name": "reward_token_mint"
+        },
+        {
+          "name": "reward_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "vault_account"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
               },
               {
                 "kind": "account",
@@ -118,6 +1255,10 @@
           }
         },
         {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
           "name": "event_authority",
           "pda": {
             "seeds": [
@@ -153,48 +1294,30 @@
       "args": []
     },
     {
-      "name": "initialize_vault_account",
+      "name": "solv_manager_confirm_deposit",
       "discriminator": [
-        189,
-        142,
-        99,
+        179,
+        55,
+        33,
+        11,
         76,
-        44,
-        159,
-        107,
-        65
+        28,
+        193,
+        103
       ],
       "accounts": [
         {
-          "name": "payer",
-          "writable": true,
-          "signer": true
+          "name": "solv_manager",
+          "signer": true,
+          "relations": [
+            "vault_account"
+          ]
         },
         {
-          "name": "admin",
-          "docs": [
-            "TODO: later it will be delegated to a PDA (restaking fund)"
-          ],
-          "signer": true
-        },
-        {
-          "name": "delegate_reward_token_admin",
-          "signer": true
-        },
-        {
-          "name": "system_program",
-          "address": "11111111111111111111111111111111"
-        },
-        {
-          "name": "receipt_token_mint",
-          "writable": true
-        },
-        {
-          "name": "supported_token_mint"
-        },
-        {
-          "name": "token_program",
-          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+          "name": "solv_protocol_wallet",
+          "relations": [
+            "vault_account"
+          ]
         },
         {
           "name": "vault_account",
@@ -213,10 +1336,1975 @@
               },
               {
                 "kind": "account",
-                "path": "receipt_token_mint"
+                "path": "vault_receipt_token_mint"
               }
             ]
           }
+        },
+        {
+          "name": "vault_receipt_token_mint"
+        },
+        {
+          "name": "vault_supported_token_mint",
+          "relations": [
+            "vault_account"
+          ]
+        },
+        {
+          "name": "solv_receipt_token_mint",
+          "relations": [
+            "vault_account"
+          ]
+        },
+        {
+          "name": "vault_vault_supported_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "vault_account"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault_supported_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "vault_solv_receipt_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "vault_account"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "solv_receipt_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "solv_protocol_wallet_vault_supported_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "solv_protocol_wallet"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault_supported_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "solv_protocol_wallet_solv_receipt_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "solv_protocol_wallet"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "solv_receipt_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "srt_amount",
+          "type": "u64"
+        },
+        {
+          "name": "one_srt_as_micro_vst",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "solv_manager_deposit",
+      "discriminator": [
+        59,
+        132,
+        252,
+        248,
+        19,
+        20,
+        156,
+        162
+      ],
+      "accounts": [
+        {
+          "name": "solv_manager",
+          "signer": true,
+          "relations": [
+            "vault_account"
+          ]
+        },
+        {
+          "name": "solv_protocol_wallet",
+          "relations": [
+            "vault_account"
+          ]
+        },
+        {
+          "name": "vault_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault_receipt_token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault_receipt_token_mint"
+        },
+        {
+          "name": "vault_supported_token_mint",
+          "relations": [
+            "vault_account"
+          ]
+        },
+        {
+          "name": "solv_receipt_token_mint",
+          "relations": [
+            "vault_account"
+          ]
+        },
+        {
+          "name": "vault_vault_supported_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "vault_account"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault_supported_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "vault_solv_receipt_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "vault_account"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "solv_receipt_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "solv_protocol_wallet_vault_supported_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "solv_protocol_wallet"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault_supported_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "solv_protocol_wallet_solv_receipt_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "solv_protocol_wallet"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "solv_receipt_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "solv_manager_request_withdrawal",
+      "discriminator": [
+        126,
+        33,
+        210,
+        18,
+        50,
+        224,
+        2,
+        145
+      ],
+      "accounts": [
+        {
+          "name": "solv_manager",
+          "signer": true,
+          "relations": [
+            "vault_account"
+          ]
+        },
+        {
+          "name": "solv_protocol_wallet",
+          "relations": [
+            "vault_account"
+          ]
+        },
+        {
+          "name": "vault_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault_receipt_token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault_receipt_token_mint"
+        },
+        {
+          "name": "vault_supported_token_mint",
+          "relations": [
+            "vault_account"
+          ]
+        },
+        {
+          "name": "solv_receipt_token_mint",
+          "relations": [
+            "vault_account"
+          ]
+        },
+        {
+          "name": "vault_vault_supported_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "vault_account"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault_supported_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "vault_solv_receipt_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "vault_account"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "solv_receipt_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "solv_protocol_wallet_vault_supported_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "solv_protocol_wallet"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault_supported_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "solv_protocol_wallet_solv_receipt_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "solv_protocol_wallet"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "solv_receipt_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "solv_manager_withdraw",
+      "discriminator": [
+        6,
+        24,
+        220,
+        220,
+        119,
+        39,
+        61,
+        64
+      ],
+      "accounts": [
+        {
+          "name": "solv_manager",
+          "signer": true,
+          "relations": [
+            "vault_account"
+          ]
+        },
+        {
+          "name": "solv_protocol_wallet",
+          "relations": [
+            "vault_account"
+          ]
+        },
+        {
+          "name": "vault_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault_receipt_token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault_receipt_token_mint"
+        },
+        {
+          "name": "vault_supported_token_mint",
+          "relations": [
+            "vault_account"
+          ]
+        },
+        {
+          "name": "solv_receipt_token_mint",
+          "relations": [
+            "vault_account"
+          ]
+        },
+        {
+          "name": "vault_vault_supported_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "vault_account"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault_supported_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "vault_solv_receipt_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "vault_account"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "solv_receipt_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "solv_protocol_wallet_vault_supported_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "solv_protocol_wallet"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault_supported_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "solv_protocol_wallet_solv_receipt_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "solv_protocol_wallet"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "solv_receipt_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "srt_amount",
+          "type": "u64"
+        },
+        {
+          "name": "vst_amount",
+          "type": "u64"
+        },
+        {
+          "name": "one_srt_as_micro_vst",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "update_vault_admin_role",
+      "discriminator": [
+        92,
+        142,
+        67,
+        99,
+        123,
+        216,
+        184,
+        20
+      ],
+      "accounts": [
+        {
+          "name": "old_vault_admin",
+          "signer": true
+        },
+        {
+          "name": "new_vault_admin"
+        },
+        {
+          "name": "vault_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault_receipt_token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault_receipt_token_mint"
+        },
+        {
+          "name": "event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "role",
+          "type": {
+            "defined": {
+              "name": "VaultAdminRole"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "vault_manager_initialize_vault_account",
+      "discriminator": [
+        60,
+        93,
+        141,
+        114,
+        198,
+        61,
+        27,
+        137
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "vault_manager",
+          "signer": true
+        },
+        {
+          "name": "vault_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault_receipt_token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault_receipt_token_mint",
+          "writable": true
+        },
+        {
+          "name": "vault_supported_token_mint"
+        },
+        {
+          "name": "solv_receipt_token_mint"
         },
         {
           "name": "vault_receipt_token_account",
@@ -227,12 +3315,45 @@
                 "path": "vault_account"
               },
               {
-                "kind": "account",
-                "path": "token_program"
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
               },
               {
                 "kind": "account",
-                "path": "receipt_token_mint"
+                "path": "vault_receipt_token_mint"
               }
             ],
             "program": {
@@ -283,12 +3404,45 @@
                 "path": "vault_account"
               },
               {
-                "kind": "account",
-                "path": "token_program"
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
               },
               {
                 "kind": "account",
-                "path": "supported_token_mint"
+                "path": "vault_supported_token_mint"
               }
             ],
             "program": {
@@ -329,6 +3483,360 @@
               ]
             }
           }
+        },
+        {
+          "name": "solv_receipt_token_account",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "vault_account"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "solv_receipt_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "vault_manager_set_solv_protocol_wallet",
+      "discriminator": [
+        145,
+        97,
+        236,
+        118,
+        219,
+        116,
+        78,
+        6
+      ],
+      "accounts": [
+        {
+          "name": "solv_manager",
+          "signer": true,
+          "relations": [
+            "vault_account"
+          ]
+        },
+        {
+          "name": "solv_protocol_wallet"
+        },
+        {
+          "name": "vault_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault_receipt_token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault_receipt_token_mint"
+        },
+        {
+          "name": "event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "vault_manager_set_solv_protocol_withdrawal_fee_rate",
+      "discriminator": [
+        16,
+        36,
+        125,
+        205,
+        176,
+        110,
+        1,
+        249
+      ],
+      "accounts": [
+        {
+          "name": "solv_manager",
+          "signer": true,
+          "relations": [
+            "vault_account"
+          ]
+        },
+        {
+          "name": "solv_protocol_wallet"
+        },
+        {
+          "name": "vault_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault_receipt_token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault_receipt_token_mint"
+        },
+        {
+          "name": "event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "solv_protocol_withdrawal_fee_rate_bps",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "vault_manager_update_vault_account_if_needed",
+      "discriminator": [
+        254,
+        125,
+        57,
+        65,
+        206,
+        129,
+        123,
+        217
+      ],
+      "accounts": [
+        {
+          "name": "vault_manager",
+          "signer": true,
+          "relations": [
+            "vault_account"
+          ]
+        },
+        {
+          "name": "vault_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault_receipt_token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault_receipt_token_mint"
+        },
+        {
+          "name": "vault_supported_token_mint"
+        },
+        {
+          "name": "solv_receipt_token_mint"
         },
         {
           "name": "event_authority",
@@ -381,6 +3889,83 @@
       ]
     }
   ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "InvalidAccountDataVersionError",
+      "msg": "invalid account data version"
+    },
+    {
+      "code": 6001,
+      "name": "CalculationArithmeticException",
+      "msg": "calculation arithmetic exception"
+    },
+    {
+      "code": 6002,
+      "name": "VaultAdminMismatchError",
+      "msg": "vault admin mismatch"
+    },
+    {
+      "code": 6003,
+      "name": "SolvProtocolWalletAlreadySetError",
+      "msg": "solv protocol wallet already set"
+    },
+    {
+      "code": 6004,
+      "name": "SolvProtocolWalletMismatchError",
+      "msg": "solv protocol wallet mismatch"
+    },
+    {
+      "code": 6005,
+      "name": "InvalidSolvProtocolWithdrawalFeeRateError",
+      "msg": "invalid srt withdrawal fee rate"
+    },
+    {
+      "code": 6006,
+      "name": "VaultSupportedTokenMintMismatchError",
+      "msg": "vault supported token mint mismatch"
+    },
+    {
+      "code": 6007,
+      "name": "SolvReceiptTokenMintMismatchError",
+      "msg": "solv receipt token mint mismatch"
+    },
+    {
+      "code": 6008,
+      "name": "InvalidSRTPriceError",
+      "msg": "invalid srt price"
+    },
+    {
+      "code": 6009,
+      "name": "ExceededMaxWithdrawalRequestsError",
+      "msg": "exceeded max withdrawal requests"
+    },
+    {
+      "code": 6010,
+      "name": "ExceededMaxDelegatedRewardTokensError",
+      "msg": "exceeded max delegated reward tokens"
+    },
+    {
+      "code": 6011,
+      "name": "NonDelegableRewardTokenMintError",
+      "msg": "non-delegable reward token mint"
+    },
+    {
+      "code": 6012,
+      "name": "DepositInProgressError",
+      "msg": "deposit in progress"
+    },
+    {
+      "code": 6013,
+      "name": "DepositNotInProgressError",
+      "msg": "deposit not in progress"
+    },
+    {
+      "code": 6014,
+      "name": "WithdrawalRequestQueueNotSetError",
+      "msg": "withdrawal request queue is not set"
+    }
+  ],
   "types": [
     {
       "name": "VaultAccount",
@@ -400,45 +3985,196 @@
             "type": "u8"
           },
           {
+            "name": "_padding0",
+            "type": {
+              "array": [
+                "u8",
+                5
+              ]
+            }
+          },
+          {
+            "name": "vault_manager",
+            "docs": [
+              "Vault manager ensures that the vault account remains up to date.",
+              "Initially, all managers are set to vault manager."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "reward_manager",
+            "docs": [
+              "Reward manager determines who can harvest rewards,",
+              "accumulated in the vault's ATA."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "fund_manager",
+            "docs": [
+              "Fund manager is responsible for depositing and withdrawing VST",
+              "in the vault, which directly affects the vault's TVL."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "solv_manager",
+            "docs": [
+              "Solv manager operates the vault to interact with the Solv protocol,",
+              "expecting to earn yield."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "solv_protocol_wallet",
+            "type": "pubkey"
+          },
+          {
+            "name": "solv_protocol_withdrawal_fee_rate_bps",
+            "type": "u16"
+          },
+          {
+            "name": "_reserved0",
+            "type": {
+              "array": [
+                "u8",
+                334
+              ]
+            }
+          },
+          {
+            "name": "vault_receipt_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "vault_receipt_token_decimals",
+            "type": "u8"
+          },
+          {
+            "name": "_padding1",
+            "type": {
+              "array": [
+                "u8",
+                7
+              ]
+            }
+          },
+          {
+            "name": "vrt_supply",
+            "type": "u64"
+          },
+          {
+            "name": "vrt_withdrawal_enqueued_amount",
+            "docs": [
+              "∑request(state == ENQUEUED).vrt_withrawal_requested_amount"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "vrt_withdrawal_processing_amount",
+            "docs": [
+              "∑request(state == PROCESSING).vrt_withrawal_requested_amount"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "vrt_withdrawal_completed_amount",
+            "docs": [
+              "∑request(state == COMPLETED).vrt_withrawal_requested_amount"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "_reserved1",
+            "type": {
+              "array": [
+                "u8",
+                440
+              ]
+            }
+          },
+          {
+            "name": "vault_supported_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "vault_supported_token_decimals",
+            "type": "u8"
+          },
+          {
             "name": "_padding2",
             "type": {
               "array": [
                 "u8",
-                13
+                7
               ]
             }
           },
           {
-            "name": "admin",
-            "type": "pubkey"
+            "name": "vst_operation_reserved_amount",
+            "docs": [
+              "VST reserved amount for operation - will be deposited to the Solv protocol"
+            ],
+            "type": "u64"
           },
           {
-            "name": "delegate_reward_token_admin",
-            "type": "pubkey"
+            "name": "vst_withdrawal_locked_amount",
+            "docs": [
+              "VST locked amount for withdrawal - will be locked until withdrawal is completed",
+              "",
+              "## Why VST locked??",
+              "",
+              "If SRT is insufficient for withdrawal, insufficient amount will be taken directly from VST operation reserved.",
+              "For example, assuming srt_reserve = 30, exchange_rate = 1:1.5 and trying to take 40 SRT expecting to receive 60 VST,",
+              "then 10 SRT is insufficient so 10 * 1.5 = 15 VST will be taken from VST operation reserved and locked until withdrawal is completed."
+            ],
+            "type": "u64"
           },
           {
-            "name": "_reserved",
+            "name": "vst_reserved_amount_to_claim",
+            "docs": [
+              "Ready to claim amount."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "vst_extra_amount_to_claim",
+            "docs": [
+              "Extra VST amount that exceeded the VST estimated withdrawal amount."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "vst_deducted_fee_amount",
+            "docs": [
+              "Deducted VST fee amount during withdrawal."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "vst_receivable_amount_to_claim",
+            "docs": [
+              "Waiting for withdrawal to complete.",
+              "Withdrawal fee is not applied yet, so these amount minus fee amount is the exact",
+              "amount that will be able to claim when withdrawal is completed."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "_reserved2",
             "type": {
               "array": [
                 "u8",
-                960
+                424
               ]
             }
           },
           {
-            "name": "receipt_token_mint",
+            "name": "solv_receipt_token_mint",
             "type": "pubkey"
           },
           {
-            "name": "supported_token_mint",
-            "type": "pubkey"
-          },
-          {
-            "name": "token_program",
-            "type": "pubkey"
-          },
-          {
-            "name": "token_decimals",
+            "name": "solv_receipt_token_decimals",
             "type": "u8"
           },
           {
@@ -446,13 +4182,92 @@
             "type": {
               "array": [
                 "u8",
-                14
+                7
+              ]
+            }
+          },
+          {
+            "name": "srt_operation_reserved_amount",
+            "docs": [
+              "SRT reserved amount for operation - used to withdraw VST from the solv protocol"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "srt_operation_receivable_amount",
+            "type": "u64"
+          },
+          {
+            "name": "srt_withdrawal_locked_amount",
+            "docs": [
+              "SRT locked amount for withdrawal - will be sent to the Solv protocol when withdrawal starts"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "one_srt_as_micro_vst",
+            "type": "u64"
+          },
+          {
+            "name": "_reserved3",
+            "type": {
+              "array": [
+                "u8",
+                440
+              ]
+            }
+          },
+          {
+            "name": "withdrawal_last_created_request_id",
+            "type": "u64"
+          },
+          {
+            "name": "num_withdrawal_requests",
+            "type": "u8"
+          },
+          {
+            "name": "_padding4",
+            "type": {
+              "array": [
+                "u8",
+                7
+              ]
+            }
+          },
+          {
+            "name": "withdrawal_requests",
+            "type": {
+              "array": [
+                {
+                  "defined": {
+                    "name": "WithdrawalRequest"
+                  }
+                },
+                80
+              ]
+            }
+          },
+          {
+            "name": "_reserved4",
+            "type": {
+              "array": [
+                "u8",
+                240
               ]
             }
           },
           {
             "name": "num_delegated_reward_token_mints",
             "type": "u8"
+          },
+          {
+            "name": "_padding6",
+            "type": {
+              "array": [
+                "u8",
+                7
+              ]
+            }
           },
           {
             "name": "delegated_reward_token_mints",
@@ -464,11 +4279,93 @@
             }
           },
           {
-            "name": "_reserved2",
+            "name": "_reserved6",
             "type": {
               "array": [
                 "u8",
-                8120
+                3128
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "VaultAdminRole",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "VaultManager"
+          },
+          {
+            "name": "RewardManager"
+          },
+          {
+            "name": "FundManager"
+          },
+          {
+            "name": "SolvManager"
+          }
+        ]
+      }
+    },
+    {
+      "name": "WithdrawalRequest",
+      "serialization": "bytemuck",
+      "repr": {
+        "kind": "c"
+      },
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "request_id",
+            "type": "u64"
+          },
+          {
+            "name": "vrt_withdrawal_requested_amount",
+            "type": "u64"
+          },
+          {
+            "name": "srt_withdrawal_locked_amount",
+            "docs": [
+              "SRT locked amount for withdrawal - will be sent to the Solv protocol when withdrawal starts (but field remains unchanged)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "vst_withdrawal_locked_amount",
+            "docs": [
+              "VST locked amount for withdrawal - will be locked until withdrawal is completed (but field remains unchanged)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "vst_withdrawal_total_estimated_amount",
+            "docs": [
+              "Total estimated amount of VST to be withdrawn by this request.",
+              "Obviously this includes `vst_withdrawal_locked_amount`.",
+              "First recorded as receivable amount when withdrawal starts,",
+              "then recorded as reserved amount after completion, with fee amount deducted."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "state",
+            "docs": [
+              "0: enqueued",
+              "1: processing",
+              "2: completed"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "_reserved",
+            "type": {
+              "array": [
+                "u8",
+                7
               ]
             }
           }
@@ -496,6 +4393,15 @@
       "name": "TARGET",
       "type": "string",
       "value": "\"local\""
+    },
+    {
+      "name": "VAULT_ACCOUNT_CURRENT_VERSION",
+      "docs": [
+        "## Version History",
+        "* v1: initial version (0x2800 = 10240 = 10KiB)"
+      ],
+      "type": "u16",
+      "value": "19"
     },
     {
       "name": "WBTC_MINT_ADDRESS",

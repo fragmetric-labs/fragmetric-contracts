@@ -429,7 +429,7 @@ impl SelfExecutable for RestakeVSTCommand {
                                         pricing_sources.into_iter().copied(),
                                         false,
                                     )?;
-                                    
+
                             let mut fund_account = ctx.fund_account.load_mut()?;
 
                             let supported_token =

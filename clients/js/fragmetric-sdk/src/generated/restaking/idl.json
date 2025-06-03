@@ -11764,15 +11764,7 @@
             "type": "pubkey"
           },
           {
-            "name": "supported_token_mint",
-            "type": "pubkey"
-          },
-          {
-            "name": "claimed_supported_token_amount",
-            "type": "u64"
-          },
-          {
-            "name": "operation_reserved_supported_token_amount",
+            "name": "total_unrestaking_receipt_token_amount",
             "type": "u64"
           },
           {
@@ -11784,7 +11776,55 @@
             "type": "u64"
           },
           {
-            "name": "total_unrestaking_receipt_token_amount",
+            "name": "supported_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "claimed_supported_token_amount",
+            "type": "u64"
+          },
+          {
+            "name": "transferred_supported_token_revenue_amount",
+            "type": "u64"
+          },
+          {
+            "name": "offsetted_supported_token_receivable_amount",
+            "type": "u64"
+          },
+          {
+            "name": "offsetted_asset_receivables",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "ClaimUnrestakedVSTCommandResultAssetReceivable"
+                }
+              }
+            }
+          },
+          {
+            "name": "operation_reserved_supported_token_amount",
+            "type": "u64"
+          },
+          {
+            "name": "operation_receivable_supported_token_amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ClaimUnrestakedVSTCommandResultAssetReceivable",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset_token_mint",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "asset_amount",
             "type": "u64"
           }
         ]
