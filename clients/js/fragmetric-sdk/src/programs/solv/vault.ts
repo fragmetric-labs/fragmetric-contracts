@@ -19,6 +19,8 @@ import {
 } from '../../context';
 import * as solv from '../../generated/solv';
 import { SolvBTCVaultProgram } from './program';
+import { SolvProtocolWalletAccountContext } from './solv_protocol_wallet';
+import { FundManagerAccountContext } from './fund_manager';
 
 export class SolvVaultAccountContext extends AccountContext<
   SolvBTCVaultProgram,
@@ -90,6 +92,8 @@ export class SolvVaultAccountContext extends AccountContext<
           receiptTokenDecimals: receiptTokenMint.data.decimals,
           oneReceiptTokenAsSupportedTokenAmount:
             vault.data.oneVrtAsMicroVst / 1_000_000n,
+          oneReceiptTokenAsMicroSupportedTokenAmount:
+            vault.data.oneVrtAsMicroVst,
 
           supportedTokenMint: supportedTokenMint.address,
           supportedTokenProgram: supportedTokenMint.programAddress,
@@ -110,6 +114,8 @@ export class SolvVaultAccountContext extends AccountContext<
             vault.data.srtOperationReceivableAmount,
           oneSolvReceiptTokenAsSupportedTokenAmount:
             vault.data.oneSrtAsMicroVst / 1_000_000n,
+          oneSolvReceiptTokenAsMicroSupportedTokenAmount:
+            vault.data.oneSrtAsMicroVst,
 
           withdrawal: {
             enqueued: {
@@ -282,13 +288,17 @@ export class SolvVaultAccountContext extends AccountContext<
     }
   );
 
+  readonly fundManager = new FundManagerAccountContext(this);
+
+  readonly solvProtocolWallet = new SolvProtocolWalletAccountContext(this);
+
   // TODO/v0.2.1: deprecate
   readonly closeAccountVersionOne = new TransactionTemplateContext(this, null, {
     description: 'close vault account v1 for migration from v0 -> v2',
     instructions: [
       async (parent, args, overrides) => {
         const vaultManager = (parent.program as SolvBTCVaultProgram)
-          .knownAddresses.vaultManager;
+          .knownAddresses.initialVaultManager;
 
         return Promise.all([
           solv.getCloseVaultAccountVersionOneInstructionAsync(
@@ -305,96 +315,6 @@ export class SolvVaultAccountContext extends AccountContext<
       },
     ],
   });
-
-  readonly donate = new TransactionTemplateContext(
-    this,
-    v.object({
-      payer: v.pipe(
-        v.string(),
-        v.description('ATA of payer will transfer the given amount of tokens')
-      ),
-      receiptTokenAmount: v.nullable(v.bigint(), 0n),
-      supportedTokenAmount: v.nullable(v.bigint(), 0n),
-      solvReceiptTokenAmount: v.nullable(v.bigint(), 0n),
-    }),
-    {
-      description:
-        'transfer arbitrary amount of tokens to the ATAs of the vault',
-      instructions: [
-        async (parent, args, overrides) => {
-          const [vault] = await Promise.all([parent.resolveAccount(true)]);
-          if (!vault) throw new Error('invalid context');
-
-          const [
-            payerReceiptTokenAccount,
-            payerSupportedTokenAccount,
-            payerSolvReceiptTokenAccount,
-            vaultReceiptTokenAccount,
-            vaultSupportedTokenAccount,
-            vaultSolvReceiptTokenAccount,
-          ] = await Promise.all([
-            TokenAccountContext.findAssociatedTokenAccountAddress({
-              owner: args.payer as Address,
-              mint: vault.data.vaultReceiptTokenMint,
-            }),
-            TokenAccountContext.findAssociatedTokenAccountAddress({
-              owner: args.payer as Address,
-              mint: vault.data.vaultSupportedTokenMint,
-            }),
-            TokenAccountContext.findAssociatedTokenAccountAddress({
-              owner: args.payer as Address,
-              mint: vault.data.solvReceiptTokenMint,
-            }),
-            TokenAccountContext.findAssociatedTokenAccountAddress({
-              owner: vault.address as Address,
-              mint: vault.data.vaultReceiptTokenMint,
-            }),
-            TokenAccountContext.findAssociatedTokenAccountAddress({
-              owner: vault.address as Address,
-              mint: vault.data.vaultSupportedTokenMint,
-            }),
-            TokenAccountContext.findAssociatedTokenAccountAddress({
-              owner: vault.address as Address,
-              mint: vault.data.solvReceiptTokenMint,
-            }),
-          ]);
-
-          return Promise.all([
-            args.receiptTokenAmount > 0n
-              ? token.getTransferCheckedInstruction({
-                  mint: vault.data.vaultReceiptTokenMint,
-                  decimals: vault.data.vaultReceiptTokenDecimals,
-                  authority: createNoopSigner(args.payer as Address),
-                  source: payerReceiptTokenAccount,
-                  destination: vaultReceiptTokenAccount,
-                  amount: args.receiptTokenAmount,
-                })
-              : null,
-            args.supportedTokenAmount > 0n
-              ? token.getTransferCheckedInstruction({
-                  mint: vault.data.vaultSupportedTokenMint,
-                  decimals: vault.data.vaultSupportedTokenDecimals,
-                  authority: createNoopSigner(args.payer as Address),
-                  source: payerSupportedTokenAccount,
-                  destination: vaultSupportedTokenAccount,
-                  amount: args.supportedTokenAmount,
-                })
-              : null,
-            args.solvReceiptTokenAmount > 0n
-              ? token.getTransferCheckedInstruction({
-                  mint: vault.data.solvReceiptTokenMint,
-                  decimals: vault.data.solvReceiptTokenDecimals,
-                  authority: createNoopSigner(args.payer as Address),
-                  source: payerSolvReceiptTokenAccount,
-                  destination: vaultSolvReceiptTokenAccount,
-                  amount: args.solvReceiptTokenAmount,
-                })
-              : null,
-          ]);
-        },
-      ],
-    }
-  );
 
   /** transactions authorized to vault manager **/
   readonly initializeReceiptTokenMint = new TransactionTemplateContext(
@@ -413,7 +333,7 @@ export class SolvVaultAccountContext extends AccountContext<
           ]);
 
           const vaultManager = (parent.program as SolvBTCVaultProgram)
-            .knownAddresses.vaultManager;
+            .knownAddresses.initialVaultManager;
 
           const vrtSpace = token.getMintSize();
           const vrtRent = await this.runtime.rpc
@@ -460,68 +380,68 @@ export class SolvVaultAccountContext extends AccountContext<
             )(parent),
           ]);
 
-          const vaultManager = (parent.program as SolvBTCVaultProgram)
-            .knownAddresses.vaultManager;
+          if (currentVersion == 0) {
+            const vaultManager = (parent.program as SolvBTCVaultProgram)
+              .knownAddresses.initialVaultManager;
 
-          return Promise.all([
-            ...(currentVersion == 0
-              ? await (async () => {
-                  const ix =
-                    await solv.getVaultManagerInitializeVaultAccountInstructionAsync(
-                      {
-                        payer: createNoopSigner(payer! as Address),
-                        vaultManager: createNoopSigner(vaultManager),
-                        vaultReceiptTokenMint: parent.__seedReceiptTokenMint,
-                        vaultSupportedTokenMint:
-                          parent.__seedSupportedTokenMint,
-                        solvReceiptTokenMint: parent.__seedSolvReceiptTokenMint,
-                        program: this.program.address,
-                      },
-                      {
-                        programAddress: this.program.address,
-                      }
-                    );
+            const ix =
+              await solv.getVaultManagerInitializeVaultAccountInstructionAsync(
+                {
+                  payer: createNoopSigner(payer! as Address),
+                  vaultManager: createNoopSigner(vaultManager),
+                  vaultReceiptTokenMint: parent.__seedReceiptTokenMint,
+                  vaultSupportedTokenMint:
+                  parent.__seedSupportedTokenMint,
+                  solvReceiptTokenMint: parent.__seedSolvReceiptTokenMint,
+                  program: this.program.address,
+                },
+                {
+                  programAddress: this.program.address,
+                }
+              );
 
-                  const vault = ix.accounts[2].address;
-                  return Promise.all([
-                    token.getCreateAssociatedTokenIdempotentInstructionAsync({
-                      payer: createNoopSigner(payer as Address),
-                      mint: parent.__seedReceiptTokenMint,
-                      owner: vault,
-                    }),
-                    token.getCreateAssociatedTokenIdempotentInstructionAsync({
-                      payer: createNoopSigner(payer as Address),
-                      mint: parent.__seedSupportedTokenMint,
-                      owner: vault,
-                    }),
-                    token.getCreateAssociatedTokenIdempotentInstructionAsync({
-                      payer: createNoopSigner(payer as Address),
-                      mint: parent.__seedSolvReceiptTokenMint,
-                      owner: vault,
-                    }),
-                    ix,
-                  ]);
-                })()
-              : []),
-            solv.getVaultManagerUpdateVaultAccountIfNeededInstructionAsync(
-              {
-                vaultManager: createNoopSigner(vaultManager),
-                vaultReceiptTokenMint: parent.__seedReceiptTokenMint,
-                vaultSupportedTokenMint: parent.__seedSupportedTokenMint,
-                solvReceiptTokenMint: parent.__seedSolvReceiptTokenMint,
-                program: this.program.address,
-              },
-              {
-                programAddress: this.program.address,
-              }
-            ),
-          ]);
+            const vault = ix.accounts[2].address;
+            return Promise.all([
+              token.getCreateAssociatedTokenIdempotentInstructionAsync({
+                payer: createNoopSigner(payer as Address),
+                mint: parent.__seedReceiptTokenMint,
+                owner: vault,
+              }),
+              token.getCreateAssociatedTokenIdempotentInstructionAsync({
+                payer: createNoopSigner(payer as Address),
+                mint: parent.__seedSupportedTokenMint,
+                owner: vault,
+              }),
+              token.getCreateAssociatedTokenIdempotentInstructionAsync({
+                payer: createNoopSigner(payer as Address),
+                mint: parent.__seedSolvReceiptTokenMint,
+                owner: vault,
+              }),
+              ix,
+            ]);
+          } else {
+            const vaultManager = parent.account!.data.vaultManager;
+            return Promise.all([
+              solv.getVaultManagerUpdateVaultAccountIfNeededInstructionAsync(
+                {
+                  vaultManager: createNoopSigner(vaultManager),
+                  vaultReceiptTokenMint: parent.__seedReceiptTokenMint,
+                  vaultSupportedTokenMint: parent.__seedSupportedTokenMint,
+                  solvReceiptTokenMint: parent.__seedSolvReceiptTokenMint,
+                  program: this.program.address,
+                },
+                {
+                  programAddress: this.program.address,
+                }
+              ),
+            ]);
+          }
         },
       ],
     }
   );
 
-  readonly initializeAdminRoles = new TransactionTemplateContext(
+  readonly setAdminRoles = new TransactionTemplateContext(
     this,
     v.object({
       vaultManager: v.pipe(
@@ -589,8 +509,17 @@ export class SolvVaultAccountContext extends AccountContext<
                   }
                 )
               : null,
-            args.fundManager
-              ? solv.getUpdateVaultAdminRoleInstructionAsync(
+            ...(args.fundManager
+              ? [
+                // to make the fund manager account look alive
+                system.getTransferSolInstruction({
+                  source: createNoopSigner(payer as Address),
+                  destination: args.fundManager as Address,
+                  amount: await this.runtime.rpc
+                    .getMinimumBalanceForRentExemption(BigInt(0n))
+                    .send(),
+                }),
+                solv.getUpdateVaultAdminRoleInstructionAsync(
                   {
                     oldVaultAdmin: createNoopSigner(vault.data.fundManager),
                     newVaultAdmin: args.fundManager as Address,
@@ -602,7 +531,9 @@ export class SolvVaultAccountContext extends AccountContext<
                     programAddress: this.program.address,
                   }
                 )
-              : null,
+              ]
+              : []
+            ),
             args.solvManager
               ? solv.getUpdateVaultAdminRoleInstructionAsync(
                   {
@@ -686,10 +617,22 @@ export class SolvVaultAccountContext extends AccountContext<
       description: 'deposit supported token to the vault',
       instructions: [
         async (parent, args, overrides) => {
-          const [vault] = await Promise.all([parent.resolveAccount(true)]);
+          const [vault, feePayer] = await Promise.all([
+            parent.resolveAccount(true),
+            transformAddressResolverVariant(
+              overrides.feePayer ??
+                this.runtime.options.transaction.feePayer ??
+                (() => Promise.resolve(null))
+            )(parent),
+          ]);
           if (!vault) throw new Error('invalid context');
 
           return Promise.all([
+            token.getCreateAssociatedTokenIdempotentInstructionAsync({
+              payer: createNoopSigner(feePayer as Address),
+              mint: vault.data.vaultReceiptTokenMint,
+              owner: args.payer as Address,
+            }),
             solv.getFundManagerDepositInstructionAsync(
               {
                 fundManager: createNoopSigner(vault.data.fundManager),
@@ -724,10 +667,22 @@ export class SolvVaultAccountContext extends AccountContext<
       description: 'request withdrawal of supported tokens from the vault',
       instructions: [
         async (parent, args, overrides) => {
-          const [vault] = await Promise.all([parent.resolveAccount(true)]);
+          const [vault, feePayer] = await Promise.all([
+            parent.resolveAccount(true),
+            transformAddressResolverVariant(
+              overrides.feePayer ??
+                this.runtime.options.transaction.feePayer ??
+                (() => Promise.resolve(null))
+            )(parent),
+          ]);
           if (!vault) throw new Error('invalid context');
 
           return Promise.all([
+            token.getCreateAssociatedTokenIdempotentInstructionAsync({
+              payer: createNoopSigner(feePayer as Address),
+              mint: vault.data.vaultSupportedTokenMint,
+              owner: args.payer as Address,
+            }),
             solv.getFundManagerRequestWithdrawalInstructionAsync(
               {
                 fundManager: createNoopSigner(vault.data.fundManager),
@@ -820,9 +775,11 @@ export class SolvVaultAccountContext extends AccountContext<
           'redeemed solv receipt token amount to complete, it can be part of incomplete deposits'
         )
       ),
-      oneSolvReceiptTokenAsMicroSupportedTokenAmount: v.pipe(
+      newOneSolvReceiptTokenAsMicroSupportedTokenAmount: v.pipe(
         v.bigint(),
-        v.description('redemption rate of srt to vst with +6 more precisions')
+        v.description(
+          'new redemption rate of srt to vst with +6 more precisions'
+        )
       ),
     }),
     {
@@ -843,8 +800,8 @@ export class SolvVaultAccountContext extends AccountContext<
                 program: this.program.address,
 
                 srtAmount: args.redeemedSolvReceiptTokenAmount,
-                oneSrtAsMicroVst:
-                  args.oneSolvReceiptTokenAsMicroSupportedTokenAmount,
+                newOneSrtAsMicroVst:
+                  args.newOneSolvReceiptTokenAsMicroSupportedTokenAmount,
               },
               {
                 programAddress: this.program.address,
@@ -901,9 +858,11 @@ export class SolvVaultAccountContext extends AccountContext<
           'redeemed vault supported token amount to complete, it can be part of incomplete withdrawal requests'
         )
       ),
-      oneSolvReceiptTokenAsMicroSupportedTokenAmount: v.pipe(
+      oldOneSolvReceiptTokenAsMicroSupportedTokenAmount: v.pipe(
         v.bigint(),
-        v.description('redemption rate of srt to vst with +6 more precisions')
+        v.description(
+          'old redemption rate of srt to vst with +6 more precisions'
+        )
       ),
     }),
     {
@@ -925,8 +884,8 @@ export class SolvVaultAccountContext extends AccountContext<
 
                 srtAmount: args.burntSolvReceiptTokenAmount,
                 vstAmount: args.redeemedSupportedTokenAmount,
-                oneSrtAsMicroVst:
-                  args.oneSolvReceiptTokenAsMicroSupportedTokenAmount,
+                oldOneSrtAsMicroVst:
+                  args.oldOneSolvReceiptTokenAsMicroSupportedTokenAmount,
               },
               {
                 programAddress: this.program.address,
@@ -957,16 +916,25 @@ export class SolvVaultAccountContext extends AccountContext<
           ]);
           if (!vault) throw new Error('invalid context');
 
+          const rent = await this.runtime.rpc
+            .getMinimumBalanceForRentExemption(BigInt(0n))
+            .send();
           return Promise.all([
+            // to make the solv protocol wallet account look alive
+            system.getTransferSolInstruction({
+              source: createNoopSigner(payer as Address),
+              destination: args.address as Address,
+              amount: rent,
+            }),
             token.getCreateAssociatedTokenIdempotentInstructionAsync({
               payer: createNoopSigner(payer as Address),
               mint: vault.data.vaultSupportedTokenMint,
-              owner: vault.data.solvProtocolWallet,
+              owner: args.address as Address,
             }),
             token.getCreateAssociatedTokenIdempotentInstructionAsync({
               payer: createNoopSigner(payer as Address),
               mint: vault.data.solvReceiptTokenMint,
-              owner: vault.data.solvProtocolWallet,
+              owner: args.address as Address,
             }),
             solv.getSolvManagerSetSolvProtocolWalletInstructionAsync(
               {
@@ -1010,6 +978,97 @@ export class SolvVaultAccountContext extends AccountContext<
                 programAddress: this.program.address,
               }
             ),
+          ]);
+        },
+      ],
+    }
+  );
+
+  /** transactions for testing and manual operation **/
+  readonly donate = new TransactionTemplateContext(
+    this,
+    v.object({
+      payer: v.pipe(
+        v.string(),
+        v.description('ATA of payer will transfer the given amount of tokens')
+      ),
+      receiptTokenAmount: v.nullable(v.bigint(), 0n),
+      supportedTokenAmount: v.nullable(v.bigint(), 0n),
+      solvReceiptTokenAmount: v.nullable(v.bigint(), 0n),
+    }),
+    {
+      description:
+        'transfer arbitrary amount of tokens to the ATAs of the vault',
+      instructions: [
+        async (parent, args, overrides) => {
+          const [vault] = await Promise.all([parent.resolveAccount(true)]);
+          if (!vault) throw new Error('invalid context');
+
+          const [
+            payerReceiptTokenAccount,
+            payerSupportedTokenAccount,
+            payerSolvReceiptTokenAccount,
+            vaultReceiptTokenAccount,
+            vaultSupportedTokenAccount,
+            vaultSolvReceiptTokenAccount,
+          ] = await Promise.all([
+            TokenAccountContext.findAssociatedTokenAccountAddress({
+              owner: args.payer as Address,
+              mint: vault.data.vaultReceiptTokenMint,
+            }),
+            TokenAccountContext.findAssociatedTokenAccountAddress({
+              owner: args.payer as Address,
+              mint: vault.data.vaultSupportedTokenMint,
+            }),
+            TokenAccountContext.findAssociatedTokenAccountAddress({
+              owner: args.payer as Address,
+              mint: vault.data.solvReceiptTokenMint,
+            }),
+            TokenAccountContext.findAssociatedTokenAccountAddress({
+              owner: vault.address as Address,
+              mint: vault.data.vaultReceiptTokenMint,
+            }),
+            TokenAccountContext.findAssociatedTokenAccountAddress({
+              owner: vault.address as Address,
+              mint: vault.data.vaultSupportedTokenMint,
+            }),
+            TokenAccountContext.findAssociatedTokenAccountAddress({
+              owner: vault.address as Address,
+              mint: vault.data.solvReceiptTokenMint,
+            }),
+          ]);
+
+          return Promise.all([
+            args.receiptTokenAmount > 0n
+              ? token.getTransferCheckedInstruction({
+                  mint: vault.data.vaultReceiptTokenMint,
+                  decimals: vault.data.vaultReceiptTokenDecimals,
+                  authority: createNoopSigner(args.payer as Address),
+                  source: payerReceiptTokenAccount,
+                  destination: vaultReceiptTokenAccount,
+                  amount: args.receiptTokenAmount,
+                })
+              : null,
+            args.supportedTokenAmount > 0n
+              ? token.getTransferCheckedInstruction({
+                  mint: vault.data.vaultSupportedTokenMint,
+                  decimals: vault.data.vaultSupportedTokenDecimals,
+                  authority: createNoopSigner(args.payer as Address),
+                  source: payerSupportedTokenAccount,
+                  destination: vaultSupportedTokenAccount,
+                  amount: args.supportedTokenAmount,
+                })
+              : null,
+            args.solvReceiptTokenAmount > 0n
+              ? token.getTransferCheckedInstruction({
+                  mint: vault.data.solvReceiptTokenMint,
+                  decimals: vault.data.solvReceiptTokenDecimals,
+                  authority: createNoopSigner(args.payer as Address),
+                  source: payerSolvReceiptTokenAccount,
+                  destination: vaultSolvReceiptTokenAccount,
+                  amount: args.solvReceiptTokenAmount,
+                })
+              : null,
           ]);
         },
       ],

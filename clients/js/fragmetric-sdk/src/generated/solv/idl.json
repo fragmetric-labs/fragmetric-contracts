@@ -1837,7 +1837,7 @@
           "type": "u64"
         },
         {
-          "name": "one_srt_as_micro_vst",
+          "name": "new_one_srt_as_micro_vst",
           "type": "u64"
         }
       ]
@@ -2312,7 +2312,7 @@
           "type": "u64"
         },
         {
-          "name": "one_srt_as_micro_vst",
+          "name": "old_one_srt_as_micro_vst",
           "type": "u64"
         }
       ]

@@ -130,12 +130,12 @@ export type SolvManagerCompleteDepositsInstruction<
 export type SolvManagerCompleteDepositsInstructionData = {
   discriminator: ReadonlyUint8Array;
   srtAmount: bigint;
-  oneSrtAsMicroVst: bigint;
+  newOneSrtAsMicroVst: bigint;
 };
 
 export type SolvManagerCompleteDepositsInstructionDataArgs = {
   srtAmount: number | bigint;
-  oneSrtAsMicroVst: number | bigint;
+  newOneSrtAsMicroVst: number | bigint;
 };
 
 export function getSolvManagerCompleteDepositsInstructionDataEncoder(): Encoder<SolvManagerCompleteDepositsInstructionDataArgs> {
@@ -143,7 +143,7 @@ export function getSolvManagerCompleteDepositsInstructionDataEncoder(): Encoder<
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
       ['srtAmount', getU64Encoder()],
-      ['oneSrtAsMicroVst', getU64Encoder()],
+      ['newOneSrtAsMicroVst', getU64Encoder()],
     ]),
     (value) => ({
       ...value,
@@ -156,7 +156,7 @@ export function getSolvManagerCompleteDepositsInstructionDataDecoder(): Decoder<
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
     ['srtAmount', getU64Decoder()],
-    ['oneSrtAsMicroVst', getU64Decoder()],
+    ['newOneSrtAsMicroVst', getU64Decoder()],
   ]);
 }
 
@@ -199,7 +199,7 @@ export type SolvManagerCompleteDepositsAsyncInput<
   eventAuthority?: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
   srtAmount: SolvManagerCompleteDepositsInstructionDataArgs['srtAmount'];
-  oneSrtAsMicroVst: SolvManagerCompleteDepositsInstructionDataArgs['oneSrtAsMicroVst'];
+  newOneSrtAsMicroVst: SolvManagerCompleteDepositsInstructionDataArgs['newOneSrtAsMicroVst'];
 };
 
 export async function getSolvManagerCompleteDepositsInstructionAsync<
@@ -491,7 +491,7 @@ export type SolvManagerCompleteDepositsInput<
   eventAuthority: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
   srtAmount: SolvManagerCompleteDepositsInstructionDataArgs['srtAmount'];
-  oneSrtAsMicroVst: SolvManagerCompleteDepositsInstructionDataArgs['oneSrtAsMicroVst'];
+  newOneSrtAsMicroVst: SolvManagerCompleteDepositsInstructionDataArgs['newOneSrtAsMicroVst'];
 };
 
 export function getSolvManagerCompleteDepositsInstruction<

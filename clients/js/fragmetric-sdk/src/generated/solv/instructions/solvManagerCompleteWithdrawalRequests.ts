@@ -130,13 +130,13 @@ export type SolvManagerCompleteWithdrawalRequestsInstructionData = {
   discriminator: ReadonlyUint8Array;
   srtAmount: bigint;
   vstAmount: bigint;
-  oneSrtAsMicroVst: bigint;
+  oldOneSrtAsMicroVst: bigint;
 };
 
 export type SolvManagerCompleteWithdrawalRequestsInstructionDataArgs = {
   srtAmount: number | bigint;
   vstAmount: number | bigint;
-  oneSrtAsMicroVst: number | bigint;
+  oldOneSrtAsMicroVst: number | bigint;
 };
 
 export function getSolvManagerCompleteWithdrawalRequestsInstructionDataEncoder(): Encoder<SolvManagerCompleteWithdrawalRequestsInstructionDataArgs> {
@@ -145,7 +145,7 @@ export function getSolvManagerCompleteWithdrawalRequestsInstructionDataEncoder()
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
       ['srtAmount', getU64Encoder()],
       ['vstAmount', getU64Encoder()],
-      ['oneSrtAsMicroVst', getU64Encoder()],
+      ['oldOneSrtAsMicroVst', getU64Encoder()],
     ]),
     (value) => ({
       ...value,
@@ -159,7 +159,7 @@ export function getSolvManagerCompleteWithdrawalRequestsInstructionDataDecoder()
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
     ['srtAmount', getU64Decoder()],
     ['vstAmount', getU64Decoder()],
-    ['oneSrtAsMicroVst', getU64Decoder()],
+    ['oldOneSrtAsMicroVst', getU64Decoder()],
   ]);
 }
 
@@ -203,7 +203,7 @@ export type SolvManagerCompleteWithdrawalRequestsAsyncInput<
   program: Address<TAccountProgram>;
   srtAmount: SolvManagerCompleteWithdrawalRequestsInstructionDataArgs['srtAmount'];
   vstAmount: SolvManagerCompleteWithdrawalRequestsInstructionDataArgs['vstAmount'];
-  oneSrtAsMicroVst: SolvManagerCompleteWithdrawalRequestsInstructionDataArgs['oneSrtAsMicroVst'];
+  oldOneSrtAsMicroVst: SolvManagerCompleteWithdrawalRequestsInstructionDataArgs['oldOneSrtAsMicroVst'];
 };
 
 export async function getSolvManagerCompleteWithdrawalRequestsInstructionAsync<
@@ -496,7 +496,7 @@ export type SolvManagerCompleteWithdrawalRequestsInput<
   program: Address<TAccountProgram>;
   srtAmount: SolvManagerCompleteWithdrawalRequestsInstructionDataArgs['srtAmount'];
   vstAmount: SolvManagerCompleteWithdrawalRequestsInstructionDataArgs['vstAmount'];
-  oneSrtAsMicroVst: SolvManagerCompleteWithdrawalRequestsInstructionDataArgs['oneSrtAsMicroVst'];
+  oldOneSrtAsMicroVst: SolvManagerCompleteWithdrawalRequestsInstructionDataArgs['oldOneSrtAsMicroVst'];
 };
 
 export function getSolvManagerCompleteWithdrawalRequestsInstruction<
