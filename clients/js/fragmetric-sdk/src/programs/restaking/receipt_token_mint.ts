@@ -133,6 +133,7 @@ export class RestakingReceiptTokenMintAccountContext extends TokenMintAccountCon
                     ) != 'PeggedToken'
                 ) // skip pegged token
                 .map((v) => v.pricingSource.address)
+                .concat(normalizedTokenPool ? [normalizedTokenPool] : [])
                 .concat(
                   restakingVaults.map(
                     (v) => v.receiptTokenPricingSource.address
