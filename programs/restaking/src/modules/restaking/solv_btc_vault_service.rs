@@ -363,6 +363,8 @@ impl<'info> SolvBTCVaultService<'info> {
         let deducted_supported_token_fee_amount = vault.get_vst_deducted_fee_amount();
         let claimed_supported_token_amount = vault.get_vst_claimable_amount();
 
+        drop(vault);
+
         solv::cpi::fund_manager_withdraw(CpiContext::new_with_signer(
             self.vault_program.to_account_info(),
             solv::cpi::accounts::FundManagerContext {
@@ -397,8 +399,10 @@ impl<'info> SolvBTCVaultService<'info> {
             claimed_supported_token_amount
         );
 
-        let total_unrestaking_vault_receipt_token_amount =
-            vault.get_vrt_withdrawal_incompleted_amount();
+        let total_unrestaking_vault_receipt_token_amount = self
+            .vault_account
+            .load()?
+            .get_vrt_withdrawal_incompleted_amount();
 
         msg!("CLAIM_UNRESTAKED#solv: receipt_token_mint={}, payer_vault_supported_token_account_amount={}, unrestaked_receipt_token_amount={}, claimed_supported_token_amount={}, deducted_supported_token_fee_amount={}",
             vault_receipt_token_mint.key,

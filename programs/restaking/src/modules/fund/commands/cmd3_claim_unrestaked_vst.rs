@@ -104,16 +104,10 @@ impl ClaimUnrestakedVSTCommand {
         let fund_account = ctx.fund_account.load()?;
         let items = fund_account
             .get_restaking_vaults_iter()
-            .filter_map(|restaking_vault| {
-                if restaking_vault.receipt_token_operation_receivable_amount > 0 {
-                    Some(ClaimUnrestakedVSTCommandItem {
-                        vault: restaking_vault.vault,
-                        receipt_token_mint: restaking_vault.receipt_token_mint,
-                        supported_token_mint: restaking_vault.supported_token_mint,
-                    })
-                } else {
-                    None
-                }
+            .map(|restaking_vault| ClaimUnrestakedVSTCommandItem {
+                vault: restaking_vault.vault,
+                receipt_token_mint: restaking_vault.receipt_token_mint,
+                supported_token_mint: restaking_vault.supported_token_mint,
             })
             .peekable();
 

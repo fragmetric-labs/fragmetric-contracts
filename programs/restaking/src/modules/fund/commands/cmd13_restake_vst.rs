@@ -1,15 +1,15 @@
 use anchor_lang::prelude::*;
 
-use crate::modules::fund::FUND_ACCOUNT_MAX_SUPPORTED_TOKENS;
-use crate::modules::pricing::TokenPricingSource;
-use crate::modules::restaking::{JitoRestakingVaultService, SolvBTCVaultService};
-use crate::{errors, modules::pricing};
-
 use super::{
     DelegateVSTCommand, FundService, OperationCommandContext, OperationCommandEntry,
     OperationCommandResult, SelfExecutable, WeightedAllocationParticipant,
     WeightedAllocationStrategy, FUND_ACCOUNT_MAX_RESTAKING_VAULTS,
 };
+use crate::modules::fund::FUND_ACCOUNT_MAX_SUPPORTED_TOKENS;
+use crate::modules::pricing::TokenPricingSource;
+use crate::modules::restaking::{JitoRestakingVaultService, SolvBTCVaultService};
+use crate::utils::PDASeeds;
+use crate::{errors, modules::pricing};
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
 pub struct RestakeVSTCommand {
@@ -414,7 +414,7 @@ impl SelfExecutable for RestakeVSTCommand {
                                 token_program,
                                 event_authority,
                                 ctx.fund_account.as_ref(),
-                                &[&fund_account.get_reserve_account_seeds()],
+                                &[&fund_account.get_seeds()],
                                 fund_vault_receipt_token_account,
                                 fund_vault_supported_token_account,
                                 fund_reserve,

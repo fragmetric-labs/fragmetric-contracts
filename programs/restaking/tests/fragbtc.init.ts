@@ -57,7 +57,7 @@ export function initializeFragBTC(testCtx: TestSuiteContext) {
         tokenAccumulatedDepositAmount: null,
         tokenAccumulatedDepositCapacityAmount: MAX_U64,
         tokenWithdrawable: true,
-        tokenWithdrawalNormalReserveRateBps: 0,
+        tokenWithdrawalNormalReserveRateBps: 30, // 0.3%
         tokenWithdrawalNormalReserveMaxAmount: MAX_U64,
         tokenRebalancingAmount: 0n,
         solAllocationWeight: 0n,
@@ -78,7 +78,7 @@ export function initializeFragBTC(testCtx: TestSuiteContext) {
         tokenAccumulatedDepositAmount: null,
         tokenAccumulatedDepositCapacityAmount: MAX_U64,
         tokenWithdrawable: true,
-        tokenWithdrawalNormalReserveRateBps: 0,
+        tokenWithdrawalNormalReserveRateBps: 30, // 0.3%
         tokenWithdrawalNormalReserveMaxAmount: MAX_U64,
         tokenRebalancingAmount: 0n,
         solAllocationWeight: 0n,
@@ -99,7 +99,7 @@ export function initializeFragBTC(testCtx: TestSuiteContext) {
         tokenAccumulatedDepositAmount: null,
         tokenAccumulatedDepositCapacityAmount: MAX_U64,
         tokenWithdrawable: true,
-        tokenWithdrawalNormalReserveRateBps: 0,
+        tokenWithdrawalNormalReserveRateBps: 30, // 0.3%
         tokenWithdrawalNormalReserveMaxAmount: MAX_U64,
         tokenRebalancingAmount: 0n,
         solAllocationWeight: 0n,
@@ -139,6 +139,12 @@ export function initializeFragBTC(testCtx: TestSuiteContext) {
         },
       });
     },
+    () =>
+      ctx.fund.updateRestakingVaultStrategy.execute({
+        vault: solv.zBTC.address!,
+        solAllocationCapacityAmount: MAX_U64,
+        solAllocationWeight: 1n,
+      }),
 
     // configure reward settings (zBTC vault)
     () =>
@@ -182,6 +188,12 @@ export function initializeFragBTC(testCtx: TestSuiteContext) {
         },
       });
     },
+    () =>
+      ctx.fund.updateRestakingVaultStrategy.execute({
+        vault: solv.cbBTC.address!,
+        solAllocationCapacityAmount: MAX_U64,
+        solAllocationWeight: 1n,
+      }),
 
     // initialize Solv BTC vault (wBTC)
     () => solv.wBTC.initializeReceiptTokenMint.execute(null),
@@ -196,6 +208,12 @@ export function initializeFragBTC(testCtx: TestSuiteContext) {
         },
       });
     },
+    () =>
+      ctx.fund.updateRestakingVaultStrategy.execute({
+        vault: solv.wBTC.address!,
+        solAllocationCapacityAmount: MAX_U64,
+        solAllocationWeight: 1n,
+      }),
 
     // initialize wrapped token mint and configuration
     () =>

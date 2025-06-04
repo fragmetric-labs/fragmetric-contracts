@@ -242,7 +242,7 @@ describe('restaking.fragBTC test', async () => {
             "tokenRebalancingAmount": 0n,
             "tokenWithdrawable": true,
             "tokenWithdrawalNormalReserveMaxAmount": 18446744073709551615n,
-            "tokenWithdrawalNormalReserveRateBps": 0,
+            "tokenWithdrawalNormalReserveRateBps": 30,
           },
           {
             "solAllocationCapacityAmount": 18446744073709551615n,
@@ -254,7 +254,7 @@ describe('restaking.fragBTC test', async () => {
             "tokenRebalancingAmount": 0n,
             "tokenWithdrawable": true,
             "tokenWithdrawalNormalReserveMaxAmount": 18446744073709551615n,
-            "tokenWithdrawalNormalReserveRateBps": 0,
+            "tokenWithdrawalNormalReserveRateBps": 30,
           },
           {
             "solAllocationCapacityAmount": 18446744073709551615n,
@@ -266,7 +266,7 @@ describe('restaking.fragBTC test', async () => {
             "tokenRebalancingAmount": 0n,
             "tokenWithdrawable": true,
             "tokenWithdrawalNormalReserveMaxAmount": 18446744073709551615n,
-            "tokenWithdrawalNormalReserveRateBps": 0,
+            "tokenWithdrawalNormalReserveRateBps": 30,
           },
         ],
         "generalStrategy": {
@@ -294,8 +294,8 @@ describe('restaking.fragBTC test', async () => {
               "__kind": "SolvBTCVault",
               "address": "H6pGcL98Rkz2aV8pq5jDEMdtrnogAmhUM5w8RAsddeB6",
             },
-            "solAllocationCapacityAmount": 0n,
-            "solAllocationWeight": 0n,
+            "solAllocationCapacityAmount": 18446744073709551615n,
+            "solAllocationWeight": 1n,
             "vault": "H6pGcL98Rkz2aV8pq5jDEMdtrnogAmhUM5w8RAsddeB6",
           },
           {
@@ -306,8 +306,8 @@ describe('restaking.fragBTC test', async () => {
               "__kind": "SolvBTCVault",
               "address": "5zXiPsDznkiEA4nKvWEWuJEYBupPEBAdA1Qnb7j25PdJ",
             },
-            "solAllocationCapacityAmount": 0n,
-            "solAllocationWeight": 0n,
+            "solAllocationCapacityAmount": 18446744073709551615n,
+            "solAllocationWeight": 1n,
             "vault": "5zXiPsDznkiEA4nKvWEWuJEYBupPEBAdA1Qnb7j25PdJ",
           },
           {
@@ -318,8 +318,8 @@ describe('restaking.fragBTC test', async () => {
               "__kind": "SolvBTCVault",
               "address": "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
             },
-            "solAllocationCapacityAmount": 0n,
-            "solAllocationWeight": 0n,
+            "solAllocationCapacityAmount": 18446744073709551615n,
+            "solAllocationWeight": 1n,
             "vault": "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
           },
         ],
@@ -1192,7 +1192,10 @@ describe('restaking.fragBTC test', async () => {
     );
 
     // run operator to harvest
-    await ctx.fund.runCommand.executeChained(null);
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestReward',
+      operator: restaking.knownAddresses.fundManager,
+    });
 
     await expect(ctx.resolve(true)).resolves.toMatchObject({
       __pricingSources: [
@@ -2056,4 +2059,1196 @@ describe('restaking.fragBTC test', async () => {
   });
 
   // TODO: full operation test through cash in/out flow
+  /** 8. operation cycle */
+  test('fragBTC does restake/unrestake assets into/from solvBTC vault', async () => {
+    // no changes on fragBTC price
+    await expectMasked(ctx.resolve(true)).resolves.toMatchInlineSnapshot(`
+      {
+        "__lookupTableAddress": "MASKED(__lookupTableAddress)",
+        "__pricingSources": [
+          {
+            "address": "4yp9YAXCJsKWMDZq2Q4j4amktvJGXBCpr3Lmv2cYBrb8",
+            "role": 0,
+          },
+          {
+            "address": "H6pGcL98Rkz2aV8pq5jDEMdtrnogAmhUM5w8RAsddeB6",
+            "role": 0,
+          },
+          {
+            "address": "5zXiPsDznkiEA4nKvWEWuJEYBupPEBAdA1Qnb7j25PdJ",
+            "role": 0,
+          },
+          {
+            "address": "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
+            "role": 0,
+          },
+        ],
+        "depositResidualMicroReceiptTokenAmount": 999995n,
+        "metadata": null,
+        "normalizedToken": null,
+        "oneReceiptTokenAsSOL": 647695086769n,
+        "receiptTokenDecimals": 8,
+        "receiptTokenMint": "ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz",
+        "receiptTokenSupply": 5620987629n,
+        "restakingVaultReceiptTokens": [
+          {
+            "mint": "DNLsKFnrBjTBKp1eSwt8z1iNu2T2PL3MnxZFsGEEpQCf",
+            "oneReceiptTokenAsSol": 0n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 0n,
+            "operationTotalAmount": 0n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "vault": "H6pGcL98Rkz2aV8pq5jDEMdtrnogAmhUM5w8RAsddeB6",
+          },
+          {
+            "mint": "BDYcrsJ6Y4kPdkReieh4RV58ziMNsYnMPpnDZgyAsdmh",
+            "oneReceiptTokenAsSol": 0n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 0n,
+            "operationTotalAmount": 0n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "vault": "5zXiPsDznkiEA4nKvWEWuJEYBupPEBAdA1Qnb7j25PdJ",
+          },
+          {
+            "mint": "4hNFn9hWmL4xxH7PxnZntFcDyEhXx5vHu4uM5rNj4fcL",
+            "oneReceiptTokenAsSol": 0n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 0n,
+            "operationTotalAmount": 0n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "vault": "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
+          },
+        ],
+        "supportedAssets": [
+          {
+            "decimals": 8,
+            "depositable": true,
+            "mint": "zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg",
+            "oneTokenAsReceiptToken": 99999999n,
+            "oneTokenAsSol": 647695086539n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 2181481475n,
+            "operationTotalAmount": 2181481475n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unstakingAmountAsSOL": 0n,
+            "withdrawable": true,
+            "withdrawableValueAsReceiptTokenAmount": 2181481474n,
+            "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
+            "withdrawalResidualMicroAssetAmount": 999999n,
+            "withdrawalUserReservedAmount": 0n,
+          },
+          {
+            "decimals": 8,
+            "depositable": true,
+            "mint": "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
+            "oneTokenAsReceiptToken": 99999999n,
+            "oneTokenAsSol": 647695086539n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 1487654321n,
+            "operationTotalAmount": 1487654321n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unstakingAmountAsSOL": 0n,
+            "withdrawable": true,
+            "withdrawableValueAsReceiptTokenAmount": 1487654320n,
+            "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
+            "withdrawalResidualMicroAssetAmount": 16418n,
+            "withdrawalUserReservedAmount": 0n,
+          },
+          {
+            "decimals": 8,
+            "depositable": true,
+            "mint": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
+            "oneTokenAsReceiptToken": 99999999n,
+            "oneTokenAsSol": 647695086539n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 1951851835n,
+            "operationTotalAmount": 1951851835n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unstakingAmountAsSOL": 0n,
+            "withdrawable": true,
+            "withdrawableValueAsReceiptTokenAmount": 1951851834n,
+            "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
+            "withdrawalResidualMicroAssetAmount": 0n,
+            "withdrawalUserReservedAmount": 0n,
+          },
+        ],
+        "wrappedTokenMint": "9mCDpsmPeozJKhdpYvNTJxi9i2Eaav3iwT5gzjN7VbaN",
+      }
+    `);
+    await ctx.fund.runCommand.executeChained(null);
+    await expectMasked(ctx.resolve(true)).resolves.toMatchInlineSnapshot(`
+      {
+        "__lookupTableAddress": "MASKED(__lookupTableAddress)",
+        "__pricingSources": [
+          {
+            "address": "4yp9YAXCJsKWMDZq2Q4j4amktvJGXBCpr3Lmv2cYBrb8",
+            "role": 0,
+          },
+          {
+            "address": "H6pGcL98Rkz2aV8pq5jDEMdtrnogAmhUM5w8RAsddeB6",
+            "role": 0,
+          },
+          {
+            "address": "5zXiPsDznkiEA4nKvWEWuJEYBupPEBAdA1Qnb7j25PdJ",
+            "role": 0,
+          },
+          {
+            "address": "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
+            "role": 0,
+          },
+        ],
+        "depositResidualMicroReceiptTokenAmount": 999995n,
+        "metadata": null,
+        "normalizedToken": null,
+        "oneReceiptTokenAsSOL": 647695086769n,
+        "receiptTokenDecimals": 8,
+        "receiptTokenMint": "ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz",
+        "receiptTokenSupply": 5620987629n,
+        "restakingVaultReceiptTokens": [
+          {
+            "mint": "DNLsKFnrBjTBKp1eSwt8z1iNu2T2PL3MnxZFsGEEpQCf",
+            "oneReceiptTokenAsSol": 647695086539n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 2174937031n,
+            "operationTotalAmount": 2174937031n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "vault": "H6pGcL98Rkz2aV8pq5jDEMdtrnogAmhUM5w8RAsddeB6",
+          },
+          {
+            "mint": "BDYcrsJ6Y4kPdkReieh4RV58ziMNsYnMPpnDZgyAsdmh",
+            "oneReceiptTokenAsSol": 647695086539n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 1483191359n,
+            "operationTotalAmount": 1483191359n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "vault": "5zXiPsDznkiEA4nKvWEWuJEYBupPEBAdA1Qnb7j25PdJ",
+          },
+          {
+            "mint": "4hNFn9hWmL4xxH7PxnZntFcDyEhXx5vHu4uM5rNj4fcL",
+            "oneReceiptTokenAsSol": 647695086539n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 1945996280n,
+            "operationTotalAmount": 1945996280n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "vault": "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
+          },
+        ],
+        "supportedAssets": [
+          {
+            "decimals": 8,
+            "depositable": true,
+            "mint": "zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg",
+            "oneTokenAsReceiptToken": 99999999n,
+            "oneTokenAsSol": 647695086539n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 6544444n,
+            "operationTotalAmount": 6544444n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unstakingAmountAsSOL": 0n,
+            "withdrawable": true,
+            "withdrawableValueAsReceiptTokenAmount": 2181481474n,
+            "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
+            "withdrawalResidualMicroAssetAmount": 999999n,
+            "withdrawalUserReservedAmount": 0n,
+          },
+          {
+            "decimals": 8,
+            "depositable": true,
+            "mint": "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
+            "oneTokenAsReceiptToken": 99999999n,
+            "oneTokenAsSol": 647695086539n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 4462962n,
+            "operationTotalAmount": 4462962n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unstakingAmountAsSOL": 0n,
+            "withdrawable": true,
+            "withdrawableValueAsReceiptTokenAmount": 1487654320n,
+            "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
+            "withdrawalResidualMicroAssetAmount": 16418n,
+            "withdrawalUserReservedAmount": 0n,
+          },
+          {
+            "decimals": 8,
+            "depositable": true,
+            "mint": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
+            "oneTokenAsReceiptToken": 99999999n,
+            "oneTokenAsSol": 647695086539n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 5855555n,
+            "operationTotalAmount": 5855555n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unstakingAmountAsSOL": 0n,
+            "withdrawable": true,
+            "withdrawableValueAsReceiptTokenAmount": 1951851834n,
+            "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
+            "withdrawalResidualMicroAssetAmount": 0n,
+            "withdrawalUserReservedAmount": 0n,
+          },
+        ],
+        "wrappedTokenMint": "9mCDpsmPeozJKhdpYvNTJxi9i2Eaav3iwT5gzjN7VbaN",
+      }
+    `);
+
+    // mock solv operation and check fragBTC price again
+    await validator.airdropToken(
+      solv.zBTC.address!,
+      'SoLvzL3ZVjofmNB5LYFrf94QtNhMUSea4DawFhnAau8',
+      30_0000_0000n
+    );
+    await solv.zBTC.setSolvProtocolWallet.execute({ address: feePayer });
+
+    // transfer zBTC to solv protocol
+    await expect(
+      solv.zBTC.confirmDeposits.execute(null)
+    ).resolves.not.toThrow();
+    await ctx.fund.updatePrices.execute(null);
+    await expectMasked(ctx.resolve(true)).resolves.toMatchInlineSnapshot(`
+      {
+        "__lookupTableAddress": "MASKED(__lookupTableAddress)",
+        "__pricingSources": [
+          {
+            "address": "4yp9YAXCJsKWMDZq2Q4j4amktvJGXBCpr3Lmv2cYBrb8",
+            "role": 0,
+          },
+          {
+            "address": "H6pGcL98Rkz2aV8pq5jDEMdtrnogAmhUM5w8RAsddeB6",
+            "role": 0,
+          },
+          {
+            "address": "5zXiPsDznkiEA4nKvWEWuJEYBupPEBAdA1Qnb7j25PdJ",
+            "role": 0,
+          },
+          {
+            "address": "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
+            "role": 0,
+          },
+        ],
+        "depositResidualMicroReceiptTokenAmount": 999995n,
+        "metadata": null,
+        "normalizedToken": null,
+        "oneReceiptTokenAsSOL": 647695086769n,
+        "receiptTokenDecimals": 8,
+        "receiptTokenMint": "ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz",
+        "receiptTokenSupply": 5620987629n,
+        "restakingVaultReceiptTokens": [
+          {
+            "mint": "DNLsKFnrBjTBKp1eSwt8z1iNu2T2PL3MnxZFsGEEpQCf",
+            "oneReceiptTokenAsSol": 647695086539n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 2174937031n,
+            "operationTotalAmount": 2174937031n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "vault": "H6pGcL98Rkz2aV8pq5jDEMdtrnogAmhUM5w8RAsddeB6",
+          },
+          {
+            "mint": "BDYcrsJ6Y4kPdkReieh4RV58ziMNsYnMPpnDZgyAsdmh",
+            "oneReceiptTokenAsSol": 647695086539n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 1483191359n,
+            "operationTotalAmount": 1483191359n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "vault": "5zXiPsDznkiEA4nKvWEWuJEYBupPEBAdA1Qnb7j25PdJ",
+          },
+          {
+            "mint": "4hNFn9hWmL4xxH7PxnZntFcDyEhXx5vHu4uM5rNj4fcL",
+            "oneReceiptTokenAsSol": 647695086539n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 1945996280n,
+            "operationTotalAmount": 1945996280n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "vault": "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
+          },
+        ],
+        "supportedAssets": [
+          {
+            "decimals": 8,
+            "depositable": true,
+            "mint": "zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg",
+            "oneTokenAsReceiptToken": 99999999n,
+            "oneTokenAsSol": 647695086539n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 6544444n,
+            "operationTotalAmount": 6544444n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unstakingAmountAsSOL": 0n,
+            "withdrawable": true,
+            "withdrawableValueAsReceiptTokenAmount": 2181481474n,
+            "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
+            "withdrawalResidualMicroAssetAmount": 999999n,
+            "withdrawalUserReservedAmount": 0n,
+          },
+          {
+            "decimals": 8,
+            "depositable": true,
+            "mint": "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
+            "oneTokenAsReceiptToken": 99999999n,
+            "oneTokenAsSol": 647695086539n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 4462962n,
+            "operationTotalAmount": 4462962n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unstakingAmountAsSOL": 0n,
+            "withdrawable": true,
+            "withdrawableValueAsReceiptTokenAmount": 1487654320n,
+            "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
+            "withdrawalResidualMicroAssetAmount": 16418n,
+            "withdrawalUserReservedAmount": 0n,
+          },
+          {
+            "decimals": 8,
+            "depositable": true,
+            "mint": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
+            "oneTokenAsReceiptToken": 99999999n,
+            "oneTokenAsSol": 647695086539n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 5855555n,
+            "operationTotalAmount": 5855555n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unstakingAmountAsSOL": 0n,
+            "withdrawable": true,
+            "withdrawableValueAsReceiptTokenAmount": 1951851834n,
+            "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
+            "withdrawalResidualMicroAssetAmount": 0n,
+            "withdrawalUserReservedAmount": 0n,
+          },
+        ],
+        "wrappedTokenMint": "9mCDpsmPeozJKhdpYvNTJxi9i2Eaav3iwT5gzjN7VbaN",
+      }
+    `);
+
+    // redeem first solvBTC.jup from solv protocol to the solv vault
+    await expect(
+      solv.zBTC.completeDeposits.execute({
+        redeemedSolvReceiptTokenAmount: 21_7493_7031n,
+        newOneSolvReceiptTokenAsMicroSupportedTokenAmount: 1_0000_0000_000000n,
+      })
+    ).resolves.not.toThrow();
+    await ctx.fund.updatePrices.execute(null);
+
+    // should have no changes on prices yet
+    // fragBTC: 647695086769n, zBTC VRT: 647695086539n -> 647695086769n, 647695086539n
+    await expectMasked(ctx.resolve(true)).resolves.toMatchInlineSnapshot(`
+      {
+        "__lookupTableAddress": "MASKED(__lookupTableAddress)",
+        "__pricingSources": [
+          {
+            "address": "4yp9YAXCJsKWMDZq2Q4j4amktvJGXBCpr3Lmv2cYBrb8",
+            "role": 0,
+          },
+          {
+            "address": "H6pGcL98Rkz2aV8pq5jDEMdtrnogAmhUM5w8RAsddeB6",
+            "role": 0,
+          },
+          {
+            "address": "5zXiPsDznkiEA4nKvWEWuJEYBupPEBAdA1Qnb7j25PdJ",
+            "role": 0,
+          },
+          {
+            "address": "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
+            "role": 0,
+          },
+        ],
+        "depositResidualMicroReceiptTokenAmount": 999995n,
+        "metadata": null,
+        "normalizedToken": null,
+        "oneReceiptTokenAsSOL": 647695086769n,
+        "receiptTokenDecimals": 8,
+        "receiptTokenMint": "ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz",
+        "receiptTokenSupply": 5620987629n,
+        "restakingVaultReceiptTokens": [
+          {
+            "mint": "DNLsKFnrBjTBKp1eSwt8z1iNu2T2PL3MnxZFsGEEpQCf",
+            "oneReceiptTokenAsSol": 647695086539n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 2174937031n,
+            "operationTotalAmount": 2174937031n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "vault": "H6pGcL98Rkz2aV8pq5jDEMdtrnogAmhUM5w8RAsddeB6",
+          },
+          {
+            "mint": "BDYcrsJ6Y4kPdkReieh4RV58ziMNsYnMPpnDZgyAsdmh",
+            "oneReceiptTokenAsSol": 647695086539n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 1483191359n,
+            "operationTotalAmount": 1483191359n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "vault": "5zXiPsDznkiEA4nKvWEWuJEYBupPEBAdA1Qnb7j25PdJ",
+          },
+          {
+            "mint": "4hNFn9hWmL4xxH7PxnZntFcDyEhXx5vHu4uM5rNj4fcL",
+            "oneReceiptTokenAsSol": 647695086539n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 1945996280n,
+            "operationTotalAmount": 1945996280n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "vault": "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
+          },
+        ],
+        "supportedAssets": [
+          {
+            "decimals": 8,
+            "depositable": true,
+            "mint": "zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg",
+            "oneTokenAsReceiptToken": 99999999n,
+            "oneTokenAsSol": 647695086539n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 6544444n,
+            "operationTotalAmount": 6544444n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unstakingAmountAsSOL": 0n,
+            "withdrawable": true,
+            "withdrawableValueAsReceiptTokenAmount": 2181481474n,
+            "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
+            "withdrawalResidualMicroAssetAmount": 999999n,
+            "withdrawalUserReservedAmount": 0n,
+          },
+          {
+            "decimals": 8,
+            "depositable": true,
+            "mint": "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
+            "oneTokenAsReceiptToken": 99999999n,
+            "oneTokenAsSol": 647695086539n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 4462962n,
+            "operationTotalAmount": 4462962n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unstakingAmountAsSOL": 0n,
+            "withdrawable": true,
+            "withdrawableValueAsReceiptTokenAmount": 1487654320n,
+            "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
+            "withdrawalResidualMicroAssetAmount": 16418n,
+            "withdrawalUserReservedAmount": 0n,
+          },
+          {
+            "decimals": 8,
+            "depositable": true,
+            "mint": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
+            "oneTokenAsReceiptToken": 99999999n,
+            "oneTokenAsSol": 647695086539n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 5855555n,
+            "operationTotalAmount": 5855555n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unstakingAmountAsSOL": 0n,
+            "withdrawable": true,
+            "withdrawableValueAsReceiptTokenAmount": 1951851834n,
+            "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
+            "withdrawalResidualMicroAssetAmount": 0n,
+            "withdrawalUserReservedAmount": 0n,
+          },
+        ],
+        "wrappedTokenMint": "9mCDpsmPeozJKhdpYvNTJxi9i2Eaav3iwT5gzjN7VbaN",
+      }
+    `);
+
+    // now mock increased solvBTC.jup price
+    await user1.deposit.execute(
+      {
+        assetMint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+        assetAmount: 1_0000_0000n,
+      },
+      { signers: [signer1] }
+    );
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'RestakeVST',
+      operator: restaking.knownAddresses.fundManager,
+    });
+    await expect(
+      solv.zBTC.confirmDeposits.execute(null)
+    ).resolves.not.toThrow();
+    await expect(
+      solv.zBTC.completeDeposits.execute({
+        redeemedSolvReceiptTokenAmount: (1_0000_0000n * 10n) / 11n,
+        newOneSolvReceiptTokenAsMicroSupportedTokenAmount: 1_1000_0000_000000n,
+      })
+    ).resolves.not.toThrow();
+
+    // fragBTC: 647695086769n, zBTC VRT: 647695086539n -> 672352352226n (x1.038...), 709711095573n (x1.095)
+    await ctx.fund.updatePrices.execute(null);
+    await expectMasked(ctx.resolve(true)).resolves.toMatchInlineSnapshot(`
+      {
+        "__lookupTableAddress": "MASKED(__lookupTableAddress)",
+        "__pricingSources": [
+          {
+            "address": "4yp9YAXCJsKWMDZq2Q4j4amktvJGXBCpr3Lmv2cYBrb8",
+            "role": 0,
+          },
+          {
+            "address": "H6pGcL98Rkz2aV8pq5jDEMdtrnogAmhUM5w8RAsddeB6",
+            "role": 0,
+          },
+          {
+            "address": "5zXiPsDznkiEA4nKvWEWuJEYBupPEBAdA1Qnb7j25PdJ",
+            "role": 0,
+          },
+          {
+            "address": "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
+            "role": 0,
+          },
+        ],
+        "depositResidualMicroReceiptTokenAmount": 964414n,
+        "metadata": null,
+        "normalizedToken": null,
+        "oneReceiptTokenAsSOL": 672352352226n,
+        "receiptTokenDecimals": 8,
+        "receiptTokenMint": "ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz",
+        "receiptTokenSupply": 5720987629n,
+        "restakingVaultReceiptTokens": [
+          {
+            "mint": "DNLsKFnrBjTBKp1eSwt8z1iNu2T2PL3MnxZFsGEEpQCf",
+            "oneReceiptTokenAsSol": 709711095573n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 2274637031n,
+            "operationTotalAmount": 2274637031n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "vault": "H6pGcL98Rkz2aV8pq5jDEMdtrnogAmhUM5w8RAsddeB6",
+          },
+          {
+            "mint": "BDYcrsJ6Y4kPdkReieh4RV58ziMNsYnMPpnDZgyAsdmh",
+            "oneReceiptTokenAsSol": 647695086539n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 1483191359n,
+            "operationTotalAmount": 1483191359n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "vault": "5zXiPsDznkiEA4nKvWEWuJEYBupPEBAdA1Qnb7j25PdJ",
+          },
+          {
+            "mint": "4hNFn9hWmL4xxH7PxnZntFcDyEhXx5vHu4uM5rNj4fcL",
+            "oneReceiptTokenAsSol": 647695086539n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 1945996280n,
+            "operationTotalAmount": 1945996280n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "vault": "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
+          },
+        ],
+        "supportedAssets": [
+          {
+            "decimals": 8,
+            "depositable": true,
+            "mint": "zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg",
+            "oneTokenAsReceiptToken": 96332686n,
+            "oneTokenAsSol": 647695086539n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 6844444n,
+            "operationTotalAmount": 6844444n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unstakingAmountAsSOL": 0n,
+            "withdrawable": true,
+            "withdrawableValueAsReceiptTokenAmount": 2407618931n,
+            "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
+            "withdrawalResidualMicroAssetAmount": 999999n,
+            "withdrawalUserReservedAmount": 0n,
+          },
+          {
+            "decimals": 8,
+            "depositable": true,
+            "mint": "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
+            "oneTokenAsReceiptToken": 96332686n,
+            "oneTokenAsSol": 647695086539n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 4462962n,
+            "operationTotalAmount": 4462962n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unstakingAmountAsSOL": 0n,
+            "withdrawable": true,
+            "withdrawableValueAsReceiptTokenAmount": 1433097379n,
+            "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
+            "withdrawalResidualMicroAssetAmount": 16418n,
+            "withdrawalUserReservedAmount": 0n,
+          },
+          {
+            "decimals": 8,
+            "depositable": true,
+            "mint": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
+            "oneTokenAsReceiptToken": 96332686n,
+            "oneTokenAsSol": 647695086539n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 5855555n,
+            "operationTotalAmount": 5855555n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unstakingAmountAsSOL": 0n,
+            "withdrawable": true,
+            "withdrawableValueAsReceiptTokenAmount": 1880271317n,
+            "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
+            "withdrawalResidualMicroAssetAmount": 0n,
+            "withdrawalUserReservedAmount": 0n,
+          },
+        ],
+        "wrappedTokenMint": "9mCDpsmPeozJKhdpYvNTJxi9i2Eaav3iwT5gzjN7VbaN",
+      }
+    `);
+
+    // now withdrawal test
+    await user1.requestWithdrawal.execute(
+      {
+        assetMint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+        receiptTokenAmount: 1_0000_0000n,
+      },
+      { signers: [signer1] }
+    );
+    await expectMasked(user1.resolve(true)).resolves.toMatchInlineSnapshot(`
+      {
+        "lamports": 99962596960n,
+        "maxWithdrawalRequests": 4,
+        "receiptTokenAmount": 5520987629n,
+        "receiptTokenMint": "ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz",
+        "supportedAssets": [
+          {
+            "amount": 97718237044n,
+            "decimals": 8,
+            "depositable": true,
+            "mint": "zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg",
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "withdrawable": true,
+          },
+          {
+            "amount": 98512158025n,
+            "decimals": 8,
+            "depositable": true,
+            "mint": "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "withdrawable": true,
+          },
+          {
+            "amount": 98148148165n,
+            "decimals": 8,
+            "depositable": true,
+            "mint": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "withdrawable": true,
+          },
+        ],
+        "user": "AWb2qUvuFzbVN5Eu7tZY8gM745pus5DhTGgo8U8Bd8X2",
+        "withdrawalRequests": [
+          {
+            "batchId": 2n,
+            "createdAt": "MASKED(/.*At?$/)",
+            "receiptTokenAmount": 100000000n,
+            "requestId": 3n,
+            "state": "cancelable",
+            "supportedAssetMint": "zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg",
+          },
+        ],
+        "wrappedTokenAmount": 0n,
+        "wrappedTokenMint": "9mCDpsmPeozJKhdpYvNTJxi9i2Eaav3iwT5gzjN7VbaN",
+      }
+    `);
+
+    await ctx.fund.runCommand.executeChained(null);
+    await expectMasked(user1.resolve(true)).resolves.toMatchInlineSnapshot(`
+      {
+        "lamports": 99962596960n,
+        "maxWithdrawalRequests": 4,
+        "receiptTokenAmount": 5520987629n,
+        "receiptTokenMint": "ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz",
+        "supportedAssets": [
+          {
+            "amount": 97718237044n,
+            "decimals": 8,
+            "depositable": true,
+            "mint": "zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg",
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "withdrawable": true,
+          },
+          {
+            "amount": 98512158025n,
+            "decimals": 8,
+            "depositable": true,
+            "mint": "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "withdrawable": true,
+          },
+          {
+            "amount": 98148148165n,
+            "decimals": 8,
+            "depositable": true,
+            "mint": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "withdrawable": true,
+          },
+        ],
+        "user": "AWb2qUvuFzbVN5Eu7tZY8gM745pus5DhTGgo8U8Bd8X2",
+        "withdrawalRequests": [
+          {
+            "batchId": 2n,
+            "createdAt": "MASKED(/.*At?$/)",
+            "receiptTokenAmount": 100000000n,
+            "requestId": 3n,
+            "state": "processing",
+            "supportedAssetMint": "zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg",
+          },
+        ],
+        "wrappedTokenAmount": 0n,
+        "wrappedTokenMint": "9mCDpsmPeozJKhdpYvNTJxi9i2Eaav3iwT5gzjN7VbaN",
+      }
+    `);
+
+    // airdrop enough extra yields and original vst to solv protocol wallet
+    await expect(
+      solv.zBTC.confirmWithdrawalRequests.execute(null)
+    ).resolves.not.toThrow();
+    await validator.airdropToken(
+      solv.zBTC.address!,
+      'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+      10_0000_0000n
+    );
+
+    // process withdrawal from solv vault
+    await expect(
+      solv.zBTC.completeWithdrawalRequests.execute({
+        burntSolvReceiptTokenAmount: 88147709n,
+        redeemedSupportedTokenAmount: (88147709n * 110n) / 100n,
+        oldOneSolvReceiptTokenAsMicroSupportedTokenAmount: 1_1000_0000_000000n,
+      })
+    ).resolves.not.toThrow();
+    await expect(solv.zBTC.resolve(true)).resolves.toMatchInlineSnapshot(`
+      {
+        "admin": {
+          "fundManager": "BEpVRdWw6VhvfwfQufB9iqcJ6acf51XRP1jETCvGDBVE",
+          "rewardManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+          "solvManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+          "vaultManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+        },
+        "delegatedRewardTokens": [
+          {
+            "amount": 0n,
+            "delegate": {
+              "__option": "Some",
+              "value": "BEpVRdWw6VhvfwfQufB9iqcJ6acf51XRP1jETCvGDBVE",
+            },
+            "mint": "ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq",
+          },
+        ],
+        "oneReceiptTokenAsMicroSupportedTokenAmount": 109574877179602n,
+        "oneReceiptTokenAsSupportedTokenAmount": 109574877n,
+        "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 110000000000000n,
+        "oneSolvReceiptTokenAsSupportedTokenAmount": 110000000n,
+        "receiptTokenDecimals": 8,
+        "receiptTokenMint": "DNLsKFnrBjTBKp1eSwt8z1iNu2T2PL3MnxZFsGEEpQCf",
+        "receiptTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "receiptTokenSupply": 2186147332n,
+        "solvProtocolWallet": "GiDkDCZjVC8Nk1Fd457qGSV2g3MQX62n7cV5CvgFyGfF",
+        "solvProtocolWithdrawalFeeRate": 0,
+        "solvReceiptTokenAmount": 2911852291n,
+        "solvReceiptTokenDecimals": 8,
+        "solvReceiptTokenMint": "SoLvzL3ZVjofmNB5LYFrf94QtNhMUSea4DawFhnAau8",
+        "solvReceiptTokenOperationReceivableAmount": 0n,
+        "solvReceiptTokenOperationReservedAmount": 2177698412n,
+        "supportedTokenAmount": 1000000000n,
+        "supportedTokenDecimals": 8,
+        "supportedTokenMint": "zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg",
+        "supportedTokenOperationReservedAmount": 0n,
+        "supportedTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "withdrawal": {
+          "completed": {
+            "receiptTokenProcessedAmount": 88489699n,
+            "requests": [
+              {
+                "id": 1n,
+                "receiptTokenEnqueuedAmount": 88489699n,
+                "solvReceiptTokenLockedAmount": 88147709n,
+                "supportedTokenLockedAmount": 0n,
+                "supportedTokenTotalEstimatedAmount": 96962479n,
+              },
+            ],
+            "supportedTokenDeductedFeeAmount": 0n,
+            "supportedTokenExtraClaimableAmount": 0n,
+            "supportedTokenTotalClaimableAmount": 96962479n,
+          },
+          "enqueued": {
+            "receiptTokenEnqueuedAmount": 0n,
+            "requests": [],
+            "solvReceiptTokenLockedAmount": 0n,
+            "supportedTokenLockedAmount": 0n,
+          },
+          "processing": {
+            "receiptTokenProcessingAmount": 0n,
+            "requests": [],
+            "supportedTokenReceivableAmount": 0n,
+          },
+        },
+      }
+    `);
+    await ctx.fund.updatePrices.execute(null);
+
+    // TODO: FIX flooring error!!! fragBTC: 672352352226n, zBTC VRT: 709711095573n -> 672352352113n (x0.9999999998), 709711095276n (x0.9999999996)
+    await expectMasked(ctx.resolve(true)).resolves.toMatchInlineSnapshot(`
+      {
+        "__lookupTableAddress": "MASKED(__lookupTableAddress)",
+        "__pricingSources": [
+          {
+            "address": "4yp9YAXCJsKWMDZq2Q4j4amktvJGXBCpr3Lmv2cYBrb8",
+            "role": 0,
+          },
+          {
+            "address": "H6pGcL98Rkz2aV8pq5jDEMdtrnogAmhUM5w8RAsddeB6",
+            "role": 0,
+          },
+          {
+            "address": "5zXiPsDznkiEA4nKvWEWuJEYBupPEBAdA1Qnb7j25PdJ",
+            "role": 0,
+          },
+          {
+            "address": "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
+            "role": 0,
+          },
+        ],
+        "depositResidualMicroReceiptTokenAmount": 964414n,
+        "metadata": null,
+        "normalizedToken": null,
+        "oneReceiptTokenAsSOL": 672352352113n,
+        "receiptTokenDecimals": 8,
+        "receiptTokenMint": "ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz",
+        "receiptTokenSupply": 5720987629n,
+        "restakingVaultReceiptTokens": [
+          {
+            "mint": "DNLsKFnrBjTBKp1eSwt8z1iNu2T2PL3MnxZFsGEEpQCf",
+            "oneReceiptTokenAsSol": 709711095276n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 2186147332n,
+            "operationTotalAmount": 2186147332n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "vault": "H6pGcL98Rkz2aV8pq5jDEMdtrnogAmhUM5w8RAsddeB6",
+          },
+          {
+            "mint": "BDYcrsJ6Y4kPdkReieh4RV58ziMNsYnMPpnDZgyAsdmh",
+            "oneReceiptTokenAsSol": 647695086539n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 1483191359n,
+            "operationTotalAmount": 1483191359n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "vault": "5zXiPsDznkiEA4nKvWEWuJEYBupPEBAdA1Qnb7j25PdJ",
+          },
+          {
+            "mint": "4hNFn9hWmL4xxH7PxnZntFcDyEhXx5vHu4uM5rNj4fcL",
+            "oneReceiptTokenAsSol": 647695086539n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 1945996280n,
+            "operationTotalAmount": 1945996280n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "vault": "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
+          },
+        ],
+        "supportedAssets": [
+          {
+            "decimals": 8,
+            "depositable": true,
+            "mint": "zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg",
+            "oneTokenAsReceiptToken": 96332686n,
+            "oneTokenAsSol": 647695086539n,
+            "operationReceivableAmount": 96962479n,
+            "operationReservedAmount": 6844444n,
+            "operationTotalAmount": 103806923n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unstakingAmountAsSOL": 0n,
+            "withdrawable": true,
+            "withdrawableValueAsReceiptTokenAmount": 2307618931n,
+            "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
+            "withdrawalResidualMicroAssetAmount": 999999n,
+            "withdrawalUserReservedAmount": 0n,
+          },
+          {
+            "decimals": 8,
+            "depositable": true,
+            "mint": "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
+            "oneTokenAsReceiptToken": 96332686n,
+            "oneTokenAsSol": 647695086539n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 4462962n,
+            "operationTotalAmount": 4462962n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unstakingAmountAsSOL": 0n,
+            "withdrawable": true,
+            "withdrawableValueAsReceiptTokenAmount": 1433097379n,
+            "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
+            "withdrawalResidualMicroAssetAmount": 16418n,
+            "withdrawalUserReservedAmount": 0n,
+          },
+          {
+            "decimals": 8,
+            "depositable": true,
+            "mint": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
+            "oneTokenAsReceiptToken": 96332686n,
+            "oneTokenAsSol": 647695086539n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 5855555n,
+            "operationTotalAmount": 5855555n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unstakingAmountAsSOL": 0n,
+            "withdrawable": true,
+            "withdrawableValueAsReceiptTokenAmount": 1880271317n,
+            "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
+            "withdrawalResidualMicroAssetAmount": 0n,
+            "withdrawalUserReservedAmount": 0n,
+          },
+        ],
+        "wrappedTokenMint": "9mCDpsmPeozJKhdpYvNTJxi9i2Eaav3iwT5gzjN7VbaN",
+      }
+    `);
+
+    await ctx.fund.runCommand.executeChained(null);
+
+    // TODO: FIX flooring error!!! fragBTC: 672352352113n, zBTC VRT: 709711095276n -> 672352351999n (x0.9999999998), 709711094953n (x0.9999999995)
+    await expectMasked(ctx.resolve(true)).resolves.toMatchInlineSnapshot(`
+      {
+        "__lookupTableAddress": "MASKED(__lookupTableAddress)",
+        "__pricingSources": [
+          {
+            "address": "4yp9YAXCJsKWMDZq2Q4j4amktvJGXBCpr3Lmv2cYBrb8",
+            "role": 0,
+          },
+          {
+            "address": "H6pGcL98Rkz2aV8pq5jDEMdtrnogAmhUM5w8RAsddeB6",
+            "role": 0,
+          },
+          {
+            "address": "5zXiPsDznkiEA4nKvWEWuJEYBupPEBAdA1Qnb7j25PdJ",
+            "role": 0,
+          },
+          {
+            "address": "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
+            "role": 0,
+          },
+        ],
+        "depositResidualMicroReceiptTokenAmount": 964414n,
+        "metadata": null,
+        "normalizedToken": null,
+        "oneReceiptTokenAsSOL": 672352352448n,
+        "receiptTokenDecimals": 8,
+        "receiptTokenMint": "ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz",
+        "receiptTokenSupply": 5620987629n,
+        "restakingVaultReceiptTokens": [
+          {
+            "mint": "DNLsKFnrBjTBKp1eSwt8z1iNu2T2PL3MnxZFsGEEpQCf",
+            "oneReceiptTokenAsSol": 709711095276n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 2186147332n,
+            "operationTotalAmount": 2186147332n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "vault": "H6pGcL98Rkz2aV8pq5jDEMdtrnogAmhUM5w8RAsddeB6",
+          },
+          {
+            "mint": "BDYcrsJ6Y4kPdkReieh4RV58ziMNsYnMPpnDZgyAsdmh",
+            "oneReceiptTokenAsSol": 647695086539n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 1483191359n,
+            "operationTotalAmount": 1483191359n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "vault": "5zXiPsDznkiEA4nKvWEWuJEYBupPEBAdA1Qnb7j25PdJ",
+          },
+          {
+            "mint": "4hNFn9hWmL4xxH7PxnZntFcDyEhXx5vHu4uM5rNj4fcL",
+            "oneReceiptTokenAsSol": 647695086539n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 1945996280n,
+            "operationTotalAmount": 1945996280n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "vault": "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
+          },
+        ],
+        "supportedAssets": [
+          {
+            "decimals": 8,
+            "depositable": true,
+            "mint": "zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg",
+            "oneTokenAsReceiptToken": 96332686n,
+            "oneTokenAsSol": 647695086539n,
+            "operationReceivableAmount": 1n,
+            "operationReservedAmount": 0n,
+            "operationTotalAmount": 1n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unstakingAmountAsSOL": 0n,
+            "withdrawable": true,
+            "withdrawableValueAsReceiptTokenAmount": 2307618932n,
+            "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
+            "withdrawalResidualMicroAssetAmount": 907439n,
+            "withdrawalUserReservedAmount": 103599312n,
+          },
+          {
+            "decimals": 8,
+            "depositable": true,
+            "mint": "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
+            "oneTokenAsReceiptToken": 96332686n,
+            "oneTokenAsSol": 647695086539n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 4462962n,
+            "operationTotalAmount": 4462962n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unstakingAmountAsSOL": 0n,
+            "withdrawable": true,
+            "withdrawableValueAsReceiptTokenAmount": 1433097379n,
+            "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
+            "withdrawalResidualMicroAssetAmount": 16418n,
+            "withdrawalUserReservedAmount": 0n,
+          },
+          {
+            "decimals": 8,
+            "depositable": true,
+            "mint": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
+            "oneTokenAsReceiptToken": 96332686n,
+            "oneTokenAsSol": 647695086539n,
+            "operationReceivableAmount": 0n,
+            "operationReservedAmount": 5855555n,
+            "operationTotalAmount": 5855555n,
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unstakingAmountAsSOL": 0n,
+            "withdrawable": true,
+            "withdrawableValueAsReceiptTokenAmount": 1880271316n,
+            "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
+            "withdrawalResidualMicroAssetAmount": 0n,
+            "withdrawalUserReservedAmount": 0n,
+          },
+        ],
+        "wrappedTokenMint": "9mCDpsmPeozJKhdpYvNTJxi9i2Eaav3iwT5gzjN7VbaN",
+      }
+    `);
+
+    await expectMasked(solv.zBTC.resolve(true)).resolves.toMatchInlineSnapshot(`
+      {
+        "admin": {
+          "fundManager": "BEpVRdWw6VhvfwfQufB9iqcJ6acf51XRP1jETCvGDBVE",
+          "rewardManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+          "solvManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+          "vaultManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+        },
+        "delegatedRewardTokens": [
+          {
+            "amount": 0n,
+            "delegate": {
+              "__option": "Some",
+              "value": "BEpVRdWw6VhvfwfQufB9iqcJ6acf51XRP1jETCvGDBVE",
+            },
+            "mint": "ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq",
+          },
+        ],
+        "oneReceiptTokenAsMicroSupportedTokenAmount": 109574877179602n,
+        "oneReceiptTokenAsSupportedTokenAmount": 109574877n,
+        "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 110000000000000n,
+        "oneSolvReceiptTokenAsSupportedTokenAmount": 110000000n,
+        "receiptTokenDecimals": 8,
+        "receiptTokenMint": "DNLsKFnrBjTBKp1eSwt8z1iNu2T2PL3MnxZFsGEEpQCf",
+        "receiptTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "receiptTokenSupply": 2186147332n,
+        "solvProtocolWallet": "GiDkDCZjVC8Nk1Fd457qGSV2g3MQX62n7cV5CvgFyGfF",
+        "solvProtocolWithdrawalFeeRate": 0,
+        "solvReceiptTokenAmount": 2911852291n,
+        "solvReceiptTokenDecimals": 8,
+        "solvReceiptTokenMint": "SoLvzL3ZVjofmNB5LYFrf94QtNhMUSea4DawFhnAau8",
+        "solvReceiptTokenOperationReceivableAmount": 0n,
+        "solvReceiptTokenOperationReservedAmount": 2177698412n,
+        "supportedTokenAmount": 903037521n,
+        "supportedTokenDecimals": 8,
+        "supportedTokenMint": "zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg",
+        "supportedTokenOperationReservedAmount": 0n,
+        "supportedTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "withdrawal": {
+          "completed": {
+            "receiptTokenProcessedAmount": 0n,
+            "requests": [],
+            "supportedTokenDeductedFeeAmount": 0n,
+            "supportedTokenExtraClaimableAmount": 0n,
+            "supportedTokenTotalClaimableAmount": 0n,
+          },
+          "enqueued": {
+            "receiptTokenEnqueuedAmount": 0n,
+            "requests": [],
+            "solvReceiptTokenLockedAmount": 0n,
+            "supportedTokenLockedAmount": 0n,
+          },
+          "processing": {
+            "receiptTokenProcessingAmount": 0n,
+            "requests": [],
+            "supportedTokenReceivableAmount": 0n,
+          },
+        },
+      }
+    `);
+
+    await expectMasked(user1.resolve(true)).resolves.toMatchInlineSnapshot(`
+      {
+        "lamports": 99962596960n,
+        "maxWithdrawalRequests": 4,
+        "receiptTokenAmount": 5520987629n,
+        "receiptTokenMint": "ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz",
+        "supportedAssets": [
+          {
+            "amount": 97718237044n,
+            "decimals": 8,
+            "depositable": true,
+            "mint": "zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg",
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "withdrawable": true,
+          },
+          {
+            "amount": 98512158025n,
+            "decimals": 8,
+            "depositable": true,
+            "mint": "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "withdrawable": true,
+          },
+          {
+            "amount": 98148148165n,
+            "decimals": 8,
+            "depositable": true,
+            "mint": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "withdrawable": true,
+          },
+        ],
+        "user": "AWb2qUvuFzbVN5Eu7tZY8gM745pus5DhTGgo8U8Bd8X2",
+        "withdrawalRequests": [
+          {
+            "batchId": 2n,
+            "createdAt": "MASKED(/.*At?$/)",
+            "receiptTokenAmount": 100000000n,
+            "requestId": 3n,
+            "state": "claimable",
+            "supportedAssetMint": "zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg",
+          },
+        ],
+        "wrappedTokenAmount": 0n,
+        "wrappedTokenMint": "9mCDpsmPeozJKhdpYvNTJxi9i2Eaav3iwT5gzjN7VbaN",
+      }
+    `);
+
+    expectMasked(ctx.fund.latestWithdrawalBatches.resolve(true)).resolves.toMatchInlineSnapshot(`
+      [
+        {
+          "assetFeeAmount": 207613n,
+          "assetUserAmount": 103599312n,
+          "batchId": 2n,
+          "claimedAssetUserAmount": 0n,
+          "claimedReceiptTokenAmount": 0n,
+          "numClaimedRequests": 0n,
+          "numRequests": 1n,
+          "processedAt": "MASKED(/.*At?$/)",
+          "receiptTokenAmount": 100000000n,
+          "receiptTokenMint": "ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz",
+          "supportedTokenMint": {
+            "__option": "Some",
+            "value": "zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg",
+          },
+          "supportedTokenProgram": {
+            "__option": "Some",
+            "value": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          },
+        },
+        null,
+        null,
+      ]
+    `);
+
+    expectMasked(
+      user1.withdraw.execute(
+        {
+          assetMint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+          requestId: 3n,
+        },
+        { signers: [signer1] }
+      )
+    ).resolves.toMatchInlineSnapshot();
+  });
 });

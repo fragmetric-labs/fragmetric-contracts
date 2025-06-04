@@ -491,6 +491,8 @@ impl<'a, 'info> UserFundService<'a, 'info> {
             }
         }
 
+        msg!("FUCK: transferring_asset_user_amount={}, fund_supported_token_reserve_account={}", transferring_asset_user_amount, fund_supported_token_reserve_account.unwrap().amount);
+
         // transfer either SOL or token to user account
         {
             let fund_account = self.fund_account.load()?;

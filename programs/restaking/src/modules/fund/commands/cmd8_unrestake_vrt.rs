@@ -724,6 +724,7 @@ impl UnrestakeVRTCommand {
                 )?;
 
                 if enqueued_vault_receipt_token_amount > 0 {
+                    drop(fund_account);
                     let mut fund_account = ctx.fund_account.load_mut()?;
 
                     let supported_token =

@@ -628,6 +628,11 @@ export class SolvVaultAccountContext extends AccountContext<
           return Promise.all([
             token.getCreateAssociatedTokenIdempotentInstructionAsync({
               payer: createNoopSigner(feePayer as Address),
+              mint: vault.data.vaultSupportedTokenMint,
+              owner: args.payer as Address,
+            }),
+            token.getCreateAssociatedTokenIdempotentInstructionAsync({
+              payer: createNoopSigner(feePayer as Address),
               mint: vault.data.vaultReceiptTokenMint,
               owner: args.payer as Address,
             }),
@@ -678,7 +683,12 @@ export class SolvVaultAccountContext extends AccountContext<
           return Promise.all([
             token.getCreateAssociatedTokenIdempotentInstructionAsync({
               payer: createNoopSigner(feePayer as Address),
-              mint: vault.data.vaultSupportedTokenMint,
+              mint: vault.data.vaultReceiptTokenMint,
+              owner: args.payer as Address,
+            }),
+            token.getCreateAssociatedTokenIdempotentInstructionAsync({
+              payer: createNoopSigner(feePayer as Address),
+              mint: vault.data.vaultReceiptTokenMint,
               owner: args.payer as Address,
             }),
             solv.getFundManagerRequestWithdrawalInstructionAsync(
@@ -715,10 +725,27 @@ export class SolvVaultAccountContext extends AccountContext<
         'claim supported tokens of completed withdrawals from the vault',
       instructions: [
         async (parent, args, overrides) => {
-          const [vault] = await Promise.all([parent.resolveAccount(true)]);
+          const [vault, feePayer] = await Promise.all([
+            parent.resolveAccount(true),
+            transformAddressResolverVariant(
+              overrides.feePayer ??
+                this.runtime.options.transaction.feePayer ??
+                (() => Promise.resolve(null))
+            )(parent),
+          ]);
           if (!vault) throw new Error('invalid context');
 
           return Promise.all([
+            token.getCreateAssociatedTokenIdempotentInstructionAsync({
+              payer: createNoopSigner(feePayer as Address),
+              mint: vault.data.vaultSupportedTokenMint,
+              owner: args.payer as Address,
+            }),
+            token.getCreateAssociatedTokenIdempotentInstructionAsync({
+              payer: createNoopSigner(feePayer as Address),
+              mint: vault.data.vaultReceiptTokenMint,
+              owner: args.payer as Address,
+            }),
             solv.getFundManagerWithdrawInstructionAsync(
               {
                 fundManager: createNoopSigner(vault.data.fundManager),
@@ -742,10 +769,27 @@ export class SolvVaultAccountContext extends AccountContext<
     description: 'confirm pending deposits toward solv protocol',
     instructions: [
       async (parent, args, overrides) => {
-        const [vault] = await Promise.all([parent.resolveAccount(true)]);
+        const [vault, feePayer] = await Promise.all([
+          parent.resolveAccount(true),
+          transformAddressResolverVariant(
+            overrides.feePayer ??
+              this.runtime.options.transaction.feePayer ??
+              (() => Promise.resolve(null))
+          )(parent),
+        ]);
         if (!vault) throw new Error('invalid context');
 
         return Promise.all([
+          token.getCreateAssociatedTokenIdempotentInstructionAsync({
+            payer: createNoopSigner(feePayer as Address),
+            mint: vault.data.vaultSupportedTokenMint,
+            owner: vault.data.solvProtocolWallet as Address,
+          }),
+          token.getCreateAssociatedTokenIdempotentInstructionAsync({
+            payer: createNoopSigner(feePayer as Address),
+            mint: vault.data.solvReceiptTokenMint,
+            owner: vault.data.solvProtocolWallet as Address,
+          }),
           solv.getSolvManagerConfirmDepositsInstructionAsync(
             {
               solvManager: createNoopSigner(vault.data.solvManager),
@@ -784,10 +828,27 @@ export class SolvVaultAccountContext extends AccountContext<
       description: 'complete deposits toward solv protocol',
       instructions: [
         async (parent, args, overrides) => {
-          const [vault] = await Promise.all([parent.resolveAccount(true)]);
+          const [vault, feePayer] = await Promise.all([
+            parent.resolveAccount(true),
+            transformAddressResolverVariant(
+              overrides.feePayer ??
+                this.runtime.options.transaction.feePayer ??
+                (() => Promise.resolve(null))
+            )(parent),
+          ]);
           if (!vault) throw new Error('invalid context');
 
           return Promise.all([
+            token.getCreateAssociatedTokenIdempotentInstructionAsync({
+              payer: createNoopSigner(feePayer as Address),
+              mint: vault.data.vaultSupportedTokenMint,
+              owner: vault.data.solvProtocolWallet as Address,
+            }),
+            token.getCreateAssociatedTokenIdempotentInstructionAsync({
+              payer: createNoopSigner(feePayer as Address),
+              mint: vault.data.solvReceiptTokenMint,
+              owner: vault.data.solvProtocolWallet as Address,
+            }),
             solv.getSolvManagerCompleteDepositsInstructionAsync(
               {
                 solvManager: createNoopSigner(vault.data.solvManager),
@@ -818,10 +879,27 @@ export class SolvVaultAccountContext extends AccountContext<
       description: 'confirm pending withdrawal requests toward solv protocol',
       instructions: [
         async (parent, args, overrides) => {
-          const [vault] = await Promise.all([parent.resolveAccount(true)]);
+          const [vault, feePayer] = await Promise.all([
+            parent.resolveAccount(true),
+            transformAddressResolverVariant(
+              overrides.feePayer ??
+                this.runtime.options.transaction.feePayer ??
+                (() => Promise.resolve(null))
+            )(parent),
+          ]);
           if (!vault) throw new Error('invalid context');
 
           return Promise.all([
+            token.getCreateAssociatedTokenIdempotentInstructionAsync({
+              payer: createNoopSigner(feePayer as Address),
+              mint: vault.data.vaultSupportedTokenMint,
+              owner: vault.data.solvProtocolWallet as Address,
+            }),
+            token.getCreateAssociatedTokenIdempotentInstructionAsync({
+              payer: createNoopSigner(feePayer as Address),
+              mint: vault.data.solvReceiptTokenMint,
+              owner: vault.data.solvProtocolWallet as Address,
+            }),
             solv.getSolvManagerConfirmWithdrawalRequestsInstructionAsync(
               {
                 solvManager: createNoopSigner(vault.data.solvManager),
@@ -867,10 +945,27 @@ export class SolvVaultAccountContext extends AccountContext<
       description: 'complete withdrawal requests toward solv protocol',
       instructions: [
         async (parent, args, overrides) => {
-          const [vault] = await Promise.all([parent.resolveAccount(true)]);
+          const [vault, feePayer] = await Promise.all([
+            parent.resolveAccount(true),
+            transformAddressResolverVariant(
+              overrides.feePayer ??
+                this.runtime.options.transaction.feePayer ??
+                (() => Promise.resolve(null))
+            )(parent),
+          ]);
           if (!vault) throw new Error('invalid context');
 
           return Promise.all([
+            token.getCreateAssociatedTokenIdempotentInstructionAsync({
+              payer: createNoopSigner(feePayer as Address),
+              mint: vault.data.vaultSupportedTokenMint,
+              owner: vault.data.solvProtocolWallet as Address,
+            }),
+            token.getCreateAssociatedTokenIdempotentInstructionAsync({
+              payer: createNoopSigner(feePayer as Address),
+              mint: vault.data.solvReceiptTokenMint,
+              owner: vault.data.solvProtocolWallet as Address,
+            }),
             solv.getSolvManagerCompleteWithdrawalRequestsInstructionAsync(
               {
                 solvManager: createNoopSigner(vault.data.solvManager),
