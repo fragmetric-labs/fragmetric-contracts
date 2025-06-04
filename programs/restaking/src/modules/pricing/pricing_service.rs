@@ -1,7 +1,7 @@
 use crate::errors::ErrorCode;
 use crate::modules::fund::FundReceiptTokenValueProvider;
 use crate::modules::normalization::NormalizedTokenPoolValueProvider;
-use crate::modules::restaking::JitoRestakingVaultValueProvider;
+use crate::modules::restaking::{JitoRestakingVaultValueProvider, SolvBTCVaultValueProvider};
 use crate::modules::staking::{
     MarinadeStakePoolValueProvider, SPLStakePool, SPLStakePoolValueProvider,
     SanctumMultiValidatorSPLStakePool, SanctumSingleValidatorSPLStakePool,
@@ -181,8 +181,14 @@ impl<'info> PricingService<'info> {
                 require_keys_neq!(*address, *token_mint);
                 self.token_values[token_index] = self.get_token_value(address)?.clone();
             }
-            TokenPricingSource::SolvBTCVault { .. } => {
-                self.token_values[token_index] = TokenValue::default();
+            TokenPricingSource::SolvBTCVault { address } => {
+                let pricing_source_accounts =
+                    [self.get_token_pricing_source_account_info(address)?];
+                SolvBTCVaultValueProvider.resolve_underlying_assets(
+                    token_mint,
+                    &pricing_source_accounts,
+                    &mut self.token_values[token_index],
+                )?
             }
             TokenPricingSource::SanctumMultiValidatorSPLStakePool { address } => {
                 let pricing_source_accounts =

@@ -25,6 +25,8 @@ import {
   getStructEncoder,
   getU16Decoder,
   getU16Encoder,
+  getU64Decoder,
+  getU64Encoder,
   getU8Decoder,
   getU8Encoder,
   transformEncoder,
@@ -40,6 +42,12 @@ import {
   type MaybeEncodedAccount,
   type ReadonlyUint8Array,
 } from '@solana/kit';
+import {
+  getWithdrawalRequestDecoder,
+  getWithdrawalRequestEncoder,
+  type WithdrawalRequest,
+  type WithdrawalRequestArgs,
+} from '../types';
 
 export const VAULT_ACCOUNT_DISCRIMINATOR = new Uint8Array([
   230, 251, 241, 83, 139, 202, 93, 28,
@@ -55,35 +63,181 @@ export type VaultAccount = {
   discriminator: ReadonlyUint8Array;
   dataVersion: number;
   bump: number;
+  padding0: ReadonlyUint8Array;
+  /**
+   * Vault manager ensures that the vault account remains up to date.
+   * Initially, all managers are set to vault manager.
+   */
+  vaultManager: Address;
+  /**
+   * Reward manager determines who can harvest rewards,
+   * accumulated in the vault's ATA.
+   */
+  rewardManager: Address;
+  /**
+   * Fund manager is responsible for depositing and withdrawing VST
+   * in the vault, which directly affects the vault's TVL.
+   */
+  fundManager: Address;
+  /**
+   * Solv manager operates the vault to interact with the Solv protocol,
+   * expecting to earn yield.
+   */
+  solvManager: Address;
+  solvProtocolWallet: Address;
+  solvProtocolWithdrawalFeeRateBps: number;
+  reserved0: ReadonlyUint8Array;
+  vaultReceiptTokenMint: Address;
+  vaultReceiptTokenDecimals: number;
+  padding1: ReadonlyUint8Array;
+  vrtSupply: bigint;
+  /** ∑request(state == ENQUEUED).vrt_withrawal_requested_amount */
+  vrtWithdrawalEnqueuedAmount: bigint;
+  /** ∑request(state == PROCESSING).vrt_withrawal_requested_amount */
+  vrtWithdrawalProcessingAmount: bigint;
+  /** ∑request(state == COMPLETED).vrt_withrawal_requested_amount */
+  vrtWithdrawalCompletedAmount: bigint;
+  /** informative VRT redemption rate. */
+  oneVrtAsMicroVst: bigint;
+  reserved1: ReadonlyUint8Array;
+  vaultSupportedTokenMint: Address;
+  vaultSupportedTokenDecimals: number;
   padding2: ReadonlyUint8Array;
-  admin: Address;
-  delegateRewardTokenAdmin: Address;
-  reserved: ReadonlyUint8Array;
-  receiptTokenMint: Address;
-  supportedTokenMint: Address;
-  tokenProgram: Address;
-  tokenDecimals: number;
-  padding3: ReadonlyUint8Array;
-  numDelegatedRewardTokenMints: number;
-  delegatedRewardTokenMints: Array<Address>;
+  /** VST reserved amount for operation - will be deposited to the Solv protocol */
+  vstOperationReservedAmount: bigint;
+  /**
+   * VST locked amount for withdrawal - will be locked until withdrawal is completed
+   *
+   * ## Why VST locked??
+   *
+   * If SRT is insufficient for withdrawal, insufficient amount will be taken directly from VST operation reserved.
+   * For example, assuming srt_reserve = 30, exchange_rate = 1:1.5 and trying to take 40 SRT expecting to receive 60 VST,
+   * then 10 SRT is insufficient so 10 * 1.5 = 15 VST will be taken from VST operation reserved and locked until withdrawal is completed.
+   */
+  vstWithdrawalLockedAmount: bigint;
+  /** Ready to claim amount. */
+  vstReservedAmountToClaim: bigint;
+  /** Extra VST amount that exceeded the VST estimated withdrawal amount. */
+  vstExtraAmountToClaim: bigint;
+  /** Deducted VST fee amount during withdrawal. */
+  vstDeductedFeeAmount: bigint;
+  /**
+   * Waiting for withdrawal to complete.
+   * Withdrawal fee is not applied yet, so these amount minus fee amount is the exact
+   * amount that will be able to claim when withdrawal is completed.
+   */
+  vstReceivableAmountToClaim: bigint;
   reserved2: ReadonlyUint8Array;
+  solvReceiptTokenMint: Address;
+  solvReceiptTokenDecimals: number;
+  padding3: ReadonlyUint8Array;
+  /** SRT reserved amount for operation - used to withdraw VST from the solv protocol */
+  srtOperationReservedAmount: bigint;
+  srtOperationReceivableAmount: bigint;
+  /** SRT locked amount for withdrawal - will be sent to the Solv protocol when withdrawal starts */
+  srtWithdrawalLockedAmount: bigint;
+  /** SRT redemption rate being used for vault net asset value appreciation. */
+  oneSrtAsMicroVst: bigint;
+  reserved3: ReadonlyUint8Array;
+  withdrawalLastCreatedRequestId: bigint;
+  numWithdrawalRequests: number;
+  padding4: ReadonlyUint8Array;
+  withdrawalRequests: Array<WithdrawalRequest>;
+  reserved4: ReadonlyUint8Array;
+  numDelegatedRewardTokenMints: number;
+  padding6: ReadonlyUint8Array;
+  delegatedRewardTokenMints: Array<Address>;
+  reserved6: ReadonlyUint8Array;
 };
 
 export type VaultAccountArgs = {
   dataVersion: number;
   bump: number;
+  padding0: ReadonlyUint8Array;
+  /**
+   * Vault manager ensures that the vault account remains up to date.
+   * Initially, all managers are set to vault manager.
+   */
+  vaultManager: Address;
+  /**
+   * Reward manager determines who can harvest rewards,
+   * accumulated in the vault's ATA.
+   */
+  rewardManager: Address;
+  /**
+   * Fund manager is responsible for depositing and withdrawing VST
+   * in the vault, which directly affects the vault's TVL.
+   */
+  fundManager: Address;
+  /**
+   * Solv manager operates the vault to interact with the Solv protocol,
+   * expecting to earn yield.
+   */
+  solvManager: Address;
+  solvProtocolWallet: Address;
+  solvProtocolWithdrawalFeeRateBps: number;
+  reserved0: ReadonlyUint8Array;
+  vaultReceiptTokenMint: Address;
+  vaultReceiptTokenDecimals: number;
+  padding1: ReadonlyUint8Array;
+  vrtSupply: number | bigint;
+  /** ∑request(state == ENQUEUED).vrt_withrawal_requested_amount */
+  vrtWithdrawalEnqueuedAmount: number | bigint;
+  /** ∑request(state == PROCESSING).vrt_withrawal_requested_amount */
+  vrtWithdrawalProcessingAmount: number | bigint;
+  /** ∑request(state == COMPLETED).vrt_withrawal_requested_amount */
+  vrtWithdrawalCompletedAmount: number | bigint;
+  /** informative VRT redemption rate. */
+  oneVrtAsMicroVst: number | bigint;
+  reserved1: ReadonlyUint8Array;
+  vaultSupportedTokenMint: Address;
+  vaultSupportedTokenDecimals: number;
   padding2: ReadonlyUint8Array;
-  admin: Address;
-  delegateRewardTokenAdmin: Address;
-  reserved: ReadonlyUint8Array;
-  receiptTokenMint: Address;
-  supportedTokenMint: Address;
-  tokenProgram: Address;
-  tokenDecimals: number;
-  padding3: ReadonlyUint8Array;
-  numDelegatedRewardTokenMints: number;
-  delegatedRewardTokenMints: Array<Address>;
+  /** VST reserved amount for operation - will be deposited to the Solv protocol */
+  vstOperationReservedAmount: number | bigint;
+  /**
+   * VST locked amount for withdrawal - will be locked until withdrawal is completed
+   *
+   * ## Why VST locked??
+   *
+   * If SRT is insufficient for withdrawal, insufficient amount will be taken directly from VST operation reserved.
+   * For example, assuming srt_reserve = 30, exchange_rate = 1:1.5 and trying to take 40 SRT expecting to receive 60 VST,
+   * then 10 SRT is insufficient so 10 * 1.5 = 15 VST will be taken from VST operation reserved and locked until withdrawal is completed.
+   */
+  vstWithdrawalLockedAmount: number | bigint;
+  /** Ready to claim amount. */
+  vstReservedAmountToClaim: number | bigint;
+  /** Extra VST amount that exceeded the VST estimated withdrawal amount. */
+  vstExtraAmountToClaim: number | bigint;
+  /** Deducted VST fee amount during withdrawal. */
+  vstDeductedFeeAmount: number | bigint;
+  /**
+   * Waiting for withdrawal to complete.
+   * Withdrawal fee is not applied yet, so these amount minus fee amount is the exact
+   * amount that will be able to claim when withdrawal is completed.
+   */
+  vstReceivableAmountToClaim: number | bigint;
   reserved2: ReadonlyUint8Array;
+  solvReceiptTokenMint: Address;
+  solvReceiptTokenDecimals: number;
+  padding3: ReadonlyUint8Array;
+  /** SRT reserved amount for operation - used to withdraw VST from the solv protocol */
+  srtOperationReservedAmount: number | bigint;
+  srtOperationReceivableAmount: number | bigint;
+  /** SRT locked amount for withdrawal - will be sent to the Solv protocol when withdrawal starts */
+  srtWithdrawalLockedAmount: number | bigint;
+  /** SRT redemption rate being used for vault net asset value appreciation. */
+  oneSrtAsMicroVst: number | bigint;
+  reserved3: ReadonlyUint8Array;
+  withdrawalLastCreatedRequestId: number | bigint;
+  numWithdrawalRequests: number;
+  padding4: ReadonlyUint8Array;
+  withdrawalRequests: Array<WithdrawalRequestArgs>;
+  reserved4: ReadonlyUint8Array;
+  numDelegatedRewardTokenMints: number;
+  padding6: ReadonlyUint8Array;
+  delegatedRewardTokenMints: Array<Address>;
+  reserved6: ReadonlyUint8Array;
 };
 
 export function getVaultAccountEncoder(): Encoder<VaultAccountArgs> {
@@ -92,21 +246,56 @@ export function getVaultAccountEncoder(): Encoder<VaultAccountArgs> {
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
       ['dataVersion', getU16Encoder()],
       ['bump', getU8Encoder()],
-      ['padding2', fixEncoderSize(getBytesEncoder(), 13)],
-      ['admin', getAddressEncoder()],
-      ['delegateRewardTokenAdmin', getAddressEncoder()],
-      ['reserved', fixEncoderSize(getBytesEncoder(), 960)],
-      ['receiptTokenMint', getAddressEncoder()],
-      ['supportedTokenMint', getAddressEncoder()],
-      ['tokenProgram', getAddressEncoder()],
-      ['tokenDecimals', getU8Encoder()],
-      ['padding3', fixEncoderSize(getBytesEncoder(), 14)],
+      ['padding0', fixEncoderSize(getBytesEncoder(), 5)],
+      ['vaultManager', getAddressEncoder()],
+      ['rewardManager', getAddressEncoder()],
+      ['fundManager', getAddressEncoder()],
+      ['solvManager', getAddressEncoder()],
+      ['solvProtocolWallet', getAddressEncoder()],
+      ['solvProtocolWithdrawalFeeRateBps', getU16Encoder()],
+      ['reserved0', fixEncoderSize(getBytesEncoder(), 334)],
+      ['vaultReceiptTokenMint', getAddressEncoder()],
+      ['vaultReceiptTokenDecimals', getU8Encoder()],
+      ['padding1', fixEncoderSize(getBytesEncoder(), 7)],
+      ['vrtSupply', getU64Encoder()],
+      ['vrtWithdrawalEnqueuedAmount', getU64Encoder()],
+      ['vrtWithdrawalProcessingAmount', getU64Encoder()],
+      ['vrtWithdrawalCompletedAmount', getU64Encoder()],
+      ['oneVrtAsMicroVst', getU64Encoder()],
+      ['reserved1', fixEncoderSize(getBytesEncoder(), 432)],
+      ['vaultSupportedTokenMint', getAddressEncoder()],
+      ['vaultSupportedTokenDecimals', getU8Encoder()],
+      ['padding2', fixEncoderSize(getBytesEncoder(), 7)],
+      ['vstOperationReservedAmount', getU64Encoder()],
+      ['vstWithdrawalLockedAmount', getU64Encoder()],
+      ['vstReservedAmountToClaim', getU64Encoder()],
+      ['vstExtraAmountToClaim', getU64Encoder()],
+      ['vstDeductedFeeAmount', getU64Encoder()],
+      ['vstReceivableAmountToClaim', getU64Encoder()],
+      ['reserved2', fixEncoderSize(getBytesEncoder(), 424)],
+      ['solvReceiptTokenMint', getAddressEncoder()],
+      ['solvReceiptTokenDecimals', getU8Encoder()],
+      ['padding3', fixEncoderSize(getBytesEncoder(), 7)],
+      ['srtOperationReservedAmount', getU64Encoder()],
+      ['srtOperationReceivableAmount', getU64Encoder()],
+      ['srtWithdrawalLockedAmount', getU64Encoder()],
+      ['oneSrtAsMicroVst', getU64Encoder()],
+      ['reserved3', fixEncoderSize(getBytesEncoder(), 440)],
+      ['withdrawalLastCreatedRequestId', getU64Encoder()],
+      ['numWithdrawalRequests', getU8Encoder()],
+      ['padding4', fixEncoderSize(getBytesEncoder(), 7)],
+      [
+        'withdrawalRequests',
+        getArrayEncoder(getWithdrawalRequestEncoder(), { size: 80 }),
+      ],
+      ['reserved4', fixEncoderSize(getBytesEncoder(), 240)],
       ['numDelegatedRewardTokenMints', getU8Encoder()],
+      ['padding6', fixEncoderSize(getBytesEncoder(), 7)],
       [
         'delegatedRewardTokenMints',
         getArrayEncoder(getAddressEncoder(), { size: 30 }),
       ],
-      ['reserved2', fixEncoderSize(getBytesEncoder(), 8120)],
+      ['reserved6', fixEncoderSize(getBytesEncoder(), 3128)],
     ]),
     (value) => ({ ...value, discriminator: VAULT_ACCOUNT_DISCRIMINATOR })
   );
@@ -117,21 +306,56 @@ export function getVaultAccountDecoder(): Decoder<VaultAccount> {
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
     ['dataVersion', getU16Decoder()],
     ['bump', getU8Decoder()],
-    ['padding2', fixDecoderSize(getBytesDecoder(), 13)],
-    ['admin', getAddressDecoder()],
-    ['delegateRewardTokenAdmin', getAddressDecoder()],
-    ['reserved', fixDecoderSize(getBytesDecoder(), 960)],
-    ['receiptTokenMint', getAddressDecoder()],
-    ['supportedTokenMint', getAddressDecoder()],
-    ['tokenProgram', getAddressDecoder()],
-    ['tokenDecimals', getU8Decoder()],
-    ['padding3', fixDecoderSize(getBytesDecoder(), 14)],
+    ['padding0', fixDecoderSize(getBytesDecoder(), 5)],
+    ['vaultManager', getAddressDecoder()],
+    ['rewardManager', getAddressDecoder()],
+    ['fundManager', getAddressDecoder()],
+    ['solvManager', getAddressDecoder()],
+    ['solvProtocolWallet', getAddressDecoder()],
+    ['solvProtocolWithdrawalFeeRateBps', getU16Decoder()],
+    ['reserved0', fixDecoderSize(getBytesDecoder(), 334)],
+    ['vaultReceiptTokenMint', getAddressDecoder()],
+    ['vaultReceiptTokenDecimals', getU8Decoder()],
+    ['padding1', fixDecoderSize(getBytesDecoder(), 7)],
+    ['vrtSupply', getU64Decoder()],
+    ['vrtWithdrawalEnqueuedAmount', getU64Decoder()],
+    ['vrtWithdrawalProcessingAmount', getU64Decoder()],
+    ['vrtWithdrawalCompletedAmount', getU64Decoder()],
+    ['oneVrtAsMicroVst', getU64Decoder()],
+    ['reserved1', fixDecoderSize(getBytesDecoder(), 432)],
+    ['vaultSupportedTokenMint', getAddressDecoder()],
+    ['vaultSupportedTokenDecimals', getU8Decoder()],
+    ['padding2', fixDecoderSize(getBytesDecoder(), 7)],
+    ['vstOperationReservedAmount', getU64Decoder()],
+    ['vstWithdrawalLockedAmount', getU64Decoder()],
+    ['vstReservedAmountToClaim', getU64Decoder()],
+    ['vstExtraAmountToClaim', getU64Decoder()],
+    ['vstDeductedFeeAmount', getU64Decoder()],
+    ['vstReceivableAmountToClaim', getU64Decoder()],
+    ['reserved2', fixDecoderSize(getBytesDecoder(), 424)],
+    ['solvReceiptTokenMint', getAddressDecoder()],
+    ['solvReceiptTokenDecimals', getU8Decoder()],
+    ['padding3', fixDecoderSize(getBytesDecoder(), 7)],
+    ['srtOperationReservedAmount', getU64Decoder()],
+    ['srtOperationReceivableAmount', getU64Decoder()],
+    ['srtWithdrawalLockedAmount', getU64Decoder()],
+    ['oneSrtAsMicroVst', getU64Decoder()],
+    ['reserved3', fixDecoderSize(getBytesDecoder(), 440)],
+    ['withdrawalLastCreatedRequestId', getU64Decoder()],
+    ['numWithdrawalRequests', getU8Decoder()],
+    ['padding4', fixDecoderSize(getBytesDecoder(), 7)],
+    [
+      'withdrawalRequests',
+      getArrayDecoder(getWithdrawalRequestDecoder(), { size: 80 }),
+    ],
+    ['reserved4', fixDecoderSize(getBytesDecoder(), 240)],
     ['numDelegatedRewardTokenMints', getU8Decoder()],
+    ['padding6', fixDecoderSize(getBytesDecoder(), 7)],
     [
       'delegatedRewardTokenMints',
       getArrayDecoder(getAddressDecoder(), { size: 30 }),
     ],
-    ['reserved2', fixDecoderSize(getBytesDecoder(), 8120)],
+    ['reserved6', fixDecoderSize(getBytesDecoder(), 3128)],
   ]);
 }
 

@@ -1,6 +1,6 @@
 [package]
 name = "solv"
-version = "0.1.0"
+version = "0.2.0"
 description = "Fragmetric SOLV BTC Vault Program"
 authors = { workspace = true }
 repository = { workspace = true }

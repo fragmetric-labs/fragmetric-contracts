@@ -46,4 +46,7 @@ pub enum VaultError {
     // TODO/phase3: deprecate
     #[msg("deposit not in progress")]
     DepositNotInProgressError,
+
+    #[msg("withdrawal request queue is not set")]
+    WithdrawalRequestQueueNotSetError,
 }

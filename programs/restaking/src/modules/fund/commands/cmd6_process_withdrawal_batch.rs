@@ -5,7 +5,7 @@ use crate::constants::PROGRAM_REVENUE_ADDRESS;
 use crate::errors;
 use crate::modules::fund::commands::OperationCommand::UnrestakeVRT;
 use crate::modules::pricing::{Asset, TokenPricingSource};
-use crate::modules::restaking::JitoRestakingVaultService;
+use crate::modules::restaking::{JitoRestakingVaultService, SolvBTCVaultService};
 use crate::modules::staking::{
     MarinadeStakePoolService, SPLStakePoolService, SanctumMultiValidatorSPLStakePoolService,
     SanctumSingleValidatorSPLStakePoolService,
@@ -362,8 +362,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         Some(TokenPricingSource::SolvBTCVault { address }) => {
                             let account = restaking_vault_pricing_sources[i];
                             require_keys_eq!(account.key(), *address);
-                            // TODO/v0.7.0: deal with solv vault if needed
-                            (0, 0)
+                            SolvBTCVaultService::get_max_cycle_fee(account)?
                         }
                         // otherwise fails
                         Some(TokenPricingSource::SPLStakePool { .. })

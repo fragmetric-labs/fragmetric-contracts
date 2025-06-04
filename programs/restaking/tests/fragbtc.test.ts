@@ -2054,4 +2054,6 @@ describe('restaking.fragBTC test', async () => {
         globalReward_7?.basePool.settlements[0].settledAmount!
     ).toEqual(200_000_000n);
   });
+
+  // TODO: full operation test through cash in/out flow
 });

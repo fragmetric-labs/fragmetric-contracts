@@ -4,9 +4,9 @@ import { initializeFrag2 } from '../restaking/tests/frag2.init';
 import { initializeFragBTC } from '../restaking/tests/fragbtc.init';
 import { initializeFragJTO } from '../restaking/tests/fragjto.init';
 import { initializeFragSOL } from '../restaking/tests/fragsol.init';
-import { initializeCBBTCVault } from '../solv/tests/cbbtc.init';
-import { initializeWBTCVault } from '../solv/tests/wbtc.init';
 import { initializeZBTCVault } from '../solv/tests/zbtc.init';
+// import { initializeCBBTCVault } from '../solv/tests/cbbtc.init';
+// import { initializeWBTCVault } from '../solv/tests/wbtc.init';
 import { createTestSuiteContext } from './context';
 
 createTestSuiteContext({ validator: 'litesvm' })
@@ -38,20 +38,22 @@ createTestSuiteContext({ validator: 'litesvm' })
       })
       .then(() => {
         if (!process.env.PROGRAM || process.env.PROGRAM == 'solv') {
-          return Promise.resolve()
-            .then(() => {
-              ctx.sdk.logger.start('Initialize zBTC Vault...');
-              return initializeZBTCVault(ctx).initializationTasks;
-            })
-            .then(() => {
-              ctx.sdk.logger.start('Initialize cbBTC Vault...');
-              return initializeCBBTCVault(ctx).initializationTasks;
-            })
-            .then(() => {
-              ctx.sdk.logger.start('Initialize wBTC Vault...');
-              return initializeWBTCVault(ctx).initializationTasks;
-            })
-            .then(() => {});
+          return (
+            Promise.resolve()
+              .then(() => {
+                ctx.sdk.logger.start('Initialize zBTC Vault...');
+                return initializeZBTCVault(ctx).initializationTasks;
+              })
+              // .then(() => {
+              //   ctx.sdk.logger.start('Initialize cbBTC Vault...');
+              //   return initializeCBBTCVault(ctx).initializationTasks;
+              // })
+              // .then(() => {
+              //   ctx.sdk.logger.start('Initialize wBTC Vault...');
+              //   return initializeWBTCVault(ctx).initializationTasks;
+              // })
+              .then(() => {})
+          );
         }
         return Promise.resolve();
       })

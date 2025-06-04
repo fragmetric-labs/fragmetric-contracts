@@ -918,7 +918,7 @@ impl<'a, 'info> FundService<'a, 'info> {
     }
 
     /// at first, it adds given [asset_amount] to the operation reserved,
-    /// then offset receivables as much as possible, then transfer remaining assets to the program revenue account
+    /// then offset receivables as much as possible, then transfer remaining assets to the treasury account
     /// returns [transferred_asset_revenue_amount, offsetted_asset_amount, offsetted_asset_receivables]
     pub(super) fn offset_receivables(
         &mut self,

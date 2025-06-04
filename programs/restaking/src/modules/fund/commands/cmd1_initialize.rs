@@ -229,11 +229,8 @@ impl InitializeCommand {
                     };
                     command.with_required_accounts(required_accounts)
                 }
-                Some(TokenPricingSource::VirtualVault { .. }) => return Ok(None),
-                Some(TokenPricingSource::SolvBTCVault { .. }) => {
-                    // TODO/v0.7.0: deal with solv vault if needed
-                    return Ok(None);
-                }
+                Some(TokenPricingSource::VirtualVault { .. })
+                | Some(TokenPricingSource::SolvBTCVault { .. }) => return Ok(None),
                 // otherwise fails
                 Some(TokenPricingSource::SPLStakePool { .. })
                 | Some(TokenPricingSource::MarinadeStakePool { .. })
@@ -296,11 +293,8 @@ impl InitializeCommand {
                         &next_item_indices,
                     )?
                 }
-                Some(TokenPricingSource::VirtualVault { .. }) => {
-                    return Ok(None);
-                }
-                Some(TokenPricingSource::SolvBTCVault { .. }) => {
-                    // TODO/v0.7.0: deal with solv vault if needed
+                Some(TokenPricingSource::VirtualVault { .. })
+                | Some(TokenPricingSource::SolvBTCVault { .. }) => {
                     return Ok(None);
                 }
                 // otherwise fails
@@ -426,11 +420,8 @@ impl InitializeCommand {
 
                 Some(result)
             }
-            Some(TokenPricingSource::VirtualVault { .. }) => None,
-            Some(TokenPricingSource::SolvBTCVault { .. }) => {
-                // TODO/v0.7.0: deal with solv vault if needed
-                None
-            }
+            Some(TokenPricingSource::VirtualVault { .. })
+            | Some(TokenPricingSource::SolvBTCVault { .. }) => None,
             // otherwise fails
             Some(TokenPricingSource::SPLStakePool { .. })
             | Some(TokenPricingSource::MarinadeStakePool { .. })

@@ -577,7 +577,7 @@ export class RestakingFundAccountContext extends AccountContext<
               parent
                 .resolveAccount(true)
                 .then((fund) => fund?.data.dataVersion ?? 0)
-                .catch((err) => 35),
+                .catch((err) => 0),
               transformAddressResolverVariant(
                 overrides.feePayer ??
                   this.runtime.options.transaction.feePayer ??
@@ -640,7 +640,7 @@ export class RestakingFundAccountContext extends AccountContext<
       const currentVersion = await parent
         .resolveAccount(true)
         .then((fund) => fund?.data.dataVersion ?? 0)
-        .catch((err) => 35);
+        .catch((err) => 0);
 
       if (currentVersion < args.targetVersion) {
         return {
@@ -1271,6 +1271,7 @@ export class RestakingFundAccountContext extends AccountContext<
             )(parent),
           ]);
           if (!(data && fund)) throw new Error('invalid context');
+          const admin = (this.program as RestakingProgram).knownAddresses.admin;
           const fundManager = (this.program as RestakingProgram).knownAddresses
             .fundManager;
 
@@ -1369,8 +1370,10 @@ export class RestakingFundAccountContext extends AccountContext<
               await restaking.getFundManagerInitializeFundRestakingVaultInstructionAsync(
                 {
                   vaultAccount: vaultAccount.address,
-                  vaultReceiptTokenMint: vaultAccount.data.receiptTokenMint,
-                  vaultSupportedTokenMint: vaultAccount.data.supportedTokenMint,
+                  vaultReceiptTokenMint:
+                    vaultAccount.data.vaultReceiptTokenMint,
+                  vaultSupportedTokenMint:
+                    vaultAccount.data.vaultSupportedTokenMint,
                   fundManager: createNoopSigner(fundManager),
                   receiptTokenMint: data.receiptTokenMint,
                   program: this.program.address,
@@ -1391,20 +1394,29 @@ export class RestakingFundAccountContext extends AccountContext<
             return Promise.all([
               token.getCreateAssociatedTokenIdempotentInstructionAsync({
                 payer: createNoopSigner(payer as Address),
-                mint: vaultAccount.data.receiptTokenMint,
+                mint: vaultAccount.data.vaultReceiptTokenMint,
                 owner: fundReserve,
                 tokenProgram: token.TOKEN_PROGRAM_ADDRESS,
               }),
               token.getCreateAssociatedTokenIdempotentInstructionAsync({
                 payer: createNoopSigner(payer as Address),
-                mint: vaultAccount.data.supportedTokenMint,
+                mint: vaultAccount.data.vaultSupportedTokenMint,
                 owner: args.vault as Address,
                 tokenProgram: token.TOKEN_PROGRAM_ADDRESS,
               }),
-              // TODO: delegate deposit/withdraw authority to fund (?)
-              // solv.getSetVaultAdminInstructionAsync({
-              //   // ...
-              // }),
+              solv.getUpdateVaultAdminRoleInstructionAsync(
+                {
+                  oldVaultAdmin: createNoopSigner(admin),
+                  newVaultAdmin: fund,
+                  vaultReceiptTokenMint:
+                    vaultAccount.data.vaultReceiptTokenMint,
+                  program: vaultAccount.programAddress,
+                  role: solv.VaultAdminRole.FundManager,
+                },
+                {
+                  programAddress: vaultAccount.programAddress,
+                }
+              ),
               ix,
             ]);
           } else if (args.pricingSource.__kind == 'VirtualVault') {

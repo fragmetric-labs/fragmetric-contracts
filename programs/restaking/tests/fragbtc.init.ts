@@ -1,4 +1,3 @@
-import type { RestakingProgram } from '@fragmetric-labs/sdk';
 import type { TestSuiteContext } from '../../testutil';
 
 export function initializeFragBTC(testCtx: TestSuiteContext) {
@@ -128,12 +127,8 @@ export function initializeFragBTC(testCtx: TestSuiteContext) {
       }),
 
     // initialize Solv BTC vault (zBTC)
-    () =>
-      solv.zBTC.initialize.execute({
-        admin: (ctx.program as RestakingProgram).knownAddresses.fundManager,
-        supportedTokenMint: solv.knownAddresses.zBTCVST,
-        receiptTokenMint: solv.knownAddresses.zBTCVRT,
-      }),
+    () => solv.zBTC.initializeReceiptTokenMint.execute(null),
+    () => solv.zBTC.initializeOrUpdateAccount.execute(null),
     async () => {
       await solv.zBTC.resolve(true);
       return ctx.fund.addRestakingVault.execute({
@@ -175,12 +170,8 @@ export function initializeFragBTC(testCtx: TestSuiteContext) {
       }),
 
     // initialize Solv BTC vault (cbBTC)
-    () =>
-      solv.cbBTC.initialize.execute({
-        admin: (ctx.program as RestakingProgram).knownAddresses.fundManager,
-        supportedTokenMint: solv.knownAddresses.cbBTCVST,
-        receiptTokenMint: solv.knownAddresses.cbBTCVRT,
-      }),
+    () => solv.cbBTC.initializeReceiptTokenMint.execute(null),
+    () => solv.cbBTC.initializeOrUpdateAccount.execute(null),
     async () => {
       await solv.cbBTC.resolve(true);
       return ctx.fund.addRestakingVault.execute({
@@ -193,12 +184,8 @@ export function initializeFragBTC(testCtx: TestSuiteContext) {
     },
 
     // initialize Solv BTC vault (wBTC)
-    () =>
-      solv.wBTC.initialize.execute({
-        admin: (ctx.program as RestakingProgram).knownAddresses.fundManager,
-        supportedTokenMint: solv.knownAddresses.wBTCVST,
-        receiptTokenMint: solv.knownAddresses.wBTCVRT,
-      }),
+    () => solv.wBTC.initializeReceiptTokenMint.execute(null),
+    () => solv.wBTC.initializeOrUpdateAccount.execute(null),
     async () => {
       await solv.wBTC.resolve(true);
       return ctx.fund.addRestakingVault.execute({

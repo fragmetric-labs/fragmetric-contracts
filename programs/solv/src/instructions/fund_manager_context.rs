@@ -61,6 +61,7 @@ pub fn process_deposit(ctx: Context<FundManagerContext>, vst_amount: u64) -> Res
     } = ctx.accounts;
 
     require_gt!(vst_amount, 0);
+    require_gte!(payer_vault_supported_token_account.amount, vst_amount);
 
     let vrt_amount = vault_account.load_mut()?.mint_vrt(vst_amount)?;
 
@@ -107,6 +108,7 @@ pub fn process_request_withdrawal(ctx: Context<FundManagerContext>, vrt_amount: 
     } = ctx.accounts;
 
     require_gt!(vrt_amount, 0);
+    require_gte!(payer_vault_receipt_token_account.amount, vrt_amount);
 
     let vrt_amount = vault_account
         .load_mut()?

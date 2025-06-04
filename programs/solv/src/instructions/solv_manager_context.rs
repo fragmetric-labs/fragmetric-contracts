@@ -57,7 +57,7 @@ pub struct SolvManagerContext<'info> {
     pub token_program: Program<'info, Token>,
 }
 
-pub fn process_deposit(ctx: Context<SolvManagerContext>) -> Result<()> {
+pub fn process_confirm_deposits(ctx: Context<SolvManagerContext>) -> Result<()> {
     let SolvManagerContext {
         vault_account,
         vault_supported_token_mint,
@@ -110,10 +110,10 @@ pub fn process_deposit(ctx: Context<SolvManagerContext>) -> Result<()> {
 }
 
 // TODO/phase3: deprecate
-pub fn process_confirm_deposit(
+pub fn process_complete_deposits(
     ctx: Context<SolvManagerContext>,
     srt_amount: u64,
-    one_srt_as_micro_vst: u64,
+    new_one_srt_as_micro_vst: u64,
 ) -> Result<()> {
     let SolvManagerContext {
         vault_account,
@@ -123,7 +123,7 @@ pub fn process_confirm_deposit(
 
     let mut vault = vault_account.load_mut()?;
 
-    vault.resolve_srt_receivables(srt_amount, one_srt_as_micro_vst)?;
+    vault.offset_srt_receivables(srt_amount, new_one_srt_as_micro_vst, true)?;
 
     require_gte!(
         vault_solv_receipt_token_account.amount,
@@ -133,7 +133,7 @@ pub fn process_confirm_deposit(
     Ok(())
 }
 
-pub fn process_request_withdrawal(ctx: Context<SolvManagerContext>) -> Result<()> {
+pub fn process_confirm_withdrawal_requests(ctx: Context<SolvManagerContext>) -> Result<()> {
     let SolvManagerContext {
         vault_account,
         solv_receipt_token_mint,
@@ -143,7 +143,7 @@ pub fn process_request_withdrawal(ctx: Context<SolvManagerContext>) -> Result<()
         ..
     } = ctx.accounts;
 
-    let srt_amount_to_withdraw = vault_account.load_mut()?.start_withdrawal_requests()?;
+    let srt_amount_to_withdraw = vault_account.load_mut()?.confirm_withdrawal_requests()?;
 
     // TODO/phase3: CPI call to the Solv protocol - now just transfer
     if srt_amount_to_withdraw > 0 {
@@ -166,11 +166,11 @@ pub fn process_request_withdrawal(ctx: Context<SolvManagerContext>) -> Result<()
     Ok(())
 }
 
-pub fn process_withdraw(
+pub fn process_complete_withdrawal_requests(
     ctx: Context<SolvManagerContext>,
     srt_amount: u64,
     vst_amount: u64,
-    one_srt_as_micro_vst: u64,
+    old_one_srt_as_micro_vst: u64,
 ) -> Result<()> {
     let SolvManagerContext {
         vault_account,
@@ -180,9 +180,11 @@ pub fn process_withdraw(
 
     // TODO/phase3: CPI call to the solv protocol - now assumes that solv protocol has already sent VST to vault's ATA
 
+    require_gt!(srt_amount, 0);
+
     let mut vault = vault_account.load_mut()?;
 
-    vault.complete_withdrawal_requests(srt_amount, vst_amount, one_srt_as_micro_vst)?;
+    vault.complete_withdrawal_requests(srt_amount, vst_amount, old_one_srt_as_micro_vst, true)?;
 
     require_gte!(
         vault_vault_supported_token_account.amount,
@@ -237,7 +239,7 @@ pub fn process_set_solv_protocol_withdrawal_fee_rate(
 
     vault_account
         .load_mut()?
-        .set_solv_protocol_withdrawal_fee_rate(solv_protocol_withdrawal_fee_rate_bps)?;
+        .set_solv_protocol_withdrawal_fee_rate_bps(solv_protocol_withdrawal_fee_rate_bps)?;
 
     Ok(())
 }
