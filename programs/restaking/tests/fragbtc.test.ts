@@ -2590,14 +2590,14 @@ describe('restaking.fragBTC test', async () => {
         "depositResidualMicroReceiptTokenAmount": 964414n,
         "metadata": null,
         "normalizedToken": null,
-        "oneReceiptTokenAsSOL": 672352352226n,
+        "oneReceiptTokenAsSOL": 672352352237n,
         "receiptTokenDecimals": 8,
         "receiptTokenMint": "ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz",
         "receiptTokenSupply": 5720987629n,
         "restakingVaultReceiptTokens": [
           {
             "mint": "DNLsKFnrBjTBKp1eSwt8z1iNu2T2PL3MnxZFsGEEpQCf",
-            "oneReceiptTokenAsSol": 709711095573n,
+            "oneReceiptTokenAsSol": 709711095602n,
             "operationReceivableAmount": 0n,
             "operationReservedAmount": 2274637031n,
             "operationTotalAmount": 2274637031n,
@@ -2873,7 +2873,7 @@ describe('restaking.fragBTC test', async () => {
     `);
     await ctx.fund.updatePrices.execute(null);
 
-    // TODO: FIX flooring error!!! fragBTC: 672352352226n, zBTC VRT: 709711095573n -> 672352352113n (x0.9999999998), 709711095276n (x0.9999999996)
+    // note: precision error or safe withdrawal request capacity => fragBTC: 672352352226n, zBTC VRT: 709711095573n -> 672352352135n (x0.9999999999), 709711095335n (x0.9999999997)
     await expectMasked(ctx.resolve(true)).resolves.toMatchInlineSnapshot(`
       {
         "__lookupTableAddress": "MASKED(__lookupTableAddress)",
@@ -2898,14 +2898,14 @@ describe('restaking.fragBTC test', async () => {
         "depositResidualMicroReceiptTokenAmount": 964414n,
         "metadata": null,
         "normalizedToken": null,
-        "oneReceiptTokenAsSOL": 672352352113n,
+        "oneReceiptTokenAsSOL": 672352352135n,
         "receiptTokenDecimals": 8,
         "receiptTokenMint": "ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz",
         "receiptTokenSupply": 5720987629n,
         "restakingVaultReceiptTokens": [
           {
             "mint": "DNLsKFnrBjTBKp1eSwt8z1iNu2T2PL3MnxZFsGEEpQCf",
-            "oneReceiptTokenAsSol": 709711095276n,
+            "oneReceiptTokenAsSol": 709711095335n,
             "operationReceivableAmount": 0n,
             "operationReservedAmount": 2186147332n,
             "operationTotalAmount": 2186147332n,
@@ -2990,7 +2990,6 @@ describe('restaking.fragBTC test', async () => {
 
     await ctx.fund.runCommand.executeChained(null);
 
-    // TODO: FIX flooring error!!! fragBTC: 672352352113n, zBTC VRT: 709711095276n -> 672352351999n (x0.9999999998), 709711094953n (x0.9999999995)
     await expectMasked(ctx.resolve(true)).resolves.toMatchInlineSnapshot(`
       {
         "__lookupTableAddress": "MASKED(__lookupTableAddress)",
@@ -3015,14 +3014,14 @@ describe('restaking.fragBTC test', async () => {
         "depositResidualMicroReceiptTokenAmount": 964414n,
         "metadata": null,
         "normalizedToken": null,
-        "oneReceiptTokenAsSOL": 672352352448n,
+        "oneReceiptTokenAsSOL": 672352352471n,
         "receiptTokenDecimals": 8,
         "receiptTokenMint": "ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz",
         "receiptTokenSupply": 5620987629n,
         "restakingVaultReceiptTokens": [
           {
             "mint": "DNLsKFnrBjTBKp1eSwt8z1iNu2T2PL3MnxZFsGEEpQCf",
-            "oneReceiptTokenAsSol": 709711095276n,
+            "oneReceiptTokenAsSol": 709711095335n,
             "operationReceivableAmount": 0n,
             "operationReservedAmount": 2186147332n,
             "operationTotalAmount": 2186147332n,
@@ -3063,7 +3062,7 @@ describe('restaking.fragBTC test', async () => {
             "withdrawable": true,
             "withdrawableValueAsReceiptTokenAmount": 2307618932n,
             "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
-            "withdrawalResidualMicroAssetAmount": 907439n,
+            "withdrawalResidualMicroAssetAmount": 910935n,
             "withdrawalUserReservedAmount": 103599312n,
           },
           {
@@ -3214,11 +3213,12 @@ describe('restaking.fragBTC test', async () => {
       }
     `);
 
-    expectMasked(ctx.fund.latestWithdrawalBatches.resolve(true)).resolves.toMatchInlineSnapshot(`
+    expectMasked(ctx.fund.latestWithdrawalBatches.resolve(true)).resolves
+      .toMatchInlineSnapshot(`
       [
         {
           "assetFeeAmount": 207613n,
-          "assetUserAmount": 103599312n,
+          "assetUserAmount": 103599311n,
           "batchId": 2n,
           "claimedAssetUserAmount": 0n,
           "claimedReceiptTokenAmount": 0n,
@@ -3249,6 +3249,42 @@ describe('restaking.fragBTC test', async () => {
         },
         { signers: [signer1] }
       )
-    ).resolves.toMatchInlineSnapshot();
+    ).resolves.toMatchInlineSnapshot(`
+      {
+        "args": {
+          "applyPresetComputeUnitLimit": true,
+          "assetMint": "zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg",
+          "requestId": 3n,
+        },
+        "events": {
+          "unknown": [],
+          "userWithdrewFromFund": {
+            "batchId": 2n,
+            "burntReceiptTokenAmount": 100000000n,
+            "deductedFeeAmount": 207613n,
+            "fundAccount": "BEpVRdWw6VhvfwfQufB9iqcJ6acf51XRP1jETCvGDBVE",
+            "fundWithdrawalBatchAccount": "S3G2m8RLtyMRFjqEMkiwidCwJ4PQhgesDhpyFFfv37P",
+            "receiptTokenMint": "ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz",
+            "requestId": 3n,
+            "returnedReceiptTokenAmount": 0n,
+            "supportedTokenMint": {
+              "__option": "Some",
+              "value": "zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg",
+            },
+            "user": "AWb2qUvuFzbVN5Eu7tZY8gM745pus5DhTGgo8U8Bd8X2",
+            "userFundAccount": "DdVfA4rT4tSJRMi688zb5SeZitH91AcKXU79Q4A3pCHg",
+            "userReceiptTokenAccount": "31GDTcPyFTexmiwSvLTZAcY2JSxafoy3yVavK4iAYaLE",
+            "userSupportedTokenAccount": {
+              "__option": "Some",
+              "value": "CHBjDuyN1JxAfeYY7wz68b78E6uPpek1TKqjKeyDJZD6",
+            },
+            "withdrawnAmount": 103599311n,
+          },
+        },
+        "signature": "MASKED(signature)",
+        "slot": "MASKED(/[.*S|s]lots?$/)",
+        "succeeded": true,
+      }
+    `);
   });
 });

@@ -831,19 +831,23 @@ impl<'a, 'info> FundService<'a, 'info> {
                     supported_token_mint_key.as_ref(),
                     &mut withdrawal_residual_micro_asset_amount,
                 )?;
+
                 let asset_fee_amount = self
                     .fund_account
                     .load()?
                     .get_withdrawal_fee_amount(asset_amount)?;
-                let asset_user_amount = asset_amount - asset_fee_amount;
+                let mut asset_user_amount = asset_amount - asset_fee_amount;
 
                 // offset asset_user_amount by asset_operation_reserved_amount
                 let mut fund_account = self.fund_account.load_mut()?;
                 let asset = fund_account.get_asset_state_mut(supported_token_mint_key)?;
                 asset.operation_reserved_amount -= asset_user_amount;
                 asset.withdrawal_user_reserved_amount += asset_user_amount;
-                asset_user_amount_processing =
-                    asset_user_amount_processing.saturating_sub(asset_user_amount);
+                if asset_user_amount_processing < asset_user_amount {
+                    // prevent over-allocation due to conversion precision error
+                    asset_user_amount = asset_user_amount_processing;
+                }
+                asset_user_amount_processing -= asset_user_amount;
                 receipt_token_amount_processing -= batch.receipt_token_amount;
 
                 // update residual
@@ -1101,12 +1105,15 @@ impl<'a, 'info> FundService<'a, 'info> {
                     None => receivable_amount_processing_as_sol,
                 };
             asset_debt_amount_processing -= receivable_amount_processed;
-            // asset_receivable_amount_processing -= receivable_amount_processed;
         }
 
         // pay remaining debt with cash with current asset
         let mut fund_account = self.fund_account.load_mut()?;
         let asset = fund_account.get_asset_state_mut(supported_token_mint_key)?;
+
+        // cut off remaining debt within possible amounts to prevent over-allocation due to conversion precision error
+        asset_debt_amount_processing =
+            asset_debt_amount_processing.min(asset.operation_reserved_amount);
         asset.operation_reserved_amount -= asset_debt_amount_processing;
         drop(fund_account);
 
