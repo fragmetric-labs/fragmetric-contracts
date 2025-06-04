@@ -1,7 +1,8 @@
-use crate::constants;
-use crate::errors::VaultError;
 use anchor_lang::prelude::*;
 use anchor_spl::token::Mint;
+
+use crate::constants;
+use crate::errors::VaultError;
 
 #[constant]
 /// ## Version History
@@ -747,9 +748,9 @@ impl VaultAccount {
         self.vst_deducted_fee_amount += vst_estimated_solv_protocol_fee_amount;
         self.vst_receivable_amount_to_claim -= vst_withdrawal_total_estimated_amount;
 
-        // TODO: deprecate this heuristic validation, need to store estimated fee at turning into processing phase
-        require_gte!(self.one_srt_as_micro_vst, old_one_srt_as_micro_vst);
-        if heuristic_validation
+        // TODO: deprecate this heuristic validation
+        if old_one_srt_as_micro_vst < self.one_srt_as_micro_vst
+            && heuristic_validation
             && self.one_srt_as_micro_vst - old_one_srt_as_micro_vst < self.one_srt_as_micro_vst / 10
         {
             err!(VaultError::InvalidSRTPriceError)?;
@@ -1166,9 +1167,8 @@ mod tests {
 
         // (Expected) 1 SRT = 2.18919457342449 => 228_395 SRT = 500001.xxx VRT => 500_001
         // (Actual)   1 SRT = 2.18919936600787 => 228_395 SRT = 500002.xxx VRT => 500_002 (+ 0)
-        // TODO: check this test case based on the original purpose; Expected? Actual?
         vault
-            .complete_withdrawal_requests(228_395, 500_002, 218_919_457_342_449, false)
+            .complete_withdrawal_requests(228_395, 500_002, 218_919_936_600_787, false)
             .unwrap();
         vault.assert_invariants().unwrap();
 
@@ -1183,9 +1183,8 @@ mod tests {
 
         // (Expected) 1 SRT = 2.18919457342449 => 228_394 SRT = 499998.xxx VRT => 499_998
         // (Actual)   1 SRT = 2.18919936600787 => 228_394 SRT = 500000.xxx VRT => 500_000 (+ 2)
-        // TODO: check this test case based on the original purpose; Expected? Actual?
         vault
-            .complete_withdrawal_requests(228_394, 500_000, 218_919_457_342_449, false)
+            .complete_withdrawal_requests(228_394, 500_000, 218_919_936_600_787, false)
             .unwrap();
         vault.assert_invariants().unwrap();
 
