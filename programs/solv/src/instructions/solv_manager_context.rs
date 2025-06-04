@@ -123,7 +123,7 @@ pub fn process_complete_deposits(
 
     let mut vault = vault_account.load_mut()?;
 
-    vault.offset_srt_receivables(srt_amount, new_one_srt_as_micro_vst)?;
+    vault.offset_srt_receivables(srt_amount, new_one_srt_as_micro_vst, true)?;
 
     require_gte!(
         vault_solv_receipt_token_account.amount,
@@ -184,7 +184,7 @@ pub fn process_complete_withdrawal_requests(
 
     let mut vault = vault_account.load_mut()?;
 
-    vault.complete_withdrawal_requests(srt_amount, vst_amount, old_one_srt_as_micro_vst)?;
+    vault.complete_withdrawal_requests(srt_amount, vst_amount, old_one_srt_as_micro_vst, true)?;
 
     require_gte!(
         vault_vault_supported_token_account.amount,

@@ -577,7 +577,7 @@ describe('solv.zBTC test', async () => {
       }
     `);
 
-    // // now process 2nd req
+    // now process 2nd req
     await expect(
       ctx.completeWithdrawalRequests.execute({
         burntSolvReceiptTokenAmount: 195361017n,
@@ -593,5 +593,161 @@ describe('solv.zBTC test', async () => {
       oneSolvReceiptTokenAsMicroSupportedTokenAmount: 109999999123456n,
       oneSolvReceiptTokenAsSupportedTokenAmount: 109999999n,
     });
+
+    await expect(ctx.resolve(true)).resolves.toMatchInlineSnapshot(`
+      {
+        "admin": {
+          "fundManager": "4pfiCiaZsTf8aNKexuGYzhQLbg6iJKoYospSUmfTpL2K",
+          "rewardManager": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx",
+          "solvManager": "BBiQ99GVfamTcqcYwLgji4k5giL3C8epmR3do1thYigw",
+          "vaultManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+        },
+        "delegatedRewardTokens": [
+          {
+            "amount": 0n,
+            "delegate": {
+              "__option": "Some",
+              "value": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx",
+            },
+            "mint": "ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq",
+          },
+        ],
+        "oneReceiptTokenAsMicroSupportedTokenAmount": 107448558666666n,
+        "oneReceiptTokenAsSupportedTokenAmount": 107448558n,
+        "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 109999999123456n,
+        "oneSolvReceiptTokenAsSupportedTokenAmount": 109999999n,
+        "receiptTokenDecimals": 8,
+        "receiptTokenMint": "DNLsKFnrBjTBKp1eSwt8z1iNu2T2PL3MnxZFsGEEpQCf",
+        "receiptTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "receiptTokenSupply": 0n,
+        "solvProtocolWallet": "4xqLe1ALAh8sbi2N2uEM5JXbhhVNKMVRg3L1m1E2Hfbv",
+        "solvProtocolWithdrawalFeeRate": 0.008,
+        "solvReceiptTokenAmount": 1n,
+        "solvReceiptTokenDecimals": 8,
+        "solvReceiptTokenMint": "SoLvzL3ZVjofmNB5LYFrf94QtNhMUSea4DawFhnAau8",
+        "solvReceiptTokenOperationReceivableAmount": 0n,
+        "solvReceiptTokenOperationReservedAmount": 0n,
+        "supportedTokenAmount": 400000000n,
+        "supportedTokenDecimals": 8,
+        "supportedTokenMint": "zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg",
+        "supportedTokenOperationReservedAmount": 0n,
+        "supportedTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "withdrawal": {
+          "completed": {
+            "receiptTokenProcessedAmount": 300000000n,
+            "requests": [
+              {
+                "id": 1n,
+                "receiptTokenEnqueuedAmount": 100000000n,
+                "solvReceiptTokenLockedAmount": 97680509n,
+                "supportedTokenLockedAmount": 0n,
+                "supportedTokenTotalEstimatedAmount": 107448559n,
+              },
+              {
+                "id": 2n,
+                "receiptTokenEnqueuedAmount": 200000000n,
+                "solvReceiptTokenLockedAmount": 195361017n,
+                "supportedTokenLockedAmount": 0n,
+                "supportedTokenTotalEstimatedAmount": 214897116n,
+              },
+            ],
+            "supportedTokenDeductedFeeAmount": 2578766n,
+            "supportedTokenExtraClaimableAmount": 2577766n,
+            "supportedTokenTotalClaimableAmount": 322344675n,
+          },
+          "enqueued": {
+            "receiptTokenEnqueuedAmount": 0n,
+            "requests": [],
+            "solvReceiptTokenLockedAmount": 0n,
+            "supportedTokenLockedAmount": 0n,
+          },
+          "processing": {
+            "receiptTokenProcessingAmount": 0n,
+            "requests": [],
+            "supportedTokenReceivableAmount": 0n,
+          },
+        },
+      }
+    `);
+
+    // claim it
+    await expect(
+      ctx.fundManager.receiptToken.resolve(true).then((a) => a.amount)
+    ).resolves.toMatchInlineSnapshot(`0n`);
+    await expect(
+      ctx.fundManager.supportedToken.resolve(true).then((a) => a.amount)
+    ).resolves.toMatchInlineSnapshot(`9700000000n`);
+
+    await expect(
+      ctx.withdraw.execute({
+        payer: knownAddresses.fundManager,
+      })
+    ).resolves.not.toThrowError();
+
+    await expect(
+      ctx.fundManager.supportedToken.resolve(true).then((a) => a.amount)
+    ).resolves.toMatchInlineSnapshot(`10022344675n`);
+    // 322344675n = 10022344675 - 9700000000
+
+    await expect(ctx.resolve(true)).resolves.toMatchInlineSnapshot(`
+      {
+        "admin": {
+          "fundManager": "4pfiCiaZsTf8aNKexuGYzhQLbg6iJKoYospSUmfTpL2K",
+          "rewardManager": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx",
+          "solvManager": "BBiQ99GVfamTcqcYwLgji4k5giL3C8epmR3do1thYigw",
+          "vaultManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+        },
+        "delegatedRewardTokens": [
+          {
+            "amount": 0n,
+            "delegate": {
+              "__option": "Some",
+              "value": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx",
+            },
+            "mint": "ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq",
+          },
+        ],
+        "oneReceiptTokenAsMicroSupportedTokenAmount": 107448558666666n,
+        "oneReceiptTokenAsSupportedTokenAmount": 107448558n,
+        "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 109999999123456n,
+        "oneSolvReceiptTokenAsSupportedTokenAmount": 109999999n,
+        "receiptTokenDecimals": 8,
+        "receiptTokenMint": "DNLsKFnrBjTBKp1eSwt8z1iNu2T2PL3MnxZFsGEEpQCf",
+        "receiptTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "receiptTokenSupply": 0n,
+        "solvProtocolWallet": "4xqLe1ALAh8sbi2N2uEM5JXbhhVNKMVRg3L1m1E2Hfbv",
+        "solvProtocolWithdrawalFeeRate": 0.008,
+        "solvReceiptTokenAmount": 1n,
+        "solvReceiptTokenDecimals": 8,
+        "solvReceiptTokenMint": "SoLvzL3ZVjofmNB5LYFrf94QtNhMUSea4DawFhnAau8",
+        "solvReceiptTokenOperationReceivableAmount": 0n,
+        "solvReceiptTokenOperationReservedAmount": 0n,
+        "supportedTokenAmount": 77655325n,
+        "supportedTokenDecimals": 8,
+        "supportedTokenMint": "zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg",
+        "supportedTokenOperationReservedAmount": 0n,
+        "supportedTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "withdrawal": {
+          "completed": {
+            "receiptTokenProcessedAmount": 0n,
+            "requests": [],
+            "supportedTokenDeductedFeeAmount": 0n,
+            "supportedTokenExtraClaimableAmount": 0n,
+            "supportedTokenTotalClaimableAmount": 0n,
+          },
+          "enqueued": {
+            "receiptTokenEnqueuedAmount": 0n,
+            "requests": [],
+            "solvReceiptTokenLockedAmount": 0n,
+            "supportedTokenLockedAmount": 0n,
+          },
+          "processing": {
+            "receiptTokenProcessingAmount": 0n,
+            "requests": [],
+            "supportedTokenReceivableAmount": 0n,
+          },
+        },
+      }
+    `);
   });
 });
