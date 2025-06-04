@@ -386,6 +386,20 @@ impl VaultAccount {
         Some(self.vst_operation_reserved_amount + srt_operation_reserved_amount_as_vst)
     }
 
+    /// NAV = VST (operation reserved) + SRT (operation reserved + receivable) as VST
+    pub fn get_net_asset_value_as_micro_vst(&self) -> Option<u64> {
+        // TODO/phase3: deprecate srt_operation_receivable_amount
+        let srt_operation_reserved_amount_as_micro_vst =
+            self.get_srt_exchange_rate().get_srt_amount_as_vst(
+                1_000_000
+                    * (self.srt_operation_reserved_amount + self.srt_operation_receivable_amount),
+                false,
+            )?;
+        let vst_operation_reserved_amount_as_micro = 1_000_000 * self.vst_operation_reserved_amount;
+
+        Some(vst_operation_reserved_amount_as_micro + srt_operation_reserved_amount_as_micro_vst)
+    }
+
     fn update_vrt_exchange_rate(&mut self) -> Result<()> {
         let net_asset_value_as_vst = self
             .get_net_asset_value_as_vst()

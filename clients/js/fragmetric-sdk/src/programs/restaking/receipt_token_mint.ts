@@ -119,14 +119,31 @@ export class RestakingReceiptTokenMintAccountContext extends TokenMintAccountCon
           data.numRestakingVaults
         );
 
-        const pricingSources: ReadonlyAccount[] = data.pricingSourceAddresses
-          .slice(0, data.numPricingSourceAddresses)
-          .map((address) => {
-            return {
-              address,
-              role: AccountRole.READONLY,
-            };
-          });
+        const pricingSources: ReadonlyAccount[] = (
+          data.numPricingSourceAddresses > 0
+            ? data.pricingSourceAddresses.slice(
+                0,
+                data.numPricingSourceAddresses
+              )
+            : supportedTokens
+                .filter(
+                  (v) =>
+                    this.__tokenPricingSourceDiscriminantMap.get(
+                      v.pricingSource.discriminant
+                    ) != 'PeggedToken'
+                ) // skip pegged token
+                .map((v) => v.pricingSource.address)
+                .concat(
+                  restakingVaults.map(
+                    (v) => v.receiptTokenPricingSource.address
+                  )
+                )
+        ).map((address) => {
+          return {
+            address,
+            role: AccountRole.READONLY,
+          };
+        });
 
         return {
           metadata,
