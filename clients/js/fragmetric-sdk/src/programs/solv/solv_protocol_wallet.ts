@@ -1,7 +1,7 @@
+import * as system from '@solana-program/system';
 import { EncodedAccount } from '@solana/kit';
 import { BaseAccountContext, TokenAccountContext } from '../../context';
 import { SolvVaultAccountContext } from './vault';
-import * as system from '@solana-program/system';
 
 export class SolvProtocolWalletAccountContext extends BaseAccountContext<SolvVaultAccountContext> {
   constructor(parent: SolvVaultAccountContext) {

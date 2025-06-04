@@ -269,7 +269,10 @@ describe('solv.zBTC test', async () => {
 
     const vaultReceiptTokenValueNumerator = 3_0000_0000n * 1_0744_8558_666666n;
     const vaultNetValueNumerator = 2_9304_1526n * 1_0999_9999_123456n;
-    expect((vaultReceiptTokenValueNumerator - vaultNetValueNumerator) / 1_0000_0000_000000n).toEqual(0n);
+    expect(
+      (vaultReceiptTokenValueNumerator - vaultNetValueNumerator) /
+        1_0000_0000_000000n
+    ).toEqual(0n);
   });
 
   /** 2. withdrawal **/
@@ -285,7 +288,8 @@ describe('solv.zBTC test', async () => {
       receiptTokenAmount: 2_0000_0000n,
     });
 
-    await expect(ctx.fundManager.receiptToken.resolve(true)).resolves.toMatchInlineSnapshot(`
+    await expect(ctx.fundManager.receiptToken.resolve(true)).resolves
+      .toMatchInlineSnapshot(`
       {
         "amount": 0n,
         "closeAuthority": {
@@ -304,50 +308,48 @@ describe('solv.zBTC test', async () => {
       }
     `);
 
-    await expect(ctx.resolve(true)).resolves.toMatchObject(
-      {
-        "receiptTokenSupply": 0n,
-        "solvReceiptTokenAmount": 293041527n,
-        "solvReceiptTokenOperationReceivableAmount": 0n,
-        "solvReceiptTokenOperationReservedAmount": 0n,
-        "supportedTokenAmount": 0n,
-        "withdrawal": {
-          "enqueued": {
-            "receiptTokenEnqueuedAmount": 300000000n,
-            "requests": [
-              {
-                "id": 1n,
-                "receiptTokenEnqueuedAmount": 100000000n,
-                "solvReceiptTokenLockedAmount": 97680509n,
-                "supportedTokenLockedAmount": 0n,
-                "supportedTokenTotalEstimatedAmount": 107448559n,
-              },
-              {
-                "id": 2n,
-                "receiptTokenEnqueuedAmount": 200000000n,
-                "solvReceiptTokenLockedAmount": 195361017n,
-                "supportedTokenLockedAmount": 0n,
-                "supportedTokenTotalEstimatedAmount": 214897116n,
-              },
-            ],
-            "solvReceiptTokenLockedAmount": 293041526n,
-            "supportedTokenLockedAmount": 0n,
-          },
-          "processing": {
-            "receiptTokenProcessingAmount": 0n,
-            "requests": [],
-            "supportedTokenReceivableAmount": 0n,
-          },
-          "completed": {
-            "receiptTokenProcessedAmount": 0n,
-            "requests": [],
-            "supportedTokenDeductedFeeAmount": 0n,
-            "supportedTokenExtraClaimableAmount": 0n,
-            "supportedTokenTotalClaimableAmount": 0n,
-          },
+    await expect(ctx.resolve(true)).resolves.toMatchObject({
+      receiptTokenSupply: 0n,
+      solvReceiptTokenAmount: 293041527n,
+      solvReceiptTokenOperationReceivableAmount: 0n,
+      solvReceiptTokenOperationReservedAmount: 0n,
+      supportedTokenAmount: 0n,
+      withdrawal: {
+        enqueued: {
+          receiptTokenEnqueuedAmount: 300000000n,
+          requests: [
+            {
+              id: 1n,
+              receiptTokenEnqueuedAmount: 100000000n,
+              solvReceiptTokenLockedAmount: 97680509n,
+              supportedTokenLockedAmount: 0n,
+              supportedTokenTotalEstimatedAmount: 107448559n,
+            },
+            {
+              id: 2n,
+              receiptTokenEnqueuedAmount: 200000000n,
+              solvReceiptTokenLockedAmount: 195361017n,
+              supportedTokenLockedAmount: 0n,
+              supportedTokenTotalEstimatedAmount: 214897116n,
+            },
+          ],
+          solvReceiptTokenLockedAmount: 293041526n,
+          supportedTokenLockedAmount: 0n,
         },
-      }
-    );
+        processing: {
+          receiptTokenProcessingAmount: 0n,
+          requests: [],
+          supportedTokenReceivableAmount: 0n,
+        },
+        completed: {
+          receiptTokenProcessedAmount: 0n,
+          requests: [],
+          supportedTokenDeductedFeeAmount: 0n,
+          supportedTokenExtraClaimableAmount: 0n,
+          supportedTokenTotalClaimableAmount: 0n,
+        },
+      },
+    });
 
     // solv manager confirm requests
     await ctx.confirmWithdrawalRequests.execute(null);
@@ -434,8 +436,12 @@ describe('solv.zBTC test', async () => {
       1_0000_0000n
     );
     expect({
-      supportedToken: await ctx.solvProtocolWallet.supportedToken.resolve(true).then(a => a.amount),
-      solvReceiptToken: await ctx.solvProtocolWallet.solvReceiptToken.resolve(true).then(a => a.amount),
+      supportedToken: await ctx.solvProtocolWallet.supportedToken
+        .resolve(true)
+        .then((a) => a.amount),
+      solvReceiptToken: await ctx.solvProtocolWallet.solvReceiptToken
+        .resolve(true)
+        .then((a) => a.amount),
     }).toMatchInlineSnapshot(`
       {
         "solvReceiptToken": 9999999999n,
@@ -451,38 +457,48 @@ describe('solv.zBTC test', async () => {
     });
 
     // cannot process zero amount
-    await expect(ctx.completeWithdrawalRequests.execute({
-      burntSolvReceiptTokenAmount: 0n,
-      redeemedSupportedTokenAmount: 0n,
-      oldOneSolvReceiptTokenAsMicroSupportedTokenAmount: 1_1000_0000_000000n,
-    })).rejects.toThrowError();
+    await expect(
+      ctx.completeWithdrawalRequests.execute({
+        burntSolvReceiptTokenAmount: 0n,
+        redeemedSupportedTokenAmount: 0n,
+        oldOneSolvReceiptTokenAsMicroSupportedTokenAmount: 1_1000_0000_000000n,
+      })
+    ).rejects.toThrowError();
 
     // cannot process withdrawals with ambiguous srt amount
-    await expect(ctx.completeWithdrawalRequests.execute({
-      burntSolvReceiptTokenAmount: 10n,
-      redeemedSupportedTokenAmount: 11n,
-      oldOneSolvReceiptTokenAsMicroSupportedTokenAmount: 1_1000_0000_000000n,
-    })).rejects.toThrowError();
+    await expect(
+      ctx.completeWithdrawalRequests.execute({
+        burntSolvReceiptTokenAmount: 10n,
+        redeemedSupportedTokenAmount: 11n,
+        oldOneSolvReceiptTokenAsMicroSupportedTokenAmount: 1_1000_0000_000000n,
+      })
+    ).rejects.toThrowError();
 
-    await expect(ctx.completeWithdrawalRequests.execute({
-      burntSolvReceiptTokenAmount: 97680509n - 1n,
-      redeemedSupportedTokenAmount: 107448559n,
-      oldOneSolvReceiptTokenAsMicroSupportedTokenAmount: 1_1000_0000_000000n,
-    })).rejects.toThrowError();
+    await expect(
+      ctx.completeWithdrawalRequests.execute({
+        burntSolvReceiptTokenAmount: 97680509n - 1n,
+        redeemedSupportedTokenAmount: 107448559n,
+        oldOneSolvReceiptTokenAsMicroSupportedTokenAmount: 1_1000_0000_000000n,
+      })
+    ).rejects.toThrowError();
 
     // cannot process withdrawals with not enough vst
-    await expect(ctx.completeWithdrawalRequests.execute({
-      burntSolvReceiptTokenAmount: 97680509n,
-      redeemedSupportedTokenAmount: 107448559n - 7448559n,
-      oldOneSolvReceiptTokenAsMicroSupportedTokenAmount: 1_100_0000_000000n,
-    })).rejects.toThrowError();
+    await expect(
+      ctx.completeWithdrawalRequests.execute({
+        burntSolvReceiptTokenAmount: 97680509n,
+        redeemedSupportedTokenAmount: 107448559n - 7448559n,
+        oldOneSolvReceiptTokenAsMicroSupportedTokenAmount: 1_100_0000_000000n,
+      })
+    ).rejects.toThrowError();
 
     // now process 1st req
-    await expect(ctx.completeWithdrawalRequests.execute({
-      burntSolvReceiptTokenAmount: 97680509n,
-      redeemedSupportedTokenAmount: 107448559n,
-      oldOneSolvReceiptTokenAsMicroSupportedTokenAmount: 1_100_0000_000000n,
-    })).resolves.not.toThrowError();
+    await expect(
+      ctx.completeWithdrawalRequests.execute({
+        burntSolvReceiptTokenAmount: 97680509n,
+        redeemedSupportedTokenAmount: 107448559n,
+        oldOneSolvReceiptTokenAsMicroSupportedTokenAmount: 1_100_0000_000000n,
+      })
+    ).resolves.not.toThrowError();
 
     await expect(ctx.resolve(true)).resolves.toMatchInlineSnapshot(`
       {
@@ -562,18 +578,20 @@ describe('solv.zBTC test', async () => {
     `);
 
     // // now process 2nd req
-    await expect(ctx.completeWithdrawalRequests.execute({
-      burntSolvReceiptTokenAmount: 195361017n,
-      redeemedSupportedTokenAmount: 214897116n - 1000n,
-      oldOneSolvReceiptTokenAsMicroSupportedTokenAmount: 1_120_0000_000000n,
-    })).resolves.not.toThrowError();
+    await expect(
+      ctx.completeWithdrawalRequests.execute({
+        burntSolvReceiptTokenAmount: 195361017n,
+        redeemedSupportedTokenAmount: 214897116n - 1000n,
+        oldOneSolvReceiptTokenAsMicroSupportedTokenAmount: 1_120_0000_000000n,
+      })
+    ).resolves.not.toThrowError();
 
     // withdrawals do not affect redemption rates
     await expect(ctx.resolve(true)).resolves.toMatchObject({
-      "oneReceiptTokenAsMicroSupportedTokenAmount": 107448558666666n,
-      "oneReceiptTokenAsSupportedTokenAmount": 107448558n,
-      "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 109999999123456n,
-      "oneSolvReceiptTokenAsSupportedTokenAmount": 109999999n,
+      oneReceiptTokenAsMicroSupportedTokenAmount: 107448558666666n,
+      oneReceiptTokenAsSupportedTokenAmount: 107448558n,
+      oneSolvReceiptTokenAsMicroSupportedTokenAmount: 109999999123456n,
+      oneSolvReceiptTokenAsSupportedTokenAmount: 109999999n,
     });
   });
 });

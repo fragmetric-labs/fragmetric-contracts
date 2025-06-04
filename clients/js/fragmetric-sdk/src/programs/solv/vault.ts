@@ -18,9 +18,9 @@ import {
   transformAddressResolverVariant,
 } from '../../context';
 import * as solv from '../../generated/solv';
+import { FundManagerAccountContext } from './fund_manager';
 import { SolvBTCVaultProgram } from './program';
 import { SolvProtocolWalletAccountContext } from './solv_protocol_wallet';
-import { FundManagerAccountContext } from './fund_manager';
 
 export class SolvVaultAccountContext extends AccountContext<
   SolvBTCVaultProgram,
@@ -390,8 +390,7 @@ export class SolvVaultAccountContext extends AccountContext<
                   payer: createNoopSigner(payer! as Address),
                   vaultManager: createNoopSigner(vaultManager),
                   vaultReceiptTokenMint: parent.__seedReceiptTokenMint,
-                  vaultSupportedTokenMint:
-                  parent.__seedSupportedTokenMint,
+                  vaultSupportedTokenMint: parent.__seedSupportedTokenMint,
                   solvReceiptTokenMint: parent.__seedSolvReceiptTokenMint,
                   program: this.program.address,
                 },
@@ -511,29 +510,28 @@ export class SolvVaultAccountContext extends AccountContext<
               : null,
             ...(args.fundManager
               ? [
-                // to make the fund manager account look alive
-                system.getTransferSolInstruction({
-                  source: createNoopSigner(payer as Address),
-                  destination: args.fundManager as Address,
-                  amount: await this.runtime.rpc
-                    .getMinimumBalanceForRentExemption(BigInt(0n))
-                    .send(),
-                }),
-                solv.getUpdateVaultAdminRoleInstructionAsync(
-                  {
-                    oldVaultAdmin: createNoopSigner(vault.data.fundManager),
-                    newVaultAdmin: args.fundManager as Address,
-                    vaultReceiptTokenMint: vault.data.vaultReceiptTokenMint,
-                    program: this.program.address,
-                    role: solv.VaultAdminRole.FundManager,
-                  },
-                  {
-                    programAddress: this.program.address,
-                  }
-                )
-              ]
-              : []
-            ),
+                  // to make the fund manager account look alive
+                  system.getTransferSolInstruction({
+                    source: createNoopSigner(payer as Address),
+                    destination: args.fundManager as Address,
+                    amount: await this.runtime.rpc
+                      .getMinimumBalanceForRentExemption(BigInt(0n))
+                      .send(),
+                  }),
+                  solv.getUpdateVaultAdminRoleInstructionAsync(
+                    {
+                      oldVaultAdmin: createNoopSigner(vault.data.fundManager),
+                      newVaultAdmin: args.fundManager as Address,
+                      vaultReceiptTokenMint: vault.data.vaultReceiptTokenMint,
+                      program: this.program.address,
+                      role: solv.VaultAdminRole.FundManager,
+                    },
+                    {
+                      programAddress: this.program.address,
+                    }
+                  ),
+                ]
+              : []),
             args.solvManager
               ? solv.getUpdateVaultAdminRoleInstructionAsync(
                   {

@@ -6,10 +6,7 @@ export class FundManagerAccountContext extends BaseAccountContext<SolvVaultAccou
   constructor(parent: SolvVaultAccountContext) {
     super(parent, async (parent) => {
       const vault = await parent.resolveAccount(true);
-      if (
-        !vault ||
-        vault.data.fundManager == vault.data.vaultManager
-      )
+      if (!vault || vault.data.fundManager == vault.data.vaultManager)
         return null;
       return vault.data.fundManager;
     });

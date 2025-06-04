@@ -460,7 +460,7 @@ impl VaultAccount {
         }
 
         // TODO: deprecate this heuristic assertion
-        if one_srt_as_micro_vst - self.one_srt_as_micro_vst > self.one_srt_as_micro_vst/10 {
+        if one_srt_as_micro_vst - self.one_srt_as_micro_vst > self.one_srt_as_micro_vst / 10 {
             err!(VaultError::InvalidSRTPriceError)?;
         }
 
@@ -741,7 +741,7 @@ impl VaultAccount {
 
         // TODO: deprecate this heuristic assertion, need to store estimated fee at turning into processing phase
         require_gte!(self.one_srt_as_micro_vst, old_one_srt_as_micro_vst);
-        if self.one_srt_as_micro_vst - old_one_srt_as_micro_vst < self.one_srt_as_micro_vst/10 {
+        if self.one_srt_as_micro_vst - old_one_srt_as_micro_vst < self.one_srt_as_micro_vst / 10 {
             err!(VaultError::InvalidSRTPriceError)?;
         }
 

@@ -1,4 +1,3 @@
-import type { RestakingProgram } from '@fragmetric-labs/sdk';
 import type { TestSuiteContext } from '../../testutil';
 
 export function initializeFragBTC(testCtx: TestSuiteContext) {

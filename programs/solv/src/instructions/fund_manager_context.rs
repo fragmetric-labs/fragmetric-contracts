@@ -126,8 +126,6 @@ pub fn process_request_withdrawal(ctx: Context<FundManagerContext>, vrt_amount: 
         vrt_amount,
     )?;
 
-    payer_vault_receipt_token_account.reload()?;
-
     Ok(())
 }
 
