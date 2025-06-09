@@ -653,6 +653,7 @@ describe('restaking.fragSOL test', async () => {
         "generalStrategy": {
           "depositEnabled": true,
           "donationEnabled": true,
+          "operationEnabled": true,
           "transferEnabled": true,
           "withdrawalBatchThresholdSeconds": 1n,
           "withdrawalEnabled": true,
@@ -2848,5 +2849,29 @@ describe('restaking.fragSOL test', async () => {
         },
       ]
     `);
+  });
+
+  test('operation disable', async () => {
+    await ctx.fund.updateGeneralStrategy.execute({
+      operationEnabled: false,
+    });
+
+    await expect(ctx.fund.runCommand.executeChained(null)).rejects.toThrowError(
+      'Transaction simulation failed'
+    ); // fund: operation is disable
+
+    await expect(
+      ctx.fund.runCommand.executeChained({
+        forceResetCommand: 'Initialize',
+      })
+    ).resolves.not.toThrow();
+
+    await ctx.fund.updateGeneralStrategy.execute({
+      operationEnabled: true,
+    });
+
+    await expect(
+      ctx.fund.runCommand.executeChained(null)
+    ).resolves.not.toThrow();
   });
 });
