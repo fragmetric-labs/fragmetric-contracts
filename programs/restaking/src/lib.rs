@@ -209,6 +209,7 @@ pub mod restaking {
         donation_enabled: bool,
         withdrawal_enabled: bool,
         transfer_enabled: bool,
+        operation_enabled: bool,
         withdrawal_fee_rate_bps: u16,
         withdrawal_batch_threshold_seconds: i64,
     ) -> Result<()> {
@@ -221,6 +222,7 @@ pub mod restaking {
             donation_enabled,
             withdrawal_enabled,
             transfer_enabled,
+            operation_enabled,
             withdrawal_fee_rate_bps,
             withdrawal_batch_threshold_seconds,
         )?);

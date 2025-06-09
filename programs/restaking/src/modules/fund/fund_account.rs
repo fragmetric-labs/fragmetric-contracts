@@ -61,7 +61,8 @@ pub struct FundAccount {
     pub(super) withdrawal_enabled: u8,
     pub(super) deposit_enabled: u8,
     pub(super) donation_enabled: u8,
-    _padding3: [u8; 3],
+    pub(super) operation_enabled: u8,
+    _padding3: [u8; 2],
 
     /// SOL deposit & withdrawal
     pub(super) sol: AssetState,
@@ -498,6 +499,11 @@ impl FundAccount {
 
     pub(super) fn set_transfer_enabled(&mut self, enabled: bool) -> &mut Self {
         self.transfer_enabled = enabled as u8;
+        self
+    }
+
+    pub(super) fn set_operation_enabled(&mut self, enabled: bool) -> &mut Self {
+        self.operation_enabled = enabled as u8;
         self
     }
 

@@ -372,7 +372,8 @@ impl<'a, 'info> FundService<'a, 'info> {
     ) -> Result<events::OperatorRanFundCommand> {
         let pricing_source_accounts = self.get_pricing_source_infos(remaining_accounts)?;
         let mut fund_account = self.fund_account.load_mut()?;
-        let operation_sequence = fund_account.operation.next_sequence;
+
+        let reset_command_is_none = reset_command.is_none();
 
         // First reset command
         fund_account.operation.initialize_command_if_needed(
@@ -380,6 +381,11 @@ impl<'a, 'info> FundService<'a, 'info> {
             self.current_slot,
             self.current_timestamp,
         )?;
+        let operation_sequence = fund_account.operation.next_sequence;
+
+        if fund_account.operation_enabled == 0 && reset_command_is_none && operation_sequence == 1 {
+            err!(ErrorCode::FundOperationDisabledError)?;
+        }
 
         let OperationCommandEntry {
             command,
