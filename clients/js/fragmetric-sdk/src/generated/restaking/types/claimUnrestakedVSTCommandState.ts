@@ -8,70 +8,42 @@
 
 import {
   combineCodec,
-  getArrayDecoder,
-  getArrayEncoder,
+  getAddressDecoder,
+  getAddressEncoder,
   getDiscriminatedUnionDecoder,
   getDiscriminatedUnionEncoder,
   getStructDecoder,
   getStructEncoder,
   getUnitDecoder,
   getUnitEncoder,
+  type Address,
   type Codec,
   type Decoder,
   type Encoder,
   type GetDiscriminatedUnionVariant,
   type GetDiscriminatedUnionVariantContent,
 } from '@solana/kit';
-import {
-  getClaimUnrestakedVSTCommandItemDecoder,
-  getClaimUnrestakedVSTCommandItemEncoder,
-  type ClaimUnrestakedVSTCommandItem,
-  type ClaimUnrestakedVSTCommandItemArgs,
-} from '.';
 
 export type ClaimUnrestakedVSTCommandState =
   | { __kind: 'New' }
-  | { __kind: 'Prepare'; items: Array<ClaimUnrestakedVSTCommandItem> }
-  | { __kind: 'Execute'; items: Array<ClaimUnrestakedVSTCommandItem> };
+  | { __kind: 'Prepare'; vault: Address }
+  | { __kind: 'Execute'; vault: Address };
 
-export type ClaimUnrestakedVSTCommandStateArgs =
-  | { __kind: 'New' }
-  | { __kind: 'Prepare'; items: Array<ClaimUnrestakedVSTCommandItemArgs> }
-  | { __kind: 'Execute'; items: Array<ClaimUnrestakedVSTCommandItemArgs> };
+export type ClaimUnrestakedVSTCommandStateArgs = ClaimUnrestakedVSTCommandState;
 
 export function getClaimUnrestakedVSTCommandStateEncoder(): Encoder<ClaimUnrestakedVSTCommandStateArgs> {
   return getDiscriminatedUnionEncoder([
     ['New', getUnitEncoder()],
-    [
-      'Prepare',
-      getStructEncoder([
-        ['items', getArrayEncoder(getClaimUnrestakedVSTCommandItemEncoder())],
-      ]),
-    ],
-    [
-      'Execute',
-      getStructEncoder([
-        ['items', getArrayEncoder(getClaimUnrestakedVSTCommandItemEncoder())],
-      ]),
-    ],
+    ['Prepare', getStructEncoder([['vault', getAddressEncoder()]])],
+    ['Execute', getStructEncoder([['vault', getAddressEncoder()]])],
   ]);
 }
 
 export function getClaimUnrestakedVSTCommandStateDecoder(): Decoder<ClaimUnrestakedVSTCommandState> {
   return getDiscriminatedUnionDecoder([
     ['New', getUnitDecoder()],
-    [
-      'Prepare',
-      getStructDecoder([
-        ['items', getArrayDecoder(getClaimUnrestakedVSTCommandItemDecoder())],
-      ]),
-    ],
-    [
-      'Execute',
-      getStructDecoder([
-        ['items', getArrayDecoder(getClaimUnrestakedVSTCommandItemDecoder())],
-      ]),
-    ],
+    ['Prepare', getStructDecoder([['vault', getAddressDecoder()]])],
+    ['Execute', getStructDecoder([['vault', getAddressDecoder()]])],
   ]);
 }
 

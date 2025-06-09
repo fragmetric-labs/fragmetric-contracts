@@ -11731,26 +11731,6 @@
       }
     },
     {
-      "name": "ClaimUnrestakedVSTCommandItem",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "vault",
-            "type": "pubkey"
-          },
-          {
-            "name": "receipt_token_mint",
-            "type": "pubkey"
-          },
-          {
-            "name": "supported_token_mint",
-            "type": "pubkey"
-          }
-        ]
-      }
-    },
-    {
       "name": "ClaimUnrestakedVSTCommandResult",
       "type": {
         "kind": "struct",
@@ -11842,14 +11822,8 @@
             "name": "Prepare",
             "fields": [
               {
-                "name": "items",
-                "type": {
-                  "vec": {
-                    "defined": {
-                      "name": "ClaimUnrestakedVSTCommandItem"
-                    }
-                  }
-                }
+                "name": "vault",
+                "type": "pubkey"
               }
             ]
           },
@@ -11857,14 +11831,8 @@
             "name": "Execute",
             "fields": [
               {
-                "name": "items",
-                "type": {
-                  "vec": {
-                    "defined": {
-                      "name": "ClaimUnrestakedVSTCommandItem"
-                    }
-                  }
-                }
+                "name": "vault",
+                "type": "pubkey"
               }
             ]
           }
