@@ -47,9 +47,9 @@ pub struct ClaimUnrestakedVSTCommandResultAssetReceivable {
 }
 
 impl SelfExecutable for ClaimUnrestakedVSTCommand {
-    fn execute<'a, 'info>(
+    fn execute<'info>(
         &self,
-        ctx: &mut OperationCommandContext<'info, 'a>,
+        ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
     ) -> ExecutionResult {
         let (result, entry) = match &self.state {
@@ -72,7 +72,7 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
 #[deny(clippy::wildcard_enum_match_arm)]
 impl ClaimUnrestakedVSTCommand {
     #[inline(never)]
-    fn execute_new<'info>(
+    fn execute_new(
         &self,
         ctx: &OperationCommandContext,
         previous_vault: Option<&Pubkey>,
@@ -86,8 +86,7 @@ impl ClaimUnrestakedVSTCommand {
             if let Some(previous_vault) = previous_vault {
                 vaults_iter
                     .skip_while(|vault| *vault != previous_vault)
-                    .skip(1)
-                    .next()
+                    .nth(1)
             } else {
                 vaults_iter.next()
             }
@@ -184,9 +183,9 @@ impl ClaimUnrestakedVSTCommand {
                         (0..5)
                             .flat_map(|index| {
                                 let ticket_account = vault_service
-                                    .find_withdrawal_ticket_account(&*FundAccount::find_unrestaking_ticket_account_address(
+                                    .find_withdrawal_ticket_account(&FundAccount::find_unrestaking_ticket_account_address(
                                         &ctx.fund_account.key(),
-                                        &vault,
+                                        vault,
                                         index,
                                     ));
                                 let ticket_receipt_token_account =
@@ -313,7 +312,7 @@ impl ClaimUnrestakedVSTCommand {
                 let mut result_unrestaked_receipt_token_amount = 0u64;
                 let mut result_deducted_receipt_token_fee_amount = 0u64;
 
-                Ok(if claimable_withdrawal_ticket_indices.len() > 0 {
+                Ok(if !claimable_withdrawal_ticket_indices.is_empty() {
                     let mut last_to_vault_supported_token_amount = 0;
 
                     let fund_account = ctx.fund_account.load()?;
