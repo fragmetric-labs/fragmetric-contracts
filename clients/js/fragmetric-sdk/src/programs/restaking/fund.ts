@@ -661,6 +661,7 @@ export class RestakingFundAccountContext extends AccountContext<
       depositEnabled: fund.data.depositEnabled == 1,
       donationEnabled: fund.data.donationEnabled == 1,
       transferEnabled: fund.data.transferEnabled == 1,
+      operationEnabled: fund.data.operationEnabled == 1,
       withdrawalBatchThresholdSeconds:
         fund.data.withdrawalBatchThresholdIntervalSeconds,
       withdrawalEnabled: fund.data.withdrawalEnabled == 1,
@@ -676,6 +677,7 @@ export class RestakingFundAccountContext extends AccountContext<
         donationEnabled: v.boolean(),
         transferEnabled: v.boolean(),
         withdrawalEnabled: v.boolean(),
+        operationEnabled: v.boolean(),
         withdrawalBatchThresholdSeconds: v.number(),
         withdrawalFeeRateBps: v.pipe(
           v.number(),

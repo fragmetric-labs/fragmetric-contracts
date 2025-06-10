@@ -117,6 +117,7 @@ export type FundAccount = {
   withdrawalEnabled: number;
   depositEnabled: number;
   donationEnabled: number;
+  operationEnabled: number;
   padding3: ReadonlyUint8Array;
   /** SOL deposit & withdrawal */
   sol: AssetState;
@@ -177,6 +178,7 @@ export type FundAccountArgs = {
   withdrawalEnabled: number;
   depositEnabled: number;
   donationEnabled: number;
+  operationEnabled: number;
   padding3: ReadonlyUint8Array;
   /** SOL deposit & withdrawal */
   sol: AssetStateArgs;
@@ -238,7 +240,8 @@ export function getFundAccountEncoder(): Encoder<FundAccountArgs> {
       ['withdrawalEnabled', getU8Encoder()],
       ['depositEnabled', getU8Encoder()],
       ['donationEnabled', getU8Encoder()],
-      ['padding3', fixEncoderSize(getBytesEncoder(), 3)],
+      ['operationEnabled', getU8Encoder()],
+      ['padding3', fixEncoderSize(getBytesEncoder(), 2)],
       ['sol', getAssetStateEncoder()],
       ['padding4', fixEncoderSize(getBytesEncoder(), 15)],
       ['numSupportedTokens', getU8Encoder()],
@@ -304,7 +307,8 @@ export function getFundAccountDecoder(): Decoder<FundAccount> {
     ['withdrawalEnabled', getU8Decoder()],
     ['depositEnabled', getU8Decoder()],
     ['donationEnabled', getU8Decoder()],
-    ['padding3', fixDecoderSize(getBytesDecoder(), 3)],
+    ['operationEnabled', getU8Decoder()],
+    ['padding3', fixDecoderSize(getBytesDecoder(), 2)],
     ['sol', getAssetStateDecoder()],
     ['padding4', fixDecoderSize(getBytesDecoder(), 15)],
     ['numSupportedTokens', getU8Decoder()],

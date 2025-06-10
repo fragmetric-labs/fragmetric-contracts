@@ -299,4 +299,7 @@ pub enum ErrorCode {
 
     #[msg("fund: restaking vault reward token not registered")]
     FundRestakingVaultRewardTokenNotRegisteredError,
+
+    #[msg("fund: operation is disabled")]
+    FundOperationDisabledError,
 }

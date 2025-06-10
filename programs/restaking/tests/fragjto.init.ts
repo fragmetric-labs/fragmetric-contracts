@@ -26,6 +26,7 @@ export function initializeFragJTO(testCtx: TestSuiteContext) {
         donationEnabled: true,
         transferEnabled: true,
         withdrawalEnabled: true,
+        operationEnabled: true,
         withdrawalBatchThresholdSeconds: 86400,
         withdrawalFeeRateBps: 10,
       }),

@@ -95,6 +95,7 @@ export type FundManagerUpdateFundStrategyInstructionData = {
   donationEnabled: boolean;
   withdrawalEnabled: boolean;
   transferEnabled: boolean;
+  operationEnabled: boolean;
   withdrawalFeeRateBps: number;
   withdrawalBatchThresholdSeconds: bigint;
 };
@@ -104,6 +105,7 @@ export type FundManagerUpdateFundStrategyInstructionDataArgs = {
   donationEnabled: boolean;
   withdrawalEnabled: boolean;
   transferEnabled: boolean;
+  operationEnabled: boolean;
   withdrawalFeeRateBps: number;
   withdrawalBatchThresholdSeconds: number | bigint;
 };
@@ -116,6 +118,7 @@ export function getFundManagerUpdateFundStrategyInstructionDataEncoder(): Encode
       ['donationEnabled', getBooleanEncoder()],
       ['withdrawalEnabled', getBooleanEncoder()],
       ['transferEnabled', getBooleanEncoder()],
+      ['operationEnabled', getBooleanEncoder()],
       ['withdrawalFeeRateBps', getU16Encoder()],
       ['withdrawalBatchThresholdSeconds', getI64Encoder()],
     ]),
@@ -133,6 +136,7 @@ export function getFundManagerUpdateFundStrategyInstructionDataDecoder(): Decode
     ['donationEnabled', getBooleanDecoder()],
     ['withdrawalEnabled', getBooleanDecoder()],
     ['transferEnabled', getBooleanDecoder()],
+    ['operationEnabled', getBooleanDecoder()],
     ['withdrawalFeeRateBps', getU16Decoder()],
     ['withdrawalBatchThresholdSeconds', getI64Decoder()],
   ]);
@@ -164,6 +168,7 @@ export type FundManagerUpdateFundStrategyAsyncInput<
   donationEnabled: FundManagerUpdateFundStrategyInstructionDataArgs['donationEnabled'];
   withdrawalEnabled: FundManagerUpdateFundStrategyInstructionDataArgs['withdrawalEnabled'];
   transferEnabled: FundManagerUpdateFundStrategyInstructionDataArgs['transferEnabled'];
+  operationEnabled: FundManagerUpdateFundStrategyInstructionDataArgs['operationEnabled'];
   withdrawalFeeRateBps: FundManagerUpdateFundStrategyInstructionDataArgs['withdrawalFeeRateBps'];
   withdrawalBatchThresholdSeconds: FundManagerUpdateFundStrategyInstructionDataArgs['withdrawalBatchThresholdSeconds'];
 };
@@ -287,6 +292,7 @@ export type FundManagerUpdateFundStrategyInput<
   donationEnabled: FundManagerUpdateFundStrategyInstructionDataArgs['donationEnabled'];
   withdrawalEnabled: FundManagerUpdateFundStrategyInstructionDataArgs['withdrawalEnabled'];
   transferEnabled: FundManagerUpdateFundStrategyInstructionDataArgs['transferEnabled'];
+  operationEnabled: FundManagerUpdateFundStrategyInstructionDataArgs['operationEnabled'];
   withdrawalFeeRateBps: FundManagerUpdateFundStrategyInstructionDataArgs['withdrawalFeeRateBps'];
   withdrawalBatchThresholdSeconds: FundManagerUpdateFundStrategyInstructionDataArgs['withdrawalBatchThresholdSeconds'];
 };
