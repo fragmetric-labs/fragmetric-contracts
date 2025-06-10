@@ -146,7 +146,7 @@ pub mod restaking {
     ) -> Result<()> {
         modules::reward::RewardConfigurationService::new(
             &ctx.accounts.receipt_token_mint,
-            &mut ctx.accounts.reward_account,
+            &ctx.accounts.reward_account,
         )?
         .process_initialize_reward_account(ctx.bumps.reward_account)
     }
@@ -161,7 +161,7 @@ pub mod restaking {
     ) -> Result<()> {
         modules::reward::RewardConfigurationService::new(
             &ctx.accounts.receipt_token_mint,
-            &mut ctx.accounts.reward_account,
+            &ctx.accounts.reward_account,
         )?
         .process_update_reward_account_if_needed(
             &ctx.accounts.payer,
@@ -696,7 +696,7 @@ pub mod restaking {
     ) -> Result<()> {
         emit_cpi!(modules::reward::RewardConfigurationService::new(
             &ctx.accounts.receipt_token_mint,
-            &mut ctx.accounts.reward_account,
+            &ctx.accounts.reward_account,
         )?
         .process_add_reward(
             ctx.accounts.reward_token_mint.as_deref(),
@@ -723,7 +723,7 @@ pub mod restaking {
     ) -> Result<()> {
         emit_cpi!(modules::reward::RewardConfigurationService::new(
             &ctx.accounts.receipt_token_mint,
-            &mut ctx.accounts.reward_account,
+            &ctx.accounts.reward_account,
         )?
         .process_update_reward(
             ctx.accounts.reward_token_mint.as_deref(),
@@ -747,7 +747,7 @@ pub mod restaking {
     ) -> Result<()> {
         emit_cpi!(modules::reward::RewardConfigurationService::new(
             &ctx.accounts.receipt_token_mint,
-            &mut ctx.accounts.reward_account,
+            &ctx.accounts.reward_account,
         )?
         .process_settle_reward(
             ctx.accounts.reward_token_mint.as_deref(),
@@ -870,7 +870,7 @@ pub mod restaking {
     pub fn operator_update_reward_pools(ctx: Context<OperatorRewardContext>) -> Result<()> {
         emit_cpi!(modules::reward::RewardService::new(
             &ctx.accounts.receipt_token_mint,
-            &mut ctx.accounts.reward_account,
+            &ctx.accounts.reward_account,
         )?
         .process_update_reward_pools()?);
 
