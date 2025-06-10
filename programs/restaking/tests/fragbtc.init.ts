@@ -25,6 +25,7 @@ export function initializeFragBTC(testCtx: TestSuiteContext) {
         donationEnabled: false,
         transferEnabled: true,
         withdrawalEnabled: true,
+        operationEnabled: true,
         withdrawalBatchThresholdSeconds: 86400,
         withdrawalFeeRateBps: 20,
       }),

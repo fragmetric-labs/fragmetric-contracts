@@ -2859,12 +2859,9 @@ describe('restaking.fragSOL test', async () => {
     await expect(ctx.fund.runCommand.executeChained(null)).rejects.toThrowError(
       'Transaction simulation failed'
     ); // fund: operation is disable
-
     await expect(
-      ctx.fund.runCommand.executeChained({
-        forceResetCommand: 'Initialize',
-      })
-    ).resolves.not.toThrow();
+      ctx.fund.runCommand.executeChained({ forceResetCommand: 'Initialize' })
+    ).rejects.toThrowError('Transaction simulation failed');
 
     await ctx.fund.updateGeneralStrategy.execute({
       operationEnabled: true,

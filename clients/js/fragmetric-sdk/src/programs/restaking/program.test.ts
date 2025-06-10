@@ -136,7 +136,7 @@ test('can traverse context graph', async () => {
     │   │   ├── donate                                        TransactionTemplate args=assetMint,assetAmount,offsetReceivable,applyPresetComputeUnitLimit, events=operatorDonatedToFund, description=donate 
     │   │   ├── runCommand                                    TransactionTemplate (chained) args=null, events=operatorRanFundCommand, description=execute the next fund command to circulate assets
     │   │   ├── initializeOrUpdateAccount                     TransactionTemplate (chained) args=targetVersion, events=undefined, description=initialize or update fund account
-    │   │   ├── updateGeneralStrategy                         TransactionTemplate args=depositEnabled,donationEnabled,transferEnabled,withdrawalEnabled,withdrawalBatchThresholdSeconds,withdrawalFeeRateBps
+    │   │   ├── updateGeneralStrategy                         TransactionTemplate args=depositEnabled,donationEnabled,transferEnabled,withdrawalEnabled,operationEnabled,withdrawalBatchThresholdSeconds,wit
     │   │   ├── addSupportedToken                             TransactionTemplate args=mint,program,pricingSource, events=fundManagerUpdatedFund, description=add a new supported token
     │   │   ├── removeSupportedToken                          TransactionTemplate args=mint, events=fundManagerUpdatedFund, description=remove unused supported token
     │   │   ├── updateAssetStrategy                           TransactionTemplate args=null, events=fundManagerUpdatedFund, description=update asset strategy of the fund
@@ -220,7 +220,7 @@ test('can traverse context graph', async () => {
     │   │   ├── donate                                        TransactionTemplate args=assetMint,assetAmount,offsetReceivable,applyPresetComputeUnitLimit, events=operatorDonatedToFund, description=donate 
     │   │   ├── runCommand                                    TransactionTemplate (chained) args=null, events=operatorRanFundCommand, description=execute the next fund command to circulate assets
     │   │   ├── initializeOrUpdateAccount                     TransactionTemplate (chained) args=targetVersion, events=undefined, description=initialize or update fund account
-    │   │   ├── updateGeneralStrategy                         TransactionTemplate args=depositEnabled,donationEnabled,transferEnabled,withdrawalEnabled,withdrawalBatchThresholdSeconds,withdrawalFeeRateBps
+    │   │   ├── updateGeneralStrategy                         TransactionTemplate args=depositEnabled,donationEnabled,transferEnabled,withdrawalEnabled,operationEnabled,withdrawalBatchThresholdSeconds,wit
     │   │   ├── addSupportedToken                             TransactionTemplate args=mint,program,pricingSource, events=fundManagerUpdatedFund, description=add a new supported token
     │   │   ├── removeSupportedToken                          TransactionTemplate args=mint, events=fundManagerUpdatedFund, description=remove unused supported token
     │   │   ├── updateAssetStrategy                           TransactionTemplate args=null, events=fundManagerUpdatedFund, description=update asset strategy of the fund
@@ -304,7 +304,7 @@ test('can traverse context graph', async () => {
     │   │   ├── donate                                        TransactionTemplate args=assetMint,assetAmount,offsetReceivable,applyPresetComputeUnitLimit, events=operatorDonatedToFund, description=donate 
     │   │   ├── runCommand                                    TransactionTemplate (chained) args=null, events=operatorRanFundCommand, description=execute the next fund command to circulate assets
     │   │   ├── initializeOrUpdateAccount                     TransactionTemplate (chained) args=targetVersion, events=undefined, description=initialize or update fund account
-    │   │   ├── updateGeneralStrategy                         TransactionTemplate args=depositEnabled,donationEnabled,transferEnabled,withdrawalEnabled,withdrawalBatchThresholdSeconds,withdrawalFeeRateBps
+    │   │   ├── updateGeneralStrategy                         TransactionTemplate args=depositEnabled,donationEnabled,transferEnabled,withdrawalEnabled,operationEnabled,withdrawalBatchThresholdSeconds,wit
     │   │   ├── addSupportedToken                             TransactionTemplate args=mint,program,pricingSource, events=fundManagerUpdatedFund, description=add a new supported token
     │   │   ├── removeSupportedToken                          TransactionTemplate args=mint, events=fundManagerUpdatedFund, description=remove unused supported token
     │   │   ├── updateAssetStrategy                           TransactionTemplate args=null, events=fundManagerUpdatedFund, description=update asset strategy of the fund
@@ -388,7 +388,7 @@ test('can traverse context graph', async () => {
     │   │   ├── donate                                        TransactionTemplate args=assetMint,assetAmount,offsetReceivable,applyPresetComputeUnitLimit, events=operatorDonatedToFund, description=donate 
     │   │   ├── runCommand                                    TransactionTemplate (chained) args=null, events=operatorRanFundCommand, description=execute the next fund command to circulate assets
     │   │   ├── initializeOrUpdateAccount                     TransactionTemplate (chained) args=targetVersion, events=undefined, description=initialize or update fund account
-    │   │   ├── updateGeneralStrategy                         TransactionTemplate args=depositEnabled,donationEnabled,transferEnabled,withdrawalEnabled,withdrawalBatchThresholdSeconds,withdrawalFeeRateBps
+    │   │   ├── updateGeneralStrategy                         TransactionTemplate args=depositEnabled,donationEnabled,transferEnabled,withdrawalEnabled,operationEnabled,withdrawalBatchThresholdSeconds,wit
     │   │   ├── addSupportedToken                             TransactionTemplate args=mint,program,pricingSource, events=fundManagerUpdatedFund, description=add a new supported token
     │   │   ├── removeSupportedToken                          TransactionTemplate args=mint, events=fundManagerUpdatedFund, description=remove unused supported token
     │   │   ├── updateAssetStrategy                           TransactionTemplate args=null, events=fundManagerUpdatedFund, description=update asset strategy of the fund

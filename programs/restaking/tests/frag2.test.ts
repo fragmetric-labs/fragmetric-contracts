@@ -129,6 +129,7 @@ describe('restaking.frag2 test', async () => {
         "generalStrategy": {
           "depositEnabled": true,
           "donationEnabled": false,
+          "operationEnabled": true,
           "transferEnabled": true,
           "withdrawalBatchThresholdSeconds": 1n,
           "withdrawalEnabled": true,

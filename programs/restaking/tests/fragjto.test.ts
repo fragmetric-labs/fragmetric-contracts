@@ -171,6 +171,7 @@ describe('restaking.fragJTO test', async () => {
         "generalStrategy": {
           "depositEnabled": true,
           "donationEnabled": true,
+          "operationEnabled": true,
           "transferEnabled": true,
           "withdrawalBatchThresholdSeconds": 1n,
           "withdrawalEnabled": true,
