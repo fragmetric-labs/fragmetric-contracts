@@ -10,7 +10,6 @@ export * from './asset';
 export * from './assetPod';
 export * from './assetState';
 export * from './claimUnrestakedVSTCommand';
-export * from './claimUnrestakedVSTCommandItem';
 export * from './claimUnrestakedVSTCommandResult';
 export * from './claimUnrestakedVSTCommandResultAssetReceivable';
 export * from './claimUnrestakedVSTCommandState';

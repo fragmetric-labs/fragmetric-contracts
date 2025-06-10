@@ -948,7 +948,7 @@ pub mod restaking {
                 .slasher_normalized_token_withdrawal_ticket_account,
             &ctx.accounts.slasher,
             &mut ctx.accounts.destination_supported_token_account,
-            &mut ctx.accounts.destination_rent_lamports_account,
+            &ctx.accounts.destination_rent_lamports_account,
         )?;
 
         Ok(())
@@ -963,7 +963,7 @@ pub mod restaking {
     ) -> Result<()> {
         let event = modules::fund::UserFundConfigurationService::process_create_user_fund_account_idempotent(
             &ctx.accounts.system_program,
-            &mut ctx.accounts.receipt_token_mint,
+            &ctx.accounts.receipt_token_mint,
             &ctx.accounts.user,
             &ctx.accounts.user_receipt_token_account,
             &mut ctx.accounts.user_fund_account,
@@ -1245,7 +1245,7 @@ pub mod restaking {
             &ctx.accounts.receipt_token_mint,
             &ctx.accounts.user_receipt_token_account,
             &ctx.accounts.reward_account,
-            &ctx.accounts.user_reward_account.as_account_info(),
+            ctx.accounts.user_reward_account.as_account_info(),
         )?
         .process_create_user_reward_account_idempotent(
             &ctx.accounts.system_program,
@@ -1319,7 +1319,7 @@ pub mod restaking {
             &ctx.accounts.receipt_token_mint,
             &ctx.accounts.user_receipt_token_account,
             &ctx.accounts.reward_account,
-            &ctx.accounts.user_reward_account.as_account_info(),
+            ctx.accounts.user_reward_account.as_account_info(),
         )?
         .process_delegate_user_reward_account(&ctx.accounts.delegate_authority, delegate)?);
 
@@ -1345,7 +1345,7 @@ pub mod restaking {
             &mut ctx.accounts.reward_account,
             &mut ctx.accounts.source_receipt_token_account,
             &mut ctx.accounts.destination_receipt_token_account,
-            &ctx.remaining_accounts,
+            ctx.remaining_accounts,
             amount,
         )?;
 

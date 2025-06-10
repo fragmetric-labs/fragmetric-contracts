@@ -360,8 +360,20 @@ impl<'info> SolvBTCVaultService<'info> {
         let vault = self.vault_account.load()?;
 
         let unrestaked_receipt_token_amount = vault.get_vrt_withdrawal_completed_amount();
+        let total_unrestaking_vault_receipt_token_amount =
+            vault.get_vrt_withdrawal_incompleted_amount();
         let deducted_supported_token_fee_amount = vault.get_vst_deducted_fee_amount();
         let claimed_supported_token_amount = vault.get_vst_claimable_amount();
+
+        if claimed_supported_token_amount == 0 {
+            return Ok((
+                payer_vault_supported_token_amount_before,
+                0,
+                0,
+                0,
+                total_unrestaking_vault_receipt_token_amount,
+            ));
+        }
 
         drop(vault);
 
@@ -398,11 +410,6 @@ impl<'info> SolvBTCVaultService<'info> {
             payer_vault_supported_token_account_amount - payer_vault_supported_token_amount_before,
             claimed_supported_token_amount
         );
-
-        let total_unrestaking_vault_receipt_token_amount = self
-            .vault_account
-            .load()?
-            .get_vrt_withdrawal_incompleted_amount();
 
         msg!("CLAIM_UNRESTAKED#solv: receipt_token_mint={}, payer_vault_supported_token_account_amount={}, unrestaked_receipt_token_amount={}, claimed_supported_token_amount={}, deducted_supported_token_fee_amount={}",
             vault_receipt_token_mint.key,

@@ -424,7 +424,7 @@ impl OperationCommandAccountMetaPod {
     pub fn deserialize(&self) -> OperationCommandAccountMeta {
         OperationCommandAccountMeta {
             pubkey: self.pubkey,
-            is_writable: self.is_writable == 1,
+            is_writable: self.is_writable > 0,
         }
     }
 }
