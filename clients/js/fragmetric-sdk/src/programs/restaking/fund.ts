@@ -1085,8 +1085,6 @@ export class RestakingFundAccountContext extends AccountContext<
       .map((item) => {
         const strategy: restaking.FundManagerAddTokenSwapStrategyInstructionDataArgs =
           {
-            fromTokenMint: item.fromTokenMint,
-            toTokenMint: item.toTokenMint,
             swapSource: {
               __kind: this.__tokenSwapStrategiesDiscriminantMap.get(
                 item.swapSource.discriminant
@@ -1139,6 +1137,7 @@ export class RestakingFundAccountContext extends AccountContext<
               {
                 fromTokenMint: args.fromTokenMint as Address,
                 toTokenMint: args.toTokenMint as Address,
+                swapSourceAccount: args.swapSource.address as Address,
                 swapSource: args.swapSource as restaking.TokenSwapSourceArgs,
                 fundManager: createNoopSigner(fundManager),
                 receiptTokenMint: data.receiptTokenMint,

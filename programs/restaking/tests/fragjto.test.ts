@@ -276,12 +276,10 @@ describe('restaking.fragJTO test', async () => {
         ],
         "tokenSwapStrategies": [
           {
-            "fromTokenMint": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
             "swapSource": {
               "__kind": "OrcaDEXLiquidityPool",
               "address": "G2FiE1yn9N9ZJx5e1E2LxxMnHvb1H3hCuHLPfKJ98smA",
             },
-            "toTokenMint": "jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL",
           },
         ],
       }

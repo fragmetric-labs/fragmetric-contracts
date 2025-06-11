@@ -10,7 +10,6 @@ import {
   combineCodec,
   fixDecoderSize,
   fixEncoderSize,
-  getAddressDecoder,
   getAddressEncoder,
   getBytesDecoder,
   getBytesEncoder,
@@ -62,6 +61,9 @@ export type FundManagerAddTokenSwapStrategyInstruction<
     | IAccountMeta<string> = '5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx',
   TAccountReceiptTokenMint extends string | IAccountMeta<string> = string,
   TAccountFundAccount extends string | IAccountMeta<string> = string,
+  TAccountFromTokenMint extends string | IAccountMeta<string> = string,
+  TAccountToTokenMint extends string | IAccountMeta<string> = string,
+  TAccountSwapSourceAccount extends string | IAccountMeta<string> = string,
   TAccountEventAuthority extends string | IAccountMeta<string> = string,
   TAccountProgram extends string | IAccountMeta<string> = string,
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
@@ -79,6 +81,15 @@ export type FundManagerAddTokenSwapStrategyInstruction<
       TAccountFundAccount extends string
         ? WritableAccount<TAccountFundAccount>
         : TAccountFundAccount,
+      TAccountFromTokenMint extends string
+        ? ReadonlyAccount<TAccountFromTokenMint>
+        : TAccountFromTokenMint,
+      TAccountToTokenMint extends string
+        ? ReadonlyAccount<TAccountToTokenMint>
+        : TAccountToTokenMint,
+      TAccountSwapSourceAccount extends string
+        ? ReadonlyAccount<TAccountSwapSourceAccount>
+        : TAccountSwapSourceAccount,
       TAccountEventAuthority extends string
         ? ReadonlyAccount<TAccountEventAuthority>
         : TAccountEventAuthority,
@@ -91,14 +102,10 @@ export type FundManagerAddTokenSwapStrategyInstruction<
 
 export type FundManagerAddTokenSwapStrategyInstructionData = {
   discriminator: ReadonlyUint8Array;
-  fromTokenMint: Address;
-  toTokenMint: Address;
   swapSource: TokenSwapSource;
 };
 
 export type FundManagerAddTokenSwapStrategyInstructionDataArgs = {
-  fromTokenMint: Address;
-  toTokenMint: Address;
   swapSource: TokenSwapSourceArgs;
 };
 
@@ -106,8 +113,6 @@ export function getFundManagerAddTokenSwapStrategyInstructionDataEncoder(): Enco
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
-      ['fromTokenMint', getAddressEncoder()],
-      ['toTokenMint', getAddressEncoder()],
       ['swapSource', getTokenSwapSourceEncoder()],
     ]),
     (value) => ({
@@ -120,8 +125,6 @@ export function getFundManagerAddTokenSwapStrategyInstructionDataEncoder(): Enco
 export function getFundManagerAddTokenSwapStrategyInstructionDataDecoder(): Decoder<FundManagerAddTokenSwapStrategyInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
-    ['fromTokenMint', getAddressDecoder()],
-    ['toTokenMint', getAddressDecoder()],
     ['swapSource', getTokenSwapSourceDecoder()],
   ]);
 }
@@ -140,16 +143,20 @@ export type FundManagerAddTokenSwapStrategyAsyncInput<
   TAccountFundManager extends string = string,
   TAccountReceiptTokenMint extends string = string,
   TAccountFundAccount extends string = string,
+  TAccountFromTokenMint extends string = string,
+  TAccountToTokenMint extends string = string,
+  TAccountSwapSourceAccount extends string = string,
   TAccountEventAuthority extends string = string,
   TAccountProgram extends string = string,
 > = {
   fundManager?: TransactionSigner<TAccountFundManager>;
   receiptTokenMint: Address<TAccountReceiptTokenMint>;
   fundAccount?: Address<TAccountFundAccount>;
+  fromTokenMint: Address<TAccountFromTokenMint>;
+  toTokenMint: Address<TAccountToTokenMint>;
+  swapSourceAccount: Address<TAccountSwapSourceAccount>;
   eventAuthority?: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
-  fromTokenMint: FundManagerAddTokenSwapStrategyInstructionDataArgs['fromTokenMint'];
-  toTokenMint: FundManagerAddTokenSwapStrategyInstructionDataArgs['toTokenMint'];
   swapSource: FundManagerAddTokenSwapStrategyInstructionDataArgs['swapSource'];
 };
 
@@ -157,6 +164,9 @@ export async function getFundManagerAddTokenSwapStrategyInstructionAsync<
   TAccountFundManager extends string,
   TAccountReceiptTokenMint extends string,
   TAccountFundAccount extends string,
+  TAccountFromTokenMint extends string,
+  TAccountToTokenMint extends string,
+  TAccountSwapSourceAccount extends string,
   TAccountEventAuthority extends string,
   TAccountProgram extends string,
   TProgramAddress extends Address = typeof RESTAKING_PROGRAM_ADDRESS,
@@ -165,6 +175,9 @@ export async function getFundManagerAddTokenSwapStrategyInstructionAsync<
     TAccountFundManager,
     TAccountReceiptTokenMint,
     TAccountFundAccount,
+    TAccountFromTokenMint,
+    TAccountToTokenMint,
+    TAccountSwapSourceAccount,
     TAccountEventAuthority,
     TAccountProgram
   >,
@@ -175,6 +188,9 @@ export async function getFundManagerAddTokenSwapStrategyInstructionAsync<
     TAccountFundManager,
     TAccountReceiptTokenMint,
     TAccountFundAccount,
+    TAccountFromTokenMint,
+    TAccountToTokenMint,
+    TAccountSwapSourceAccount,
     TAccountEventAuthority,
     TAccountProgram
   >
@@ -190,6 +206,12 @@ export async function getFundManagerAddTokenSwapStrategyInstructionAsync<
       isWritable: false,
     },
     fundAccount: { value: input.fundAccount ?? null, isWritable: true },
+    fromTokenMint: { value: input.fromTokenMint ?? null, isWritable: false },
+    toTokenMint: { value: input.toTokenMint ?? null, isWritable: false },
+    swapSourceAccount: {
+      value: input.swapSourceAccount ?? null,
+      isWritable: false,
+    },
     eventAuthority: { value: input.eventAuthority ?? null, isWritable: false },
     program: { value: input.program ?? null, isWritable: false },
   };
@@ -237,6 +259,9 @@ export async function getFundManagerAddTokenSwapStrategyInstructionAsync<
       getAccountMeta(accounts.fundManager),
       getAccountMeta(accounts.receiptTokenMint),
       getAccountMeta(accounts.fundAccount),
+      getAccountMeta(accounts.fromTokenMint),
+      getAccountMeta(accounts.toTokenMint),
+      getAccountMeta(accounts.swapSourceAccount),
       getAccountMeta(accounts.eventAuthority),
       getAccountMeta(accounts.program),
     ],
@@ -249,6 +274,9 @@ export async function getFundManagerAddTokenSwapStrategyInstructionAsync<
     TAccountFundManager,
     TAccountReceiptTokenMint,
     TAccountFundAccount,
+    TAccountFromTokenMint,
+    TAccountToTokenMint,
+    TAccountSwapSourceAccount,
     TAccountEventAuthority,
     TAccountProgram
   >;
@@ -260,16 +288,20 @@ export type FundManagerAddTokenSwapStrategyInput<
   TAccountFundManager extends string = string,
   TAccountReceiptTokenMint extends string = string,
   TAccountFundAccount extends string = string,
+  TAccountFromTokenMint extends string = string,
+  TAccountToTokenMint extends string = string,
+  TAccountSwapSourceAccount extends string = string,
   TAccountEventAuthority extends string = string,
   TAccountProgram extends string = string,
 > = {
   fundManager?: TransactionSigner<TAccountFundManager>;
   receiptTokenMint: Address<TAccountReceiptTokenMint>;
   fundAccount: Address<TAccountFundAccount>;
+  fromTokenMint: Address<TAccountFromTokenMint>;
+  toTokenMint: Address<TAccountToTokenMint>;
+  swapSourceAccount: Address<TAccountSwapSourceAccount>;
   eventAuthority: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
-  fromTokenMint: FundManagerAddTokenSwapStrategyInstructionDataArgs['fromTokenMint'];
-  toTokenMint: FundManagerAddTokenSwapStrategyInstructionDataArgs['toTokenMint'];
   swapSource: FundManagerAddTokenSwapStrategyInstructionDataArgs['swapSource'];
 };
 
@@ -277,6 +309,9 @@ export function getFundManagerAddTokenSwapStrategyInstruction<
   TAccountFundManager extends string,
   TAccountReceiptTokenMint extends string,
   TAccountFundAccount extends string,
+  TAccountFromTokenMint extends string,
+  TAccountToTokenMint extends string,
+  TAccountSwapSourceAccount extends string,
   TAccountEventAuthority extends string,
   TAccountProgram extends string,
   TProgramAddress extends Address = typeof RESTAKING_PROGRAM_ADDRESS,
@@ -285,6 +320,9 @@ export function getFundManagerAddTokenSwapStrategyInstruction<
     TAccountFundManager,
     TAccountReceiptTokenMint,
     TAccountFundAccount,
+    TAccountFromTokenMint,
+    TAccountToTokenMint,
+    TAccountSwapSourceAccount,
     TAccountEventAuthority,
     TAccountProgram
   >,
@@ -294,6 +332,9 @@ export function getFundManagerAddTokenSwapStrategyInstruction<
   TAccountFundManager,
   TAccountReceiptTokenMint,
   TAccountFundAccount,
+  TAccountFromTokenMint,
+  TAccountToTokenMint,
+  TAccountSwapSourceAccount,
   TAccountEventAuthority,
   TAccountProgram
 > {
@@ -308,6 +349,12 @@ export function getFundManagerAddTokenSwapStrategyInstruction<
       isWritable: false,
     },
     fundAccount: { value: input.fundAccount ?? null, isWritable: true },
+    fromTokenMint: { value: input.fromTokenMint ?? null, isWritable: false },
+    toTokenMint: { value: input.toTokenMint ?? null, isWritable: false },
+    swapSourceAccount: {
+      value: input.swapSourceAccount ?? null,
+      isWritable: false,
+    },
     eventAuthority: { value: input.eventAuthority ?? null, isWritable: false },
     program: { value: input.program ?? null, isWritable: false },
   };
@@ -331,6 +378,9 @@ export function getFundManagerAddTokenSwapStrategyInstruction<
       getAccountMeta(accounts.fundManager),
       getAccountMeta(accounts.receiptTokenMint),
       getAccountMeta(accounts.fundAccount),
+      getAccountMeta(accounts.fromTokenMint),
+      getAccountMeta(accounts.toTokenMint),
+      getAccountMeta(accounts.swapSourceAccount),
       getAccountMeta(accounts.eventAuthority),
       getAccountMeta(accounts.program),
     ],
@@ -343,6 +393,9 @@ export function getFundManagerAddTokenSwapStrategyInstruction<
     TAccountFundManager,
     TAccountReceiptTokenMint,
     TAccountFundAccount,
+    TAccountFromTokenMint,
+    TAccountToTokenMint,
+    TAccountSwapSourceAccount,
     TAccountEventAuthority,
     TAccountProgram
   >;
@@ -359,8 +412,11 @@ export type ParsedFundManagerAddTokenSwapStrategyInstruction<
     fundManager: TAccountMetas[0];
     receiptTokenMint: TAccountMetas[1];
     fundAccount: TAccountMetas[2];
-    eventAuthority: TAccountMetas[3];
-    program: TAccountMetas[4];
+    fromTokenMint: TAccountMetas[3];
+    toTokenMint: TAccountMetas[4];
+    swapSourceAccount: TAccountMetas[5];
+    eventAuthority: TAccountMetas[6];
+    program: TAccountMetas[7];
   };
   data: FundManagerAddTokenSwapStrategyInstructionData;
 };
@@ -373,7 +429,7 @@ export function parseFundManagerAddTokenSwapStrategyInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedFundManagerAddTokenSwapStrategyInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 5) {
+  if (instruction.accounts.length < 8) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -389,6 +445,9 @@ export function parseFundManagerAddTokenSwapStrategyInstruction<
       fundManager: getNextAccount(),
       receiptTokenMint: getNextAccount(),
       fundAccount: getNextAccount(),
+      fromTokenMint: getNextAccount(),
+      toTokenMint: getNextAccount(),
+      swapSourceAccount: getNextAccount(),
       eventAuthority: getNextAccount(),
       program: getNextAccount(),
     },

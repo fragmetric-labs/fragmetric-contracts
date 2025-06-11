@@ -1982,6 +1982,15 @@
           }
         },
         {
+          "name": "from_token_mint"
+        },
+        {
+          "name": "to_token_mint"
+        },
+        {
+          "name": "swap_source_account"
+        },
+        {
           "name": "event_authority",
           "pda": {
             "seeds": [
@@ -2015,14 +2024,6 @@
         }
       ],
       "args": [
-        {
-          "name": "from_token_mint",
-          "type": "pubkey"
-        },
-        {
-          "name": "to_token_mint",
-          "type": "pubkey"
-        },
         {
           "name": "swap_source",
           "type": {
@@ -11492,6 +11493,11 @@
       "code": 6097,
       "name": "FundOperationDisabledError",
       "msg": "fund: operation is disabled"
+    },
+    {
+      "code": 6098,
+      "name": "FundTokenSwapStrategyValidationError",
+      "msg": "fund: token swap strategy validation error"
     }
   ],
   "types": [
