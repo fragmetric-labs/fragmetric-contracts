@@ -433,13 +433,32 @@ pub mod restaking {
             &ctx.accounts.from_token_mint.to_account_info(),
             &ctx.accounts.to_token_mint.to_account_info(),
             swap_source,
-            &ctx.accounts.swap_source_account.as_account_info()
+            &ctx.accounts
+                .swap_source_account
+                .as_ref()
+                .unwrap()
+                .as_account_info()
         )?);
 
         Ok(())
     }
 
-    // TODO: add fund_manager_remove_token_swap_strategy ix, using `FundManagerFundTokenSwapStrategyContext`
+    pub fn fund_manager_remove_token_swap_strategy(
+        ctx: Context<FundManagerFundTokenSwapStrategyContext>,
+        swap_source: modules::swap::TokenSwapSource,
+    ) -> Result<()> {
+        emit_cpi!(modules::fund::FundConfigurationService::new(
+            &mut ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.fund_account
+        )?
+        .process_remove_token_swap_strategy(
+            &ctx.accounts.from_token_mint.to_account_info(),
+            &ctx.accounts.to_token_mint.to_account_info(),
+            swap_source,
+        )?);
+
+        Ok(())
+    }
 
     ////////////////////////////////////////////
     // FundManagerFundNormalizedTokenInitialContext
@@ -554,6 +573,7 @@ pub mod restaking {
     // FundManagerFundRestakingVaultInitialContext
     ////////////////////////////////////////////
 
+    // TODO: add pricing_source to argument
     pub fn fund_manager_initialize_fund_restaking_vault<'info>(
         ctx: Context<'_, '_, 'info, 'info, FundManagerFundRestakingVaultInitialContext<'info>>,
     ) -> Result<()> {

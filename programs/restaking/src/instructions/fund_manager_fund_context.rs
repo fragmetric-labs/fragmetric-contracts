@@ -46,5 +46,5 @@ pub struct FundManagerFundTokenSwapStrategyContext<'info> {
     pub to_token_mint: Box<InterfaceAccount<'info, Mint>>,
 
     /// CHECK: will be validated by fund service
-    pub swap_source_account: UncheckedAccount<'info>,
+    pub swap_source_account: Option<UncheckedAccount<'info>>,
 }

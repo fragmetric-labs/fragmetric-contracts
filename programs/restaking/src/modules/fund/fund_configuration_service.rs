@@ -724,6 +724,21 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         self.create_fund_manager_updated_fund_event()
     }
 
+    pub fn process_remove_token_swap_strategy(
+        &mut self,
+        from_token_mint: &AccountInfo,
+        to_token_mint: &AccountInfo,
+        swap_source: TokenSwapSource,
+    ) -> Result<events::FundManagerUpdatedFund> {
+        self.fund_account.load_mut()?.remove_token_swap_strategy(
+            from_token_mint,
+            to_token_mint,
+            swap_source,
+        )?;
+
+        self.create_fund_manager_updated_fund_event()
+    }
+
     fn create_fund_manager_updated_fund_event(&self) -> Result<events::FundManagerUpdatedFund> {
         Ok(events::FundManagerUpdatedFund {
             receipt_token_mint: self.receipt_token_mint.key(),

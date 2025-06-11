@@ -9,7 +9,7 @@ pub use orca_dex_liquidity_pool_value_provider::*;
 pub use token_swap_source::*;
 
 /// Validate swap source account based on the owner(swap source program).
-/// 
+///
 /// returns token swap source
 pub fn validate_swap_source<'info>(
     swap_source_account: &'info AccountInfo<'info>,
