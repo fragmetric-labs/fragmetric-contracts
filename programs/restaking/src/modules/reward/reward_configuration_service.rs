@@ -70,9 +70,9 @@ impl<'a, 'info> RewardConfigurationService<'a, 'info> {
 
     pub fn process_add_reward(
         &self,
-        reward_token_mint: Option<&InterfaceAccount<'info, Mint>>,
-        reward_token_program: Option<&Interface<'info, TokenInterface>>,
-        reward_token_reserve_account: Option<&InterfaceAccount<'info, TokenAccount>>,
+        reward_token_mint: Option<&InterfaceAccount<Mint>>,
+        reward_token_program: Option<&Interface<TokenInterface>>,
+        reward_token_reserve_account: Option<&InterfaceAccount<TokenAccount>>,
 
         name: String,
         description: String,
@@ -104,9 +104,9 @@ impl<'a, 'info> RewardConfigurationService<'a, 'info> {
 
     pub fn process_update_reward(
         &self,
-        reward_token_mint: Option<&InterfaceAccount<'info, Mint>>,
-        reward_token_program: Option<&Interface<'info, TokenInterface>>,
-        reward_token_reserve_account: Option<&InterfaceAccount<'info, TokenAccount>>,
+        reward_token_mint: Option<&InterfaceAccount<Mint>>,
+        reward_token_program: Option<&Interface<TokenInterface>>,
+        reward_token_reserve_account: Option<&InterfaceAccount<TokenAccount>>,
 
         mint: Pubkey,
         new_mint: Option<Pubkey>,
@@ -135,9 +135,9 @@ impl<'a, 'info> RewardConfigurationService<'a, 'info> {
 
     pub fn process_settle_reward(
         &self,
-        reward_token_mint: Option<&InterfaceAccount<'info, Mint>>,
-        reward_token_program: Option<&Interface<'info, TokenInterface>>,
-        reward_token_reserve_account: Option<&InterfaceAccount<'info, TokenAccount>>,
+        reward_token_mint: Option<&InterfaceAccount<Mint>>,
+        reward_token_program: Option<&Interface<TokenInterface>>,
+        reward_token_reserve_account: Option<&InterfaceAccount<TokenAccount>>,
 
         mint: Pubkey,
         is_bonus_pool: bool,
@@ -158,9 +158,9 @@ impl<'a, 'info> RewardConfigurationService<'a, 'info> {
     /// Settle reward.
     pub(in crate::modules) fn settle_reward(
         &self,
-        reward_token_mint: Option<&InterfaceAccount<'info, Mint>>,
-        reward_token_program: Option<&Interface<'info, TokenInterface>>,
-        reward_token_reserve_account: Option<&InterfaceAccount<'info, TokenAccount>>,
+        reward_token_mint: Option<&InterfaceAccount<Mint>>,
+        reward_token_program: Option<&Interface<TokenInterface>>,
+        reward_token_reserve_account: Option<&InterfaceAccount<TokenAccount>>,
 
         mint: Pubkey,
         is_bonus_pool: bool,

@@ -81,7 +81,7 @@ impl<'a, 'info> UserRewardService<'a, 'info> {
         reward_reserve_account: &SystemAccount<'info>,
         reward_token_reserve_account: &InterfaceAccount<'info, TokenAccount>,
         destination_reward_token_account: &InterfaceAccount<'info, TokenAccount>,
-        authority: &Signer<'info>,
+        authority: &Signer,
         is_bonus_pool: bool,
         amount: Option<u64>,
     ) -> Result<events::UserClaimedReward> {
