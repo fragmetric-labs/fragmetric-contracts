@@ -739,11 +739,11 @@ impl FundAccount {
 
     pub(super) fn add_token_swap_strategy(
         &mut self,
-        from_token_mint: Pubkey,
-        to_token_mint: Pubkey,
+        from_token_mint: &AccountInfo,
+        to_token_mint: &AccountInfo,
         swap_source: TokenSwapSource,
     ) -> Result<()> {
-        if self.get_token_swap_strategy(&from_token_mint).is_ok() {
+        if self.get_token_swap_strategy(from_token_mint.key).is_ok() {
             err!(ErrorCode::FundTokenSwapStrategyAlreadyRegistered)?
         }
 
@@ -754,10 +754,10 @@ impl FundAccount {
         );
 
         self.token_swap_strategies[self.num_token_swap_strategies as usize].initialize(
-            from_token_mint,
-            to_token_mint,
+            from_token_mint.key(),
+            to_token_mint.key(),
             swap_source,
-        );
+        )?;
         self.num_token_swap_strategies += 1;
 
         Ok(())

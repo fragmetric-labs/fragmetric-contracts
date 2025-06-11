@@ -302,4 +302,7 @@ pub enum ErrorCode {
 
     #[msg("fund: operation is disabled")]
     FundOperationDisabledError,
+
+    #[msg("fund: token swap strategy validation error")]
+    FundTokenSwapStrategyValidationError,
 }

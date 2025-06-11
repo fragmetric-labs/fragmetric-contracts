@@ -11,6 +11,7 @@ use crate::modules::normalization::{NormalizedTokenPoolAccount, NormalizedTokenP
 use crate::modules::pricing::TokenPricingSource;
 use crate::modules::restaking;
 use crate::modules::reward;
+use crate::modules::swap;
 use crate::modules::swap::TokenSwapSource;
 use crate::utils::{AccountLoaderExt, AsAccountInfo, SystemProgramExt};
 
@@ -702,15 +703,23 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
 
     pub fn process_add_token_swap_strategy(
         &mut self,
-        from_token_mint: Pubkey,
-        to_token_mint: Pubkey,
+        from_token_mint: &AccountInfo,
+        to_token_mint: &AccountInfo,
         swap_source: TokenSwapSource,
+        swap_source_account: &'info AccountInfo<'info>,
     ) -> Result<events::FundManagerUpdatedFund> {
-        self.fund_account.load_mut()?.add_token_swap_strategy(
-            from_token_mint,
-            to_token_mint,
-            swap_source,
-        )?;
+        let validated_swap_source =
+            swap::validate_swap_source(swap_source_account, from_token_mint, to_token_mint)?;
+
+        if validated_swap_source == swap_source {
+            self.fund_account.load_mut()?.add_token_swap_strategy(
+                from_token_mint,
+                to_token_mint,
+                swap_source,
+            )?;
+        } else {
+            err!(ErrorCode::FundTokenSwapStrategyValidationError)?
+        }
 
         self.create_fund_manager_updated_fund_event()
     }

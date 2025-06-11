@@ -53,6 +53,18 @@ impl<'info> OrcaDEXLiquidityPoolService<'info> {
         Account::try_from(pool_account)
     }
 
+    pub fn validate_pool_token(
+        pool_account: &'info AccountInfo<'info>,
+        from_token_mint: &AccountInfo,
+        to_token_mint: &AccountInfo,
+    ) -> Result<()> {
+        let pool_account = Self::deserialize_pool_account(pool_account)?;
+
+        Self::a_to_b(&pool_account, from_token_mint.key, to_token_mint.key)?;
+
+        Ok(())
+    }
+
     fn a_to_b(
         pool_account: &Account<Whirlpool>,
         from_token_mint: &Pubkey,
