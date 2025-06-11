@@ -154,6 +154,19 @@ impl RewardSettlement {
 
         Ok(())
     }
+
+    /// returns claimed_amount
+    pub fn claim_remaining_reward(&mut self, current_slot: u64) -> Result<u64> {
+        require_gte!(current_slot, self.claimed_amount_updated_slot);
+
+        let remaining_amount = self.remaining_amount;
+
+        self.claimed_amount += remaining_amount;
+        self.claimed_amount_updated_slot = current_slot;
+        self.remaining_amount = 0;
+
+        Ok(remaining_amount)
+    }
 }
 
 /// Exact settlement block range: [`starting_slot`, `ending_slot`)
@@ -361,5 +374,35 @@ mod tests {
         assert_eq!(settlement.remaining_amount, 1);
         assert_eq!(settlement.settlement_blocks_head, 1);
         assert_eq!(settlement.num_settlement_blocks, 64);
+    }
+
+    #[test]
+    fn test_claim_remaining_amount() {
+        let mut settlement = RewardSettlement::zeroed();
+        settlement.initialize(0, 0, 0, 0);
+
+        settlement.settle_reward(10, 10, 1).unwrap();
+        settlement.force_clear_settlement_block();
+
+        let claimed_amount = settlement.claim_remaining_reward(2).unwrap();
+        assert_eq!(claimed_amount, 10);
+        assert_eq!(settlement.remaining_amount, 0);
+
+        let claimed_amount = settlement.claim_remaining_reward(3).unwrap();
+        assert_eq!(claimed_amount, 0);
+        assert_eq!(settlement.remaining_amount, 0);
+
+        settlement.settle_reward(5, 20, 4).unwrap();
+        settlement.settlement_blocks[1]
+            .settle_user_reward(5)
+            .unwrap();
+        settlement.settlement_blocks[1]
+            .settle_user_reward(5)
+            .unwrap();
+        settlement.clear_stale_settlement_blocks();
+
+        let claimed_amount = settlement.claim_remaining_reward(5).unwrap();
+        assert_eq!(claimed_amount, 1);
+        assert_eq!(settlement.remaining_amount, 0);
     }
 }

@@ -305,4 +305,27 @@ impl RewardAccount {
         self.base_reward_pool.update_reward_pool(current_slot);
         self.bonus_reward_pool.update_reward_pool(current_slot);
     }
+
+    /// returns claimed_amount
+    pub(super) fn claim_remaining_reward(
+        &mut self,
+        reward_id: u16,
+        current_slot: u64,
+    ) -> Result<u64> {
+        require_eq!(
+            self.get_reward(reward_id)?.claimable,
+            1,
+            ErrorCode::RewardNotClaimableError,
+        );
+
+        let mut claimed_amount = 0;
+        claimed_amount += self
+            .base_reward_pool
+            .claim_remaining_reward(reward_id, current_slot)?;
+        claimed_amount += self
+            .bonus_reward_pool
+            .claim_remaining_reward(reward_id, current_slot)?;
+
+        Ok(claimed_amount)
+    }
 }

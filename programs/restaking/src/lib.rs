@@ -878,6 +878,26 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
+    // OperatorRewardClaimContext
+    ////////////////////////////////////////////
+
+    pub fn operator_claim_remaining_reward(ctx: Context<OperatorRewardClaimContext>) -> Result<()> {
+        emit_cpi!(modules::reward::RewardService::new(
+            &ctx.accounts.receipt_token_mint,
+            &ctx.accounts.reward_account,
+        )?
+        .process_claim_remaining_reward(
+            &ctx.accounts.reward_token_mint,
+            &ctx.accounts.reward_token_program,
+            &ctx.accounts.reward_reserve_account,
+            &ctx.accounts.reward_token_reserve_account,
+            &ctx.accounts.program_reward_token_revenue_account,
+        )?);
+
+        Ok(())
+    }
+
+    ////////////////////////////////////////////
     // OperatorNormalizedTokenPoolContext
     ////////////////////////////////////////////
 

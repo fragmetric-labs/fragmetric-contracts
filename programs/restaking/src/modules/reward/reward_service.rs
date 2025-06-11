@@ -1,6 +1,7 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::Mint;
+use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
+use crate::constants::PROGRAM_REVENUE_ADDRESS;
 use crate::errors::ErrorCode;
 use crate::events;
 
@@ -128,5 +129,43 @@ impl<'a, 'info> RewardService<'a, 'info> {
         }
 
         Ok(updated_user_reward_accounts)
+    }
+
+    pub fn process_claim_remaining_reward(
+        &self,
+        reward_token_mint: &InterfaceAccount<'info, Mint>,
+        reward_token_program: &Interface<'info, TokenInterface>,
+        reward_reserve_account: &SystemAccount<'info>,
+        reward_token_reserve_account: &InterfaceAccount<'info, TokenAccount>,
+        program_reward_token_revenue_account: &InterfaceAccount<'info, TokenAccount>,
+    ) -> Result<events::OperatorClaimedRemainingReward> {
+        let mut reward_account = self.reward_account.load_mut()?;
+        let reward_id = reward_account.get_reward_id(&reward_token_mint.key())?;
+
+        let claimed_amount = reward_account.claim_remaining_reward(reward_id, self.current_slot)?;
+
+        anchor_spl::token_interface::transfer_checked(
+            CpiContext::new_with_signer(
+                reward_token_program.to_account_info(),
+                anchor_spl::token_interface::TransferChecked {
+                    from: reward_token_reserve_account.to_account_info(),
+                    mint: reward_token_mint.to_account_info(),
+                    to: program_reward_token_revenue_account.to_account_info(),
+                    authority: reward_reserve_account.to_account_info(),
+                },
+                &[&reward_account.get_reserve_account_seeds()],
+            ),
+            claimed_amount,
+            reward_token_mint.decimals,
+        )?;
+
+        Ok(events::OperatorClaimedRemainingReward {
+            receipt_token_mint: self.receipt_token_mint.key(),
+            reward_token_mint: reward_token_mint.key(),
+            program_revenue_account: PROGRAM_REVENUE_ADDRESS,
+            program_reward_token_revenue_account: program_reward_token_revenue_account.key(),
+            updated_reward_account: self.reward_account.key(),
+            claimed_reward_token_amount: claimed_amount,
+        })
     }
 }

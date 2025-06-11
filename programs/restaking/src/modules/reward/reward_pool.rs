@@ -74,9 +74,10 @@ impl RewardPool {
         self.reward_settlements_1[..self.num_reward_settlements as usize].iter_mut()
     }
 
-    pub fn get_reward_settlement(&self, reward_id: u16) -> Option<&RewardSettlement> {
+    pub fn get_reward_settlement(&self, reward_id: u16) -> Result<&RewardSettlement> {
         self.get_reward_settlements_iter()
             .find(|s| s.reward_id == reward_id)
+            .ok_or_else(|| error!(ErrorCode::RewardSettlementNotFoundError))
     }
 
     pub fn get_reward_settlement_mut(&mut self, reward_id: u16) -> Result<&mut RewardSettlement> {
@@ -178,6 +179,18 @@ impl RewardPool {
         } else {
             Ok(deltas)
         }
+    }
+
+    /// returns claimed_amount
+    pub fn claim_remaining_reward(&mut self, reward_id: u16, current_slot: u64) -> Result<u64> {
+        // First update reward pool
+        self.update_reward_pool(current_slot);
+
+        let Ok(settlement) = self.get_reward_settlement_mut(reward_id) else {
+            return Ok(0);
+        };
+
+        settlement.claim_remaining_reward(current_slot)
     }
 }
 
