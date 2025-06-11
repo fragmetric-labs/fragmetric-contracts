@@ -155,7 +155,7 @@ impl RewardAccount {
     }
 
     /// returns None if reward isn't claimable
-    pub fn find_reward_token_reserve_account_address(
+    pub fn get_reward_token_reserve_account_address(
         &self,
         token: &Pubkey,
     ) -> Result<Option<Pubkey>> {

@@ -717,7 +717,7 @@ impl HarvestRewardCommand {
 
                 let Some(reward_token_reserve_account) = reward_account
                     .load()?
-                    .find_reward_token_reserve_account_address(reward_token_mint.key)?
+                    .get_reward_token_reserve_account_address(reward_token_mint.key)?
                 else {
                     // Reward is not claimable, so move on to next reward
                     return Ok(None);
@@ -1107,7 +1107,7 @@ impl HarvestRewardCommand {
 
                 let Some(reward_token_reserve_account_address) = reward_account
                     .load()?
-                    .find_reward_token_reserve_account_address(&reward_token_mint.key())?
+                    .get_reward_token_reserve_account_address(&reward_token_mint.key())?
                 else {
                     // reward isn't claimable, so move on to next item.
                     return Ok(None);
