@@ -1,6 +1,5 @@
 mod fund_manager_updated_fund;
 mod fund_manager_updated_reward_pool;
-mod operator_claimed_remaining_reward;
 mod operator_donated_to_fund;
 mod operator_ran_fund_command;
 mod operator_updated_fund_prices;
@@ -21,7 +20,6 @@ mod user_wrapped_receipt_token;
 
 pub use fund_manager_updated_fund::*;
 pub use fund_manager_updated_reward_pool::*;
-pub use operator_claimed_remaining_reward::*;
 pub use operator_donated_to_fund::*;
 pub use operator_ran_fund_command::*;
 pub use operator_updated_fund_prices::*;

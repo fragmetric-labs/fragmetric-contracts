@@ -11016,19 +11016,6 @@
       ]
     },
     {
-      "name": "OperatorClaimedRemainingReward",
-      "discriminator": [
-        181,
-        141,
-        36,
-        87,
-        76,
-        218,
-        10,
-        140
-      ]
-    },
-    {
       "name": "OperatorDonatedToFund",
       "discriminator": [
         87,
@@ -14219,38 +14206,6 @@
                 49
               ]
             }
-          }
-        ]
-      }
-    },
-    {
-      "name": "OperatorClaimedRemainingReward",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "receipt_token_mint",
-            "type": "pubkey"
-          },
-          {
-            "name": "reward_token_mint",
-            "type": "pubkey"
-          },
-          {
-            "name": "program_revenue_account",
-            "type": "pubkey"
-          },
-          {
-            "name": "program_reward_token_revenue_account",
-            "type": "pubkey"
-          },
-          {
-            "name": "updated_reward_account",
-            "type": "pubkey"
-          },
-          {
-            "name": "claimed_reward_token_amount",
-            "type": "u64"
           }
         ]
       }

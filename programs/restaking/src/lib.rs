@@ -882,7 +882,7 @@ pub mod restaking {
     ////////////////////////////////////////////
 
     pub fn operator_claim_remaining_reward(ctx: Context<OperatorRewardClaimContext>) -> Result<()> {
-        emit_cpi!(modules::reward::RewardService::new(
+        modules::reward::RewardService::new(
             &ctx.accounts.receipt_token_mint,
             &ctx.accounts.reward_account,
         )?
@@ -892,7 +892,7 @@ pub mod restaking {
             &ctx.accounts.reward_reserve_account,
             &ctx.accounts.reward_token_reserve_account,
             &ctx.accounts.program_reward_token_revenue_account,
-        )?);
+        )?;
 
         Ok(())
     }

@@ -492,9 +492,6 @@ export class RestakingRewardAccountContext extends AccountContext<
     }),
     {
       description: 'claim remaining reward to program revenue account',
-      anchorEventDecoders: getRestakingAnchorEventDecoders(
-        'operatorClaimedRemainingReward'
-      ),
       instructions: [
         async (parent, args, overrides) => {
           const [receiptTokenMint, rewardAccount, operator] = await Promise.all(

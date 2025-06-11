@@ -90,7 +90,6 @@ export enum RestakingAccount {
   UserRewardAccount,
   FundManagerUpdatedFund,
   FundManagerUpdatedRewardPool,
-  OperatorClaimedRemainingReward,
   OperatorDonatedToFund,
   OperatorRanFundCommand,
   OperatorUpdatedFundPrices,
@@ -212,17 +211,6 @@ export function identifyRestakingAccount(
     )
   ) {
     return RestakingAccount.FundManagerUpdatedRewardPool;
-  }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([181, 141, 36, 87, 76, 218, 10, 140])
-      ),
-      0
-    )
-  ) {
-    return RestakingAccount.OperatorClaimedRemainingReward;
   }
   if (
     containsBytes(

@@ -138,7 +138,24 @@ impl<'a, 'info> RewardService<'a, 'info> {
         reward_reserve_account: &SystemAccount<'info>,
         reward_token_reserve_account: &InterfaceAccount<'info, TokenAccount>,
         program_reward_token_revenue_account: &InterfaceAccount<'info, TokenAccount>,
-    ) -> Result<events::OperatorClaimedRemainingReward> {
+    ) -> Result<()> {
+        self.claim_remaining_reward(
+            reward_token_mint,
+            reward_token_program,
+            reward_reserve_account,
+            reward_token_reserve_account,
+            program_reward_token_revenue_account,
+        )
+    }
+
+    pub(in crate::modules) fn claim_remaining_reward(
+        &self,
+        reward_token_mint: &InterfaceAccount<'info, Mint>,
+        reward_token_program: &Interface<'info, TokenInterface>,
+        reward_reserve_account: &SystemAccount<'info>,
+        reward_token_reserve_account: &InterfaceAccount<'info, TokenAccount>,
+        program_reward_token_revenue_account: &InterfaceAccount<'info, TokenAccount>,
+    ) -> Result<()> {
         let mut reward_account = self.reward_account.load_mut()?;
         let reward_id = reward_account.get_reward_id(&reward_token_mint.key())?;
 
@@ -159,13 +176,6 @@ impl<'a, 'info> RewardService<'a, 'info> {
             reward_token_mint.decimals,
         )?;
 
-        Ok(events::OperatorClaimedRemainingReward {
-            receipt_token_mint: self.receipt_token_mint.key(),
-            reward_token_mint: reward_token_mint.key(),
-            program_revenue_account: PROGRAM_REVENUE_ADDRESS,
-            program_reward_token_revenue_account: program_reward_token_revenue_account.key(),
-            updated_reward_account: self.reward_account.key(),
-            claimed_reward_token_amount: claimed_amount,
-        })
+        Ok(())
     }
 }

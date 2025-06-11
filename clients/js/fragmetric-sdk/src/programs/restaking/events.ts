@@ -4,8 +4,6 @@ import {
   getFundManagerUpdatedFundDiscriminatorBytes,
   getFundManagerUpdatedRewardPoolDecoder,
   getFundManagerUpdatedRewardPoolDiscriminatorBytes,
-  getOperatorClaimedRemainingRewardDecoder,
-  getOperatorClaimedRemainingRewardDiscriminatorBytes,
   getOperatorDonatedToFundDecoder,
   getOperatorDonatedToFundDiscriminatorBytes,
   getOperatorRanFundCommandDecoder,
@@ -91,10 +89,6 @@ export const restakingAnchorEventDecoders = {
   operatorUpdatedRewardPools: {
     discriminator: getOperatorUpdatedRewardPoolsDiscriminatorBytes(),
     decoder: getOperatorUpdatedRewardPoolsDecoder(),
-  },
-  operatorClaimedRemainingReward: {
-    discriminator: getOperatorClaimedRemainingRewardDiscriminatorBytes(),
-    decoder: getOperatorClaimedRemainingRewardDecoder(),
   },
 
   // user
