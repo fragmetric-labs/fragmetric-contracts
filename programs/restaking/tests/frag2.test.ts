@@ -827,4 +827,55 @@ describe('restaking.frag2 test', async () => {
           .totalSettledContribution
     );
   });
+
+  test('leftovers from cleared blocks are claimed to program revenue account', async () => {
+    let globalReward = (await ctx.reward.resolve(true))!;
+    const remainingAmount =
+      globalReward.basePool.settlements[0].remainingAmount;
+    const claimedAmount = globalReward.basePool.settlements[0].claimedAmount;
+
+    const rewardIndex = globalReward.rewards.findIndex(
+      (reward) => reward.mint == 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF'
+    );
+
+    const rewardReserveAccount = ctx.user(ctx.reward.reserve.address!);
+    await rewardReserveAccount.rewardTokens.resolve(true);
+    const rewardTokenReserveAccount =
+      rewardReserveAccount.rewardTokens.children[rewardIndex];
+
+    let rewardTokenReserveAccountBalance = await rewardTokenReserveAccount
+      .resolve(true)
+      .then((res) => res!.amount);
+
+    const programRevenueAccount = ctx.user(
+      'GuSruSKKCmAGuWMeMsiw3mbNhjeiRtNhnh9Eatgz33NA'
+    );
+    await programRevenueAccount.rewardTokens.resolve(true);
+    const programRewardTokenRevenueAccount =
+      programRevenueAccount.rewardTokens.children[rewardIndex];
+
+    let programRewardTokenRevenueAccountBalance =
+      await programRewardTokenRevenueAccount
+        .resolve(true)
+        .then((res) => res?.amount ?? 0n);
+
+    await ctx.reward.claimRemainingReward.execute({
+      mint: 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF',
+    });
+
+    globalReward = (await ctx.reward.resolve(true))!;
+    expect(globalReward.basePool.settlements[0].remainingAmount).toEqual(0n);
+    expect(globalReward.basePool.settlements[0].claimedAmount).toEqual(
+      remainingAmount + claimedAmount
+    );
+
+    await expect(
+      rewardTokenReserveAccount.resolve(true).then((res) => res!.amount)
+    ).resolves.toEqual(rewardTokenReserveAccountBalance - remainingAmount);
+    await expect(
+      programRewardTokenRevenueAccount.resolve(true).then((res) => res!.amount)
+    ).resolves.toEqual(
+      programRewardTokenRevenueAccountBalance + remainingAmount
+    );
+  });
 });
