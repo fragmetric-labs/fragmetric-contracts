@@ -104,9 +104,9 @@ impl TokenAllocatedAmount {
                     .get_record_mut(rate)
                     .ok_or_else(|| error!(ErrorCode::RewardInvalidAllocatedAmountDeltaException))?;
                 record.amount -= delta.amount;
-                OneOrManyDeltas::Single(delta)
+                OneOrManyDeltas::One(delta)
             }
-            _ => OneOrManyDeltas::Multiple(self.get_records_iter_mut().map_while(move |record| {
+            _ => OneOrManyDeltas::Many(self.get_records_iter_mut().map_while(move |record| {
                 if delta.amount == 0 {
                     return None;
                 }
@@ -264,13 +264,13 @@ impl TokenAllocatedAmountDelta {
 
 /// Auxillary type for better code - represents either a single delta or multiple deltas
 enum OneOrManyDeltas<T: IntoIterator<Item = TokenAllocatedAmountDelta>> {
-    Single(TokenAllocatedAmountDelta),
-    Multiple(T),
+    One(TokenAllocatedAmountDelta),
+    Many(T),
 }
 
 enum OneOrManyDeltasIter<T: Iterator<Item = TokenAllocatedAmountDelta>> {
-    Single(std::option::IntoIter<TokenAllocatedAmountDelta>),
-    Multiple(T),
+    One(std::option::IntoIter<TokenAllocatedAmountDelta>),
+    Many(T),
 }
 
 impl<T: IntoIterator<Item = TokenAllocatedAmountDelta>> IntoIterator for OneOrManyDeltas<T> {
@@ -279,8 +279,8 @@ impl<T: IntoIterator<Item = TokenAllocatedAmountDelta>> IntoIterator for OneOrMa
 
     fn into_iter(self) -> Self::IntoIter {
         match self {
-            Self::Single(single) => OneOrManyDeltasIter::Single(Some(single).into_iter()),
-            Self::Multiple(multiple) => OneOrManyDeltasIter::Multiple(multiple.into_iter()),
+            Self::One(single) => OneOrManyDeltasIter::One(Some(single).into_iter()),
+            Self::Many(multiple) => OneOrManyDeltasIter::Many(multiple.into_iter()),
         }
     }
 }
@@ -290,8 +290,8 @@ impl<T: Iterator<Item = TokenAllocatedAmountDelta>> Iterator for OneOrManyDeltas
 
     fn next(&mut self) -> Option<Self::Item> {
         match self {
-            Self::Single(single) => single.next(),
-            Self::Multiple(multiple) => multiple.next(),
+            Self::One(single) => single.next(),
+            Self::Many(multiple) => multiple.next(),
         }
     }
 }
