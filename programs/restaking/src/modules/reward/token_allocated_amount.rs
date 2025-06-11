@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use bytemuck::Zeroable;
 
 use crate::errors::ErrorCode;
 
@@ -64,7 +65,6 @@ impl TokenAllocatedAmount {
         );
 
         self.clear_stale_records();
-        self.sort_records();
 
         Ok(effective_deltas)
     }
@@ -138,38 +138,35 @@ impl TokenAllocatedAmount {
 
     /// record is stale if amount = 0 and contribution accrual rate != 1.0.
     fn clear_stale_records(&mut self) {
+        // goal: partition the record according to the staleness.
+        // * record[0..l]: non-stale, initially l = 0
+        // * record[r..n]: stale, initially r = n
+        // * terminate condition: l == r
+
         let mut l = 0;
         let mut r = self.num_records as usize;
 
         loop {
             // 1. move l to right until record[l] is stale
-            // invariant: record[0..l] are all non-stale
             while l < self.num_records as usize && !self.records[l].is_stale() {
                 l += 1;
             }
             // 2. move r to left until record[r-1] is non-stale
-            // invariant: record[r..n] are all stale
             while r > 0 && self.records[r - 1].is_stale() {
                 r -= 1;
+                self.records[r] = Zeroable::zeroed();
             }
 
+            // 3. terminate condition check
             if l == r {
                 break; // done
             }
 
-            // if l == n or r == 0, then obviously l == r
-            // if l == r-1 then record[l], which is record[r-1] is both empty and non-empty so contradiction.
-            // therefore l < r-1 so l+1 <= r-1.
-            // swap record[l] and record[r-1]
+            // 4. swap record[l] (which is stale) and record[r-1] (which is non-stale)
             self.records.swap(l, r - 1);
-            l += 1;
-            r -= 1;
         }
 
         self.num_records = l as u8;
-    }
-
-    fn sort_records(&mut self) {
         self.records[..self.num_records as usize].sort_by_key(|r| r.contribution_accrual_rate);
     }
 }
@@ -298,8 +295,6 @@ impl<T: Iterator<Item = TokenAllocatedAmountDelta>> Iterator for OneOrManyDeltas
 
 #[cfg(test)]
 mod tests {
-    use bytemuck::Zeroable;
-
     use super::*;
 
     #[test]
@@ -316,7 +311,6 @@ mod tests {
         });
 
         amount.clear_stale_records();
-        amount.sort_records();
 
         assert_eq!(amount.num_records, 4);
         for (record, rate) in amount
