@@ -12,6 +12,7 @@ export * from './fundManagerUpdatedRewardPool';
 export * from './fundWithdrawalBatchAccount';
 export * from './normalizedTokenPoolAccount';
 export * from './normalizedTokenWithdrawalAccount';
+export * from './operatorClaimedRemainingReward';
 export * from './operatorDonatedToFund';
 export * from './operatorRanFundCommand';
 export * from './operatorUpdatedFundPrices';

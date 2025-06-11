@@ -5032,6 +5032,241 @@
       ]
     },
     {
+      "name": "operator_claim_remaining_reward",
+      "discriminator": [
+        139,
+        86,
+        147,
+        213,
+        255,
+        222,
+        222,
+        216
+      ],
+      "accounts": [
+        {
+          "name": "operator",
+          "signer": true
+        },
+        {
+          "name": "receipt_token_mint",
+          "relations": [
+            "reward_account"
+          ]
+        },
+        {
+          "name": "reward_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  119,
+                  97,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "reward_reserve_account",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  119,
+                  97,
+                  114,
+                  100,
+                  95,
+                  114,
+                  101,
+                  115,
+                  101,
+                  114,
+                  118,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "program_revenue_account",
+          "address": "GuSruSKKCmAGuWMeMsiw3mbNhjeiRtNhnh9Eatgz33NA"
+        },
+        {
+          "name": "reward_token_mint"
+        },
+        {
+          "name": "reward_token_program"
+        },
+        {
+          "name": "reward_token_reserve_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "reward_reserve_account"
+              },
+              {
+                "kind": "account",
+                "path": "reward_token_program"
+              },
+              {
+                "kind": "account",
+                "path": "reward_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "program_reward_token_revenue_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "program_revenue_account"
+              },
+              {
+                "kind": "account",
+                "path": "reward_token_program"
+              },
+              {
+                "kind": "account",
+                "path": "reward_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "operator_donate_sol_to_fund",
       "discriminator": [
         88,
@@ -10781,6 +11016,19 @@
       ]
     },
     {
+      "name": "OperatorClaimedRemainingReward",
+      "discriminator": [
+        181,
+        141,
+        36,
+        87,
+        76,
+        218,
+        10,
+        140
+      ]
+    },
+    {
       "name": "OperatorDonatedToFund",
       "discriminator": [
         87,
@@ -13971,6 +14219,38 @@
                 49
               ]
             }
+          }
+        ]
+      }
+    },
+    {
+      "name": "OperatorClaimedRemainingReward",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "receipt_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "reward_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "program_revenue_account",
+            "type": "pubkey"
+          },
+          {
+            "name": "program_reward_token_revenue_account",
+            "type": "pubkey"
+          },
+          {
+            "name": "updated_reward_account",
+            "type": "pubkey"
+          },
+          {
+            "name": "claimed_reward_token_amount",
+            "type": "u64"
           }
         ]
       }

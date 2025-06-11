@@ -42,6 +42,7 @@ export * from './fundManagerUpdateRestakingVaultStrategy';
 export * from './fundManagerUpdateReward';
 export * from './fundManagerUpdateSolStrategy';
 export * from './fundManagerUpdateSupportedTokenStrategy';
+export * from './operatorClaimRemainingReward';
 export * from './operatorDonateSolToFund';
 export * from './operatorDonateSupportedTokenToFund';
 export * from './operatorLogMessage';
