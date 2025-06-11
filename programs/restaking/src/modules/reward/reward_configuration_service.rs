@@ -194,6 +194,7 @@ impl<'a, 'info> RewardConfigurationService<'a, 'info> {
         reward_id: u16,
     ) -> Result<()> {
         let reward_account = self.reward_account.load()?;
+        let reward_reserve_account_address = reward_account.get_reserve_account_address()?;
 
         let reward_token_mint =
             reward_token_mint.ok_or_else(|| error!(ErrorCode::ConstraintAccountIsNone))?;
@@ -207,17 +208,23 @@ impl<'a, 'info> RewardConfigurationService<'a, 'info> {
         // associated_token::authority = reward_reserve_account
         // associated_token::token_program = reward_token_program
         require_keys_eq!(
+            reward_token_reserve_account.owner,
+            reward_reserve_account_address,
+            ErrorCode::ConstraintTokenOwner,
+        );
+        require_keys_eq!(
             reward_token_reserve_account.key(),
             anchor_spl::associated_token::get_associated_token_address_with_program_id(
-                &reward_account.get_reserve_account_address()?,
+                &reward_reserve_account_address,
                 &reward_token_mint.key(),
                 reward_token_program.key,
             ),
+            ErrorCode::ConstraintAssociated,
         );
 
         // Check correct mint, program and decimals are provided
         let reward = reward_account.get_reward(reward_id)?;
-        require_keys_eq!(reward_token_reserve_account.mint, reward.mint);
+        require_keys_eq!(reward_token_mint.key(), reward.mint);
         require_keys_eq!(reward_token_program.key(), reward.program);
         require_eq!(reward_token_mint.decimals, reward.decimals);
 
