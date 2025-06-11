@@ -1153,6 +1153,62 @@ export class RestakingFundAccountContext extends AccountContext<
     }
   );
 
+  readonly removeTokenSwapStrategy = new TransactionTemplateContext(
+    this,
+    v.object({
+      fromTokenMint: v.string(),
+      toTokenMint: v.string(),
+      swapSource: v.pipe(
+        v.object({
+          __kind: v.picklist(['OrcaDEXLiquidityPool']),
+          address: v.string(),
+        }) as v.GenericSchema<
+          Omit<restaking.TokenSwapSourceArgs, 'address'> & {
+            address: string;
+          }
+        >
+      ),
+    }),
+    {
+      description: 'remove a token swap strategy',
+      anchorEventDecoders: getRestakingAnchorEventDecoders(
+        'fundManagerUpdatedFund'
+      ),
+      addressLookupTables: [this.__resolveAddressLookupTable],
+      instructions: [
+        async (parent, args, overrides) => {
+          const [data, payer] = await Promise.all([
+            parent.parent.resolve(true),
+            transformAddressResolverVariant(
+              overrides.feePayer ??
+                this.runtime.options.transaction.feePayer ??
+                (() => Promise.resolve(null))
+            )(parent),
+          ]);
+          if (!data) throw new Error('invalid context');
+          const fundManager = (this.program as RestakingProgram).knownAddresses
+            .fundManager;
+
+          return Promise.all([
+            restaking.getFundManagerRemoveTokenSwapStrategyInstructionAsync(
+              {
+                fromTokenMint: args.fromTokenMint as Address,
+                toTokenMint: args.toTokenMint as Address,
+                swapSource: args.swapSource as restaking.TokenSwapSourceArgs,
+                fundManager: createNoopSigner(fundManager),
+                receiptTokenMint: data.receiptTokenMint,
+                program: this.program.address,
+              },
+              {
+                programAddress: this.program.address,
+              }
+            ),
+          ]);
+        },
+      ],
+    }
+  );
+
   async resolveRestakingVaultStrategies(noCache = false): Promise<
     | (restaking.FundManagerUpdateRestakingVaultStrategyInstructionDataArgs & {
         pricingSource: restaking.TokenPricingSourceArgs;
