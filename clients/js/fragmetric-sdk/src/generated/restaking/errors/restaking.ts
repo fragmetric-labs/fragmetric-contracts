@@ -212,6 +212,8 @@ export const RESTAKING_ERROR__FUND_RESTAKING_VAULT_REWARD_TOKEN_NOT_REGISTERED_E
 export const RESTAKING_ERROR__FUND_OPERATION_DISABLED_ERROR = 0x17d1; // 6097
 /** FundTokenSwapStrategyValidationError: fund: token swap strategy validation error */
 export const RESTAKING_ERROR__FUND_TOKEN_SWAP_STRATEGY_VALIDATION_ERROR = 0x17d2; // 6098
+/** FundTokenSwapStrategyShouldBeProvidedException: fund: token swap strategy should be provided */
+export const RESTAKING_ERROR__FUND_TOKEN_SWAP_STRATEGY_SHOULD_BE_PROVIDED_EXCEPTION = 0x17d3; // 6099
 
 export type RestakingError =
   | typeof RESTAKING_ERROR__CALCULATION_ARITHMETIC_EXCEPTION
@@ -253,6 +255,7 @@ export type RestakingError =
   | typeof RESTAKING_ERROR__FUND_SUPPORTED_TOKEN_IN_USE_ERROR
   | typeof RESTAKING_ERROR__FUND_TOKEN_SWAP_STRATEGY_ALREADY_REGISTERED
   | typeof RESTAKING_ERROR__FUND_TOKEN_SWAP_STRATEGY_NOT_FOUND_ERROR
+  | typeof RESTAKING_ERROR__FUND_TOKEN_SWAP_STRATEGY_SHOULD_BE_PROVIDED_EXCEPTION
   | typeof RESTAKING_ERROR__FUND_TOKEN_SWAP_STRATEGY_VALIDATION_ERROR
   | typeof RESTAKING_ERROR__FUND_WITHDRAWAL_DISABLED_ERROR
   | typeof RESTAKING_ERROR__FUND_WITHDRAWAL_NOT_SUPPORTED_ASSET
@@ -356,6 +359,7 @@ if (process.env.NODE_ENV !== 'production') {
     [RESTAKING_ERROR__FUND_SUPPORTED_TOKEN_IN_USE_ERROR]: `fund: supported token still in use`,
     [RESTAKING_ERROR__FUND_TOKEN_SWAP_STRATEGY_ALREADY_REGISTERED]: `fund: token swap strategy already registered`,
     [RESTAKING_ERROR__FUND_TOKEN_SWAP_STRATEGY_NOT_FOUND_ERROR]: `fund: token swap strategy not found`,
+    [RESTAKING_ERROR__FUND_TOKEN_SWAP_STRATEGY_SHOULD_BE_PROVIDED_EXCEPTION]: `fund: token swap strategy should be provided`,
     [RESTAKING_ERROR__FUND_TOKEN_SWAP_STRATEGY_VALIDATION_ERROR]: `fund: token swap strategy validation error`,
     [RESTAKING_ERROR__FUND_WITHDRAWAL_DISABLED_ERROR]: `fund: withdrawal is currently disabled`,
     [RESTAKING_ERROR__FUND_WITHDRAWAL_NOT_SUPPORTED_ASSET]: `fund: withdrawal is not supported for the given asset`,

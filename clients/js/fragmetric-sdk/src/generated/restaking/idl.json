@@ -11598,6 +11598,11 @@
       "code": 6098,
       "name": "FundTokenSwapStrategyValidationError",
       "msg": "fund: token swap strategy validation error"
+    },
+    {
+      "code": 6099,
+      "name": "FundTokenSwapStrategyShouldBeProvidedException",
+      "msg": "fund: token swap strategy should be provided"
     }
   ],
   "types": [
