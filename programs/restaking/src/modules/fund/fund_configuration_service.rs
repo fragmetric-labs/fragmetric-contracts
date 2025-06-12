@@ -268,6 +268,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         vault_supported_token_mint: &InterfaceAccount<'info, Mint>,
         vault_receipt_token_mint: &InterfaceAccount<'info, Mint>,
 
+        pricing_source: TokenPricingSource,
         pricing_sources: &'info [AccountInfo<'info>],
     ) -> Result<events::FundManagerUpdatedFund> {
         let receipt_token_pricing_source = restaking::validate_vault(
@@ -277,6 +278,10 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
             self.fund_account.as_ref(),
         )?;
 
+        if receipt_token_pricing_source != pricing_source {
+            err!(ErrorCode::FundPricingSourceValidationError)?
+        }
+
         let mut fund_account = self.fund_account.load_mut()?;
         fund_account.add_restaking_vault(
             vault.key(),
@@ -285,7 +290,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
             vault_receipt_token_mint.key(),
             *AsRef::<AccountInfo>::as_ref(vault_receipt_token_mint).owner,
             vault_receipt_token_mint.decimals,
-            receipt_token_pricing_source,
+            pricing_source,
             fund_vault_receipt_token_account.amount,
         )?;
         fund_account.update_pricing_source_addresses()?;
