@@ -40,6 +40,7 @@ export type HarvestRewardCommandState =
       vault: Address;
       rewardTokenMints: Array<Address>;
     }
+  | { __kind: 'ExecuteSwap'; vault: Address; rewardTokenMints: Array<Address> }
   | { __kind: 'NewDistribute' }
   | {
       __kind: 'PrepareDistribute';
@@ -74,6 +75,13 @@ export function getHarvestRewardCommandStateEncoder(): Encoder<HarvestRewardComm
     ],
     [
       'ExecuteCompound',
+      getStructEncoder([
+        ['vault', getAddressEncoder()],
+        ['rewardTokenMints', getArrayEncoder(getAddressEncoder())],
+      ]),
+    ],
+    [
+      'ExecuteSwap',
       getStructEncoder([
         ['vault', getAddressEncoder()],
         ['rewardTokenMints', getArrayEncoder(getAddressEncoder())],
@@ -117,6 +125,13 @@ export function getHarvestRewardCommandStateDecoder(): Decoder<HarvestRewardComm
     ],
     [
       'ExecuteCompound',
+      getStructDecoder([
+        ['vault', getAddressDecoder()],
+        ['rewardTokenMints', getArrayDecoder(getAddressDecoder())],
+      ]),
+    ],
+    [
+      'ExecuteSwap',
       getStructDecoder([
         ['vault', getAddressDecoder()],
         ['rewardTokenMints', getArrayDecoder(getAddressDecoder())],
@@ -196,6 +211,18 @@ export function harvestRewardCommandState(
   HarvestRewardCommandStateArgs,
   '__kind',
   'ExecuteCompound'
+>;
+export function harvestRewardCommandState(
+  kind: 'ExecuteSwap',
+  data: GetDiscriminatedUnionVariantContent<
+    HarvestRewardCommandStateArgs,
+    '__kind',
+    'ExecuteSwap'
+  >
+): GetDiscriminatedUnionVariant<
+  HarvestRewardCommandStateArgs,
+  '__kind',
+  'ExecuteSwap'
 >;
 export function harvestRewardCommandState(
   kind: 'NewDistribute'

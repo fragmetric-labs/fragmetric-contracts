@@ -3,38 +3,17 @@ use anchor_spl::{associated_token, token_interface::Mint};
 
 use crate::errors::ErrorCode;
 
-pub struct VirtualVaultService<'info> {
-    vault_account: &'info AccountInfo<'info>,
-    vault_receipt_token_mint: &'info AccountInfo<'info>,
-}
+pub(in crate::modules) struct VirtualVaultService;
 
-impl<'info> VirtualVaultService<'info> {
-    pub fn new(
-        vault_account: &'info AccountInfo<'info>,
-        vault_receipt_token_mint: &'info AccountInfo<'info>,
-    ) -> Result<Self> {
-        require_keys_eq!(*vault_account.owner, System::id());
-
-        Ok(Self {
-            vault_account,
-            vault_receipt_token_mint,
-        })
-    }
-
-    pub fn validate_vault(
+impl VirtualVaultService {
+    pub fn validate_vault<'info>(
         vault_account: &AccountInfo,
         vault_receipt_token_mint: &'info AccountInfo<'info>,
         fund_account: &AccountInfo,
     ) -> Result<()> {
         // validate vault address
-        let (vault_address, _) = Pubkey::find_program_address(
-            &[
-                Self::VIRTUAL_VAULT_SEEDS,
-                vault_receipt_token_mint.key().as_ref(),
-                fund_account.key.as_ref(),
-            ],
-            &crate::ID,
-        );
+        let vault_address =
+            Self::find_vault_address(vault_receipt_token_mint.key, fund_account.key).vault_address;
         require_keys_eq!(*vault_account.key, vault_address);
         require_keys_eq!(*vault_account.owner, System::id());
 
@@ -51,57 +30,47 @@ impl<'info> VirtualVaultService<'info> {
         Ok(())
     }
 
-    pub const VIRTUAL_VAULT_SEEDS: &'static [u8] = b"virtual_vault";
+    pub fn find_vault_address<'a>(
+        vault_receipt_token_mint: &'a Pubkey,
+        fund_account: &'a Pubkey,
+    ) -> VirtualVaultAddress<'a> {
+        VirtualVaultAddress::new(vault_receipt_token_mint, fund_account)
+    }
+}
 
-    pub fn transfer_vault_token(
-        &self,
-        token_mint: &InterfaceAccount<'info, Mint>,
-        token_program: AccountInfo<'info>,
-        from_vault_token_account: AccountInfo<'info>,
-        to_token_account: AccountInfo<'info>,
-        fund_account: AccountInfo<'info>,
-        amount: u64,
-    ) -> Result<()> {
-        require_keys_eq!(
-            from_vault_token_account.key(),
-            self.get_vault_token_account_address(&token_mint.key(), token_program.key)
-        );
+pub(in crate::modules) struct VirtualVaultAddress<'a> {
+    vault_address: Pubkey,
+    vault_receipt_token_mint: &'a Pubkey,
+    fund_account: &'a Pubkey,
+    bump: u8,
+}
 
-        let (_, virtual_vault_bump) = Pubkey::find_program_address(
+impl<'a> VirtualVaultAddress<'a> {
+    const SEED: &'static [u8] = b"virtual_vault";
+
+    fn new(vault_receipt_token_mint: &'a Pubkey, fund_account: &'a Pubkey) -> Self {
+        let (vault_address, bump) = Pubkey::find_program_address(
             &[
-                Self::VIRTUAL_VAULT_SEEDS,
-                self.vault_receipt_token_mint.key().as_ref(),
-                fund_account.key.as_ref(),
+                Self::SEED,
+                vault_receipt_token_mint.as_ref(),
+                fund_account.as_ref(),
             ],
             &crate::ID,
         );
-
-        anchor_spl::token_interface::transfer_checked(
-            CpiContext::new_with_signer(
-                token_program,
-                anchor_spl::token_interface::TransferChecked {
-                    from: from_vault_token_account,
-                    mint: token_mint.to_account_info(),
-                    to: to_token_account,
-                    authority: self.vault_account.clone(),
-                },
-                &[&[
-                    Self::VIRTUAL_VAULT_SEEDS,
-                    self.vault_receipt_token_mint.key().as_ref(),
-                    fund_account.key.as_ref(),
-                    &[virtual_vault_bump],
-                ]],
-            ),
-            amount,
-            token_mint.decimals,
-        )
+        Self {
+            vault_address,
+            vault_receipt_token_mint,
+            fund_account,
+            bump,
+        }
     }
 
-    fn get_vault_token_account_address(&self, mint: &Pubkey, token_program_id: &Pubkey) -> Pubkey {
-        associated_token::get_associated_token_address_with_program_id(
-            self.vault_account.key,
-            mint,
-            token_program_id,
-        )
+    pub fn get_seeds(&self) -> [&[u8]; 4] {
+        [
+            Self::SEED,
+            self.vault_receipt_token_mint.as_ref(),
+            self.fund_account.as_ref(),
+            std::slice::from_ref(&self.bump),
+        ]
     }
 }

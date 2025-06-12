@@ -13072,6 +13072,21 @@
             ]
           },
           {
+            "name": "ExecuteSwap",
+            "fields": [
+              {
+                "name": "vault",
+                "type": "pubkey"
+              },
+              {
+                "name": "reward_token_mints",
+                "type": {
+                  "vec": "pubkey"
+                }
+              }
+            ]
+          },
+          {
             "name": "NewDistribute"
           },
           {
