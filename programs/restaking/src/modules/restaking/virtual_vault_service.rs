@@ -3,10 +3,27 @@ use anchor_spl::{associated_token, token_interface::Mint};
 
 use crate::errors::ErrorCode;
 
-pub(in crate::modules) struct VirtualVaultService;
+#[allow(dead_code)]
+pub(in crate::modules) struct VirtualVaultService<'info> {
+    vault_account: &'info AccountInfo<'info>,
+    vault_receipt_token_mint: &'info AccountInfo<'info>,
+}
 
-impl VirtualVaultService {
-    pub fn validate_vault<'info>(
+impl<'info> VirtualVaultService<'info> {
+    #[allow(dead_code)]
+    pub fn new(
+        vault_account: &'info AccountInfo<'info>,
+        vault_receipt_token_mint: &'info AccountInfo<'info>,
+    ) -> Result<Self> {
+        require_keys_eq!(*vault_account.owner, System::id());
+
+        Ok(Self {
+            vault_account,
+            vault_receipt_token_mint,
+        })
+    }
+
+    pub fn validate_vault(
         vault_account: &AccountInfo,
         vault_receipt_token_mint: &'info AccountInfo<'info>,
         fund_account: &AccountInfo,
