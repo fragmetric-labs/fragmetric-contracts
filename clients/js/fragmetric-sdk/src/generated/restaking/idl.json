@@ -2850,7 +2850,16 @@
           "name": "program"
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "pricing_source",
+          "type": {
+            "defined": {
+              "name": "TokenPricingSource"
+            }
+          }
+        }
+      ]
     },
     {
       "name": "fund_manager_initialize_fund_restaking_vault_delegation",
@@ -11831,6 +11840,11 @@
       "code": 6098,
       "name": "FundTokenSwapStrategyValidationError",
       "msg": "fund: token swap strategy validation failed"
+    },
+    {
+      "code": 6099,
+      "name": "FundPricingSourceValidationError",
+      "msg": "fund: pricing source validation failed"
     }
   ],
   "types": [

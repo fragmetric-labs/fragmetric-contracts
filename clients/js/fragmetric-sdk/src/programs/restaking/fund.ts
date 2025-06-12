@@ -1356,6 +1356,7 @@ export class RestakingFundAccountContext extends AccountContext<
                   vaultSupportedTokenMint: vaultAccount.data.supportedMint,
                   fundManager: createNoopSigner(fundManager),
                   receiptTokenMint: data.receiptTokenMint,
+                  pricingSource: args.pricingSource as restaking.TokenPricingSourceArgs,
                   program: this.program.address,
                 },
                 {
@@ -1434,6 +1435,7 @@ export class RestakingFundAccountContext extends AccountContext<
                     vaultAccount.data.vaultSupportedTokenMint,
                   fundManager: createNoopSigner(fundManager),
                   receiptTokenMint: data.receiptTokenMint,
+                  pricingSource: args.pricingSource as restaking.TokenPricingSourceArgs,
                   program: this.program.address,
                 },
                 {
@@ -1510,6 +1512,7 @@ export class RestakingFundAccountContext extends AccountContext<
                   vaultSupportedTokenMint: vrtMint, // use same VRRT - notes no cash-in flow
                   fundManager: createNoopSigner(fundManager),
                   receiptTokenMint: data.receiptTokenMint,
+                  pricingSource: args.pricingSource as restaking.TokenPricingSourceArgs,
                   program: this.program.address,
                 },
                 {
