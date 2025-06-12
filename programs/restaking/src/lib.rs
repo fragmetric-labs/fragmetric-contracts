@@ -421,6 +421,10 @@ pub mod restaking {
         Ok(())
     }
 
+    ////////////////////////////////////////////
+    // FundManagerFundTokenSwapStrategyContext
+    ////////////////////////////////////////////
+
     pub fn fund_manager_add_token_swap_strategy(
         ctx: Context<FundManagerFundTokenSwapStrategyContext>,
         swap_source: modules::swap::TokenSwapSource,
