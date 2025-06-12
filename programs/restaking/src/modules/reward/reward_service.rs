@@ -131,6 +131,62 @@ impl<'a, 'info> RewardService<'a, 'info> {
         Ok(updated_user_reward_accounts)
     }
 
+    pub fn process_settle_reward(
+        &self,
+        reward_token_mint: Option<&InterfaceAccount<Mint>>,
+        reward_token_program: Option<&Interface<TokenInterface>>,
+        reward_token_reserve_account: Option<&InterfaceAccount<TokenAccount>>,
+
+        mint: Pubkey,
+        is_bonus_pool: bool,
+        amount: u64,
+    ) -> Result<events::FundManagerUpdatedRewardPool> {
+        self.settle_reward(
+            reward_token_mint,
+            reward_token_program,
+            reward_token_reserve_account,
+            mint,
+            is_bonus_pool,
+            amount,
+        )?;
+
+        Ok(events::FundManagerUpdatedRewardPool {
+            receipt_token_mint: self.receipt_token_mint.key(),
+            reward_account: self.reward_account.key(),
+        })
+    }
+
+    /// Settle reward.
+    pub(in crate::modules) fn settle_reward(
+        &self,
+        reward_token_mint: Option<&InterfaceAccount<Mint>>,
+        reward_token_program: Option<&Interface<TokenInterface>>,
+        reward_token_reserve_account: Option<&InterfaceAccount<TokenAccount>>,
+
+        mint: Pubkey,
+        is_bonus_pool: bool,
+        amount: u64,
+    ) -> Result<()> {
+        let mut reward_account = self.reward_account.load_mut()?;
+        let reward_id = reward_account.get_reward_id(&mint)?;
+        let claimable = reward_account.get_reward(reward_id)?.claimable;
+
+        reward_account.settle_reward(reward_id, is_bonus_pool, amount, self.current_slot)?;
+
+        drop(reward_account);
+
+        if claimable == 1 {
+            self.validate_reward_token_reserve_account(
+                reward_token_mint,
+                reward_token_program,
+                reward_token_reserve_account,
+                reward_id,
+            )?;
+        }
+
+        Ok(())
+    }
+
     pub fn process_claim_remaining_reward(
         &self,
         reward_token_mint: &InterfaceAccount<'info, Mint>,
@@ -175,6 +231,68 @@ impl<'a, 'info> RewardService<'a, 'info> {
             claimed_amount,
             reward_token_mint.decimals,
         )?;
+
+        drop(reward_account);
+
+        self.validate_reward_token_reserve_account(
+            Some(reward_token_mint),
+            Some(reward_token_program),
+            Some(reward_token_reserve_account),
+            reward_id,
+        )?;
+
+        Ok(())
+    }
+
+    pub(in crate::modules) fn validate_reward_token_reserve_account(
+        &self,
+        reward_token_mint: Option<&InterfaceAccount<Mint>>,
+        reward_token_program: Option<&Interface<TokenInterface>>,
+        reward_token_reserve_account: Option<&InterfaceAccount<TokenAccount>>,
+        reward_id: u16,
+    ) -> Result<()> {
+        let reward_account = self.reward_account.load()?;
+        let reward_reserve_account_address = reward_account.get_reserve_account_address()?;
+
+        let reward_token_mint =
+            reward_token_mint.ok_or_else(|| error!(error::ErrorCode::ConstraintAccountIsNone))?;
+        let reward_token_program = reward_token_program
+            .ok_or_else(|| error!(error::ErrorCode::ConstraintAccountIsNone))?;
+        let reward_token_reserve_account = reward_token_reserve_account
+            .ok_or_else(|| error!(error::ErrorCode::ConstraintAccountIsNone))?;
+
+        // Constraint check
+        // associated_token::mint = reward_token_mint
+        // associated_token::authority = reward_reserve_account
+        // associated_token::token_program = reward_token_program
+        require_keys_eq!(
+            reward_token_reserve_account.owner,
+            reward_reserve_account_address,
+            error::ErrorCode::ConstraintTokenOwner,
+        );
+        require_keys_eq!(
+            reward_token_reserve_account.key(),
+            anchor_spl::associated_token::get_associated_token_address_with_program_id(
+                &reward_reserve_account_address,
+                &reward_token_mint.key(),
+                reward_token_program.key,
+            ),
+            error::ErrorCode::ConstraintAssociated,
+        );
+
+        // Check correct mint, program and decimals are provided
+        let reward = reward_account.get_reward(reward_id)?;
+        require_keys_eq!(reward_token_mint.key(), reward.mint);
+        require_keys_eq!(reward_token_program.key(), reward.program);
+        require_eq!(reward_token_mint.decimals, reward.decimals);
+
+        // assert unclaimed amount <= ATA balance
+        let unclaimed_reward_amount = reward_account.get_unclaimed_reward_amount(reward_id);
+        require_gte!(
+            reward_token_reserve_account.amount,
+            unclaimed_reward_amount,
+            ErrorCode::RewardNotEnoughRewardsToClaimError,
+        );
 
         Ok(())
     }

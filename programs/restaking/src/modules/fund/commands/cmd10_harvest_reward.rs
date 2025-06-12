@@ -1096,7 +1096,6 @@ impl HarvestRewardCommand {
                 };
 
                 let reward_account = AccountLoader::<RewardAccount>::try_from(reward_account)?;
-                RewardService::validate_reward_account(&ctx.receipt_token_mint, &reward_account)?;
 
                 let reward_token_mint = InterfaceAccount::<Mint>::try_from(reward_token_mint)?;
                 require_keys_eq!(reward_token_mint.key(), reward_token_mints[0]);
@@ -1180,15 +1179,14 @@ impl HarvestRewardCommand {
                 from_reward_token_account.reload()?;
                 reward_token_reserve_account.reload()?;
 
-                RewardConfigurationService::new(ctx.receipt_token_mint, &reward_account)?
-                    .settle_reward(
-                        Some(&reward_token_mint),
-                        Some(&reward_token_program),
-                        Some(&reward_token_reserve_account),
-                        reward_token_mint.key(),
-                        false,
-                        available_reward_token_amount_to_harvest,
-                    )?;
+                RewardService::new(ctx.receipt_token_mint, &reward_account)?.settle_reward(
+                    Some(&reward_token_mint),
+                    Some(&reward_token_program),
+                    Some(&reward_token_reserve_account),
+                    reward_token_mint.key(),
+                    false,
+                    available_reward_token_amount_to_harvest,
+                )?;
 
                 ctx.fund_account
                     .load_mut()?

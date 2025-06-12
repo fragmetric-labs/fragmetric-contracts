@@ -745,7 +745,7 @@ pub mod restaking {
         is_bonus_pool: bool,
         amount: u64,
     ) -> Result<()> {
-        emit_cpi!(modules::reward::RewardConfigurationService::new(
+        emit_cpi!(modules::reward::RewardService::new(
             &ctx.accounts.receipt_token_mint,
             &ctx.accounts.reward_account,
         )?
