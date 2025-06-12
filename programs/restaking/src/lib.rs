@@ -436,7 +436,9 @@ pub mod restaking {
             &ctx.accounts
                 .swap_source_account
                 .as_ref()
-                .unwrap()
+                .ok_or_else(|| error!(
+                    errors::ErrorCode::FundTokenSwapStrategyShouldBeProvidedException
+                ))?
                 .as_account_info()
         )?);
 

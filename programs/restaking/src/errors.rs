@@ -305,4 +305,7 @@ pub enum ErrorCode {
 
     #[msg("fund: token swap strategy validation error")]
     FundTokenSwapStrategyValidationError,
+
+    #[msg("fund: token swap strategy should be provided")]
+    FundTokenSwapStrategyShouldBeProvidedException,
 }

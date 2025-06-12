@@ -778,8 +778,8 @@ impl FundAccount {
             })
             .ok_or_else(|| error!(ErrorCode::FundTokenSwapStrategyNotFoundError))?;
 
-        let deserialized_swap_source = strategy.swap_source.try_deserialize()?;
-        if deserialized_swap_source != swap_source {
+        let strategy_swap_source = strategy.swap_source.try_deserialize()?;
+        if strategy_swap_source != swap_source {
             err!(ErrorCode::FundTokenSwapStrategyValidationError)?
         }
 
