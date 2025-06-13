@@ -183,9 +183,6 @@ impl RewardPool {
 
     /// returns claimed_amount
     pub fn claim_remaining_reward(&mut self, reward_id: u16, current_slot: u64) -> Result<u64> {
-        // First update reward pool
-        self.update_reward_pool(current_slot);
-
         let Ok(settlement) = self.get_reward_settlement_mut(reward_id) else {
             return Ok(0);
         };

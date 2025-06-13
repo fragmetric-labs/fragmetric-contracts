@@ -1299,7 +1299,7 @@ impl HarvestRewardCommand {
                 reward_reserve_account.key(),
                 reward_account_data.get_reserve_account_address()?,
             );
-            require_keys_eq!(program_revenue_account.key(), PROGRAM_REVENUE_ADDRESS,);
+            require_keys_eq!(program_revenue_account.key(), PROGRAM_REVENUE_ADDRESS);
             require_keys_eq!(
                 program_reward_token_revenue_account.key(),
                 anchor_spl::associated_token::get_associated_token_address_with_program_id(

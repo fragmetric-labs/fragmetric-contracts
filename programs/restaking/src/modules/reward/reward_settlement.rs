@@ -141,6 +141,21 @@ impl RewardSettlement {
         self.num_settlement_blocks -= 1;
     }
 
+    /// returns claimed_amount
+    pub fn claim_remaining_reward(&mut self, current_slot: u64) -> Result<u64> {
+        self.clear_stale_settlement_blocks();
+
+        require_gte!(current_slot, self.claimed_amount_updated_slot);
+
+        let remaining_amount = self.remaining_amount;
+
+        self.claimed_amount += remaining_amount;
+        self.claimed_amount_updated_slot = current_slot;
+        self.remaining_amount = 0;
+
+        Ok(remaining_amount)
+    }
+
     pub fn get_unclaimed_reward_amount(&self) -> u64 {
         self.settled_amount - self.claimed_amount
     }
@@ -153,19 +168,6 @@ impl RewardSettlement {
         self.claimed_amount_updated_slot = current_slot;
 
         Ok(())
-    }
-
-    /// returns claimed_amount
-    pub fn claim_remaining_reward(&mut self, current_slot: u64) -> Result<u64> {
-        require_gte!(current_slot, self.claimed_amount_updated_slot);
-
-        let remaining_amount = self.remaining_amount;
-
-        self.claimed_amount += remaining_amount;
-        self.claimed_amount_updated_slot = current_slot;
-        self.remaining_amount = 0;
-
-        Ok(remaining_amount)
     }
 }
 
