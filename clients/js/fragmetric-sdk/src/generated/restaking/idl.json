@@ -1988,8 +1988,7 @@
           "name": "to_token_mint"
         },
         {
-          "name": "swap_source_account",
-          "optional": true
+          "name": "swap_source_account"
         },
         {
           "name": "event_authority",
@@ -3675,8 +3674,7 @@
           "name": "to_token_mint"
         },
         {
-          "name": "swap_source_account",
-          "optional": true
+          "name": "swap_source_account"
         },
         {
           "name": "event_authority",
@@ -11597,12 +11595,7 @@
     {
       "code": 6098,
       "name": "FundTokenSwapStrategyValidationError",
-      "msg": "fund: token swap strategy validation error"
-    },
-    {
-      "code": 6099,
-      "name": "FundTokenSwapStrategyShouldBeProvidedException",
-      "msg": "fund: token swap strategy should be provided"
+      "msg": "fund: token swap strategy validation failed"
     }
   ],
   "types": [

@@ -154,7 +154,7 @@ export type FundManagerAddTokenSwapStrategyAsyncInput<
   fundAccount?: Address<TAccountFundAccount>;
   fromTokenMint: Address<TAccountFromTokenMint>;
   toTokenMint: Address<TAccountToTokenMint>;
-  swapSourceAccount?: Address<TAccountSwapSourceAccount>;
+  swapSourceAccount: Address<TAccountSwapSourceAccount>;
   eventAuthority?: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
   swapSource: FundManagerAddTokenSwapStrategyInstructionDataArgs['swapSource'];
@@ -299,7 +299,7 @@ export type FundManagerAddTokenSwapStrategyInput<
   fundAccount: Address<TAccountFundAccount>;
   fromTokenMint: Address<TAccountFromTokenMint>;
   toTokenMint: Address<TAccountToTokenMint>;
-  swapSourceAccount?: Address<TAccountSwapSourceAccount>;
+  swapSourceAccount: Address<TAccountSwapSourceAccount>;
   eventAuthority: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
   swapSource: FundManagerAddTokenSwapStrategyInstructionDataArgs['swapSource'];
@@ -414,7 +414,7 @@ export type ParsedFundManagerAddTokenSwapStrategyInstruction<
     fundAccount: TAccountMetas[2];
     fromTokenMint: TAccountMetas[3];
     toTokenMint: TAccountMetas[4];
-    swapSourceAccount?: TAccountMetas[5] | undefined;
+    swapSourceAccount: TAccountMetas[5];
     eventAuthority: TAccountMetas[6];
     program: TAccountMetas[7];
   };
@@ -439,12 +439,6 @@ export function parseFundManagerAddTokenSwapStrategyInstruction<
     accountIndex += 1;
     return accountMeta;
   };
-  const getNextOptionalAccount = () => {
-    const accountMeta = getNextAccount();
-    return accountMeta.address === RESTAKING_PROGRAM_ADDRESS
-      ? undefined
-      : accountMeta;
-  };
   return {
     programAddress: instruction.programAddress,
     accounts: {
@@ -453,7 +447,7 @@ export function parseFundManagerAddTokenSwapStrategyInstruction<
       fundAccount: getNextAccount(),
       fromTokenMint: getNextAccount(),
       toTokenMint: getNextAccount(),
-      swapSourceAccount: getNextOptionalAccount(),
+      swapSourceAccount: getNextAccount(),
       eventAuthority: getNextAccount(),
       program: getNextAccount(),
     },

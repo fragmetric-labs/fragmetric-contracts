@@ -1194,6 +1194,7 @@ export class RestakingFundAccountContext extends AccountContext<
               {
                 fromTokenMint: args.fromTokenMint as Address,
                 toTokenMint: args.toTokenMint as Address,
+                swapSourceAccount: args.swapSource.address as Address,
                 swapSource: args.swapSource as restaking.TokenSwapSourceArgs,
                 fundManager: createNoopSigner(fundManager),
                 receiptTokenMint: data.receiptTokenMint,
