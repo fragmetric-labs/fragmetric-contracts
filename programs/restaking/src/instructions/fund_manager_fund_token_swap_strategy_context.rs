@@ -8,7 +8,7 @@ use crate::utils::{AccountLoaderExt, PDASeeds};
 
 #[event_cpi]
 #[derive(Accounts)]
-pub struct FundManagerFundContext<'info> {
+pub struct FundManagerFundTokenSwapStrategyContext<'info> {
     #[account(address = FUND_MANAGER_PUBKEY)]
     pub fund_manager: Signer<'info>,
 
@@ -22,4 +22,11 @@ pub struct FundManagerFundContext<'info> {
         constraint = fund_account.load()?.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
     )]
     pub fund_account: AccountLoader<'info, FundAccount>,
+
+    pub from_token_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    pub to_token_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    /// CHECK: will be validated by fund service
+    pub swap_source_account: UncheckedAccount<'info>,
 }

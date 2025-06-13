@@ -303,9 +303,6 @@ pub enum ErrorCode {
     #[msg("fund: operation is disabled")]
     FundOperationDisabledError,
 
-    #[msg("fund: token swap strategy validation error")]
+    #[msg("fund: token swap strategy validation failed")]
     FundTokenSwapStrategyValidationError,
-
-    #[msg("fund: token swap strategy should be provided")]
-    FundTokenSwapStrategyShouldBeProvidedException,
 }

@@ -53,14 +53,15 @@ impl<'info> OrcaDEXLiquidityPoolService<'info> {
         Account::try_from(pool_account)
     }
 
-    pub fn validate_pool_token(
+    pub fn validate_pool(
         pool_account: &'info AccountInfo<'info>,
-        from_token_mint: &AccountInfo,
-        to_token_mint: &AccountInfo,
+        from_token_mint: &Pubkey,
+        to_token_mint: &Pubkey,
     ) -> Result<()> {
         let pool_account = Self::deserialize_pool_account(pool_account)?;
 
-        Self::a_to_b(&pool_account, from_token_mint.key, to_token_mint.key)?;
+        // This validates pool_account by checking that input from_token_mint and to_token_mint match the pool's tokenA, B mint.
+        Self::a_to_b(&pool_account, from_token_mint, to_token_mint)?;
 
         Ok(())
     }

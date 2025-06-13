@@ -434,16 +434,10 @@ pub mod restaking {
             &mut ctx.accounts.fund_account,
         )?
         .process_add_token_swap_strategy(
-            &ctx.accounts.from_token_mint.to_account_info(),
-            &ctx.accounts.to_token_mint.to_account_info(),
+            &ctx.accounts.from_token_mint,
+            &ctx.accounts.to_token_mint,
             swap_source,
-            &ctx.accounts
-                .swap_source_account
-                .as_ref()
-                .ok_or_else(|| error!(
-                    errors::ErrorCode::FundTokenSwapStrategyShouldBeProvidedException
-                ))?
-                .as_account_info()
+            &ctx.accounts.swap_source_account.as_account_info()
         )?);
 
         Ok(())
@@ -458,8 +452,8 @@ pub mod restaking {
             &mut ctx.accounts.fund_account
         )?
         .process_remove_token_swap_strategy(
-            &ctx.accounts.from_token_mint.to_account_info(),
-            &ctx.accounts.to_token_mint.to_account_info(),
+            &ctx.accounts.from_token_mint,
+            &ctx.accounts.to_token_mint,
             swap_source,
         )?);
 

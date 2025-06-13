@@ -703,36 +703,36 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
 
     pub fn process_add_token_swap_strategy(
         &mut self,
-        from_token_mint: &AccountInfo,
-        to_token_mint: &AccountInfo,
+        from_token_mint: &InterfaceAccount<Mint>,
+        to_token_mint: &InterfaceAccount<Mint>,
         swap_source: TokenSwapSource,
         swap_source_account: &'info AccountInfo<'info>,
     ) -> Result<events::FundManagerUpdatedFund> {
-        let validated_swap_source =
-            swap::validate_swap_source(swap_source_account, from_token_mint, to_token_mint)?;
+        swap::validate_swap_source(
+            &swap_source,
+            swap_source_account,
+            &from_token_mint.key(),
+            &to_token_mint.key(),
+        )?;
 
-        if validated_swap_source == swap_source {
-            self.fund_account.load_mut()?.add_token_swap_strategy(
-                from_token_mint,
-                to_token_mint,
-                swap_source,
-            )?;
-        } else {
-            err!(ErrorCode::FundTokenSwapStrategyValidationError)?
-        }
+        self.fund_account.load_mut()?.add_token_swap_strategy(
+            from_token_mint.key(),
+            to_token_mint.key(),
+            swap_source,
+        )?;
 
         self.create_fund_manager_updated_fund_event()
     }
 
     pub fn process_remove_token_swap_strategy(
         &mut self,
-        from_token_mint: &AccountInfo,
-        to_token_mint: &AccountInfo,
+        from_token_mint: &InterfaceAccount<Mint>,
+        to_token_mint: &InterfaceAccount<Mint>,
         swap_source: TokenSwapSource,
     ) -> Result<events::FundManagerUpdatedFund> {
         self.fund_account.load_mut()?.remove_token_swap_strategy(
-            from_token_mint,
-            to_token_mint,
+            from_token_mint.key(),
+            to_token_mint.key(),
             swap_source,
         )?;
 

@@ -1,7 +1,6 @@
 use anchor_lang::prelude::*;
 use bytemuck::Zeroable;
 
-use crate::errors::ErrorCode;
 use crate::modules::swap::{TokenSwapSource, TokenSwapSourcePod};
 
 /// A strategy to swap `from_token` to `to_token`.
@@ -34,17 +33,11 @@ impl TokenSwapStrategy {
         from_token_mint: Pubkey,
         to_token_mint: Pubkey,
         swap_source: TokenSwapSource,
-    ) -> Result<()> {
-        match swap_source {
-            TokenSwapSource::OrcaDEXLiquidityPool { .. } => {}
-        }
-
+    ) {
         *self = Zeroable::zeroed();
 
         self.from_token_mint = from_token_mint;
         self.to_token_mint = to_token_mint;
         swap_source.serialize_as_pod(&mut self.swap_source);
-
-        Ok(())
     }
 }
