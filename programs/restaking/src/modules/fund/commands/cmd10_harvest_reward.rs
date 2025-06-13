@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::associated_token;
 use anchor_spl::token_interface::TokenAccount;
 
+use crate::constants::PROGRAM_REVENUE_ADDRESS;
 use crate::errors::ErrorCode;
 use crate::modules::pricing::TokenPricingSource;
 use crate::modules::restaking::VirtualVaultService;
@@ -703,9 +704,10 @@ impl HarvestRewardCommand {
         );
 
         let reward_account = AccountLoader::<RewardAccount>::try_from(reward_account)?;
-        let Some(reward_token_reserve_account) = reward_account
-            .load()?
-            .get_reward_token_reserve_account_address(reward_token_mint.key)?
+        let reward_account_data = reward_account.load()?;
+        let reward_reserve_account = reward_account_data.get_reserve_account_address()?;
+        let Some(reward_token_reserve_account) =
+            reward_account_data.get_reward_token_reserve_account_address(reward_token_mint.key)?
         else {
             // Reward is not claimable, so move on to next reward
             return Ok(None);
@@ -750,13 +752,24 @@ impl HarvestRewardCommand {
         } else {
             *vault
         };
+        let program_reward_token_revenue_account =
+            anchor_spl::associated_token::get_associated_token_address_with_program_id(
+                &PROGRAM_REVENUE_ADDRESS,
+                reward_token_mint.key,
+                reward_token_program,
+            );
         let required_accounts = [
-            (reward_account.key(), true),               // reward_account
-            (reward_token_mint.key(), false),           // reward_token_mint
-            (vault_reward_token_account.key(), true),   // from_reward_token_account
-            (reward_token_reserve_account, true),       // to_reward_token_account
-            (*reward_token_program, false),             // reward_token_program
-            (vault_reward_token_account_signer, false), // from_reward_token_account_signer
+            (reward_account.key(), true),                 // reward_account
+            (reward_reserve_account, false),              // reward_reserve_account
+            (PROGRAM_REVENUE_ADDRESS, false),             // program_revenue_account
+            (program_reward_token_revenue_account, true), // program_reward_token_revenue_account
+            (System::id(), false),                        // system_program
+            (anchor_spl::associated_token::ID, false),    // associated_token_program
+            (reward_token_mint.key(), false),             // reward_token_mint
+            (vault_reward_token_account.key(), true),     // from_reward_token_account
+            (reward_token_reserve_account, true),         // to_reward_token_account
+            (*reward_token_program, false),               // reward_token_program
+            (vault_reward_token_account_signer, false),   // from_reward_token_account_signer
         ];
 
         let command = Self {
@@ -1263,23 +1276,47 @@ impl HarvestRewardCommand {
         }
 
         let result = (|| {
-            let [reward_account, remaining_accounts @ ..] = accounts else {
+            let [reward_account, reward_reserve_account, program_revenue_account, program_reward_token_revenue_account, system_program, associated_token_program, remaining_accounts @ ..] =
+                accounts
+            else {
                 err!(error::ErrorCode::AccountNotEnoughKeys)?
             };
+            let [reward_token_mint, _, reward_token_reserve_account, reward_token_program, ..] =
+                remaining_accounts
+            else {
+                err!(error::ErrorCode::AccountNotEnoughKeys)?
+            };
+            accounts = remaining_accounts;
+
+            let reward_account = AccountLoader::<RewardAccount>::try_from(reward_account)?;
+            let reward_account_data = reward_account.load()?;
+
             require_keys_eq!(
                 reward_account.key(),
                 RewardAccount::find_account_address(&ctx.receipt_token_mint.key()),
             );
-            accounts = remaining_accounts;
+            require_keys_eq!(
+                reward_reserve_account.key(),
+                reward_account_data.get_reserve_account_address()?,
+            );
+            require_keys_eq!(program_revenue_account.key(), PROGRAM_REVENUE_ADDRESS,);
+            require_keys_eq!(
+                program_reward_token_revenue_account.key(),
+                anchor_spl::associated_token::get_associated_token_address_with_program_id(
+                    &PROGRAM_REVENUE_ADDRESS,
+                    reward_token_mint.key,
+                    reward_token_program.key,
+                ),
+            );
 
-            let reward_account = AccountLoader::<RewardAccount>::try_from(reward_account)?;
-            let Some(to_reward_token_account_address) = reward_account
-                .load()?
+            let Some(to_reward_token_account_address) = reward_account_data
                 .get_reward_token_reserve_account_address(&reward_token_mints[0])?
             else {
                 // reward isn't claimable
                 return Ok(None);
             };
+
+            drop(reward_account_data);
 
             let fund_account = ctx.fund_account.load()?;
             let restaking_vault = fund_account.get_restaking_vault(vault)?;
@@ -1330,24 +1367,45 @@ impl HarvestRewardCommand {
             drop(fund_account);
 
             Ok(if distributed_token_amount > 0 {
-                let [reward_token_mint, _, reward_token_reserve_account, reward_token_program, ..] =
-                    remaining_accounts
-                else {
-                    err!(error::ErrorCode::AccountNotEnoughKeys)?
-                };
+                if !program_reward_token_revenue_account.is_initialized() {
+                    anchor_spl::associated_token::create(CpiContext::new(
+                        associated_token_program.to_account_info(),
+                        anchor_spl::associated_token::Create {
+                            payer: ctx.operator.to_account_info(),
+                            associated_token: program_reward_token_revenue_account
+                                .to_account_info(),
+                            authority: program_revenue_account.to_account_info(),
+                            mint: reward_token_mint.to_account_info(),
+                            system_program: system_program.to_account_info(),
+                            token_program: reward_token_program.to_account_info(),
+                        },
+                    ))?;
+                }
 
+                let reward_reserve_account = SystemAccount::try_from(reward_reserve_account)?;
+                let program_reward_token_revenue_account =
+                    InterfaceAccount::try_from(program_reward_token_revenue_account)?;
                 let reward_token_mint = InterfaceAccount::try_from(reward_token_mint)?;
                 let reward_token_reserve_account =
                     InterfaceAccount::try_from(reward_token_reserve_account)?;
                 let reward_token_program = Interface::try_from(*reward_token_program)?;
 
-                RewardService::new(ctx.receipt_token_mint, &reward_account)?.settle_reward(
+                let reward_service = RewardService::new(ctx.receipt_token_mint, &reward_account)?;
+                reward_service.settle_reward(
                     Some(&reward_token_mint),
                     Some(&reward_token_program),
                     Some(&reward_token_reserve_account),
                     reward_token_mint.key(),
                     false,
                     distributed_token_amount,
+                )?;
+
+                reward_service.claim_remaining_reward(
+                    &reward_token_mint,
+                    &reward_token_program,
+                    &reward_reserve_account,
+                    &reward_token_reserve_account,
+                    &program_reward_token_revenue_account,
                 )?;
 
                 ctx.fund_account

@@ -147,7 +147,7 @@ impl RewardAccount {
         seeds
     }
 
-    pub(super) fn get_reserve_account_address(&self) -> Result<Pubkey> {
+    pub fn get_reserve_account_address(&self) -> Result<Pubkey> {
         Ok(
             Pubkey::create_program_address(&self.get_reserve_account_seeds(), &crate::ID)
                 .map_err(|_| ProgramError::InvalidSeeds)?,
