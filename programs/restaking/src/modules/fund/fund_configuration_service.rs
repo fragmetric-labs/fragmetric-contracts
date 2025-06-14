@@ -711,8 +711,8 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         swap::validate_swap_source(
             &swap_source,
             swap_source_account,
-            &from_token_mint.key(),
-            &to_token_mint.key(),
+            from_token_mint,
+            to_token_mint,
         )?;
 
         self.fund_account.load_mut()?.add_token_swap_strategy(

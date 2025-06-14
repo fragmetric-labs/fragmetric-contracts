@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::TokenAccount;
+use anchor_spl::token_interface::{Mint, TokenAccount};
 use whirlpool_cpi::whirlpool::accounts::Whirlpool;
 
 pub(in crate::modules) struct OrcaDEXLiquidityPoolService<'info> {
@@ -55,13 +55,13 @@ impl<'info> OrcaDEXLiquidityPoolService<'info> {
 
     pub fn validate_pool(
         pool_account: &'info AccountInfo<'info>,
-        from_token_mint: &Pubkey,
-        to_token_mint: &Pubkey,
+        from_token_mint: &InterfaceAccount<Mint>,
+        to_token_mint: &InterfaceAccount<Mint>,
     ) -> Result<()> {
         let pool_account = Self::deserialize_pool_account(pool_account)?;
 
         // This validates pool_account by checking that input from_token_mint and to_token_mint match the pool's tokenA, B mint.
-        Self::a_to_b(&pool_account, from_token_mint, to_token_mint)?;
+        Self::a_to_b(&pool_account, &from_token_mint.key(), &to_token_mint.key())?;
 
         Ok(())
     }

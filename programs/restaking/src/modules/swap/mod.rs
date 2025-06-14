@@ -13,8 +13,8 @@ use anchor_spl::token_interface::Mint;
 pub fn validate_swap_source<'info>(
     swap_source: &TokenSwapSource,
     swap_source_account: &'info AccountInfo<'info>,
-    from_token_mint: &Pubkey,
-    to_token_mint: &Pubkey,
+    from_token_mint: &InterfaceAccount<Mint>,
+    to_token_mint: &InterfaceAccount<Mint>,
 ) -> Result<()> {
     match swap_source {
         TokenSwapSource::OrcaDEXLiquidityPool { address } => {
