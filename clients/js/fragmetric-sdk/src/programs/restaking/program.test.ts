@@ -160,7 +160,8 @@ test('can traverse context graph', async () => {
     │   │   ├── initializeOrUpdateAccount                     TransactionTemplate (chained) args=targetVersion, events=undefined, description=initialize or update reward account
     │   │   ├── addReward                                     TransactionTemplate args=mint,program,decimals,name,description, events=fundManagerUpdatedRewardPool, description=register a new reward (non-c
     │   │   ├── updateReward                                  TransactionTemplate args=mint,newMint,newProgram,newDecimals,claimable, events=fundManagerUpdatedRewardPool, description=update a non-claimabl
-    │   │   └── settleReward                                  TransactionTemplate args=isBonus,mint,amount, events=fundManagerUpdatedRewardPool, description=settle a reward
+    │   │   ├── settleReward                                  TransactionTemplate args=isBonus,mint,amount, events=fundManagerUpdatedRewardPool, description=settle a reward
+    │   │   └── claimRemainingReward                          TransactionTemplate args=mint, events=undefined, description=claim remaining reward to program revenue account
     │   ├── normalizedTokenMint                               RestakingNormalizedTokenMintAccount address=undefined, supply=undefined, decimals=undefined
     │   │   ├── metadata                                      FragmetricMetadata address=undefined
     │   │   └── initializeMint                                TransactionTemplate args=mint,name,symbol,uri,description,decimals, events=undefined, description=initialize normalized token mint
@@ -245,7 +246,8 @@ test('can traverse context graph', async () => {
     │   │   ├── initializeOrUpdateAccount                     TransactionTemplate (chained) args=targetVersion, events=undefined, description=initialize or update reward account
     │   │   ├── addReward                                     TransactionTemplate args=mint,program,decimals,name,description, events=fundManagerUpdatedRewardPool, description=register a new reward (non-c
     │   │   ├── updateReward                                  TransactionTemplate args=mint,newMint,newProgram,newDecimals,claimable, events=fundManagerUpdatedRewardPool, description=update a non-claimabl
-    │   │   └── settleReward                                  TransactionTemplate args=isBonus,mint,amount, events=fundManagerUpdatedRewardPool, description=settle a reward
+    │   │   ├── settleReward                                  TransactionTemplate args=isBonus,mint,amount, events=fundManagerUpdatedRewardPool, description=settle a reward
+    │   │   └── claimRemainingReward                          TransactionTemplate args=mint, events=undefined, description=claim remaining reward to program revenue account
     │   ├── normalizedTokenMint                               RestakingNormalizedTokenMintAccount address=undefined, supply=undefined, decimals=undefined
     │   │   ├── metadata                                      FragmetricMetadata address=undefined
     │   │   └── initializeMint                                TransactionTemplate args=mint,name,symbol,uri,description,decimals, events=undefined, description=initialize normalized token mint
@@ -330,7 +332,8 @@ test('can traverse context graph', async () => {
     │   │   ├── initializeOrUpdateAccount                     TransactionTemplate (chained) args=targetVersion, events=undefined, description=initialize or update reward account
     │   │   ├── addReward                                     TransactionTemplate args=mint,program,decimals,name,description, events=fundManagerUpdatedRewardPool, description=register a new reward (non-c
     │   │   ├── updateReward                                  TransactionTemplate args=mint,newMint,newProgram,newDecimals,claimable, events=fundManagerUpdatedRewardPool, description=update a non-claimabl
-    │   │   └── settleReward                                  TransactionTemplate args=isBonus,mint,amount, events=fundManagerUpdatedRewardPool, description=settle a reward
+    │   │   ├── settleReward                                  TransactionTemplate args=isBonus,mint,amount, events=fundManagerUpdatedRewardPool, description=settle a reward
+    │   │   └── claimRemainingReward                          TransactionTemplate args=mint, events=undefined, description=claim remaining reward to program revenue account
     │   ├── normalizedTokenMint                               RestakingNormalizedTokenMintAccount address=undefined, supply=undefined, decimals=undefined
     │   │   ├── metadata                                      FragmetricMetadata address=undefined
     │   │   └── initializeMint                                TransactionTemplate args=mint,name,symbol,uri,description,decimals, events=undefined, description=initialize normalized token mint
@@ -415,7 +418,8 @@ test('can traverse context graph', async () => {
     │   │   ├── initializeOrUpdateAccount                     TransactionTemplate (chained) args=targetVersion, events=undefined, description=initialize or update reward account
     │   │   ├── addReward                                     TransactionTemplate args=mint,program,decimals,name,description, events=fundManagerUpdatedRewardPool, description=register a new reward (non-c
     │   │   ├── updateReward                                  TransactionTemplate args=mint,newMint,newProgram,newDecimals,claimable, events=fundManagerUpdatedRewardPool, description=update a non-claimabl
-    │   │   └── settleReward                                  TransactionTemplate args=isBonus,mint,amount, events=fundManagerUpdatedRewardPool, description=settle a reward
+    │   │   ├── settleReward                                  TransactionTemplate args=isBonus,mint,amount, events=fundManagerUpdatedRewardPool, description=settle a reward
+    │   │   └── claimRemainingReward                          TransactionTemplate args=mint, events=undefined, description=claim remaining reward to program revenue account
     │   ├── normalizedTokenMint                               RestakingNormalizedTokenMintAccount address=undefined, supply=undefined, decimals=undefined
     │   │   ├── metadata                                      FragmetricMetadata address=undefined
     │   │   └── initializeMint                                TransactionTemplate args=mint,name,symbol,uri,description,decimals, events=undefined, description=initialize normalized token mint

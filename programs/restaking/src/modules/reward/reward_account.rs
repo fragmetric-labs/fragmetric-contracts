@@ -147,7 +147,7 @@ impl RewardAccount {
         seeds
     }
 
-    pub(super) fn get_reserve_account_address(&self) -> Result<Pubkey> {
+    pub fn get_reserve_account_address(&self) -> Result<Pubkey> {
         Ok(
             Pubkey::create_program_address(&self.get_reserve_account_seeds(), &crate::ID)
                 .map_err(|_| ProgramError::InvalidSeeds)?,
@@ -155,7 +155,7 @@ impl RewardAccount {
     }
 
     /// returns None if reward isn't claimable
-    pub fn find_reward_token_reserve_account_address(
+    pub fn get_reward_token_reserve_account_address(
         &self,
         token: &Pubkey,
     ) -> Result<Option<Pubkey>> {
@@ -304,5 +304,28 @@ impl RewardAccount {
     pub(super) fn update_reward_pools(&mut self, current_slot: u64) {
         self.base_reward_pool.update_reward_pool(current_slot);
         self.bonus_reward_pool.update_reward_pool(current_slot);
+    }
+
+    /// returns claimed_amount
+    pub(super) fn claim_remaining_reward(
+        &mut self,
+        reward_id: u16,
+        current_slot: u64,
+    ) -> Result<u64> {
+        require_eq!(
+            self.get_reward(reward_id)?.claimable,
+            1,
+            ErrorCode::RewardNotClaimableError,
+        );
+
+        let mut claimed_amount = 0;
+        claimed_amount += self
+            .base_reward_pool
+            .claim_remaining_reward(reward_id, current_slot)?;
+        claimed_amount += self
+            .bonus_reward_pool
+            .claim_remaining_reward(reward_id, current_slot)?;
+
+        Ok(claimed_amount)
     }
 }
