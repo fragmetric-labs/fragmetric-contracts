@@ -484,4 +484,59 @@ export class RestakingRewardAccountContext extends AccountContext<
       ],
     }
   );
+
+  readonly claimRemainingReward = new TransactionTemplateContext(
+    this,
+    v.object({
+      mint: v.string(),
+    }),
+    {
+      description: 'claim remaining reward to program revenue account',
+      instructions: [
+        async (parent, args, overrides) => {
+          const [receiptTokenMint, rewardAccount, operator] = await Promise.all(
+            [
+              parent.parent.resolveAddress(),
+              parent.resolveAccount(true),
+              transformAddressResolverVariant(
+                overrides.feePayer ??
+                  this.runtime.options.transaction.feePayer ??
+                  (() => Promise.resolve(null))
+              )(parent),
+            ]
+          );
+          const reward = rewardAccount?.data.rewards1
+            .slice(0, rewardAccount.data.numRewards)
+            .find((r) => r.mint == args.mint);
+          if (!(receiptTokenMint && rewardAccount && reward && operator))
+            throw new Error('invalid context');
+
+          const ix =
+            await restaking.getOperatorClaimRemainingRewardInstructionAsync(
+              {
+                operator: createNoopSigner(operator as Address),
+                receiptTokenMint,
+                rewardTokenMint: reward.mint,
+                rewardTokenProgram: reward.program,
+                program: this.program.address,
+              },
+              {
+                programAddress: this.program.address,
+              }
+            );
+
+          return Promise.all([
+            token.getCreateAssociatedTokenIdempotentInstructionAsync({
+              payer: createNoopSigner(operator as Address),
+              mint: reward.mint,
+              owner: ix.accounts[4].address,
+              tokenProgram: reward.program,
+              ata: ix.accounts[8].address,
+            }),
+            ix,
+          ]);
+        },
+      ],
+    }
+  );
 }

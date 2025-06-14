@@ -50,6 +50,7 @@ import {
   type ParsedFundManagerUpdateRewardInstruction,
   type ParsedFundManagerUpdateSolStrategyInstruction,
   type ParsedFundManagerUpdateSupportedTokenStrategyInstruction,
+  type ParsedOperatorClaimRemainingRewardInstruction,
   type ParsedOperatorDonateSolToFundInstruction,
   type ParsedOperatorDonateSupportedTokenToFundInstruction,
   type ParsedOperatorLogMessageInstruction,
@@ -440,6 +441,7 @@ export enum RestakingInstruction {
   FundManagerUpdateReward,
   FundManagerUpdateSolStrategy,
   FundManagerUpdateSupportedTokenStrategy,
+  OperatorClaimRemainingReward,
   OperatorDonateSolToFund,
   OperatorDonateSupportedTokenToFund,
   OperatorLogMessage,
@@ -870,6 +872,17 @@ export function identifyRestakingInstruction(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([139, 86, 147, 213, 255, 222, 222, 216])
+      ),
+      0
+    )
+  ) {
+    return RestakingInstruction.OperatorClaimRemainingReward;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
         new Uint8Array([88, 167, 224, 32, 221, 203, 157, 69])
       ),
       0
@@ -1246,6 +1259,9 @@ export type ParsedRestakingInstruction<
   | ({
       instructionType: RestakingInstruction.FundManagerUpdateSupportedTokenStrategy;
     } & ParsedFundManagerUpdateSupportedTokenStrategyInstruction<TProgram>)
+  | ({
+      instructionType: RestakingInstruction.OperatorClaimRemainingReward;
+    } & ParsedOperatorClaimRemainingRewardInstruction<TProgram>)
   | ({
       instructionType: RestakingInstruction.OperatorDonateSolToFund;
     } & ParsedOperatorDonateSolToFundInstruction<TProgram>)

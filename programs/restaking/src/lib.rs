@@ -146,7 +146,7 @@ pub mod restaking {
     ) -> Result<()> {
         modules::reward::RewardConfigurationService::new(
             &ctx.accounts.receipt_token_mint,
-            &mut ctx.accounts.reward_account,
+            &ctx.accounts.reward_account,
         )?
         .process_initialize_reward_account(ctx.bumps.reward_account)
     }
@@ -161,7 +161,7 @@ pub mod restaking {
     ) -> Result<()> {
         modules::reward::RewardConfigurationService::new(
             &ctx.accounts.receipt_token_mint,
-            &mut ctx.accounts.reward_account,
+            &ctx.accounts.reward_account,
         )?
         .process_update_reward_account_if_needed(
             &ctx.accounts.payer,
@@ -696,7 +696,7 @@ pub mod restaking {
     ) -> Result<()> {
         emit_cpi!(modules::reward::RewardConfigurationService::new(
             &ctx.accounts.receipt_token_mint,
-            &mut ctx.accounts.reward_account,
+            &ctx.accounts.reward_account,
         )?
         .process_add_reward(
             ctx.accounts.reward_token_mint.as_deref(),
@@ -723,7 +723,7 @@ pub mod restaking {
     ) -> Result<()> {
         emit_cpi!(modules::reward::RewardConfigurationService::new(
             &ctx.accounts.receipt_token_mint,
-            &mut ctx.accounts.reward_account,
+            &ctx.accounts.reward_account,
         )?
         .process_update_reward(
             ctx.accounts.reward_token_mint.as_deref(),
@@ -745,9 +745,9 @@ pub mod restaking {
         is_bonus_pool: bool,
         amount: u64,
     ) -> Result<()> {
-        emit_cpi!(modules::reward::RewardConfigurationService::new(
+        emit_cpi!(modules::reward::RewardService::new(
             &ctx.accounts.receipt_token_mint,
-            &mut ctx.accounts.reward_account,
+            &ctx.accounts.reward_account,
         )?
         .process_settle_reward(
             ctx.accounts.reward_token_mint.as_deref(),
@@ -870,9 +870,29 @@ pub mod restaking {
     pub fn operator_update_reward_pools(ctx: Context<OperatorRewardContext>) -> Result<()> {
         emit_cpi!(modules::reward::RewardService::new(
             &ctx.accounts.receipt_token_mint,
-            &mut ctx.accounts.reward_account,
+            &ctx.accounts.reward_account,
         )?
         .process_update_reward_pools()?);
+
+        Ok(())
+    }
+
+    ////////////////////////////////////////////
+    // OperatorRewardClaimContext
+    ////////////////////////////////////////////
+
+    pub fn operator_claim_remaining_reward(ctx: Context<OperatorRewardClaimContext>) -> Result<()> {
+        modules::reward::RewardService::new(
+            &ctx.accounts.receipt_token_mint,
+            &ctx.accounts.reward_account,
+        )?
+        .process_claim_remaining_reward(
+            &ctx.accounts.reward_token_mint,
+            &ctx.accounts.reward_token_program,
+            &ctx.accounts.reward_reserve_account,
+            &ctx.accounts.reward_token_reserve_account,
+            &ctx.accounts.program_reward_token_revenue_account,
+        )?;
 
         Ok(())
     }

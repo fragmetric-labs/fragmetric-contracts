@@ -1191,6 +1191,10 @@ describe('restaking.fragBTC test', async () => {
       'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
       100_000_000_000n
     );
+    await validator.airdrop(
+      ctx.parent.knownAddresses.fundManager,
+      1_000_000_000n
+    );
 
     // run operator to harvest
     await ctx.fund.runCommand.executeChained({
