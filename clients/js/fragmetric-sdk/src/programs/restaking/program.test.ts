@@ -141,6 +141,7 @@ test('can traverse context graph', async () => {
     │   │   ├── removeSupportedToken                          TransactionTemplate args=mint, events=fundManagerUpdatedFund, description=remove unused supported token
     │   │   ├── updateAssetStrategy                           TransactionTemplate args=null, events=fundManagerUpdatedFund, description=update asset strategy of the fund
     │   │   ├── addTokenSwapStrategy                          TransactionTemplate args=fromTokenMint,toTokenMint,swapSource, events=fundManagerUpdatedFund, description=add a new token swap strategy
+    │   │   ├── removeTokenSwapStrategy                       TransactionTemplate args=fromTokenMint,toTokenMint,swapSource, events=fundManagerUpdatedFund, description=remove a token swap strategy
     │   │   ├── addRestakingVault                             TransactionTemplate args=vault,pricingSource, events=fundManagerUpdatedFund, description=add a new restaking vault
     │   │   ├── addRestakingVaultDelegation                   TransactionTemplate args=vault,operator, events=fundManagerUpdatedFund, description=add a new operator delegation to a restaking vault
     │   │   ├── updateRestakingVaultStrategy                  TransactionTemplate (chained) args=null, events=fundManagerUpdatedFund, description=update restaking vault strategy of the fund
@@ -226,6 +227,7 @@ test('can traverse context graph', async () => {
     │   │   ├── removeSupportedToken                          TransactionTemplate args=mint, events=fundManagerUpdatedFund, description=remove unused supported token
     │   │   ├── updateAssetStrategy                           TransactionTemplate args=null, events=fundManagerUpdatedFund, description=update asset strategy of the fund
     │   │   ├── addTokenSwapStrategy                          TransactionTemplate args=fromTokenMint,toTokenMint,swapSource, events=fundManagerUpdatedFund, description=add a new token swap strategy
+    │   │   ├── removeTokenSwapStrategy                       TransactionTemplate args=fromTokenMint,toTokenMint,swapSource, events=fundManagerUpdatedFund, description=remove a token swap strategy
     │   │   ├── addRestakingVault                             TransactionTemplate args=vault,pricingSource, events=fundManagerUpdatedFund, description=add a new restaking vault
     │   │   ├── addRestakingVaultDelegation                   TransactionTemplate args=vault,operator, events=fundManagerUpdatedFund, description=add a new operator delegation to a restaking vault
     │   │   ├── updateRestakingVaultStrategy                  TransactionTemplate (chained) args=null, events=fundManagerUpdatedFund, description=update restaking vault strategy of the fund
@@ -311,6 +313,7 @@ test('can traverse context graph', async () => {
     │   │   ├── removeSupportedToken                          TransactionTemplate args=mint, events=fundManagerUpdatedFund, description=remove unused supported token
     │   │   ├── updateAssetStrategy                           TransactionTemplate args=null, events=fundManagerUpdatedFund, description=update asset strategy of the fund
     │   │   ├── addTokenSwapStrategy                          TransactionTemplate args=fromTokenMint,toTokenMint,swapSource, events=fundManagerUpdatedFund, description=add a new token swap strategy
+    │   │   ├── removeTokenSwapStrategy                       TransactionTemplate args=fromTokenMint,toTokenMint,swapSource, events=fundManagerUpdatedFund, description=remove a token swap strategy
     │   │   ├── addRestakingVault                             TransactionTemplate args=vault,pricingSource, events=fundManagerUpdatedFund, description=add a new restaking vault
     │   │   ├── addRestakingVaultDelegation                   TransactionTemplate args=vault,operator, events=fundManagerUpdatedFund, description=add a new operator delegation to a restaking vault
     │   │   ├── updateRestakingVaultStrategy                  TransactionTemplate (chained) args=null, events=fundManagerUpdatedFund, description=update restaking vault strategy of the fund
@@ -396,6 +399,7 @@ test('can traverse context graph', async () => {
     │   │   ├── removeSupportedToken                          TransactionTemplate args=mint, events=fundManagerUpdatedFund, description=remove unused supported token
     │   │   ├── updateAssetStrategy                           TransactionTemplate args=null, events=fundManagerUpdatedFund, description=update asset strategy of the fund
     │   │   ├── addTokenSwapStrategy                          TransactionTemplate args=fromTokenMint,toTokenMint,swapSource, events=fundManagerUpdatedFund, description=add a new token swap strategy
+    │   │   ├── removeTokenSwapStrategy                       TransactionTemplate args=fromTokenMint,toTokenMint,swapSource, events=fundManagerUpdatedFund, description=remove a token swap strategy
     │   │   ├── addRestakingVault                             TransactionTemplate args=vault,pricingSource, events=fundManagerUpdatedFund, description=add a new restaking vault
     │   │   ├── addRestakingVaultDelegation                   TransactionTemplate args=vault,operator, events=fundManagerUpdatedFund, description=add a new operator delegation to a restaking vault
     │   │   ├── updateRestakingVaultStrategy                  TransactionTemplate (chained) args=null, events=fundManagerUpdatedFund, description=update restaking vault strategy of the fund

@@ -45,16 +45,16 @@ import {
   type TokenSwapSourceArgs,
 } from '../types';
 
-export const FUND_MANAGER_ADD_TOKEN_SWAP_STRATEGY_DISCRIMINATOR =
-  new Uint8Array([14, 59, 222, 151, 4, 112, 133, 184]);
+export const FUND_MANAGER_REMOVE_TOKEN_SWAP_STRATEGY_DISCRIMINATOR =
+  new Uint8Array([251, 28, 208, 118, 116, 8, 56, 50]);
 
-export function getFundManagerAddTokenSwapStrategyDiscriminatorBytes() {
+export function getFundManagerRemoveTokenSwapStrategyDiscriminatorBytes() {
   return fixEncoderSize(getBytesEncoder(), 8).encode(
-    FUND_MANAGER_ADD_TOKEN_SWAP_STRATEGY_DISCRIMINATOR
+    FUND_MANAGER_REMOVE_TOKEN_SWAP_STRATEGY_DISCRIMINATOR
   );
 }
 
-export type FundManagerAddTokenSwapStrategyInstruction<
+export type FundManagerRemoveTokenSwapStrategyInstruction<
   TProgram extends string = typeof RESTAKING_PROGRAM_ADDRESS,
   TAccountFundManager extends
     | string
@@ -100,16 +100,16 @@ export type FundManagerAddTokenSwapStrategyInstruction<
     ]
   >;
 
-export type FundManagerAddTokenSwapStrategyInstructionData = {
+export type FundManagerRemoveTokenSwapStrategyInstructionData = {
   discriminator: ReadonlyUint8Array;
   swapSource: TokenSwapSource;
 };
 
-export type FundManagerAddTokenSwapStrategyInstructionDataArgs = {
+export type FundManagerRemoveTokenSwapStrategyInstructionDataArgs = {
   swapSource: TokenSwapSourceArgs;
 };
 
-export function getFundManagerAddTokenSwapStrategyInstructionDataEncoder(): Encoder<FundManagerAddTokenSwapStrategyInstructionDataArgs> {
+export function getFundManagerRemoveTokenSwapStrategyInstructionDataEncoder(): Encoder<FundManagerRemoveTokenSwapStrategyInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
@@ -117,29 +117,29 @@ export function getFundManagerAddTokenSwapStrategyInstructionDataEncoder(): Enco
     ]),
     (value) => ({
       ...value,
-      discriminator: FUND_MANAGER_ADD_TOKEN_SWAP_STRATEGY_DISCRIMINATOR,
+      discriminator: FUND_MANAGER_REMOVE_TOKEN_SWAP_STRATEGY_DISCRIMINATOR,
     })
   );
 }
 
-export function getFundManagerAddTokenSwapStrategyInstructionDataDecoder(): Decoder<FundManagerAddTokenSwapStrategyInstructionData> {
+export function getFundManagerRemoveTokenSwapStrategyInstructionDataDecoder(): Decoder<FundManagerRemoveTokenSwapStrategyInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
     ['swapSource', getTokenSwapSourceDecoder()],
   ]);
 }
 
-export function getFundManagerAddTokenSwapStrategyInstructionDataCodec(): Codec<
-  FundManagerAddTokenSwapStrategyInstructionDataArgs,
-  FundManagerAddTokenSwapStrategyInstructionData
+export function getFundManagerRemoveTokenSwapStrategyInstructionDataCodec(): Codec<
+  FundManagerRemoveTokenSwapStrategyInstructionDataArgs,
+  FundManagerRemoveTokenSwapStrategyInstructionData
 > {
   return combineCodec(
-    getFundManagerAddTokenSwapStrategyInstructionDataEncoder(),
-    getFundManagerAddTokenSwapStrategyInstructionDataDecoder()
+    getFundManagerRemoveTokenSwapStrategyInstructionDataEncoder(),
+    getFundManagerRemoveTokenSwapStrategyInstructionDataDecoder()
   );
 }
 
-export type FundManagerAddTokenSwapStrategyAsyncInput<
+export type FundManagerRemoveTokenSwapStrategyAsyncInput<
   TAccountFundManager extends string = string,
   TAccountReceiptTokenMint extends string = string,
   TAccountFundAccount extends string = string,
@@ -157,10 +157,10 @@ export type FundManagerAddTokenSwapStrategyAsyncInput<
   swapSourceAccount: Address<TAccountSwapSourceAccount>;
   eventAuthority?: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
-  swapSource: FundManagerAddTokenSwapStrategyInstructionDataArgs['swapSource'];
+  swapSource: FundManagerRemoveTokenSwapStrategyInstructionDataArgs['swapSource'];
 };
 
-export async function getFundManagerAddTokenSwapStrategyInstructionAsync<
+export async function getFundManagerRemoveTokenSwapStrategyInstructionAsync<
   TAccountFundManager extends string,
   TAccountReceiptTokenMint extends string,
   TAccountFundAccount extends string,
@@ -171,7 +171,7 @@ export async function getFundManagerAddTokenSwapStrategyInstructionAsync<
   TAccountProgram extends string,
   TProgramAddress extends Address = typeof RESTAKING_PROGRAM_ADDRESS,
 >(
-  input: FundManagerAddTokenSwapStrategyAsyncInput<
+  input: FundManagerRemoveTokenSwapStrategyAsyncInput<
     TAccountFundManager,
     TAccountReceiptTokenMint,
     TAccountFundAccount,
@@ -183,7 +183,7 @@ export async function getFundManagerAddTokenSwapStrategyInstructionAsync<
   >,
   config?: { programAddress?: TProgramAddress }
 ): Promise<
-  FundManagerAddTokenSwapStrategyInstruction<
+  FundManagerRemoveTokenSwapStrategyInstruction<
     TProgramAddress,
     TAccountFundManager,
     TAccountReceiptTokenMint,
@@ -266,10 +266,10 @@ export async function getFundManagerAddTokenSwapStrategyInstructionAsync<
       getAccountMeta(accounts.program),
     ],
     programAddress,
-    data: getFundManagerAddTokenSwapStrategyInstructionDataEncoder().encode(
-      args as FundManagerAddTokenSwapStrategyInstructionDataArgs
+    data: getFundManagerRemoveTokenSwapStrategyInstructionDataEncoder().encode(
+      args as FundManagerRemoveTokenSwapStrategyInstructionDataArgs
     ),
-  } as FundManagerAddTokenSwapStrategyInstruction<
+  } as FundManagerRemoveTokenSwapStrategyInstruction<
     TProgramAddress,
     TAccountFundManager,
     TAccountReceiptTokenMint,
@@ -284,7 +284,7 @@ export async function getFundManagerAddTokenSwapStrategyInstructionAsync<
   return instruction;
 }
 
-export type FundManagerAddTokenSwapStrategyInput<
+export type FundManagerRemoveTokenSwapStrategyInput<
   TAccountFundManager extends string = string,
   TAccountReceiptTokenMint extends string = string,
   TAccountFundAccount extends string = string,
@@ -302,10 +302,10 @@ export type FundManagerAddTokenSwapStrategyInput<
   swapSourceAccount: Address<TAccountSwapSourceAccount>;
   eventAuthority: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
-  swapSource: FundManagerAddTokenSwapStrategyInstructionDataArgs['swapSource'];
+  swapSource: FundManagerRemoveTokenSwapStrategyInstructionDataArgs['swapSource'];
 };
 
-export function getFundManagerAddTokenSwapStrategyInstruction<
+export function getFundManagerRemoveTokenSwapStrategyInstruction<
   TAccountFundManager extends string,
   TAccountReceiptTokenMint extends string,
   TAccountFundAccount extends string,
@@ -316,7 +316,7 @@ export function getFundManagerAddTokenSwapStrategyInstruction<
   TAccountProgram extends string,
   TProgramAddress extends Address = typeof RESTAKING_PROGRAM_ADDRESS,
 >(
-  input: FundManagerAddTokenSwapStrategyInput<
+  input: FundManagerRemoveTokenSwapStrategyInput<
     TAccountFundManager,
     TAccountReceiptTokenMint,
     TAccountFundAccount,
@@ -327,7 +327,7 @@ export function getFundManagerAddTokenSwapStrategyInstruction<
     TAccountProgram
   >,
   config?: { programAddress?: TProgramAddress }
-): FundManagerAddTokenSwapStrategyInstruction<
+): FundManagerRemoveTokenSwapStrategyInstruction<
   TProgramAddress,
   TAccountFundManager,
   TAccountReceiptTokenMint,
@@ -385,10 +385,10 @@ export function getFundManagerAddTokenSwapStrategyInstruction<
       getAccountMeta(accounts.program),
     ],
     programAddress,
-    data: getFundManagerAddTokenSwapStrategyInstructionDataEncoder().encode(
-      args as FundManagerAddTokenSwapStrategyInstructionDataArgs
+    data: getFundManagerRemoveTokenSwapStrategyInstructionDataEncoder().encode(
+      args as FundManagerRemoveTokenSwapStrategyInstructionDataArgs
     ),
-  } as FundManagerAddTokenSwapStrategyInstruction<
+  } as FundManagerRemoveTokenSwapStrategyInstruction<
     TProgramAddress,
     TAccountFundManager,
     TAccountReceiptTokenMint,
@@ -403,7 +403,7 @@ export function getFundManagerAddTokenSwapStrategyInstruction<
   return instruction;
 }
 
-export type ParsedFundManagerAddTokenSwapStrategyInstruction<
+export type ParsedFundManagerRemoveTokenSwapStrategyInstruction<
   TProgram extends string = typeof RESTAKING_PROGRAM_ADDRESS,
   TAccountMetas extends readonly IAccountMeta[] = readonly IAccountMeta[],
 > = {
@@ -418,17 +418,20 @@ export type ParsedFundManagerAddTokenSwapStrategyInstruction<
     eventAuthority: TAccountMetas[6];
     program: TAccountMetas[7];
   };
-  data: FundManagerAddTokenSwapStrategyInstructionData;
+  data: FundManagerRemoveTokenSwapStrategyInstructionData;
 };
 
-export function parseFundManagerAddTokenSwapStrategyInstruction<
+export function parseFundManagerRemoveTokenSwapStrategyInstruction<
   TProgram extends string,
   TAccountMetas extends readonly IAccountMeta[],
 >(
   instruction: IInstruction<TProgram> &
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
-): ParsedFundManagerAddTokenSwapStrategyInstruction<TProgram, TAccountMetas> {
+): ParsedFundManagerRemoveTokenSwapStrategyInstruction<
+  TProgram,
+  TAccountMetas
+> {
   if (instruction.accounts.length < 8) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
@@ -451,7 +454,7 @@ export function parseFundManagerAddTokenSwapStrategyInstruction<
       eventAuthority: getNextAccount(),
       program: getNextAccount(),
     },
-    data: getFundManagerAddTokenSwapStrategyInstructionDataDecoder().decode(
+    data: getFundManagerRemoveTokenSwapStrategyInstructionDataDecoder().decode(
       instruction.data
     ),
   };

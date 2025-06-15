@@ -763,6 +763,34 @@ impl FundAccount {
         Ok(())
     }
 
+    pub(super) fn remove_token_swap_strategy(
+        &mut self,
+        from_token_mint: Pubkey,
+        to_token_mint: Pubkey,
+        swap_source: TokenSwapSource,
+    ) -> Result<()> {
+        let (index, strategy) = self
+            .get_token_swap_strategies_iter()
+            .enumerate()
+            .find(|(_, strategy)| strategy.from_token_mint == from_token_mint)
+            .ok_or_else(|| error!(ErrorCode::FundTokenSwapStrategyNotFoundError))?;
+
+        if strategy.to_token_mint != to_token_mint {
+            err!(ErrorCode::FundTokenSwapStrategyValidationError)?
+        }
+        let strategy_swap_source = strategy.swap_source.try_deserialize()?;
+        if strategy_swap_source != swap_source {
+            err!(ErrorCode::FundTokenSwapStrategyValidationError)?
+        }
+
+        self.num_token_swap_strategies -= 1;
+        self.token_swap_strategies[index] =
+            self.token_swap_strategies[self.num_token_swap_strategies as usize];
+        self.token_swap_strategies[self.num_token_swap_strategies as usize] = Zeroable::zeroed();
+
+        Ok(())
+    }
+
     pub(super) fn reload_receipt_token_supply(
         &mut self,
         receipt_token_mint: &mut InterfaceAccount<Mint>,

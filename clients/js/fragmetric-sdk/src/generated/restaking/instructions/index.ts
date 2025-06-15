@@ -31,6 +31,7 @@ export * from './fundManagerRemoveNormalizedTokenPoolSupportedToken';
 export * from './fundManagerRemoveRestakingVaultCompoundingRewardToken';
 export * from './fundManagerRemoveRestakingVaultDistributingRewardToken';
 export * from './fundManagerRemoveSupportedToken';
+export * from './fundManagerRemoveTokenSwapStrategy';
 export * from './fundManagerRemoveWrappedTokenHolder';
 export * from './fundManagerResetFundWrapAccountRewardAccountDelegate';
 export * from './fundManagerResetWrappedTokenHolderRewardAccountDelegate';

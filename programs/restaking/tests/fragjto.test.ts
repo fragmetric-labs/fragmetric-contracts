@@ -75,6 +75,7 @@ describe('restaking.fragJTO test', async () => {
         ]);
         return signer;
       }),
+    validator.airdrop(restaking.knownAddresses.fundManager, 100_000_000_000n),
   ]);
 
   const user1 = ctx.user(signer1);
@@ -276,12 +277,10 @@ describe('restaking.fragJTO test', async () => {
         ],
         "tokenSwapStrategies": [
           {
-            "fromTokenMint": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
             "swapSource": {
               "__kind": "OrcaDEXLiquidityPool",
               "address": "G2FiE1yn9N9ZJx5e1E2LxxMnHvb1H3hCuHLPfKJ98smA",
             },
-            "toTokenMint": "jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL",
           },
         ],
       }
@@ -1335,7 +1334,7 @@ describe('restaking.fragJTO test', async () => {
     );
   });
 
-  /** 6. token is subtracted from user account in ascending order (contribution accural rate low to high **/
+  /** 6. token is subtracted from user account in ascending order (contribution accural rate low to high) **/
   test(`record with low contribution rate is deleted first`, async () => {
     // user4 deposits 200 JTO with 150 accrual rate enabled
     await expectMasked(
@@ -1657,5 +1656,55 @@ describe('restaking.fragJTO test', async () => {
         "updatedSlot": "MASKED(/[.*S|s]lots?$/)",
       }
     `);
+  });
+
+  test('remove token swap strategy', async () => {
+    const fund_1 = await ctx.fund.resolve(true);
+    expect(fund_1.tokenSwapStrategies).toHaveLength(1);
+
+    await expect(
+      ctx.fund.removeTokenSwapStrategy.execute({
+        fromTokenMint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+        toTokenMint: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
+        swapSource: {
+          __kind: 'OrcaDEXLiquidityPool',
+          address: 'G2FiE1yn9N9ZJx5e1E2LxxMnHvb1H3hCuHLPfKJ98smA',
+        },
+      })
+    ).resolves.not.toThrow();
+
+    await expect(
+      ctx.fund.removeTokenSwapStrategy.execute({
+        fromTokenMint: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL', // invalid from token mint
+        toTokenMint: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
+        swapSource: {
+          __kind: 'OrcaDEXLiquidityPool',
+          address: 'G2FiE1yn9N9ZJx5e1E2LxxMnHvb1H3hCuHLPfKJ98smA',
+        }
+      })
+    ).rejects.toThrowError('Transaction simulation failed'); // fund: token swap strategy not found.
+    await expect(
+      ctx.fund.removeTokenSwapStrategy.execute({
+        fromTokenMint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+        toTokenMint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn', // invalid to token mint
+        swapSource: {
+          __kind: 'OrcaDEXLiquidityPool',
+          address: 'G2FiE1yn9N9ZJx5e1E2LxxMnHvb1H3hCuHLPfKJ98smA',
+        }
+      })
+    ).rejects.toThrowError('Transaction simulation failed'); // fund: token swap strategy not found.
+    await expect(
+      ctx.fund.removeTokenSwapStrategy.execute({
+        fromTokenMint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+        toTokenMint: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
+        swapSource: {
+          __kind: 'OrcaDEXLiquidityPool',
+          address: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL', // invalid swap source
+        }
+      })
+    ).rejects.toThrowError('Transaction simulation failed'); // fund: token swap strategy validation error.
+
+    const fund_2 = await ctx.fund.resolve(true);
+    expect(fund_2.tokenSwapStrategies).toHaveLength(0);
   });
 });

@@ -1982,6 +1982,15 @@
           }
         },
         {
+          "name": "from_token_mint"
+        },
+        {
+          "name": "to_token_mint"
+        },
+        {
+          "name": "swap_source_account"
+        },
+        {
           "name": "event_authority",
           "pda": {
             "seeds": [
@@ -2015,14 +2024,6 @@
         }
       ],
       "args": [
-        {
-          "name": "from_token_mint",
-          "type": "pubkey"
-        },
-        {
-          "name": "to_token_mint",
-          "type": "pubkey"
-        },
         {
           "name": "swap_source",
           "type": {
@@ -3620,6 +3621,104 @@
         }
       ],
       "args": []
+    },
+    {
+      "name": "fund_manager_remove_token_swap_strategy",
+      "discriminator": [
+        251,
+        28,
+        208,
+        118,
+        116,
+        8,
+        56,
+        50
+      ],
+      "accounts": [
+        {
+          "name": "fund_manager",
+          "signer": true,
+          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
+        },
+        {
+          "name": "receipt_token_mint",
+          "relations": [
+            "fund_account"
+          ]
+        },
+        {
+          "name": "fund_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  117,
+                  110,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "from_token_mint"
+        },
+        {
+          "name": "to_token_mint"
+        },
+        {
+          "name": "swap_source_account"
+        },
+        {
+          "name": "event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "swap_source",
+          "type": {
+            "defined": {
+              "name": "TokenSwapSource"
+            }
+          }
+        }
+      ]
     },
     {
       "name": "fund_manager_remove_wrapped_token_holder",
@@ -11727,6 +11826,11 @@
       "code": 6097,
       "name": "FundOperationDisabledError",
       "msg": "fund: operation is disabled"
+    },
+    {
+      "code": 6098,
+      "name": "FundTokenSwapStrategyValidationError",
+      "msg": "fund: token swap strategy validation failed"
     }
   ],
   "types": [

@@ -95,6 +95,7 @@ describe('restaking.fragBTC test', async () => {
         ]);
         return signer;
       }),
+    validator.airdrop(restaking.knownAddresses.fundManager, 100_000_000_000n),
   ]);
   const user1 = ctx.user(signer1);
   const user2 = ctx.user(signer2);
@@ -1190,10 +1191,6 @@ describe('restaking.fragBTC test', async () => {
       solv.zBTC.address!,
       'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
       100_000_000_000n
-    );
-    await validator.airdrop(
-      ctx.parent.knownAddresses.fundManager,
-      1_000_000_000n
     );
 
     // run operator to harvest
@@ -3218,7 +3215,7 @@ describe('restaking.fragBTC test', async () => {
       }
     `);
 
-    expectMasked(ctx.fund.latestWithdrawalBatches.resolve(true)).resolves
+    await expectMasked(ctx.fund.latestWithdrawalBatches.resolve(true)).resolves
       .toMatchInlineSnapshot(`
       [
         {
@@ -3246,7 +3243,7 @@ describe('restaking.fragBTC test', async () => {
       ]
     `);
 
-    expectMasked(
+    await expectMasked(
       user1.withdraw.execute(
         {
           assetMint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
