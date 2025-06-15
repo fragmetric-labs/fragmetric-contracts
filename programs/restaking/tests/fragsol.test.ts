@@ -38,6 +38,7 @@ describe('restaking.fragSOL test', async () => {
         ]);
         return signer;
       }),
+    validator.airdrop(restaking.knownAddresses.fundManager, 100_000_000_000n),
   ]);
   const user1 = ctx.user(signer1);
   const user2 = ctx.user(signer2);
@@ -2282,11 +2283,6 @@ describe('restaking.fragSOL test', async () => {
 
   /** Jupsol & sanctum-multi-validator test **/
   test.skip('new supported token with new pricing source deposits & withdraws without any issue', async () => {
-    await validator.airdrop(
-      restaking.knownAddresses.fundManager,
-      100_000_000_000n
-    );
-
     // 1) unstake test from jupSOL stake pool validators
     // 1-0) make jupSOL depositable & only weighted
     await ctx.fund.updateAssetStrategy.execute({
@@ -2701,7 +2697,7 @@ describe('restaking.fragSOL test', async () => {
     `);
   });
 
-  /** 4. Operation **/
+  /** 5. Operation **/
   test('run operation cycles through multiple epoches to test cach-in/out flows including (un)stake/(un)restake', async () => {
     await user1.resolveAddress(true);
 
@@ -2851,7 +2847,7 @@ describe('restaking.fragSOL test', async () => {
     `);
   });
 
-  test('operation disable', async () => {
+  test('operation disabled', async () => {
     await ctx.fund.updateGeneralStrategy.execute({
       operationEnabled: false,
     });

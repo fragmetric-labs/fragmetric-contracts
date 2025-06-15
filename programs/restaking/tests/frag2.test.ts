@@ -36,6 +36,7 @@ describe('restaking.frag2 test', async () => {
         ]);
         return signer;
       }),
+    validator.airdrop(restaking.knownAddresses.fundManager, 100_000_000_000n),
   ]);
   const user1 = ctx.user(signer1);
   const user2 = ctx.user(signer2);
@@ -392,7 +393,7 @@ describe('restaking.frag2 test', async () => {
     `);
   });
 
-  /** 3. virtual vault harvest/compound */
+  /** 3. virtual vault harvest */
   test('virtual vault harvest/compound', async () => {
     const fragRewardAmount = 1_000_000_000n; // 20% of current fund NAV
     await validator.airdropToken(
@@ -592,10 +593,6 @@ describe('restaking.frag2 test', async () => {
       'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF',
       voteRewardAmount
     );
-    await validator.airdrop(
-      ctx.parent.knownAddresses.fundManager,
-      1_000_000_000n
-    );
 
     const globalReward_1 = await ctx.reward.resolve(true);
 
@@ -613,7 +610,7 @@ describe('restaking.frag2 test', async () => {
     ).toEqual(voteRewardAmount);
   });
 
-  /** 3. reward settlement with clearing **/
+  /** 5. reward settlement with clearing **/
   test('reward settlement clears one block before block addition when block queue is full', async () => {
     // ensure a few blocks filled
     await validator.airdropToken(

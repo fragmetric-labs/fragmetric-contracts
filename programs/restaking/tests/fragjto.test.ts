@@ -75,6 +75,7 @@ describe('restaking.fragJTO test', async () => {
         ]);
         return signer;
       }),
+    validator.airdrop(restaking.knownAddresses.fundManager, 100_000_000_000n),
   ]);
 
   const user1 = ctx.user(signer1);
@@ -1333,7 +1334,7 @@ describe('restaking.fragJTO test', async () => {
     );
   });
 
-  /** 6. token is subtracted from user account in ascending order (contribution accural rate low to high **/
+  /** 6. token is subtracted from user account in ascending order (contribution accural rate low to high) **/
   test(`record with low contribution rate is deleted first`, async () => {
     // user4 deposits 200 JTO with 150 accrual rate enabled
     await expectMasked(
