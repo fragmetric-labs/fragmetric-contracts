@@ -12,7 +12,6 @@ use crate::modules::pricing::TokenPricingSource;
 use crate::modules::restaking;
 use crate::modules::reward;
 use crate::modules::swap;
-use crate::modules::swap::TokenSwapSource;
 use crate::utils::{AccountLoaderExt, AsAccountInfo, SystemProgramExt};
 
 use super::*;
@@ -707,7 +706,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         &mut self,
         from_token_mint: &InterfaceAccount<Mint>,
         to_token_mint: &InterfaceAccount<Mint>,
-        swap_source: TokenSwapSource,
+        swap_source: swap::TokenSwapSource,
         swap_source_account: &'info AccountInfo<'info>,
     ) -> Result<events::FundManagerUpdatedFund> {
         swap::validate_swap_source(
@@ -730,7 +729,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         &mut self,
         from_token_mint: &InterfaceAccount<Mint>,
         to_token_mint: &InterfaceAccount<Mint>,
-        swap_source: TokenSwapSource,
+        swap_source: swap::TokenSwapSource,
     ) -> Result<events::FundManagerUpdatedFund> {
         self.fund_account.load_mut()?.remove_token_swap_strategy(
             from_token_mint.key(),
