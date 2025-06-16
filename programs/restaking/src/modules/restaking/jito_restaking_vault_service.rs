@@ -16,6 +16,8 @@ use crate::modules::pricing::PricingService;
 use crate::utils;
 use crate::utils::AccountInfoExt;
 
+use super::ValidateVault;
+
 pub(in crate::modules) struct JitoRestakingVaultService<'info> {
     vault_program: &'info AccountInfo<'info>,
     vault_config_account: &'info AccountInfo<'info>,
@@ -26,6 +28,26 @@ pub(in crate::modules) struct JitoRestakingVaultService<'info> {
     last_update_epoch: u64,
     epoch_length: u64,
     vault_program_fee_wallet: Pubkey,
+}
+
+impl ValidateVault for JitoRestakingVaultService<'_> {
+    #[inline(never)]
+    fn validate_vault(
+        vault_account: &AccountInfo,
+        vault_supported_token_mint: &AccountInfo,
+        vault_receipt_token_mint: &AccountInfo,
+        _fund_account: &AccountInfo,
+    ) -> Result<()> {
+        let data = &Self::borrow_account_data(vault_account)?;
+        let vault = Self::deserialize_account_data::<Vault>(data)?;
+
+        require_keys_eq!(vault.supported_mint, vault_supported_token_mint.key());
+        require_keys_eq!(*vault_supported_token_mint.owner, Token::id());
+        require_keys_eq!(vault.vrt_mint, vault_receipt_token_mint.key());
+        require_keys_eq!(*vault_receipt_token_mint.owner, Token::id());
+
+        Ok(())
+    }
 }
 
 impl<'info> JitoRestakingVaultService<'info> {
@@ -66,22 +88,6 @@ impl<'info> JitoRestakingVaultService<'info> {
             epoch_length,
             vault_program_fee_wallet: vault_config.program_fee_wallet,
         })
-    }
-
-    pub fn validate_vault(
-        vault_account: &AccountInfo,
-        vault_supported_token_mint: &AccountInfo,
-        vault_receipt_token_mint: &AccountInfo,
-    ) -> Result<()> {
-        let data = &Self::borrow_account_data(vault_account)?;
-        let vault = Self::deserialize_account_data::<Vault>(data)?;
-
-        require_keys_eq!(vault.supported_mint, vault_supported_token_mint.key());
-        require_keys_eq!(*vault_supported_token_mint.owner, Token::id());
-        require_keys_eq!(vault.vrt_mint, vault_receipt_token_mint.key());
-        require_keys_eq!(*vault_receipt_token_mint.owner, Token::id());
-
-        Ok(())
     }
 
     /// returns [delegation_index, staked_amount, enqueued_for_cooldown_amount, cooling_down_amount]

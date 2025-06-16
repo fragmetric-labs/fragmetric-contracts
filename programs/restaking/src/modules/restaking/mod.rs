@@ -16,9 +16,7 @@ use anchor_lang::solana_program::system_program;
 use crate::constants::{JITO_VAULT_PROGRAM_ID, SOLV_PROGRAM_ID};
 use crate::modules::pricing::TokenPricingSource;
 
-/// Validate vault account based on the owner(vault program).
-///
-/// returns pricing source
+/// Validate vault account by deserializing pricing_source.
 pub(in crate::modules) fn validate_vault<'info>(
     pricing_source: &TokenPricingSource,
     vault_account: &'info AccountInfo<'info>,
@@ -33,6 +31,7 @@ pub(in crate::modules) fn validate_vault<'info>(
                 vault_account,
                 vault_supported_token_mint,
                 vault_receipt_token_mint,
+                fund_account,
             )?
         }
         TokenPricingSource::SolvBTCVault { address } => {
@@ -48,6 +47,7 @@ pub(in crate::modules) fn validate_vault<'info>(
             require_keys_eq!(*address, vault_account.key());
             VirtualVaultService::validate_vault(
                 vault_account,
+                vault_supported_token_mint,
                 vault_receipt_token_mint,
                 fund_account,
             )?
@@ -68,6 +68,15 @@ pub(in crate::modules) fn validate_vault<'info>(
     }
 
     Ok(())
+}
+
+trait ValidateVault {
+    fn validate_vault<'info>(
+        vault_account: &'info AccountInfo<'info>,
+        vault_supported_token_mint: &AccountInfo,
+        vault_receipt_token_mint: &'info AccountInfo<'info>,
+        fund_account: &AccountInfo,
+    ) -> Result<()>;
 }
 
 /// Validate delegation based on the owner(vault program).

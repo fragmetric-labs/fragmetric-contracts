@@ -3,28 +3,18 @@ use anchor_spl::{associated_token, token_interface::Mint};
 
 use crate::errors::ErrorCode;
 
+use super::ValidateVault;
+
 #[allow(dead_code)]
 pub(in crate::modules) struct VirtualVaultService<'info> {
     vault_account: &'info AccountInfo<'info>,
     vault_receipt_token_mint: &'info AccountInfo<'info>,
 }
 
-impl<'info> VirtualVaultService<'info> {
-    #[allow(dead_code)]
-    pub fn new(
+impl ValidateVault for VirtualVaultService<'_> {
+    fn validate_vault<'info>(
         vault_account: &'info AccountInfo<'info>,
-        vault_receipt_token_mint: &'info AccountInfo<'info>,
-    ) -> Result<Self> {
-        require_keys_eq!(*vault_account.owner, System::id());
-
-        Ok(Self {
-            vault_account,
-            vault_receipt_token_mint,
-        })
-    }
-
-    pub fn validate_vault(
-        vault_account: &AccountInfo,
+        _vault_supported_token_mint: &AccountInfo,
         vault_receipt_token_mint: &'info AccountInfo<'info>,
         fund_account: &AccountInfo,
     ) -> Result<()> {
@@ -45,6 +35,21 @@ impl<'info> VirtualVaultService<'info> {
         );
 
         Ok(())
+    }
+}
+
+impl<'info> VirtualVaultService<'info> {
+    #[allow(dead_code)]
+    pub fn new(
+        vault_account: &'info AccountInfo<'info>,
+        vault_receipt_token_mint: &'info AccountInfo<'info>,
+    ) -> Result<Self> {
+        require_keys_eq!(*vault_account.owner, System::id());
+
+        Ok(Self {
+            vault_account,
+            vault_receipt_token_mint,
+        })
     }
 
     pub fn find_vault_address<'a>(

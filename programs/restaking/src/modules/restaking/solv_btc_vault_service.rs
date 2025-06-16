@@ -7,9 +7,30 @@ use solv::states::VaultAccount;
 
 use crate::constants::SOLV_PROGRAM_ID;
 
+use super::ValidateVault;
+
 pub(in crate::modules) struct SolvBTCVaultService<'info> {
     vault_program: &'info AccountInfo<'info>,
     vault_account: AccountLoader<'info, VaultAccount>,
+}
+
+impl ValidateVault for SolvBTCVaultService<'_> {
+    #[inline(never)]
+    fn validate_vault<'info>(
+        vault_account: &'info AccountInfo<'info>,
+        vault_supported_token_mint: &AccountInfo,
+        vault_receipt_token_mint: &AccountInfo,
+        fund_account: &AccountInfo,
+    ) -> Result<()> {
+        let vault_account = AccountLoader::<VaultAccount>::try_from(vault_account)?;
+        let vault = vault_account.load()?;
+
+        require_keys_eq!(vault.get_fund_manager(), fund_account.key());
+        require_keys_eq!(vault.get_vst_mint(), vault_supported_token_mint.key());
+        require_keys_eq!(vault.get_vrt_mint(), vault_receipt_token_mint.key());
+
+        Ok(())
+    }
 }
 
 impl<'info> SolvBTCVaultService<'info> {
@@ -24,22 +45,6 @@ impl<'info> SolvBTCVaultService<'info> {
             vault_program,
             vault_account: AccountLoader::try_from(vault_account)?,
         })
-    }
-
-    pub fn validate_vault(
-        vault_account: &'info AccountInfo<'info>,
-        vault_supported_token_mint: &AccountInfo,
-        vault_receipt_token_mint: &AccountInfo,
-        fund_account: &AccountInfo,
-    ) -> Result<()> {
-        let vault_account = AccountLoader::<VaultAccount>::try_from(vault_account)?;
-        let vault = vault_account.load()?;
-
-        require_keys_eq!(vault.get_fund_manager(), fund_account.key());
-        require_keys_eq!(vault.get_vst_mint(), vault_supported_token_mint.key());
-        require_keys_eq!(vault.get_vrt_mint(), vault_receipt_token_mint.key());
-
-        Ok(())
     }
 
     fn find_solv_event_authority_address() -> Pubkey {

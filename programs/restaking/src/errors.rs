@@ -306,9 +306,6 @@ pub enum ErrorCode {
     #[msg("fund: token swap strategy validation failed")]
     FundTokenSwapStrategyValidationError,
 
-    #[msg("fund: pricing source validation failed")]
-    FundPricingSourceValidationError,
-
     #[msg("unexpected pricing source")]
     UnexpectedPricingSourceError,
 }
