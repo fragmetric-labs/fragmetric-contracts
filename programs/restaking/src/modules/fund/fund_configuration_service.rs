@@ -271,16 +271,13 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         pricing_source: TokenPricingSource,
         pricing_sources: &'info [AccountInfo<'info>],
     ) -> Result<events::FundManagerUpdatedFund> {
-        let receipt_token_pricing_source = restaking::validate_vault(
+        restaking::validate_vault(
+            &pricing_source,
             vault.as_account_info(),
             vault_supported_token_mint.as_account_info(),
             vault_receipt_token_mint.as_account_info(),
             self.fund_account.as_ref(),
         )?;
-
-        if receipt_token_pricing_source != pricing_source {
-            err!(ErrorCode::FundPricingSourceValidationError)?
-        }
 
         let mut fund_account = self.fund_account.load_mut()?;
         fund_account.add_restaking_vault(

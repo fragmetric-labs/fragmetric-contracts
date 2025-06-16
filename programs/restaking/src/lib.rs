@@ -573,7 +573,6 @@ pub mod restaking {
     // FundManagerFundRestakingVaultInitialContext
     ////////////////////////////////////////////
 
-    // TODO: add pricing_source to argument
     pub fn fund_manager_initialize_fund_restaking_vault<'info>(
         ctx: Context<'_, '_, 'info, 'info, FundManagerFundRestakingVaultInitialContext<'info>>,
         pricing_source: modules::pricing::TokenPricingSource,
