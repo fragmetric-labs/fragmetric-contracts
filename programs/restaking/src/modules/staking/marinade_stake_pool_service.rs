@@ -10,12 +10,11 @@ use crate::utils::SystemProgramExt;
 pub(in crate::modules) struct MarinadeStakePoolService<'info> {
     marinade_stake_pool_program: Program<'info, MarinadeFinance>,
     pool_account: Account<'info, State>,
-    pool_token_mint: InterfaceAccount<'info, Mint>,
-    pool_token_program: Program<'info, Token>,
+    pool_token_mint: &'info AccountInfo<'info>,
+    pool_token_program: &'info AccountInfo<'info>,
 }
 
 impl<'info> MarinadeStakePoolService<'info> {
-    #[inline(never)]
     pub fn new(
         marinade_stake_pool_program: &'info AccountInfo<'info>,
         pool_account: &'info AccountInfo<'info>,
@@ -28,30 +27,28 @@ impl<'info> MarinadeStakePoolService<'info> {
         require_keys_eq!(*pool_token_mint.owner, *pool_token_program.key);
 
         Ok(Self {
-            pool_account,
             marinade_stake_pool_program: Program::try_from(marinade_stake_pool_program)?,
-            pool_token_mint: InterfaceAccount::try_from(pool_token_mint)?,
-            pool_token_program: Program::try_from(pool_token_program)?,
+            pool_account,
+            pool_token_mint,
+            pool_token_program,
         })
     }
 
-    #[inline(always)]
-    pub(super) fn deserialize_pool_account(
-        pool_account: &'info AccountInfo<'info>,
-    ) -> Result<Account<'info, State>> {
-        Account::<State>::try_from(pool_account)
+    pub(super) fn deserialize_pool_account<'a>(
+        pool_account: &'a AccountInfo<'a>,
+    ) -> Result<Account<'a, State>> {
+        Account::try_from(pool_account)
     }
 
-    #[inline(always)]
-    fn deserialize_withdrawal_ticket_account(
-        withdrawal_ticket_account: &'info AccountInfo<'info>,
-    ) -> Result<Account<'info, TicketAccountData>> {
+    fn deserialize_withdrawal_ticket_account<'a>(
+        withdrawal_ticket_account: &'a AccountInfo<'a>,
+    ) -> Result<Account<'a, TicketAccountData>> {
         Account::try_from(withdrawal_ticket_account)
     }
 
-    fn find_pool_account_derived_address<'a>(
+    fn find_pool_account_derived_address<'a, 'b>(
         pool_account: &impl AsRef<AccountInfo<'a>>,
-        seed: &'static [u8],
+        seed: &'b [u8],
     ) -> Pubkey {
         Pubkey::find_program_address(
             &[pool_account.as_ref().key.as_ref(), seed],
