@@ -308,4 +308,7 @@ pub enum ErrorCode {
 
     #[msg("fund: pricing source validation failed")]
     FundPricingSourceValidationError,
+
+    #[msg("unexpected pricing source")]
+    UnexpectedPricingSourceError,
 }

@@ -10,6 +10,8 @@ use spl_stake_pool::state::{StakePool, ValidatorListHeader, ValidatorStakeInfo};
 use crate::errors::ErrorCode;
 use crate::utils::SystemProgramExt;
 
+use super::ValidateStakePool;
+
 pub(in crate::modules) trait SPLStakePoolInterface: anchor_lang::Id {}
 
 pub(in crate::modules) struct SPLStakePool;
@@ -30,6 +32,20 @@ where
     pool_account: &'info AccountInfo<'info>, // deserialize on-demand
     pool_token_mint: &'info AccountInfo<'info>,
     pool_token_program: &'info AccountInfo<'info>,
+}
+
+impl<T: SPLStakePoolInterface> ValidateStakePool for SPLStakePoolService<'_, T> {
+    fn validate_stake_pool<'info>(
+        pool_account: &'info AccountInfo<'info>,
+        pool_token_mint: &InterfaceAccount<'info, Mint>,
+    ) -> Result<()> {
+        require_keys_eq!(*pool_account.owner, T::id());
+        let pool_account_data = Self::deserialize_pool_account(pool_account)?;
+
+        require_keys_eq!(pool_account_data.pool_mint, pool_token_mint.key());
+
+        Ok(())
+    }
 }
 
 impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {

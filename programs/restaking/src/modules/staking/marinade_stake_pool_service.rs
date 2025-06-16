@@ -7,11 +7,26 @@ use marinade_cpi::marinade::program::MarinadeFinance;
 
 use crate::utils::SystemProgramExt;
 
+use super::ValidateStakePool;
+
 pub(in crate::modules) struct MarinadeStakePoolService<'info> {
     marinade_stake_pool_program: Program<'info, MarinadeFinance>,
     pool_account: Account<'info, State>,
     pool_token_mint: &'info AccountInfo<'info>,
     pool_token_program: &'info AccountInfo<'info>,
+}
+
+impl ValidateStakePool for MarinadeStakePoolService<'_> {
+    fn validate_stake_pool<'info>(
+        pool_account: &'info AccountInfo<'info>,
+        pool_token_mint: &InterfaceAccount<'info, Mint>,
+    ) -> Result<()> {
+        let pool_account = Self::deserialize_pool_account(pool_account)?;
+
+        require_keys_eq!(pool_account.msol_mint, pool_token_mint.key());
+
+        Ok(())
+    }
 }
 
 impl<'info> MarinadeStakePoolService<'info> {
