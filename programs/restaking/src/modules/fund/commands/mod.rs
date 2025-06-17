@@ -1,4 +1,4 @@
-mod cmd10_harvest_reward;
+mod cmd10_harvest_restaking_yield;
 mod cmd11_stake_sol;
 mod cmd12_normalize_st;
 mod cmd13_restake_vst;
@@ -13,7 +13,7 @@ mod cmd7_unstake_lst;
 mod cmd8_unrestake_vrt;
 mod cmd9_undelegate_vst;
 
-pub use cmd10_harvest_reward::*;
+pub use cmd10_harvest_restaking_yield::*;
 pub use cmd11_stake_sol::*;
 pub use cmd12_normalize_st::*;
 pub use cmd13_restake_vst::*;
@@ -55,7 +55,7 @@ pub enum OperationCommand {
     UnstakeLST(UnstakeLSTCommand),
     UnrestakeVRT(UnrestakeVRTCommand),
     UndelegateVST(UndelegateVSTCommand),
-    HarvestReward(HarvestRewardCommand),
+    HarvestRestakingYield(HarvestRestakingYieldCommand),
     StakeSOL(StakeSOLCommand),
     NormalizeST(NormalizeSTCommand),
     RestakeVST(RestakeVSTCommand),
@@ -74,7 +74,7 @@ impl std::fmt::Debug for OperationCommand {
             OperationCommand::UnstakeLST(command) => command.fmt(f),
             OperationCommand::UndelegateVST(command) => command.fmt(f),
             OperationCommand::UnrestakeVRT(command) => command.fmt(f),
-            OperationCommand::HarvestReward(command) => command.fmt(f),
+            OperationCommand::HarvestRestakingYield(command) => command.fmt(f),
             OperationCommand::StakeSOL(command) => command.fmt(f),
             OperationCommand::NormalizeST(command) => command.fmt(f),
             OperationCommand::RestakeVST(command) => command.fmt(f),
@@ -95,7 +95,7 @@ impl OperationCommand {
             OperationCommand::UnstakeLST(..) => "UnstakeLST",
             OperationCommand::UndelegateVST(..) => "UndelegateVST",
             OperationCommand::UnrestakeVRT(..) => "UnrestakeVRT",
-            OperationCommand::HarvestReward(..) => "HarvestReward",
+            OperationCommand::HarvestRestakingYield(..) => "HarvestRestakingYield",
             OperationCommand::StakeSOL(..) => "StakeSOL",
             OperationCommand::NormalizeST(..) => "NormalizeST",
             OperationCommand::RestakeVST(..) => "RestakeVST",
@@ -115,7 +115,7 @@ pub enum OperationCommandResult {
     UnstakeLST(UnstakeLSTCommandResult),
     UnrestakeVRT(UnrestakeVRTCommandResult),
     UndelegateVST(UndelegateVSTCommandResult),
-    HarvestReward(HarvestRewardCommandResult),
+    HarvestRestakingYield(HarvestRestakingYieldCommandResult),
     StakeSOL(StakeSOLCommandResult),
     NormalizeST(NormalizeSTCommandResult),
     RestakeVST(RestakeVSTCommandResult),
@@ -292,15 +292,15 @@ impl From<DelegateVSTCommandResult> for OperationCommandResult {
 }
 
 // cmd14
-impl From<HarvestRewardCommand> for OperationCommand {
-    fn from(command: HarvestRewardCommand) -> Self {
-        Self::HarvestReward(command)
+impl From<HarvestRestakingYieldCommand> for OperationCommand {
+    fn from(command: HarvestRestakingYieldCommand) -> Self {
+        Self::HarvestRestakingYield(command)
     }
 }
 
-impl From<HarvestRewardCommandResult> for OperationCommandResult {
-    fn from(result: HarvestRewardCommandResult) -> Self {
-        Self::HarvestReward(result)
+impl From<HarvestRestakingYieldCommandResult> for OperationCommandResult {
+    fn from(result: HarvestRestakingYieldCommandResult) -> Self {
+        Self::HarvestRestakingYield(result)
     }
 }
 
@@ -317,7 +317,7 @@ impl OperationCommand {
             OperationCommand::UnrestakeVRT(_) => 8,
             OperationCommand::UndelegateVST(_) => 9,
             OperationCommand::StakeSOL(_) => 10,
-            OperationCommand::HarvestReward(_) => 11,
+            OperationCommand::HarvestRestakingYield(_) => 11,
             OperationCommand::NormalizeST(_) => 12,
             OperationCommand::RestakeVST(_) => 13,
             OperationCommand::DelegateVST(_) => 14,
@@ -522,7 +522,7 @@ impl SelfExecutable for OperationCommand {
             OperationCommand::UnstakeLST(command) => command.execute(ctx, accounts),
             OperationCommand::UnrestakeVRT(command) => command.execute(ctx, accounts),
             OperationCommand::UndelegateVST(command) => command.execute(ctx, accounts),
-            OperationCommand::HarvestReward(command) => command.execute(ctx, accounts),
+            OperationCommand::HarvestRestakingYield(command) => command.execute(ctx, accounts),
             OperationCommand::StakeSOL(command) => command.execute(ctx, accounts),
             OperationCommand::NormalizeST(command) => command.execute(ctx, accounts),
             OperationCommand::RestakeVST(command) => command.execute(ctx, accounts),
