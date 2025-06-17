@@ -406,7 +406,7 @@ describe('restaking.frag2 test', async () => {
 
     // run operator harvest
     await ctx.fund.runCommand.executeChained({
-      forceResetCommand: 'HarvestReward',
+      forceResetCommand: 'HarvestRestakingYield',
       operator: restaking.knownAddresses.fundManager,
     });
 
@@ -508,7 +508,7 @@ describe('restaking.frag2 test', async () => {
 
     // run operator harvest
     await ctx.fund.runCommand.executeChained({
-      forceResetCommand: 'HarvestReward',
+      forceResetCommand: 'HarvestRestakingYield',
       operator: restaking.knownAddresses.fundManager,
     });
 
@@ -535,7 +535,7 @@ describe('restaking.frag2 test', async () => {
 
     // try to harvest reward
     await ctx.fund.runCommand.executeChained({
-      forceResetCommand: 'HarvestReward',
+      forceResetCommand: 'HarvestRestakingYield',
       operator: restaking.knownAddresses.fundManager,
     });
 
@@ -561,7 +561,7 @@ describe('restaking.frag2 test', async () => {
 
     // harvest occurs
     await ctx.fund.runCommand.executeChained({
-      forceResetCommand: 'HarvestReward',
+      forceResetCommand: 'HarvestRestakingYield',
       operator: restaking.knownAddresses.fundManager,
     });
 
@@ -598,7 +598,7 @@ describe('restaking.frag2 test', async () => {
 
     // run operator harvest
     await ctx.fund.runCommand.executeChained({
-      forceResetCommand: 'HarvestReward',
+      forceResetCommand: 'HarvestRestakingYield',
       operator: restaking.knownAddresses.fundManager,
     });
 
@@ -937,7 +937,7 @@ describe('restaking.frag2 test', async () => {
 
     // run operator harvest
     await ctx.fund.runCommand.executeChained({
-      forceResetCommand: 'HarvestReward',
+      forceResetCommand: 'HarvestRestakingYield',
       operator: restaking.knownAddresses.fundManager,
     });
 

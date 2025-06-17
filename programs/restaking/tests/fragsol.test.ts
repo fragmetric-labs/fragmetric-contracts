@@ -2867,4 +2867,44 @@ describe('restaking.fragSOL test', async () => {
       ctx.fund.runCommand.executeChained(null)
     ).resolves.not.toThrow();
   });
+
+  test('harvest restaking yield test', async () => {
+    await expectMasked(ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestRestakingYield',
+      operator: restaking.knownAddresses.fundManager,
+    })).resolves.toMatchInlineSnapshot(`
+      {
+        "args": {
+          "forceResetCommand": null,
+          "operator": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx",
+        },
+        "events": {
+          "operatorRanFundCommand": {
+            "command": {
+              "__kind": "HarvestRestakingYield",
+              "fields": [
+                {
+                  "state": {
+                    "__kind": "ExecuteCompoundVaultSupportedToken",
+                    "vault": "HR1ANmDHjaEhknvsTaK48M5xZtbBiwNdXM5NTiWhAb4S",
+                  },
+                },
+              ],
+            },
+            "fundAccount": "7xraTDZ4QWgvgJ5SCZp4hyJN2XEfyGRySQjdG49iZfU8",
+            "nextSequence": 0,
+            "numOperated": 212n,
+            "receiptTokenMint": "Cs29UiPhAkM2v8fZW7qCJ1UjhF1UAhgrsKj61yGGYizD",
+            "result": {
+              "__option": "None",
+            },
+          },
+          "unknown": [],
+        },
+        "signature": "MASKED(signature)",
+        "slot": "MASKED(/[.*S|s]lots?$/)",
+        "succeeded": true,
+      }
+    `);
+  });
 });
