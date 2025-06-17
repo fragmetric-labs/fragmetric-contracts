@@ -449,6 +449,70 @@ impl<'info> PricingService<'info> {
         )
     }
 
+    pub fn get_vault_supported_token_to_receipt_token_exchange_ratio(
+        &mut self,
+        token_mint: &Pubkey,
+    ) -> Result<(u64, u64)> {
+        let token_index: usize = if let Some(index) = self.get_token_index(token_mint) {
+            index
+        } else {
+            return err!(ErrorCode::TokenPricingSourceAccountNotFoundError);
+        };
+
+        let token_pricing_source = self.get_token_pricing_source(token_mint);
+
+        // resolve underlying assets for vault-only pricing source' value provider adapter
+        match token_pricing_source {
+            Some(TokenPricingSource::JitoRestakingVault { address }) => {
+                let pricing_source_accounts =
+                    [self.get_token_pricing_source_account_info(address)?];
+                JitoRestakingVaultValueProvider.resolve_underlying_assets(
+                    token_mint,
+                    &pricing_source_accounts,
+                    &mut self.token_values[token_index],
+                )?
+            }
+            Some(TokenPricingSource::SolvBTCVault { address }) => {
+                let pricing_source_accounts =
+                    [self.get_token_pricing_source_account_info(address)?];
+                SolvBTCVaultValueProvider.resolve_underlying_assets(
+                    token_mint,
+                    &pricing_source_accounts,
+                    &mut self.token_values[token_index],
+                )?
+            }
+            Some(TokenPricingSource::VirtualVault { .. })
+            | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+            | Some(TokenPricingSource::SPLStakePool { .. })
+            | Some(TokenPricingSource::MarinadeStakePool { .. })
+            | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+            | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+            | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. })
+            | Some(TokenPricingSource::PeggedToken { .. })
+            | Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { .. })
+            | None => return err!(ErrorCode::TokenPricingSourceNotMatched),
+
+            #[cfg(all(test, not(feature = "idl-build")))]
+            Some(TokenPricingSource::Mock { .. }) => {
+                return err!(ErrorCode::TokenPricingSourceNotMatched)
+            }
+        };
+
+        let token_value = &self.token_values[token_index];
+        require_eq!(token_value.numerator.len(), 1);
+
+        let supported_token_amount_numerator = match token_value.numerator[0] {
+            Asset::SOL(_) => return err!(ErrorCode::TokenPricingAssetTypeNotMatched),
+            Asset::Token(_, _, token_amount) => token_amount,
+        };
+        let receipt_token_amount_denominator = token_value.denominator;
+
+        Ok((
+            supported_token_amount_numerator,
+            receipt_token_amount_denominator,
+        ))
+    }
+
     /// This is for display or informational purposes only.
     pub fn get_one_token_amount_as_sol(
         &self,
