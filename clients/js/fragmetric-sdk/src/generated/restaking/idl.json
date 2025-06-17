@@ -11831,6 +11831,16 @@
       "code": 6098,
       "name": "FundTokenSwapStrategyValidationError",
       "msg": "fund: token swap strategy validation failed"
+    },
+    {
+      "code": 6099,
+      "name": "TokenPricingSourceNotMatched",
+      "msg": "pricing: token pricing source not mathced"
+    },
+    {
+      "code": 6100,
+      "name": "TokenPricingAssetTypeNotMatched",
+      "msg": "pricing: asset type not matched"
     }
   ],
   "types": [
@@ -13064,7 +13074,7 @@
       }
     },
     {
-      "name": "HarvestRewardCommand",
+      "name": "HarvestRestakingYieldCommand",
       "type": {
         "kind": "struct",
         "fields": [
@@ -13072,7 +13082,7 @@
             "name": "state",
             "type": {
               "defined": {
-                "name": "HarvestRewardCommandState"
+                "name": "HarvestRestakingYieldState"
               }
             }
           }
@@ -13080,7 +13090,7 @@
       }
     },
     {
-      "name": "HarvestRewardCommandResult",
+      "name": "HarvestRestakingYieldCommandResult",
       "type": {
         "kind": "struct",
         "fields": [
@@ -13089,11 +13099,11 @@
             "type": "pubkey"
           },
           {
-            "name": "reward_token_mint",
+            "name": "yield_token_mint",
             "type": "pubkey"
           },
           {
-            "name": "reward_token_amount",
+            "name": "yield_token_amount",
             "type": "u64"
           },
           {
@@ -13103,11 +13113,11 @@
             }
           },
           {
-            "name": "compounded_token_amount",
+            "name": "fund_supported_token_compounded_token_amount",
             "type": "u64"
           },
           {
-            "name": "distributed_token_amount",
+            "name": "reward_token_distributed_token_amount",
             "type": "u64"
           },
           {
@@ -13115,12 +13125,16 @@
             "type": {
               "option": "pubkey"
             }
+          },
+          {
+            "name": "vault_supported_token_compounded_amount",
+            "type": "i128"
           }
         ]
       }
     },
     {
-      "name": "HarvestRewardCommandState",
+      "name": "HarvestRestakingYieldState",
       "type": {
         "kind": "enum",
         "variants": [
@@ -13128,10 +13142,10 @@
             "name": "New"
           },
           {
-            "name": "NewCompound"
+            "name": "NewCompoundReward"
           },
           {
-            "name": "PrepareCompound",
+            "name": "PrepareCompoundReward",
             "fields": [
               {
                 "name": "vault",
@@ -13161,7 +13175,7 @@
             ]
           },
           {
-            "name": "ExecuteCompound",
+            "name": "ExecuteCompoundReward",
             "fields": [
               {
                 "name": "vault",
@@ -13191,10 +13205,10 @@
             ]
           },
           {
-            "name": "NewDistribute"
+            "name": "NewDistributeReward"
           },
           {
-            "name": "PrepareDistribute",
+            "name": "PrepareDistributeReward",
             "fields": [
               {
                 "name": "vault",
@@ -13209,7 +13223,7 @@
             ]
           },
           {
-            "name": "ExecuteDistribute",
+            "name": "ExecuteDistributeReward",
             "fields": [
               {
                 "name": "vault",
@@ -13220,6 +13234,27 @@
                 "type": {
                   "vec": "pubkey"
                 }
+              }
+            ]
+          },
+          {
+            "name": "NewCompoundVaultSupportedToken"
+          },
+          {
+            "name": "PrepareCompoundVaultSupportedToken",
+            "fields": [
+              {
+                "name": "vault",
+                "type": "pubkey"
+              }
+            ]
+          },
+          {
+            "name": "ExecuteCompoundVaultSupportedToken",
+            "fields": [
+              {
+                "name": "vault",
+                "type": "pubkey"
               }
             ]
           }
@@ -13912,11 +13947,11 @@
             ]
           },
           {
-            "name": "HarvestReward",
+            "name": "HarvestRestakingYield",
             "fields": [
               {
                 "defined": {
-                  "name": "HarvestRewardCommand"
+                  "name": "HarvestRestakingYieldCommand"
                 }
               }
             ]
@@ -14211,11 +14246,11 @@
             ]
           },
           {
-            "name": "HarvestReward",
+            "name": "HarvestRestakingYield",
             "fields": [
               {
                 "defined": {
-                  "name": "HarvestRewardCommandResult"
+                  "name": "HarvestRestakingYieldCommandResult"
                 }
               }
             ]
@@ -14693,7 +14728,8 @@
       "name": "RestakingVault",
       "serialization": "bytemuck",
       "repr": {
-        "kind": "c"
+        "kind": "c",
+        "packed": true
       },
       "type": {
         "kind": "struct",
@@ -14857,11 +14893,27 @@
             }
           },
           {
+            "name": "supported_token_compounded_amount",
+            "type": "i128"
+          },
+          {
+            "name": "supported_token_to_receipt_token_exchange_ratio",
+            "type": {
+              "defined": {
+                "name": "TokenExchangeRatio"
+              }
+            }
+          },
+          {
+            "name": "supported_token_to_receipt_token_exchange_ratio_updated_timestamp",
+            "type": "i64"
+          },
+          {
             "name": "_reserved",
             "type": {
               "array": [
                 "u8",
-                856
+                816
               ]
             }
           }
@@ -15637,6 +15689,26 @@
                 6
               ]
             }
+          }
+        ]
+      }
+    },
+    {
+      "name": "TokenExchangeRatio",
+      "serialization": "bytemuck",
+      "repr": {
+        "kind": "c"
+      },
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "numerator",
+            "type": "u64"
+          },
+          {
+            "name": "denominator",
+            "type": "u64"
           }
         ]
       }
