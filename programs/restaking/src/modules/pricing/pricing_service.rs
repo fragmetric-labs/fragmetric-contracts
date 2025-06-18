@@ -490,11 +490,11 @@ impl<'info> PricingService<'info> {
             | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. })
             | Some(TokenPricingSource::PeggedToken { .. })
             | Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { .. })
-            | None => return err!(ErrorCode::TokenPricingSourceNotMatched),
+            | None => return err!(ErrorCode::TokenPricingSourceNotMatchedError),
 
             #[cfg(all(test, not(feature = "idl-build")))]
             Some(TokenPricingSource::Mock { .. }) => {
-                return err!(ErrorCode::TokenPricingSourceNotMatched)
+                return err!(ErrorCode::TokenPricingSourceNotMatchedError)
             }
         };
 
@@ -502,7 +502,7 @@ impl<'info> PricingService<'info> {
         require_eq!(token_value.numerator.len(), 1);
 
         let supported_token_amount_numerator = match token_value.numerator[0] {
-            Asset::SOL(_) => return err!(ErrorCode::TokenPricingAssetTypeNotMatched),
+            Asset::SOL(_) => return err!(ErrorCode::TokenPricingAssetTypeNotMatchedError),
             Asset::Token(_, _, token_amount) => token_amount,
         };
         let receipt_token_amount_denominator = token_value.denominator;

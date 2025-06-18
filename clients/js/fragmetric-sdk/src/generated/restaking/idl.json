@@ -11834,12 +11834,12 @@
     },
     {
       "code": 6099,
-      "name": "TokenPricingSourceNotMatched",
-      "msg": "pricing: token pricing source not mathced"
+      "name": "TokenPricingSourceNotMatchedError",
+      "msg": "pricing: token pricing source not matchced"
     },
     {
       "code": 6100,
-      "name": "TokenPricingAssetTypeNotMatched",
+      "name": "TokenPricingAssetTypeNotMatchedError",
       "msg": "pricing: asset type not matched"
     }
   ],

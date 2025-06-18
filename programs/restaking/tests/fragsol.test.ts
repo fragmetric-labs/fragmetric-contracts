@@ -2698,7 +2698,7 @@ describe('restaking.fragSOL test', async () => {
   });
 
   /** 5. Operation **/
-  test('run operation cycles through multiple epoches to test cach-in/out flows including (un)stake/(un)restake', async () => {
+  test('run operation cycles through multiple epoches to test cash-in/out flows including (un)stake/(un)restake', async () => {
     await user1.resolveAddress(true);
 
     for (const mint of [
