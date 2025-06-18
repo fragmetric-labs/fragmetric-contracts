@@ -28,7 +28,7 @@ impl ValidateVault for VirtualVaultService<'_> {
         require_eq!(vault_receipt_token_mint.supply, 0);
         require!(
             vault_receipt_token_mint.mint_authority.is_none(),
-            ErrorCode::FundRestakingVaultAuthorityNotMatchedError
+            ErrorCode::RestakingVaultAuthorityNotMatchedError
         );
 
         Ok(())

@@ -188,6 +188,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
                 )?
             }
             TokenPricingSource::PeggedToken { address } => {
+                // The pegging token is already at the fund's supported token list, so this validation is meaningful.
                 self.fund_account.load()?.get_supported_token(&address)?;
             }
             // otherwise fails
@@ -321,7 +322,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
             vault.as_account_info(),
             &vault_supported_token_mint,
             &vault_receipt_token_mint,
-            AsRef::<AccountInfo>::as_ref(&self.fund_account),
+            self.fund_account.as_ref(),
         )?;
 
         let mut fund_account = self.fund_account.load_mut()?;
