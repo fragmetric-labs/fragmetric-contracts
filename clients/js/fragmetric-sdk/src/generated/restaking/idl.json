@@ -11823,8 +11823,8 @@
     },
     {
       "code": 6095,
-      "name": "FundRestakingVaultAuthorityNotMatchedError",
-      "msg": "fund: restaking vault authority not matched"
+      "name": "RestakingVaultAuthorityNotMatchedError",
+      "msg": "restaking: vault authority not matched"
     },
     {
       "code": 6096,
