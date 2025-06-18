@@ -14,23 +14,20 @@ pub(in crate::modules) struct VirtualVaultService<'info> {
 impl ValidateVault for VirtualVaultService<'_> {
     fn validate_vault<'info>(
         vault_account: &'info AccountInfo<'info>,
-        _vault_supported_token_mint: &AccountInfo,
-        vault_receipt_token_mint: &'info AccountInfo<'info>,
+        _vault_supported_token_mint: &InterfaceAccount<Mint>,
+        vault_receipt_token_mint: &InterfaceAccount<Mint>,
         fund_account: &AccountInfo,
     ) -> Result<()> {
         // validate vault address
         let vault_address =
-            Self::find_vault_address(vault_receipt_token_mint.key, fund_account.key).vault_address;
+            Self::find_vault_address(&vault_receipt_token_mint.key(), fund_account.key)
+                .vault_address;
         require_keys_eq!(*vault_account.key, vault_address);
         require_keys_eq!(*vault_account.owner, System::id());
 
-        // validate vrt mint
-        let vault_receipt_token_mint_data =
-            InterfaceAccount::<Mint>::try_from(vault_receipt_token_mint)?;
-
-        require_eq!(vault_receipt_token_mint_data.supply, 0);
+        require_eq!(vault_receipt_token_mint.supply, 0);
         require!(
-            vault_receipt_token_mint_data.mint_authority.is_none(),
+            vault_receipt_token_mint.mint_authority.is_none(),
             ErrorCode::FundRestakingVaultAuthorityNotMatchedError
         );
 

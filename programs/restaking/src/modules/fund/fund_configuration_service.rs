@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use anchor_spl::token::spl_token;
 use anchor_spl::token::Token;
 use anchor_spl::token_2022::spl_token_2022;
 use anchor_spl::token_2022::Token2022;
@@ -11,6 +12,7 @@ use crate::modules::normalization::{NormalizedTokenPoolAccount, NormalizedTokenP
 use crate::modules::pricing::TokenPricingSource;
 use crate::modules::restaking;
 use crate::modules::reward;
+use crate::modules::staking;
 use crate::modules::swap;
 use crate::utils::{AccountLoaderExt, AsAccountInfo, SystemProgramExt};
 
@@ -142,7 +144,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
     pub fn process_add_supported_token(
         &mut self,
         fund_supported_token_reserve_account: &InterfaceAccount<TokenAccount>,
-        supported_token_mint: &InterfaceAccount<Mint>,
+        supported_token_mint: &InterfaceAccount<'info, Mint>,
         pricing_source: TokenPricingSource,
         pricing_sources: &'info [AccountInfo<'info>],
     ) -> Result<events::FundManagerUpdatedFund> {
@@ -154,6 +156,51 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
             fund_supported_token_reserve_account.mint,
             supported_token_mint.key()
         );
+
+        #[deny(clippy::wildcard_enum_match_arm)]
+        match pricing_source {
+            TokenPricingSource::SPLStakePool { address }
+            | TokenPricingSource::MarinadeStakePool { address }
+            | TokenPricingSource::SanctumSingleValidatorSPLStakePool { address }
+            | TokenPricingSource::SanctumMultiValidatorSPLStakePool { address } => {
+                let pool_account_info = pricing_sources
+                    .iter()
+                    .find(|account| account.key() == address)
+                    .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundError))?;
+
+                staking::validate_pricing_source(
+                    &pricing_source,
+                    pool_account_info,
+                    &supported_token_mint,
+                )?
+            }
+            TokenPricingSource::OrcaDEXLiquidityPool { address } => {
+                let pool_account_info = pricing_sources
+                    .iter()
+                    .find(|account| account.key() == address)
+                    .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundError))?;
+
+                swap::validate_pricing_source(
+                    &pricing_source,
+                    pool_account_info,
+                    &supported_token_mint.key(),
+                    &spl_token::native_mint::ID,
+                )?
+            }
+            TokenPricingSource::PeggedToken { address } => {
+                self.fund_account.load()?.get_supported_token(&address)?;
+            }
+            // otherwise fails
+            TokenPricingSource::FragmetricNormalizedTokenPool { .. }
+            | TokenPricingSource::FragmetricRestakingFund { .. }
+            | TokenPricingSource::JitoRestakingVault { .. }
+            | TokenPricingSource::SolvBTCVault { .. }
+            | TokenPricingSource::VirtualVault { .. } => {
+                err!(ErrorCode::FundNotSupportedTokenError)?
+            }
+            #[cfg(all(test, not(feature = "idl-build")))]
+            TokenPricingSource::Mock { .. } => err!(ErrorCode::FundNotSupportedTokenError)?,
+        }
 
         let mut fund_account = self.fund_account.load_mut()?;
         fund_account.add_supported_token(
@@ -261,8 +308,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
 
     pub fn process_add_restaking_vault(
         &mut self,
-        fund_vault_receipt_token_account: &InterfaceAccount<TokenAccount>,
-
+        fund_vault_receipt_token_account: &InterfaceAccount<'info, TokenAccount>,
         vault: &UncheckedAccount<'info>,
         vault_supported_token_mint: &InterfaceAccount<'info, Mint>,
         vault_receipt_token_mint: &InterfaceAccount<'info, Mint>,
@@ -270,12 +316,12 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         pricing_source: TokenPricingSource,
         pricing_sources: &'info [AccountInfo<'info>],
     ) -> Result<events::FundManagerUpdatedFund> {
-        restaking::validate_vault(
+        restaking::validate_pricing_source(
             &pricing_source,
             vault.as_account_info(),
-            vault_supported_token_mint.as_account_info(),
-            vault_receipt_token_mint.as_account_info(),
-            self.fund_account.as_ref(),
+            &vault_supported_token_mint,
+            &vault_receipt_token_mint,
+            AsRef::<AccountInfo>::as_ref(&self.fund_account),
         )?;
 
         let mut fund_account = self.fund_account.load_mut()?;

@@ -37,7 +37,7 @@ where
 impl<T: SPLStakePoolInterface> ValidateStakePool for SPLStakePoolService<'_, T> {
     fn validate_stake_pool<'info>(
         pool_account: &'info AccountInfo<'info>,
-        pool_token_mint: &InterfaceAccount<'info, Mint>,
+        pool_token_mint: &Pubkey,
     ) -> Result<()> {
         require_keys_eq!(*pool_account.owner, T::id());
         let pool_account_data = Self::deserialize_pool_account(pool_account)?;

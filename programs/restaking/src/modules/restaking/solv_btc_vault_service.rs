@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{
-    token::{Mint, Token},
-    token_interface::TokenAccount,
+    token::Token,
+    token_interface::{Mint, TokenAccount},
 };
 use solv::states::VaultAccount;
 
@@ -18,8 +18,8 @@ impl ValidateVault for SolvBTCVaultService<'_> {
     #[inline(never)]
     fn validate_vault<'info>(
         vault_account: &'info AccountInfo<'info>,
-        vault_supported_token_mint: &AccountInfo,
-        vault_receipt_token_mint: &AccountInfo,
+        vault_supported_token_mint: &InterfaceAccount<Mint>,
+        vault_receipt_token_mint: &InterfaceAccount<Mint>,
         fund_account: &AccountInfo,
     ) -> Result<()> {
         let vault_account = AccountLoader::<VaultAccount>::try_from(vault_account)?;

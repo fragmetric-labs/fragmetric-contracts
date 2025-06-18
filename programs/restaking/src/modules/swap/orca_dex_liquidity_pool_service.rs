@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount};
 use whirlpool_cpi::whirlpool::accounts::Whirlpool;
 
-use super::ValidateSwapSource;
+use super::ValidateLiquidityPool;
 
 pub(in crate::modules) struct OrcaDEXLiquidityPoolService<'info> {
     whirlpool_program: &'info AccountInfo<'info>,
@@ -15,16 +15,16 @@ pub(in crate::modules) struct OrcaDEXLiquidityPoolService<'info> {
     token_program_b: &'info AccountInfo<'info>,
 }
 
-impl ValidateSwapSource for OrcaDEXLiquidityPoolService<'_> {
+impl ValidateLiquidityPool for OrcaDEXLiquidityPoolService<'_> {
     #[inline(never)]
-    fn validate_swap_source<'info>(
-        swap_source_account: &'info AccountInfo<'info>,
-        from_token_mint: &InterfaceAccount<Mint>,
-        to_token_mint: &InterfaceAccount<Mint>,
+    fn validate_liquidity_pool<'info>(
+        pool_account: &'info AccountInfo<'info>,
+        from_token_mint: &Pubkey,
+        to_token_mint: &Pubkey,
     ) -> Result<()> {
-        let pool_account = Self::deserialize_pool_account(swap_source_account)?;
+        let pool_account = Self::deserialize_pool_account(pool_account)?;
 
-        // THis validates pool account by checking that input from_token_mint and to_token_mint match the pool's tokenA, B mint.
+        // This validates pool account by checking that input from_token_mint and to_token_mint match the pool's tokenA, B mint.
         Self::a_to_b(&pool_account, &from_token_mint.key(), &to_token_mint.key())?;
 
         Ok(())

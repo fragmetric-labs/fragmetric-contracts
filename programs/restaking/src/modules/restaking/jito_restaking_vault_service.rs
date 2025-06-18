@@ -3,7 +3,7 @@ use anchor_lang::solana_program::program::invoke_signed;
 use anchor_lang::solana_program::system_program;
 use anchor_spl::associated_token;
 use anchor_spl::token::Token;
-use anchor_spl::token_interface::TokenAccount;
+use anchor_spl::token_interface::{Mint, TokenAccount};
 use jito_vault_core::{
     config::Config, vault::Vault, vault_operator_delegation::VaultOperatorDelegation,
     vault_staker_withdrawal_ticket::VaultStakerWithdrawalTicket,
@@ -34,17 +34,23 @@ impl ValidateVault for JitoRestakingVaultService<'_> {
     #[inline(never)]
     fn validate_vault(
         vault_account: &AccountInfo,
-        vault_supported_token_mint: &AccountInfo,
-        vault_receipt_token_mint: &AccountInfo,
+        vault_supported_token_mint: &InterfaceAccount<Mint>,
+        vault_receipt_token_mint: &InterfaceAccount<Mint>,
         _fund_account: &AccountInfo,
     ) -> Result<()> {
         let data = &Self::borrow_account_data(vault_account)?;
         let vault = Self::deserialize_account_data::<Vault>(data)?;
 
         require_keys_eq!(vault.supported_mint, vault_supported_token_mint.key());
-        require_keys_eq!(*vault_supported_token_mint.owner, Token::id());
+        require_keys_eq!(
+            *AsRef::<AccountInfo>::as_ref(vault_supported_token_mint).owner,
+            Token::id()
+        );
         require_keys_eq!(vault.vrt_mint, vault_receipt_token_mint.key());
-        require_keys_eq!(*vault_receipt_token_mint.owner, Token::id());
+        require_keys_eq!(
+            *AsRef::<AccountInfo>::as_ref(vault_receipt_token_mint).owner,
+            Token::id()
+        );
 
         Ok(())
     }
