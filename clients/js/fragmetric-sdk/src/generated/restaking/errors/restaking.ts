@@ -212,8 +212,8 @@ export const RESTAKING_ERROR__FUND_RESTAKING_VAULT_REWARD_TOKEN_NOT_REGISTERED_E
 export const RESTAKING_ERROR__FUND_OPERATION_DISABLED_ERROR = 0x17d1; // 6097
 /** FundTokenSwapStrategyValidationError: fund: token swap strategy validation failed */
 export const RESTAKING_ERROR__FUND_TOKEN_SWAP_STRATEGY_VALIDATION_ERROR = 0x17d2; // 6098
-/** FundPricingSourceValidationError: fund: pricing source validation failed */
-export const RESTAKING_ERROR__FUND_PRICING_SOURCE_VALIDATION_ERROR = 0x17d3; // 6099
+/** UnexpectedPricingSourceError: unexpected pricing source */
+export const RESTAKING_ERROR__UNEXPECTED_PRICING_SOURCE_ERROR = 0x17d3; // 6099
 
 export type RestakingError =
   | typeof RESTAKING_ERROR__CALCULATION_ARITHMETIC_EXCEPTION
@@ -241,7 +241,6 @@ export type RestakingError =
   | typeof RESTAKING_ERROR__FUND_OPERATION_COMMAND_EXECUTION_FAILED_EXCEPTION
   | typeof RESTAKING_ERROR__FUND_OPERATION_DISABLED_ERROR
   | typeof RESTAKING_ERROR__FUND_OPERATION_UNAUTHORIZED_COMMAND_ERROR
-  | typeof RESTAKING_ERROR__FUND_PRICING_SOURCE_VALIDATION_ERROR
   | typeof RESTAKING_ERROR__FUND_RESTAKING_NOT_SUPPORTED_VAULT_ERROR
   | typeof RESTAKING_ERROR__FUND_RESTAKING_VAULT_ALREADY_REGISTERED_ERROR
   | typeof RESTAKING_ERROR__FUND_RESTAKING_VAULT_AUTHORITY_NOT_MATCHED_ERROR
@@ -315,6 +314,7 @@ export type RestakingError =
   | typeof RESTAKING_ERROR__TOKEN_NOT_TRANSFERABLE_ERROR
   | typeof RESTAKING_ERROR__TOKEN_NOT_TRANSFERRING_EXCEPTION
   | typeof RESTAKING_ERROR__TOKEN_PRICING_SOURCE_ACCOUNT_NOT_FOUND_ERROR
+  | typeof RESTAKING_ERROR__UNEXPECTED_PRICING_SOURCE_ERROR
   | typeof RESTAKING_ERROR__U_T_F8_DECODING_EXCEPTION;
 
 let restakingErrorMessages: Record<RestakingError, string> | undefined;
@@ -345,7 +345,6 @@ if (process.env.NODE_ENV !== 'production') {
     [RESTAKING_ERROR__FUND_OPERATION_COMMAND_EXECUTION_FAILED_EXCEPTION]: `fund: failed to execute the operation command`,
     [RESTAKING_ERROR__FUND_OPERATION_DISABLED_ERROR]: `fund: operation is disabled`,
     [RESTAKING_ERROR__FUND_OPERATION_UNAUTHORIZED_COMMAND_ERROR]: `fund: unauhorized operation command`,
-    [RESTAKING_ERROR__FUND_PRICING_SOURCE_VALIDATION_ERROR]: `fund: pricing source validation failed`,
     [RESTAKING_ERROR__FUND_RESTAKING_NOT_SUPPORTED_VAULT_ERROR]: `fund: not supported restaking vault`,
     [RESTAKING_ERROR__FUND_RESTAKING_VAULT_ALREADY_REGISTERED_ERROR]: `fund: restaking vault already registered`,
     [RESTAKING_ERROR__FUND_RESTAKING_VAULT_AUTHORITY_NOT_MATCHED_ERROR]: `fund: restaking vault authority not matched`,
@@ -419,6 +418,7 @@ if (process.env.NODE_ENV !== 'production') {
     [RESTAKING_ERROR__TOKEN_NOT_TRANSFERABLE_ERROR]: `token is not transferable currently`,
     [RESTAKING_ERROR__TOKEN_NOT_TRANSFERRING_EXCEPTION]: `token is not transferring currently`,
     [RESTAKING_ERROR__TOKEN_PRICING_SOURCE_ACCOUNT_NOT_FOUND_ERROR]: `pricing: token pricing source is not found`,
+    [RESTAKING_ERROR__UNEXPECTED_PRICING_SOURCE_ERROR]: `unexpected pricing source`,
     [RESTAKING_ERROR__U_T_F8_DECODING_EXCEPTION]: `utf-8 decoding exception`,
   };
 }

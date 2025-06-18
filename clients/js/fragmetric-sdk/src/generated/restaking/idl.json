@@ -11843,8 +11843,8 @@
     },
     {
       "code": 6099,
-      "name": "FundPricingSourceValidationError",
-      "msg": "fund: pricing source validation failed"
+      "name": "UnexpectedPricingSourceError",
+      "msg": "unexpected pricing source"
     }
   ],
   "types": [

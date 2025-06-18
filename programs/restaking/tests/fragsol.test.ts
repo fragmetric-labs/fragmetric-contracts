@@ -2867,4 +2867,40 @@ describe('restaking.fragSOL test', async () => {
       ctx.fund.runCommand.executeChained(null)
     ).resolves.not.toThrow();
   });
+
+  /** 6. Pricing Source Validation - supported token */
+  // note) tested with commenting out adding supported token for jupsol at init file
+  test.skip(`fails if trying to add wrong pricing source when adding supported token`, async () => {
+    // stake pool pricing source
+    await expect(
+      ctx.fund.addSupportedToken.execute({
+        mint: 'jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v',
+        pricingSource: {
+          __kind: 'SPLStakePool',
+          address: '8VpRhuxa7sUUepdY3kQiTmX9rS5vx4WgaXiAnXq4KCtr',
+        },
+      })
+    ).rejects.toThrowError('Transaction simulation failed'); // key not match error
+
+    // orca liquidity pool pricing source
+    await expect(
+      ctx.fund.addSupportedToken.execute({
+        mint: 'jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v',
+        pricingSource: {
+          __kind: 'OrcaDEXLiquidityPool',
+          address: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+        },
+      })
+    ).rejects.toThrowError('Transaction simulation failed'); // AccountOwnedByWrongProgram
+
+    await expect(
+      ctx.fund.addSupportedToken.execute({
+        mint: 'jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v',
+        pricingSource: {
+          __kind: 'OrcaDEXLiquidityPool',
+          address: 'DxD41srN8Xk9QfYjdNXF9tTnP6qQxeF2bZF8s1eN62Pe', // inf/sol orca pool, example for not matching pool account
+        },
+      })
+    ).rejects.toThrowError('Transaction simulation failed'); // key not match error
+  });
 });
