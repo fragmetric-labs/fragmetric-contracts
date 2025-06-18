@@ -196,10 +196,10 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
             | TokenPricingSource::JitoRestakingVault { .. }
             | TokenPricingSource::SolvBTCVault { .. }
             | TokenPricingSource::VirtualVault { .. } => {
-                err!(ErrorCode::FundNotSupportedTokenError)?
+                err!(ErrorCode::UnexpectedPricingSourceError)?
             }
             #[cfg(all(test, not(feature = "idl-build")))]
-            TokenPricingSource::Mock { .. } => err!(ErrorCode::FundNotSupportedTokenError)?,
+            TokenPricingSource::Mock { .. } => err!(ErrorCode::UnexpectedPricingSourceError)?,
         }
 
         let mut fund_account = self.fund_account.load_mut()?;

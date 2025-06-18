@@ -15,6 +15,7 @@ use anchor_lang::solana_program::system_program;
 use anchor_spl::token_interface::Mint;
 
 use crate::constants::{JITO_VAULT_PROGRAM_ID, SOLV_PROGRAM_ID};
+use crate::errors::ErrorCode;
 use crate::modules::pricing::TokenPricingSource;
 use crate::utils::AsAccountInfo;
 
@@ -64,10 +65,10 @@ pub(in crate::modules) fn validate_pricing_source<'info>(
         | TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. }
         | TokenPricingSource::PeggedToken { .. }
         | TokenPricingSource::SanctumMultiValidatorSPLStakePool { .. } => {
-            err!(error::ErrorCode::AccountOwnedByWrongProgram)?
+            err!(ErrorCode::UnexpectedPricingSourceError)?
         }
         #[cfg(all(test, not(feature = "idl-build")))]
-        TokenPricingSource::Mock { .. } => err!(error::ErrorCode::AccountOwnedByWrongProgram)?,
+        TokenPricingSource::Mock { .. } => err!(ErrorCode::UnexpectedPricingSourceError)?,
     }
 
     Ok(())
