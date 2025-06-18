@@ -144,7 +144,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
     pub fn process_add_supported_token(
         &mut self,
         fund_supported_token_reserve_account: &InterfaceAccount<TokenAccount>,
-        supported_token_mint: &InterfaceAccount<'info, Mint>,
+        supported_token_mint: &InterfaceAccount<Mint>,
         pricing_source: TokenPricingSource,
         pricing_sources: &'info [AccountInfo<'info>],
     ) -> Result<events::FundManagerUpdatedFund> {
@@ -308,7 +308,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
 
     pub fn process_add_restaking_vault(
         &mut self,
-        fund_vault_receipt_token_account: &InterfaceAccount<'info, TokenAccount>,
+        fund_vault_receipt_token_account: &InterfaceAccount<TokenAccount>,
         vault: &UncheckedAccount<'info>,
         vault_supported_token_mint: &InterfaceAccount<'info, Mint>,
         vault_receipt_token_mint: &InterfaceAccount<'info, Mint>,
