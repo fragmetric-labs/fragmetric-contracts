@@ -399,7 +399,7 @@ impl StakeSOLCommand {
         item: &StakeSOLCommandItem,
         pool_account_address: &Pubkey,
     ) -> Result<(u64, u64, u64)> {
-        let [fund_reserve_account, fund_supported_token_reserve_account, pool_program, pool_account, pool_token_mint, pool_token_program, withdraw_authority, reserve_stake_account, manager_fee_account, validator_list_account, clock, pricing_sources @ ..] =
+        let [fund_reserve_account, fund_supported_token_reserve_account, pool_program, pool_account, pool_token_mint, pool_token_program, withdraw_authority, reserve_stake_account, manager_fee_account, validator_list_account, pricing_sources @ ..] =
             accounts
         else {
             err!(error::ErrorCode::AccountNotEnoughKeys)?
@@ -420,7 +420,6 @@ impl StakeSOLCommand {
             reserve_stake_account,
             manager_fee_account,
             validator_list_account,
-            clock,
         )?;
 
         let (

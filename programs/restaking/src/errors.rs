@@ -294,8 +294,8 @@ pub enum ErrorCode {
     #[msg("fund: exceeded max pricing sources")]
     FundExceededMaxPricingSourcesError,
 
-    #[msg("fund: restaking vault authority not matched")]
-    FundRestakingVaultAuthorityNotMatchedError,
+    #[msg("restaking: vault authority not matched")]
+    RestakingVaultAuthorityNotMatchedError,
 
     #[msg("fund: restaking vault reward token not registered")]
     FundRestakingVaultRewardTokenNotRegisteredError,
@@ -311,4 +311,7 @@ pub enum ErrorCode {
 
     #[msg("pricing: asset type not matched")]
     TokenPricingAssetTypeNotMatchedError,
+
+    #[msg("unexpected pricing source")]
+    UnexpectedPricingSourceError,
 }

@@ -167,10 +167,6 @@ impl<'info> PricingService<'info> {
             TokenPricingSource::SanctumSingleValidatorSPLStakePool { address } => {
                 let pricing_source_accounts =
                     [self.get_token_pricing_source_account_info(address)?];
-                require_keys_eq!(
-                    SanctumSingleValidatorSPLStakePool::id(),
-                    *pricing_source_accounts[0].owner
-                );
                 SPLStakePoolValueProvider.resolve_underlying_assets(
                     token_mint,
                     &pricing_source_accounts,
@@ -193,10 +189,6 @@ impl<'info> PricingService<'info> {
             TokenPricingSource::SanctumMultiValidatorSPLStakePool { address } => {
                 let pricing_source_accounts =
                     [self.get_token_pricing_source_account_info(address)?];
-                require_keys_eq!(
-                    SanctumMultiValidatorSPLStakePool::id(),
-                    *pricing_source_accounts[0].owner
-                );
                 SPLStakePoolValueProvider.resolve_underlying_assets(
                     token_mint,
                     &pricing_source_accounts,

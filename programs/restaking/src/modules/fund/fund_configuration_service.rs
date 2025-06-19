@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use anchor_spl::token::spl_token;
 use anchor_spl::token::Token;
 use anchor_spl::token_2022::spl_token_2022;
 use anchor_spl::token_2022::Token2022;
@@ -11,8 +12,8 @@ use crate::modules::normalization::{NormalizedTokenPoolAccount, NormalizedTokenP
 use crate::modules::pricing::TokenPricingSource;
 use crate::modules::restaking;
 use crate::modules::reward;
+use crate::modules::staking;
 use crate::modules::swap;
-use crate::modules::swap::TokenSwapSource;
 use crate::utils::{AccountLoaderExt, AsAccountInfo, SystemProgramExt};
 
 use super::*;
@@ -156,6 +157,52 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
             supported_token_mint.key()
         );
 
+        #[deny(clippy::wildcard_enum_match_arm)]
+        match pricing_source {
+            TokenPricingSource::SPLStakePool { address }
+            | TokenPricingSource::MarinadeStakePool { address }
+            | TokenPricingSource::SanctumSingleValidatorSPLStakePool { address }
+            | TokenPricingSource::SanctumMultiValidatorSPLStakePool { address } => {
+                let pool_account_info = pricing_sources
+                    .iter()
+                    .find(|account| account.key() == address)
+                    .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundError))?;
+
+                staking::validate_pricing_source(
+                    &pricing_source,
+                    pool_account_info,
+                    &supported_token_mint,
+                )?
+            }
+            TokenPricingSource::OrcaDEXLiquidityPool { address } => {
+                let pool_account_info = pricing_sources
+                    .iter()
+                    .find(|account| account.key() == address)
+                    .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundError))?;
+
+                swap::validate_pricing_source(
+                    &pricing_source,
+                    pool_account_info,
+                    &supported_token_mint.key(),
+                    &spl_token::native_mint::ID,
+                )?
+            }
+            TokenPricingSource::PeggedToken { address } => {
+                // The pegging token is already at the fund's supported token list, so this validation is meaningful.
+                self.fund_account.load()?.get_supported_token(&address)?;
+            }
+            // otherwise fails
+            TokenPricingSource::FragmetricNormalizedTokenPool { .. }
+            | TokenPricingSource::FragmetricRestakingFund { .. }
+            | TokenPricingSource::JitoRestakingVault { .. }
+            | TokenPricingSource::SolvBTCVault { .. }
+            | TokenPricingSource::VirtualVault { .. } => {
+                err!(ErrorCode::UnexpectedPricingSourceError)?
+            }
+            #[cfg(all(test, not(feature = "idl-build")))]
+            TokenPricingSource::Mock { .. } => err!(ErrorCode::UnexpectedPricingSourceError)?,
+        }
+
         let mut fund_account = self.fund_account.load_mut()?;
         fund_account.add_supported_token(
             supported_token_mint.key(),
@@ -263,17 +310,18 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
     pub fn process_add_restaking_vault(
         &mut self,
         fund_vault_receipt_token_account: &InterfaceAccount<TokenAccount>,
-
         vault: &UncheckedAccount<'info>,
         vault_supported_token_mint: &InterfaceAccount<'info, Mint>,
         vault_receipt_token_mint: &InterfaceAccount<'info, Mint>,
 
+        pricing_source: TokenPricingSource,
         pricing_sources: &'info [AccountInfo<'info>],
     ) -> Result<events::FundManagerUpdatedFund> {
-        let receipt_token_pricing_source = restaking::validate_vault(
+        restaking::validate_pricing_source(
+            &pricing_source,
             vault.as_account_info(),
-            vault_supported_token_mint.as_account_info(),
-            vault_receipt_token_mint.as_account_info(),
+            &vault_supported_token_mint,
+            &vault_receipt_token_mint,
             self.fund_account.as_ref(),
         )?;
 
@@ -285,7 +333,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
             vault_receipt_token_mint.key(),
             *AsRef::<AccountInfo>::as_ref(vault_receipt_token_mint).owner,
             vault_receipt_token_mint.decimals,
-            receipt_token_pricing_source,
+            pricing_source,
             fund_vault_receipt_token_account.amount,
         )?;
         fund_account.update_pricing_source_addresses()?;
@@ -705,7 +753,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         &mut self,
         from_token_mint: &InterfaceAccount<Mint>,
         to_token_mint: &InterfaceAccount<Mint>,
-        swap_source: TokenSwapSource,
+        swap_source: swap::TokenSwapSource,
         swap_source_account: &'info AccountInfo<'info>,
     ) -> Result<events::FundManagerUpdatedFund> {
         swap::validate_swap_source(
@@ -728,7 +776,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         &mut self,
         from_token_mint: &InterfaceAccount<Mint>,
         to_token_mint: &InterfaceAccount<Mint>,
-        swap_source: TokenSwapSource,
+        swap_source: swap::TokenSwapSource,
     ) -> Result<events::FundManagerUpdatedFund> {
         self.fund_account.load_mut()?.remove_token_swap_strategy(
             from_token_mint.key(),

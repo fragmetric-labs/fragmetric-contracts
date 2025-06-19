@@ -1680,7 +1680,7 @@ describe('restaking.fragJTO test', async () => {
         swapSource: {
           __kind: 'OrcaDEXLiquidityPool',
           address: 'G2FiE1yn9N9ZJx5e1E2LxxMnHvb1H3hCuHLPfKJ98smA',
-        }
+        },
       })
     ).rejects.toThrowError('Transaction simulation failed'); // fund: token swap strategy not found.
     await expect(
@@ -1690,7 +1690,7 @@ describe('restaking.fragJTO test', async () => {
         swapSource: {
           __kind: 'OrcaDEXLiquidityPool',
           address: 'G2FiE1yn9N9ZJx5e1E2LxxMnHvb1H3hCuHLPfKJ98smA',
-        }
+        },
       })
     ).rejects.toThrowError('Transaction simulation failed'); // fund: token swap strategy not found.
     await expect(
@@ -1700,7 +1700,7 @@ describe('restaking.fragJTO test', async () => {
         swapSource: {
           __kind: 'OrcaDEXLiquidityPool',
           address: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL', // invalid swap source
-        }
+        },
       })
     ).rejects.toThrowError('Transaction simulation failed'); // fund: token swap strategy validation error.
 
