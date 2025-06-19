@@ -2850,7 +2850,16 @@
           "name": "program"
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "pricing_source",
+          "type": {
+            "defined": {
+              "name": "TokenPricingSource"
+            }
+          }
+        }
+      ]
     },
     {
       "name": "fund_manager_initialize_fund_restaking_vault_delegation",
@@ -11814,8 +11823,8 @@
     },
     {
       "code": 6095,
-      "name": "FundRestakingVaultAuthorityNotMatchedError",
-      "msg": "fund: restaking vault authority not matched"
+      "name": "RestakingVaultAuthorityNotMatchedError",
+      "msg": "restaking: vault authority not matched"
     },
     {
       "code": 6096,
@@ -11831,6 +11840,11 @@
       "code": 6098,
       "name": "FundTokenSwapStrategyValidationError",
       "msg": "fund: token swap strategy validation failed"
+    },
+    {
+      "code": 6099,
+      "name": "UnexpectedPricingSourceError",
+      "msg": "unexpected pricing source"
     }
   ],
   "types": [

@@ -762,7 +762,6 @@ impl UnstakeLSTCommand {
             reserve_stake_account,
             manager_fee_account,
             validator_list_account,
-            clock,
         )?;
 
         let fund_account = ctx.fund_account.load()?;

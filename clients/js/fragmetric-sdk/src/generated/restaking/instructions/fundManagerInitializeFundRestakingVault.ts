@@ -38,6 +38,12 @@ import {
   getAccountMetaFactory,
   type ResolvedAccount,
 } from '../shared';
+import {
+  getTokenPricingSourceDecoder,
+  getTokenPricingSourceEncoder,
+  type TokenPricingSource,
+  type TokenPricingSourceArgs,
+} from '../types';
 
 export const FUND_MANAGER_INITIALIZE_FUND_RESTAKING_VAULT_DISCRIMINATOR =
   new Uint8Array([197, 78, 171, 122, 189, 150, 117, 182]);
@@ -126,13 +132,19 @@ export type FundManagerInitializeFundRestakingVaultInstruction<
 
 export type FundManagerInitializeFundRestakingVaultInstructionData = {
   discriminator: ReadonlyUint8Array;
+  pricingSource: TokenPricingSource;
 };
 
-export type FundManagerInitializeFundRestakingVaultInstructionDataArgs = {};
+export type FundManagerInitializeFundRestakingVaultInstructionDataArgs = {
+  pricingSource: TokenPricingSourceArgs;
+};
 
 export function getFundManagerInitializeFundRestakingVaultInstructionDataEncoder(): Encoder<FundManagerInitializeFundRestakingVaultInstructionDataArgs> {
   return transformEncoder(
-    getStructEncoder([['discriminator', fixEncoderSize(getBytesEncoder(), 8)]]),
+    getStructEncoder([
+      ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
+      ['pricingSource', getTokenPricingSourceEncoder()],
+    ]),
     (value) => ({
       ...value,
       discriminator: FUND_MANAGER_INITIALIZE_FUND_RESTAKING_VAULT_DISCRIMINATOR,
@@ -143,6 +155,7 @@ export function getFundManagerInitializeFundRestakingVaultInstructionDataEncoder
 export function getFundManagerInitializeFundRestakingVaultInstructionDataDecoder(): Decoder<FundManagerInitializeFundRestakingVaultInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
+    ['pricingSource', getTokenPricingSourceDecoder()],
   ]);
 }
 
@@ -184,6 +197,7 @@ export type FundManagerInitializeFundRestakingVaultAsyncInput<
   vaultVaultSupportedTokenAccount?: Address<TAccountVaultVaultSupportedTokenAccount>;
   eventAuthority?: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
+  pricingSource: FundManagerInitializeFundRestakingVaultInstructionDataArgs['pricingSource'];
 };
 
 export async function getFundManagerInitializeFundRestakingVaultInstructionAsync<
@@ -280,6 +294,9 @@ export async function getFundManagerInitializeFundRestakingVaultInstructionAsync
     keyof typeof originalAccounts,
     ResolvedAccount
   >;
+
+  // Original args.
+  const args = { ...input };
 
   // Resolve default values.
   if (!accounts.fundManager.value) {
@@ -415,7 +432,7 @@ export async function getFundManagerInitializeFundRestakingVaultInstructionAsync
     ],
     programAddress,
     data: getFundManagerInitializeFundRestakingVaultInstructionDataEncoder().encode(
-      {}
+      args as FundManagerInitializeFundRestakingVaultInstructionDataArgs
     ),
   } as FundManagerInitializeFundRestakingVaultInstruction<
     TProgramAddress,
@@ -465,6 +482,7 @@ export type FundManagerInitializeFundRestakingVaultInput<
   vaultVaultSupportedTokenAccount: Address<TAccountVaultVaultSupportedTokenAccount>;
   eventAuthority: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
+  pricingSource: FundManagerInitializeFundRestakingVaultInstructionDataArgs['pricingSource'];
 };
 
 export function getFundManagerInitializeFundRestakingVaultInstruction<
@@ -560,6 +578,9 @@ export function getFundManagerInitializeFundRestakingVaultInstruction<
     ResolvedAccount
   >;
 
+  // Original args.
+  const args = { ...input };
+
   // Resolve default values.
   if (!accounts.fundManager.value) {
     accounts.fundManager.value =
@@ -589,7 +610,7 @@ export function getFundManagerInitializeFundRestakingVaultInstruction<
     ],
     programAddress,
     data: getFundManagerInitializeFundRestakingVaultInstructionDataEncoder().encode(
-      {}
+      args as FundManagerInitializeFundRestakingVaultInstructionDataArgs
     ),
   } as FundManagerInitializeFundRestakingVaultInstruction<
     TProgramAddress,

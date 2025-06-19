@@ -573,9 +573,9 @@ pub mod restaking {
     // FundManagerFundRestakingVaultInitialContext
     ////////////////////////////////////////////
 
-    // TODO: add pricing_source to argument
     pub fn fund_manager_initialize_fund_restaking_vault<'info>(
         ctx: Context<'_, '_, 'info, 'info, FundManagerFundRestakingVaultInitialContext<'info>>,
+        pricing_source: modules::pricing::TokenPricingSource,
     ) -> Result<()> {
         emit_cpi!(modules::fund::FundConfigurationService::new(
             &mut ctx.accounts.receipt_token_mint,
@@ -586,6 +586,7 @@ pub mod restaking {
             &ctx.accounts.vault_account,
             &ctx.accounts.vault_supported_token_mint,
             &ctx.accounts.vault_receipt_token_mint,
+            pricing_source,
             ctx.remaining_accounts,
         )?);
 

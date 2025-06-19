@@ -2,8 +2,10 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount};
 use whirlpool_cpi::whirlpool::accounts::Whirlpool;
 
+use super::ValidateLiquidityPool;
+
 pub(in crate::modules) struct OrcaDEXLiquidityPoolService<'info> {
-    whirlpool_program: Program<'info, whirlpool_cpi::whirlpool::program::Whirlpool>,
+    whirlpool_program: &'info AccountInfo<'info>,
     pool_account: Account<'info, Whirlpool>,
     token_mint_a: &'info AccountInfo<'info>,
     token_vault_a: &'info AccountInfo<'info>,
@@ -13,8 +15,23 @@ pub(in crate::modules) struct OrcaDEXLiquidityPoolService<'info> {
     token_program_b: &'info AccountInfo<'info>,
 }
 
-impl<'info> OrcaDEXLiquidityPoolService<'info> {
+impl ValidateLiquidityPool for OrcaDEXLiquidityPoolService<'_> {
     #[inline(never)]
+    fn validate_liquidity_pool<'info>(
+        pool_account: &'info AccountInfo<'info>,
+        from_token_mint: &Pubkey,
+        to_token_mint: &Pubkey,
+    ) -> Result<()> {
+        let pool_account = Self::deserialize_pool_account(pool_account)?;
+
+        // This validates pool account by checking that input from_token_mint and to_token_mint match the pool's tokenA, B mint.
+        Self::a_to_b(&pool_account, &from_token_mint.key(), &to_token_mint.key())?;
+
+        Ok(())
+    }
+}
+
+impl<'info> OrcaDEXLiquidityPoolService<'info> {
     pub fn new(
         whirlpool_program: &'info AccountInfo<'info>,
         pool_account: &'info AccountInfo<'info>,
@@ -27,6 +44,7 @@ impl<'info> OrcaDEXLiquidityPoolService<'info> {
     ) -> Result<Self> {
         let pool_account = Self::deserialize_pool_account(pool_account)?;
 
+        require_keys_eq!(whirlpool_cpi::whirlpool::ID, whirlpool_program.key());
         require_keys_eq!(pool_account.token_mint_a, token_mint_a.key());
         require_keys_eq!(pool_account.token_vault_a, token_vault_a.key());
         require_keys_eq!(*token_mint_a.owner, token_program_a.key());
@@ -35,7 +53,7 @@ impl<'info> OrcaDEXLiquidityPoolService<'info> {
         require_keys_eq!(*token_mint_b.owner, token_program_b.key());
 
         Ok(Self {
-            whirlpool_program: Program::try_from(whirlpool_program)?,
+            whirlpool_program,
             pool_account,
             token_mint_a,
             token_vault_a,
@@ -46,24 +64,10 @@ impl<'info> OrcaDEXLiquidityPoolService<'info> {
         })
     }
 
-    #[inline(always)]
-    pub(super) fn deserialize_pool_account(
-        pool_account: &'info AccountInfo<'info>,
-    ) -> Result<Account<'info, Whirlpool>> {
+    pub(super) fn deserialize_pool_account<'a>(
+        pool_account: &'a AccountInfo<'a>,
+    ) -> Result<Account<'a, Whirlpool>> {
         Account::try_from(pool_account)
-    }
-
-    pub fn validate_pool(
-        pool_account: &'info AccountInfo<'info>,
-        from_token_mint: &InterfaceAccount<Mint>,
-        to_token_mint: &InterfaceAccount<Mint>,
-    ) -> Result<()> {
-        let pool_account = Self::deserialize_pool_account(pool_account)?;
-
-        // This validates pool_account by checking that input from_token_mint and to_token_mint match the pool's tokenA, B mint.
-        Self::a_to_b(&pool_account, &from_token_mint.key(), &to_token_mint.key())?;
-
-        Ok(())
     }
 
     fn a_to_b(
