@@ -272,23 +272,12 @@ impl ClaimUnrestakedVSTCommand {
         accounts: &[&'info AccountInfo<'info>],
         vault: &Pubkey,
     ) -> ExecutionResult {
-        let mut pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-            .new_pricing_service(accounts.iter().copied(), false)?;
-
-        let mut fund_account = ctx.fund_account.load_mut()?;
-        let restaking_vault = fund_account.get_restaking_vault_mut(vault)?;
+        let fund_account = ctx.fund_account.load()?;
+        let restaking_vault = fund_account.get_restaking_vault(vault)?;
         let supported_token_mint = restaking_vault.supported_token_mint;
-        let receipt_token_mint = restaking_vault.receipt_token_mint;
         let receipt_token_pricing_source = restaking_vault
             .receipt_token_pricing_source
             .try_deserialize()?;
-
-        let (supported_token_amount_numerator, receipt_token_amount_denominator) = pricing_service
-            .get_vault_supported_token_to_receipt_token_exchange_ratio(&receipt_token_mint)?;
-        restaking_vault.update_supported_token_to_receipt_token_exchange_ratio(
-            supported_token_amount_numerator,
-            receipt_token_amount_denominator,
-        )?;
 
         drop(fund_account);
 
@@ -324,6 +313,25 @@ impl ClaimUnrestakedVSTCommand {
                 let mut result_deducted_receipt_token_fee_amount = 0u64;
 
                 Ok(if !claimable_withdrawal_ticket_indices.is_empty() {
+                    let mut pricing_service =
+                        FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+                            .new_pricing_service(accounts.iter().copied(), false)?;
+
+                    let mut fund_account = ctx.fund_account.load_mut()?;
+                    let restaking_vault = fund_account.get_restaking_vault_mut(vault)?;
+                    let receipt_token_mint = &restaking_vault.receipt_token_mint;
+
+                    let (supported_token_amount_numerator, receipt_token_amount_denominator) =
+                        pricing_service.get_vault_supported_token_to_receipt_token_exchange_ratio(
+                            receipt_token_mint,
+                        )?;
+                    restaking_vault.update_supported_token_to_receipt_token_exchange_ratio(
+                        supported_token_amount_numerator,
+                        receipt_token_amount_denominator,
+                    )?;
+
+                    drop(fund_account);
+
                     let mut last_to_vault_supported_token_amount = 0;
 
                     let fund_account = ctx.fund_account.load()?;
@@ -369,11 +377,8 @@ impl ClaimUnrestakedVSTCommand {
 
                     drop(fund_account);
 
-                    let mut fund_service =
-                        FundService::new(ctx.receipt_token_mint, ctx.fund_account)?;
-                    fund_service.update_asset_values(&mut pricing_service, false)?;
-
-                    drop(fund_service);
+                    FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+                        .update_asset_values(&mut pricing_service, false)?;
 
                     let mut fund_account = ctx.fund_account.load_mut()?;
 
@@ -472,6 +477,26 @@ impl ClaimUnrestakedVSTCommand {
                     err!(error::ErrorCode::AccountNotEnoughKeys)?
                 };
                 require_keys_eq!(address, vault_account.key());
+
+                let mut pricing_service =
+                    FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+                        .new_pricing_service(accounts.iter().copied(), false)?;
+
+                let mut fund_account = ctx.fund_account.load_mut()?;
+                let restaking_vault: &mut RestakingVault =
+                    fund_account.get_restaking_vault_mut(vault)?;
+                let receipt_token_mint: &Pubkey = &restaking_vault.receipt_token_mint;
+
+                let (supported_token_amount_numerator, receipt_token_amount_denominator) =
+                    pricing_service.get_vault_supported_token_to_receipt_token_exchange_ratio(
+                        receipt_token_mint,
+                    )?;
+                restaking_vault.update_supported_token_to_receipt_token_exchange_ratio(
+                    supported_token_amount_numerator,
+                    receipt_token_amount_denominator,
+                )?;
+
+                drop(fund_account);
 
                 let fund_account = ctx.fund_account.load()?;
 

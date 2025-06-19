@@ -583,30 +583,16 @@ impl UnrestakeVRTCommand {
             return Ok((None, None));
         }
 
-        let mut pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-            .new_pricing_service(accounts.iter().copied(), false)?;
-
         let item = &items[0];
-        let mut fund_account = ctx.fund_account.load_mut()?;
-        let restaking_vault = fund_account.get_restaking_vault_mut(&item.vault)?;
-        let receipt_token_mint = restaking_vault.receipt_token_mint;
-
-        let (supported_token_amount_numerator, receipt_token_amount_denominator) = pricing_service
-            .get_vault_supported_token_to_receipt_token_exchange_ratio(&receipt_token_mint)?;
-        restaking_vault.update_supported_token_to_receipt_token_exchange_ratio(
-            supported_token_amount_numerator,
-            receipt_token_amount_denominator,
-        )?;
+        let fund_account = ctx.fund_account.load()?;
+        let restaking_vault = fund_account.get_restaking_vault(&item.vault)?;
+        let receipt_token_pricing_source = restaking_vault
+            .receipt_token_pricing_source
+            .try_deserialize()?;
 
         drop(fund_account);
 
-        let fund_account = ctx.fund_account.load()?;
-        let restaking_vault = fund_account.get_restaking_vault(&item.vault)?;
-
-        let result = match restaking_vault
-            .receipt_token_pricing_source
-            .try_deserialize()?
-        {
+        let result = (|| match receipt_token_pricing_source {
             Some(TokenPricingSource::JitoRestakingVault { address }) => {
                 let [vault_program, vault_config, vault_account, token_program, associated_token, system_program, vault_receipt_token_mint, fund_vault_receipt_token_reserve_account, fund_reserve_account, remaining_accounts @ ..] =
                     accounts
@@ -644,6 +630,27 @@ impl UnrestakeVRTCommand {
                     withdrawal_ticket_base_account,
                 )) = withdrawal_ticket_accounts
                 {
+                    let mut pricing_service =
+                        FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+                            .new_pricing_service(accounts.iter().copied(), false)?;
+
+                    let mut fund_account = ctx.fund_account.load_mut()?;
+                    let restaking_vault = fund_account.get_restaking_vault_mut(&item.vault)?;
+                    let receipt_token_mint = &restaking_vault.receipt_token_mint;
+
+                    let (supported_token_amount_numerator, receipt_token_amount_denominator) =
+                        pricing_service.get_vault_supported_token_to_receipt_token_exchange_ratio(
+                            receipt_token_mint,
+                        )?;
+                    restaking_vault.update_supported_token_to_receipt_token_exchange_ratio(
+                        supported_token_amount_numerator,
+                        receipt_token_amount_denominator,
+                    )?;
+
+                    drop(fund_account);
+
+                    let fund_account = ctx.fund_account.load()?;
+
                     let vault_service =
                         JitoRestakingVaultService::new(vault_program, vault_config, vault_account)?;
                     let (
@@ -690,7 +697,7 @@ impl UnrestakeVRTCommand {
                         restaking_vault.receipt_token_operation_reserved_amount
                     );
 
-                    Some(
+                    Ok(Some(
                         UnrestakeVRTCommandResult {
                             vault: item.vault,
                             token_mint: item.receipt_token_mint,
@@ -701,12 +708,12 @@ impl UnrestakeVRTCommand {
                                 .receipt_token_operation_reserved_amount,
                         }
                         .into(),
-                    )
+                    ))
                 } else {
-                    None
+                    Ok(None)
                 }
             }
-            Some(TokenPricingSource::VirtualVault { .. }) => None,
+            Some(TokenPricingSource::VirtualVault { .. }) => Ok(None),
             Some(TokenPricingSource::SolvBTCVault { address }) => {
                 let [vault_program, vault_account, vault_receipt_token_mint, vault_supported_token_mint, vault_vault_supported_token_account, token_program, event_authority, fund_vault_supported_token_account, fund_vault_receipt_token_account, fund_reserve, ..] =
                     accounts
@@ -714,6 +721,27 @@ impl UnrestakeVRTCommand {
                     err!(ErrorCode::AccountNotEnoughKeys)?
                 };
                 require_keys_eq!(address, vault_account.key());
+
+                let mut pricing_service =
+                    FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+                        .new_pricing_service(accounts.iter().copied(), false)?;
+
+                let mut fund_account = ctx.fund_account.load_mut()?;
+                let restaking_vault = fund_account.get_restaking_vault_mut(&item.vault)?;
+                let receipt_token_mint = &restaking_vault.receipt_token_mint;
+
+                let (supported_token_amount_numerator, receipt_token_amount_denominator) =
+                    pricing_service.get_vault_supported_token_to_receipt_token_exchange_ratio(
+                        receipt_token_mint,
+                    )?;
+                restaking_vault.update_supported_token_to_receipt_token_exchange_ratio(
+                    supported_token_amount_numerator,
+                    receipt_token_amount_denominator,
+                )?;
+
+                drop(fund_account);
+
+                let fund_account = ctx.fund_account.load()?;
 
                 let vault_service = SolvBTCVaultService::new(vault_program, vault_account)?;
                 let (
@@ -763,7 +791,7 @@ impl UnrestakeVRTCommand {
                         restaking_vault.receipt_token_operation_reserved_amount
                     );
 
-                    Some(
+                    Ok(Some(
                         UnrestakeVRTCommandResult {
                             vault: item.vault,
                             token_mint: item.receipt_token_mint,
@@ -774,9 +802,9 @@ impl UnrestakeVRTCommand {
                                 .receipt_token_operation_reserved_amount,
                         }
                         .into(),
-                    )
+                    ))
                 } else {
-                    None
+                    Ok(None)
                 }
             }
             // invalid configuration
@@ -793,7 +821,7 @@ impl UnrestakeVRTCommand {
             Some(TokenPricingSource::Mock { .. }) => {
                 err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
             }
-        };
+        })()?;
 
         Ok((
             result,
