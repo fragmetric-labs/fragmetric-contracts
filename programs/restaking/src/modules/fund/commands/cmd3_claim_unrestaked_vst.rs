@@ -313,18 +313,11 @@ impl ClaimUnrestakedVSTCommand {
                 let mut result_deducted_receipt_token_fee_amount = 0u64;
 
                 Ok(if !claimable_withdrawal_ticket_indices.is_empty() {
-                    let mut pricing_service =
-                        FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-                            .new_pricing_service(accounts.iter().copied(), false)?;
-
                     let mut fund_account = ctx.fund_account.load_mut()?;
                     let restaking_vault = fund_account.get_restaking_vault_mut(vault)?;
-                    let receipt_token_mint = &restaking_vault.receipt_token_mint;
 
                     let (supported_token_amount_numerator, receipt_token_amount_denominator) =
-                        pricing_service.get_vault_supported_token_to_receipt_token_exchange_ratio(
-                            receipt_token_mint,
-                        )?;
+                        vault_service.get_supported_token_to_receipt_token_exchange_ratio()?;
                     restaking_vault.update_supported_token_to_receipt_token_exchange_ratio(
                         supported_token_amount_numerator,
                         receipt_token_amount_denominator,
@@ -377,8 +370,9 @@ impl ClaimUnrestakedVSTCommand {
 
                     drop(fund_account);
 
-                    FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-                        .update_asset_values(&mut pricing_service, false)?;
+                    let mut pricing_service =
+                        FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+                            .new_pricing_service(accounts.iter().copied(), false)?;
 
                     let mut fund_account = ctx.fund_account.load_mut()?;
 
@@ -478,19 +472,13 @@ impl ClaimUnrestakedVSTCommand {
                 };
                 require_keys_eq!(address, vault_account.key());
 
-                let mut pricing_service =
-                    FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-                        .new_pricing_service(accounts.iter().copied(), false)?;
-
+                let vault_service = SolvBTCVaultService::new(vault_program, vault_account)?;
                 let mut fund_account = ctx.fund_account.load_mut()?;
                 let restaking_vault: &mut RestakingVault =
                     fund_account.get_restaking_vault_mut(vault)?;
-                let receipt_token_mint: &Pubkey = &restaking_vault.receipt_token_mint;
 
                 let (supported_token_amount_numerator, receipt_token_amount_denominator) =
-                    pricing_service.get_vault_supported_token_to_receipt_token_exchange_ratio(
-                        receipt_token_mint,
-                    )?;
+                    vault_service.get_supported_token_to_receipt_token_exchange_ratio()?;
                 restaking_vault.update_supported_token_to_receipt_token_exchange_ratio(
                     supported_token_amount_numerator,
                     receipt_token_amount_denominator,
@@ -500,7 +488,6 @@ impl ClaimUnrestakedVSTCommand {
 
                 let fund_account = ctx.fund_account.load()?;
 
-                let vault_service = SolvBTCVaultService::new(vault_program, vault_account)?;
                 let (
                     fund_reserve_vault_supported_token_amount,
                     unrestaked_receipt_token_amount,
@@ -528,7 +515,8 @@ impl ClaimUnrestakedVSTCommand {
                 drop(fund_account);
 
                 let mut fund_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?;
-                fund_service.update_asset_values(&mut pricing_service, false)?;
+                let mut pricing_service =
+                    fund_service.new_pricing_service(accounts.iter().copied(), false)?;
 
                 let deducted_receipt_token_fee_amount = pricing_service.get_token_amount_as_token(
                     &supported_token_mint,

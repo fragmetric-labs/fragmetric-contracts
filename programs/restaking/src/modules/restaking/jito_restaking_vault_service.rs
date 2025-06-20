@@ -12,7 +12,8 @@ use jito_vault_core::{
 
 use crate::constants::{JITO_VAULT_CONFIG_ADDRESS, JITO_VAULT_PROGRAM_ID};
 use crate::errors::ErrorCode;
-use crate::modules::pricing::PricingService;
+use crate::modules::pricing::{PricingService, TokenValue, TokenValueProvider};
+use crate::modules::restaking::JitoRestakingVaultValueProvider;
 use crate::utils;
 use crate::utils::AccountInfoExt;
 
@@ -1100,5 +1101,12 @@ impl<'info> JitoRestakingVaultService<'info> {
         );
 
         Ok(())
+    }
+
+    pub fn get_supported_token_to_receipt_token_exchange_ratio(&self) -> Result<(u64, u64)> {
+        let data = &Self::borrow_account_data(self.vault_account)?;
+        let vault = Self::deserialize_account_data::<Vault>(data)?;
+
+        Ok((vault.tokens_deposited(), vault.vrt_supply()))
     }
 }
