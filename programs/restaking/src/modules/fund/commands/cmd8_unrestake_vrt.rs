@@ -641,7 +641,7 @@ impl UnrestakeVRTCommand {
 
                     let (supported_token_amount_numerator, receipt_token_amount_denominator) =
                         vault_service.get_supported_token_to_receipt_token_exchange_ratio()?;
-                    restaking_vault.update_supported_token_to_receipt_token_exchange_ratio(
+                    restaking_vault.update_supported_token_compounded_amount(
                         supported_token_amount_numerator,
                         receipt_token_amount_denominator,
                     )?;
@@ -685,6 +685,14 @@ impl UnrestakeVRTCommand {
 
                     let mut fund_account = ctx.fund_account.load_mut()?;
                     let restaking_vault = fund_account.get_restaking_vault_mut(&item.vault)?;
+
+                    let (supported_token_amount_numerator, receipt_token_amount_denominator) =
+                        vault_service.get_supported_token_to_receipt_token_exchange_ratio()?;
+                    restaking_vault.update_supported_token_receipt_token_exchange_ratio(
+                        supported_token_amount_numerator,
+                        receipt_token_amount_denominator,
+                    )?;
+
                     restaking_vault.receipt_token_operation_reserved_amount -=
                         enqueued_vault_receipt_token_amount;
                     restaking_vault.receipt_token_operation_receivable_amount +=
@@ -726,7 +734,7 @@ impl UnrestakeVRTCommand {
 
                 let (supported_token_amount_numerator, receipt_token_amount_denominator) =
                     vault_service.get_supported_token_to_receipt_token_exchange_ratio()?;
-                restaking_vault.update_supported_token_to_receipt_token_exchange_ratio(
+                restaking_vault.update_supported_token_compounded_amount(
                     supported_token_amount_numerator,
                     receipt_token_amount_denominator,
                 )?;
@@ -774,6 +782,14 @@ impl UnrestakeVRTCommand {
                     );
 
                     let restaking_vault = fund_account.get_restaking_vault_mut(&item.vault)?;
+
+                    let (supported_token_amount_numerator, receipt_token_amount_denominator) =
+                        vault_service.get_supported_token_to_receipt_token_exchange_ratio()?;
+                    restaking_vault.update_supported_token_compounded_amount(
+                        supported_token_amount_numerator,
+                        receipt_token_amount_denominator,
+                    )?;
+
                     restaking_vault.receipt_token_operation_reserved_amount -=
                         enqueued_vault_receipt_token_amount;
 

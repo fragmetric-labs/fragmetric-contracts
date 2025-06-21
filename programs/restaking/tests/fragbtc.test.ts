@@ -3866,7 +3866,7 @@ describe('restaking.fragBTC test', async () => {
                     },
                     "vault": "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
                     "vaultSupportedTokenCompoundedAmount": 188756889n,
-                    "yieldTokenAmount": 2076325781200000n,
+                    "yieldTokenAmount": 3939996280000000n,
                     "yieldTokenMint": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
                   },
                 ],

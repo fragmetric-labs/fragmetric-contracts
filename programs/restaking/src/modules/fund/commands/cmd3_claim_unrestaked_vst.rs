@@ -318,7 +318,7 @@ impl ClaimUnrestakedVSTCommand {
 
                     let (supported_token_amount_numerator, receipt_token_amount_denominator) =
                         vault_service.get_supported_token_to_receipt_token_exchange_ratio()?;
-                    restaking_vault.update_supported_token_to_receipt_token_exchange_ratio(
+                    restaking_vault.update_supported_token_compounded_amount(
                         supported_token_amount_numerator,
                         receipt_token_amount_denominator,
                     )?;
@@ -375,8 +375,15 @@ impl ClaimUnrestakedVSTCommand {
                             .new_pricing_service(accounts.iter().copied(), false)?;
 
                     let mut fund_account = ctx.fund_account.load_mut()?;
-
                     let restaking_vault = fund_account.get_restaking_vault_mut(vault)?;
+
+                    let (supported_token_amount_numerator, receipt_token_amount_denominator) =
+                        vault_service.get_supported_token_to_receipt_token_exchange_ratio()?;
+                    restaking_vault.update_supported_token_receipt_token_exchange_ratio(
+                        supported_token_amount_numerator,
+                        receipt_token_amount_denominator,
+                    )?;
+
                     restaking_vault.receipt_token_operation_receivable_amount -=
                         result_unrestaked_receipt_token_amount;
 
@@ -479,7 +486,7 @@ impl ClaimUnrestakedVSTCommand {
 
                 let (supported_token_amount_numerator, receipt_token_amount_denominator) =
                     vault_service.get_supported_token_to_receipt_token_exchange_ratio()?;
-                restaking_vault.update_supported_token_to_receipt_token_exchange_ratio(
+                restaking_vault.update_supported_token_compounded_amount(
                     supported_token_amount_numerator,
                     receipt_token_amount_denominator,
                 )?;
@@ -511,6 +518,18 @@ impl ClaimUnrestakedVSTCommand {
                 if unrestaked_receipt_token_amount == 0 {
                     return Ok(None);
                 }
+
+                drop(fund_account);
+
+                let mut fund_account = ctx.fund_account.load_mut()?;
+                let restaking_vault = fund_account.get_restaking_vault_mut(vault)?;
+
+                let (supported_token_amount_numerator, receipt_token_amount_denominator) =
+                    vault_service.get_supported_token_to_receipt_token_exchange_ratio()?;
+                restaking_vault.update_supported_token_receipt_token_exchange_ratio(
+                    supported_token_amount_numerator,
+                    receipt_token_amount_denominator,
+                )?;
 
                 drop(fund_account);
 

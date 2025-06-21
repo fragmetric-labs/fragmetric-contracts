@@ -342,7 +342,7 @@ impl RestakingVault {
             .ok_or_else(|| error!(ErrorCode::FundRestakingVaultOperatorNotFoundError))
     }
 
-    pub fn update_supported_token_to_receipt_token_exchange_ratio(
+    pub fn update_supported_token_compounded_amount(
         &mut self,
         supported_token_amount_numerator: u64,
         receipt_token_amount_denominator: u64,
@@ -369,6 +369,14 @@ impl RestakingVault {
         self.supported_token_compounded_amount +=
             supported_token_amount as i128 - supported_token_amount_before as i128;
 
+        Ok(())
+    }
+
+    pub fn update_supported_token_receipt_token_exchange_ratio(
+        &mut self,
+        supported_token_amount_numerator: u64,
+        receipt_token_amount_denominator: u64,
+    ) -> Result<()> {
         self.supported_token_to_receipt_token_exchange_ratio = TokenExchangeRatio {
             numerator: supported_token_amount_numerator,
             denominator: receipt_token_amount_denominator,
