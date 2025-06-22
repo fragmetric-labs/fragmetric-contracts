@@ -18,8 +18,16 @@ pub enum VaultError {
     SolvProtocolWalletMismatchError,
 
     // TODO/phase3: deprecate
+    #[msg("invalid srt deposit fee rate")]
+    InvalidSolvProtocolDepositFeeRateError,
+
+    // TODO/phase3: deprecate
     #[msg("invalid srt withdrawal fee rate")]
     InvalidSolvProtocolWithdrawalFeeRateError,
+
+    // TODO/phase3: deprecate
+    #[msg("invalid srt fixed amount fee")]
+    InvalidSolvProtocolFixedAmountFeeError,
 
     #[msg("vault supported token mint mismatch")]
     VaultSupportedTokenMintMismatchError,

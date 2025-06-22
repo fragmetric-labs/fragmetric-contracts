@@ -97,8 +97,7 @@ pub fn process_confirm_deposits(ctx: Context<SolvManagerContext>) -> Result<()> 
     let mut vault = vault_account.load_mut()?;
 
     // TODO/phase3: calculate ∆vault_solv_receipt_token_account.amount
-    let srt_amount = vault.get_srt_operation_receivable_amount_for_deposit(vst_amount)?;
-    vault.deposit_vst(vst_amount, srt_amount)?;
+    vault.deposit_vst(vst_amount)?;
 
     // TODO/phase3: use validation code below
     // require_gte!(
