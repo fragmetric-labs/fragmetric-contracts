@@ -11843,16 +11843,6 @@
     },
     {
       "code": 6099,
-      "name": "TokenPricingSourceNotMatchedError",
-      "msg": "pricing: token pricing source not matchced"
-    },
-    {
-      "code": 6100,
-      "name": "TokenPricingAssetTypeNotMatchedError",
-      "msg": "pricing: asset type not matched"
-    },
-    {
-      "code": 6101,
       "name": "UnexpectedPricingSourceError",
       "msg": "unexpected pricing source"
     }

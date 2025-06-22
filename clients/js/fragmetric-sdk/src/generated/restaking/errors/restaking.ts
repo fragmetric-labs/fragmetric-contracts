@@ -212,12 +212,8 @@ export const RESTAKING_ERROR__FUND_RESTAKING_VAULT_REWARD_TOKEN_NOT_REGISTERED_E
 export const RESTAKING_ERROR__FUND_OPERATION_DISABLED_ERROR = 0x17d1; // 6097
 /** FundTokenSwapStrategyValidationError: fund: token swap strategy validation failed */
 export const RESTAKING_ERROR__FUND_TOKEN_SWAP_STRATEGY_VALIDATION_ERROR = 0x17d2; // 6098
-/** TokenPricingSourceNotMatchedError: pricing: token pricing source not matchced */
-export const RESTAKING_ERROR__TOKEN_PRICING_SOURCE_NOT_MATCHED_ERROR = 0x17d3; // 6099
-/** TokenPricingAssetTypeNotMatchedError: pricing: asset type not matched */
-export const RESTAKING_ERROR__TOKEN_PRICING_ASSET_TYPE_NOT_MATCHED_ERROR = 0x17d4; // 6100
 /** UnexpectedPricingSourceError: unexpected pricing source */
-export const RESTAKING_ERROR__UNEXPECTED_PRICING_SOURCE_ERROR = 0x17d5; // 6101
+export const RESTAKING_ERROR__UNEXPECTED_PRICING_SOURCE_ERROR = 0x17d3; // 6099
 
 export type RestakingError =
   | typeof RESTAKING_ERROR__CALCULATION_ARITHMETIC_EXCEPTION
@@ -317,9 +313,7 @@ export type RestakingError =
   | typeof RESTAKING_ERROR__STAKING_UNINITIALIZED_WITHDRAW_TICKET_NOT_FOUND_EXCEPTION
   | typeof RESTAKING_ERROR__TOKEN_NOT_TRANSFERABLE_ERROR
   | typeof RESTAKING_ERROR__TOKEN_NOT_TRANSFERRING_EXCEPTION
-  | typeof RESTAKING_ERROR__TOKEN_PRICING_ASSET_TYPE_NOT_MATCHED_ERROR
   | typeof RESTAKING_ERROR__TOKEN_PRICING_SOURCE_ACCOUNT_NOT_FOUND_ERROR
-  | typeof RESTAKING_ERROR__TOKEN_PRICING_SOURCE_NOT_MATCHED_ERROR
   | typeof RESTAKING_ERROR__UNEXPECTED_PRICING_SOURCE_ERROR
   | typeof RESTAKING_ERROR__U_T_F8_DECODING_EXCEPTION;
 
@@ -423,9 +417,7 @@ if (process.env.NODE_ENV !== 'production') {
     [RESTAKING_ERROR__STAKING_UNINITIALIZED_WITHDRAW_TICKET_NOT_FOUND_EXCEPTION]: `staking: failed to find uninitialized withdraw ticket`,
     [RESTAKING_ERROR__TOKEN_NOT_TRANSFERABLE_ERROR]: `token is not transferable currently`,
     [RESTAKING_ERROR__TOKEN_NOT_TRANSFERRING_EXCEPTION]: `token is not transferring currently`,
-    [RESTAKING_ERROR__TOKEN_PRICING_ASSET_TYPE_NOT_MATCHED_ERROR]: `pricing: asset type not matched`,
     [RESTAKING_ERROR__TOKEN_PRICING_SOURCE_ACCOUNT_NOT_FOUND_ERROR]: `pricing: token pricing source is not found`,
-    [RESTAKING_ERROR__TOKEN_PRICING_SOURCE_NOT_MATCHED_ERROR]: `pricing: token pricing source not matchced`,
     [RESTAKING_ERROR__UNEXPECTED_PRICING_SOURCE_ERROR]: `unexpected pricing source`,
     [RESTAKING_ERROR__U_T_F8_DECODING_EXCEPTION]: `utf-8 decoding exception`,
   };
