@@ -1427,7 +1427,7 @@ mod tests {
         #[test]
         fn test_offset_srt_receivables_no_price_increase(
             mut vault in vault(),
-            fixed_amount_fee_as_srt in 0u64..5_000,
+            fixed_amount_fee_as_srt in 0..SOLV_PROTOCOL_MAX_FIXED_AMOUNT_FEE / 3,
         ) {
             vault
                 .deposit_vst(vault.vst_operation_reserved_amount)
@@ -1469,7 +1469,7 @@ mod tests {
         #[test]
         fn test_offset_srt_receivables_with_price_increase(
             mut vault in vault(),
-            fixed_amount_fee_as_srt in 0u64..5_000,
+            fixed_amount_fee_as_srt in 0..SOLV_PROTOCOL_MAX_FIXED_AMOUNT_FEE / 3,
         ) {
             vault
                 .deposit_vst(vault.vst_operation_reserved_amount)
@@ -1716,7 +1716,7 @@ mod tests {
         #[test]
         fn test_complete_withdrawal_request_one_by_one(
             mut vault in vault(),
-            fixed_amount_fee_as_vst in 0u64..=20000,
+            fixed_amount_fee_as_vst in 0..=SOLV_PROTOCOL_MAX_FIXED_AMOUNT_FEE,
         ) {
             vault.solv_protocol_deposit_fee_rate_bps = 0;
             vault.solv_protocol_withdrawal_fee_rate_bps = 0;
@@ -1794,7 +1794,7 @@ mod tests {
         #[test]
         fn test_complete_withdrawal_request_bulk(
             mut vault in vault(),
-            fixed_amount_fee_as_vst in 0u64..=20000,
+            fixed_amount_fee_as_vst in 0..=SOLV_PROTOCOL_MAX_FIXED_AMOUNT_FEE,
         ) {
             vault.solv_protocol_deposit_fee_rate_bps = 0;
             vault.solv_protocol_withdrawal_fee_rate_bps = 0;
@@ -1870,7 +1870,7 @@ mod tests {
         #[test]
         fn test_complete_withdrawal_request_with_higher_price(
             mut vault in vault(),
-            fixed_amount_fee_as_vst in 0u64..=20000,
+            fixed_amount_fee_as_vst in 0..=SOLV_PROTOCOL_MAX_FIXED_AMOUNT_FEE,
         ) {
             if vault.vst_operation_reserved_amount > (1 << 62) {
                 vault.vst_operation_reserved_amount = 1 << 62;
@@ -1992,20 +1992,30 @@ mod tests {
         let mut vault = VaultAccount::dummy();
         vault.solv_protocol_deposit_fee_rate_bps = 0;
 
-        vault.mint_vrt(20001).unwrap();
-        vault.deposit_vst(20001).unwrap();
+        vault
+            .mint_vrt(SOLV_PROTOCOL_MAX_FIXED_AMOUNT_FEE + 1)
+            .unwrap();
+        vault
+            .deposit_vst(SOLV_PROTOCOL_MAX_FIXED_AMOUNT_FEE + 1)
+            .unwrap();
         vault
             .offset_srt_receivables(1, vault.one_srt_as_micro_vst, true)
             .unwrap();
 
-        vault.mint_vrt(20000).unwrap();
-        vault.deposit_vst(20000).unwrap();
+        vault.mint_vrt(SOLV_PROTOCOL_MAX_FIXED_AMOUNT_FEE).unwrap();
+        vault
+            .deposit_vst(SOLV_PROTOCOL_MAX_FIXED_AMOUNT_FEE)
+            .unwrap();
         vault
             .offset_srt_receivables(0, vault.one_srt_as_micro_vst, true)
             .unwrap();
 
-        vault.mint_vrt(20001).unwrap();
-        vault.deposit_vst(20001).unwrap();
+        vault
+            .mint_vrt(SOLV_PROTOCOL_MAX_FIXED_AMOUNT_FEE + 1)
+            .unwrap();
+        vault
+            .deposit_vst(SOLV_PROTOCOL_MAX_FIXED_AMOUNT_FEE + 1)
+            .unwrap();
         vault
             .offset_srt_receivables(0, vault.one_srt_as_micro_vst, true)
             .unwrap_err();
