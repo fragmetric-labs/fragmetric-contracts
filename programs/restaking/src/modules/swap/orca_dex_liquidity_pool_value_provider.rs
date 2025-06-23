@@ -257,7 +257,7 @@ mod tests {
                     };
 
                     // Acceptance Criteria: price error within 2^-14 ~= 0.006%
-                    assert!(error < 1e-14);
+                    assert!(error < 1.0 / (1 << 14) as f32);
                 },
             );
     }
