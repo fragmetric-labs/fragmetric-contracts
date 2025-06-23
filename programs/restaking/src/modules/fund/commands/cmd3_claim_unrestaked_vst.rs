@@ -313,6 +313,18 @@ impl ClaimUnrestakedVSTCommand {
                 let mut result_deducted_receipt_token_fee_amount = 0u64;
 
                 Ok(if !claimable_withdrawal_ticket_indices.is_empty() {
+                    let mut fund_account = ctx.fund_account.load_mut()?;
+                    let restaking_vault = fund_account.get_restaking_vault_mut(vault)?;
+
+                    let (supported_token_amount_numerator, receipt_token_amount_denominator) =
+                        vault_service.get_supported_token_to_receipt_token_exchange_ratio()?;
+                    restaking_vault.update_supported_token_compounded_amount(
+                        supported_token_amount_numerator,
+                        receipt_token_amount_denominator,
+                    )?;
+
+                    drop(fund_account);
+
                     let mut last_to_vault_supported_token_amount = 0;
 
                     let fund_account = ctx.fund_account.load()?;
@@ -357,12 +369,21 @@ impl ClaimUnrestakedVSTCommand {
                     }
 
                     drop(fund_account);
+
                     let mut pricing_service =
                         FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
                             .new_pricing_service(accounts.iter().copied(), false)?;
-                    let mut fund_account = ctx.fund_account.load_mut()?;
 
+                    let mut fund_account = ctx.fund_account.load_mut()?;
                     let restaking_vault = fund_account.get_restaking_vault_mut(vault)?;
+
+                    let (supported_token_amount_numerator, receipt_token_amount_denominator) =
+                        vault_service.get_supported_token_to_receipt_token_exchange_ratio()?;
+                    restaking_vault.update_supported_token_receipt_token_exchange_ratio(
+                        supported_token_amount_numerator,
+                        receipt_token_amount_denominator,
+                    )?;
+
                     restaking_vault.receipt_token_operation_receivable_amount -=
                         result_unrestaked_receipt_token_amount;
 
@@ -458,9 +479,22 @@ impl ClaimUnrestakedVSTCommand {
                 };
                 require_keys_eq!(address, vault_account.key());
 
+                let vault_service = SolvBTCVaultService::new(vault_program, vault_account)?;
+                let mut fund_account = ctx.fund_account.load_mut()?;
+                let restaking_vault: &mut RestakingVault =
+                    fund_account.get_restaking_vault_mut(vault)?;
+
+                let (supported_token_amount_numerator, receipt_token_amount_denominator) =
+                    vault_service.get_supported_token_to_receipt_token_exchange_ratio()?;
+                restaking_vault.update_supported_token_compounded_amount(
+                    supported_token_amount_numerator,
+                    receipt_token_amount_denominator,
+                )?;
+
+                drop(fund_account);
+
                 let fund_account = ctx.fund_account.load()?;
 
-                let vault_service = SolvBTCVaultService::new(vault_program, vault_account)?;
                 let (
                     fund_reserve_vault_supported_token_amount,
                     unrestaked_receipt_token_amount,
@@ -484,6 +518,18 @@ impl ClaimUnrestakedVSTCommand {
                 if unrestaked_receipt_token_amount == 0 {
                     return Ok(None);
                 }
+
+                drop(fund_account);
+
+                let mut fund_account = ctx.fund_account.load_mut()?;
+                let restaking_vault = fund_account.get_restaking_vault_mut(vault)?;
+
+                let (supported_token_amount_numerator, receipt_token_amount_denominator) =
+                    vault_service.get_supported_token_to_receipt_token_exchange_ratio()?;
+                restaking_vault.update_supported_token_receipt_token_exchange_ratio(
+                    supported_token_amount_numerator,
+                    receipt_token_amount_denominator,
+                )?;
 
                 drop(fund_account);
 

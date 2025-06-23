@@ -31,8 +31,8 @@ import {
   getDenormalizeNTCommandResultEncoder,
   getEnqueueWithdrawalBatchCommandResultDecoder,
   getEnqueueWithdrawalBatchCommandResultEncoder,
-  getHarvestRewardCommandResultDecoder,
-  getHarvestRewardCommandResultEncoder,
+  getHarvestRestakingYieldCommandResultDecoder,
+  getHarvestRestakingYieldCommandResultEncoder,
   getInitializeCommandResultDecoder,
   getInitializeCommandResultEncoder,
   getNormalizeSTCommandResultDecoder,
@@ -59,8 +59,8 @@ import {
   type DenormalizeNTCommandResultArgs,
   type EnqueueWithdrawalBatchCommandResult,
   type EnqueueWithdrawalBatchCommandResultArgs,
-  type HarvestRewardCommandResult,
-  type HarvestRewardCommandResultArgs,
+  type HarvestRestakingYieldCommandResult,
+  type HarvestRestakingYieldCommandResultArgs,
   type InitializeCommandResult,
   type InitializeCommandResultArgs,
   type NormalizeSTCommandResult,
@@ -101,7 +101,10 @@ export type OperationCommandResult =
   | { __kind: 'UnstakeLST'; fields: readonly [UnstakeLSTCommandResult] }
   | { __kind: 'UnrestakeVRT'; fields: readonly [UnrestakeVRTCommandResult] }
   | { __kind: 'UndelegateVST'; fields: readonly [UndelegateVSTCommandResult] }
-  | { __kind: 'HarvestReward'; fields: readonly [HarvestRewardCommandResult] }
+  | {
+      __kind: 'HarvestRestakingYield';
+      fields: readonly [HarvestRestakingYieldCommandResult];
+    }
   | { __kind: 'StakeSOL'; fields: readonly [StakeSOLCommandResult] }
   | { __kind: 'NormalizeST'; fields: readonly [NormalizeSTCommandResult] }
   | { __kind: 'RestakeVST'; fields: readonly [RestakeVSTCommandResult] }
@@ -136,8 +139,8 @@ export type OperationCommandResultArgs =
       fields: readonly [UndelegateVSTCommandResultArgs];
     }
   | {
-      __kind: 'HarvestReward';
-      fields: readonly [HarvestRewardCommandResultArgs];
+      __kind: 'HarvestRestakingYield';
+      fields: readonly [HarvestRestakingYieldCommandResultArgs];
     }
   | { __kind: 'StakeSOL'; fields: readonly [StakeSOLCommandResultArgs] }
   | { __kind: 'NormalizeST'; fields: readonly [NormalizeSTCommandResultArgs] }
@@ -213,9 +216,12 @@ export function getOperationCommandResultEncoder(): Encoder<OperationCommandResu
       ]),
     ],
     [
-      'HarvestReward',
+      'HarvestRestakingYield',
       getStructEncoder([
-        ['fields', getTupleEncoder([getHarvestRewardCommandResultEncoder()])],
+        [
+          'fields',
+          getTupleEncoder([getHarvestRestakingYieldCommandResultEncoder()]),
+        ],
       ]),
     ],
     [
@@ -314,9 +320,12 @@ export function getOperationCommandResultDecoder(): Decoder<OperationCommandResu
       ]),
     ],
     [
-      'HarvestReward',
+      'HarvestRestakingYield',
       getStructDecoder([
-        ['fields', getTupleDecoder([getHarvestRewardCommandResultDecoder()])],
+        [
+          'fields',
+          getTupleDecoder([getHarvestRestakingYieldCommandResultDecoder()]),
+        ],
       ]),
     ],
     [
@@ -466,16 +475,16 @@ export function operationCommandResult(
   'UndelegateVST'
 >;
 export function operationCommandResult(
-  kind: 'HarvestReward',
+  kind: 'HarvestRestakingYield',
   data: GetDiscriminatedUnionVariantContent<
     OperationCommandResultArgs,
     '__kind',
-    'HarvestReward'
+    'HarvestRestakingYield'
   >['fields']
 ): GetDiscriminatedUnionVariant<
   OperationCommandResultArgs,
   '__kind',
-  'HarvestReward'
+  'HarvestRestakingYield'
 >;
 export function operationCommandResult(
   kind: 'StakeSOL',

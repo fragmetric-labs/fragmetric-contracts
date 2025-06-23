@@ -6,7 +6,7 @@ use crate::modules::restaking::JitoRestakingVaultService;
 use crate::utils::PDASeeds;
 
 use super::{
-    FundService, HarvestRewardCommand, OperationCommandContext, OperationCommandEntry,
+    FundService, HarvestRestakingYieldCommand, OperationCommandContext, OperationCommandEntry,
     OperationCommandResult, SelfExecutable, WeightedAllocationParticipant,
     WeightedAllocationStrategy, FUND_ACCOUNT_MAX_RESTAKING_VAULTS,
     FUND_ACCOUNT_MAX_RESTAKING_VAULT_DELEGATIONS,
@@ -75,7 +75,9 @@ impl SelfExecutable for UndelegateVSTCommand {
 
         Ok((
             result,
-            entry.or_else(|| Some(HarvestRewardCommand::default().without_required_accounts())),
+            entry.or_else(|| {
+                Some(HarvestRestakingYieldCommand::default().without_required_accounts())
+            }),
         ))
     }
 }

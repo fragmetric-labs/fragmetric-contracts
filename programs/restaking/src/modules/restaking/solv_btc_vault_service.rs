@@ -6,6 +6,7 @@ use anchor_spl::{
 use solv::states::VaultAccount;
 
 use crate::constants::SOLV_PROGRAM_ID;
+use crate::errors::ErrorCode;
 
 use super::ValidateVault;
 
@@ -430,6 +431,18 @@ impl<'info> SolvBTCVaultService<'info> {
             claimed_supported_token_amount,
             deducted_supported_token_fee_amount,
             total_unrestaking_vault_receipt_token_amount,
+        ))
+    }
+
+    pub fn get_supported_token_to_receipt_token_exchange_ratio(&self) -> Result<(u64, u64)> {
+        let vault = self.vault_account.load()?;
+        let vrt_supply = vault.get_vrt_supply();
+
+        Ok((
+            vault
+                .get_net_asset_value_as_vst()
+                .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?,
+            vrt_supply,
         ))
     }
 }
