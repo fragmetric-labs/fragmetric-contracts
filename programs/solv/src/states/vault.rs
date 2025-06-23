@@ -877,24 +877,33 @@ impl VaultAccount {
         }
 
         // Validate vst_amount
-        let srt_amount_as_vst =
-            SRTExchangeRate::new(old_one_srt_as_micro_vst, self.solv_receipt_token_decimals)
-                .get_srt_amount_as_vst(srt_amount, false)
-                .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
-        let solv_protocol_withdrawal_fee_amount_as_vst = div_util(
-            srt_amount_as_vst as u128 * self.solv_protocol_withdrawal_fee_rate_bps as u128,
-            BPS,
-            true,
-        )
-        .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
-        let expected_vst_amount = srt_amount_as_vst - solv_protocol_withdrawal_fee_amount_as_vst;
+        if srt_amount == 0 {
+            // Since there might exist requests without SRT withdrawal required,
+            // so completion with 0 SRT is allowed.
+            // In this case, obviously VST amount should be 0.
+            require_eq!(vst_amount, 0);
+        } else {
+            let srt_amount_as_vst =
+                SRTExchangeRate::new(old_one_srt_as_micro_vst, self.solv_receipt_token_decimals)
+                    .get_srt_amount_as_vst(srt_amount, false)
+                    .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
+            let solv_protocol_withdrawal_fee_amount_as_vst = div_util(
+                srt_amount_as_vst as u128 * self.solv_protocol_withdrawal_fee_rate_bps as u128,
+                BPS,
+                true,
+            )
+            .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
+            let expected_vst_amount =
+                srt_amount_as_vst - solv_protocol_withdrawal_fee_amount_as_vst;
 
-        // fixed amount fee
-        let solv_protocol_extra_withdrawal_fee_amount_as_vst =
-            expected_vst_amount.saturating_sub(vst_amount);
+            // fixed amount fee
+            let solv_protocol_extra_withdrawal_fee_amount_as_vst =
+                expected_vst_amount.saturating_sub(vst_amount);
 
-        if solv_protocol_extra_withdrawal_fee_amount_as_vst > SOLV_PROTOCOL_MAX_FIXED_AMOUNT_FEE {
-            err!(VaultError::InvalidSolvProtocolFixedAmountFeeError)?;
+            if solv_protocol_extra_withdrawal_fee_amount_as_vst > SOLV_PROTOCOL_MAX_FIXED_AMOUNT_FEE
+            {
+                err!(VaultError::InvalidSolvProtocolFixedAmountFeeError)?;
+            }
         }
 
         // Complete

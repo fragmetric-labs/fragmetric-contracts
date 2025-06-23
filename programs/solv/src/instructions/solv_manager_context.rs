@@ -179,8 +179,6 @@ pub fn process_complete_withdrawal_requests(
 
     // TODO/phase3: CPI call to the solv protocol - now assumes that solv protocol has already sent VST to vault's ATA
 
-    require_gt!(srt_amount, 0);
-
     let mut vault = vault_account.load_mut()?;
 
     vault.complete_withdrawal_requests(srt_amount, vst_amount, old_one_srt_as_micro_vst, true)?;
