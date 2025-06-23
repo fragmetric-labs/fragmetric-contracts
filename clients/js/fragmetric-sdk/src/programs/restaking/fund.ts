@@ -909,7 +909,6 @@ export class RestakingFundAccountContext extends AccountContext<
               item.token.normalReserveRateBps,
             tokenWithdrawalNormalReserveMaxAmount:
               item.token.normalReserveMaxAmount,
-            tokenRebalancingAmount: item.rebalancingAmount,
             solAllocationWeight: item.solAllocationWeight,
             solAllocationCapacityAmount: item.solAllocationCapacityAmount,
           };

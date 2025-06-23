@@ -5124,12 +5124,6 @@
           "type": "u64"
         },
         {
-          "name": "token_rebalancing_amount",
-          "type": {
-            "option": "u64"
-          }
-        },
-        {
           "name": "sol_allocation_weight",
           "type": "u64"
         },
@@ -12060,9 +12054,8 @@
             "name": "operation_receivable_amount",
             "docs": [
               "asset: receivable amount that the fund may charge the users requesting withdrawals.",
-              "It is accrued during either the preparation of the withdrawal obligation or rebalancing of LST like fees from (un)staking or (un)restaking.",
-              "And it shall be settled by the withdrawal fee normally. And it also can be written off by a donation operation.",
-              "Then it costs the rebalancing expense to the capital of the fund itself as an operation cost instead of charging the users requesting withdrawals."
+              "It is accrued during the preparation of the withdrawal obligation.",
+              "And it shall be settled by the withdrawal fee normally. And it also can be written off by a donation operation."
             ],
             "type": "u64"
           },
@@ -15582,11 +15575,13 @@
             }
           },
           {
-            "name": "rebalancing_amount",
-            "docs": [
-              "configuration: the amount requested to be unstaked as soon as possible regardless of current state, this value should be decreased by each unstaking requested amount."
-            ],
-            "type": "u64"
+            "name": "_padding2",
+            "type": {
+              "array": [
+                "u8",
+                8
+              ]
+            }
           },
           {
             "name": "sol_allocation_weight",
