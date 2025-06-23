@@ -80,12 +80,12 @@ impl std::fmt::Debug for HarvestRestakingYieldState {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::New => write!(f, "New"),
-            Self::NewCompoundReward => write!(f, "NewCompound"),
+            Self::NewCompoundReward => write!(f, "NewCompoundReward"),
             Self::PrepareCompoundReward {
                 vault,
                 reward_token_mints,
             } => f
-                .debug_struct("PrepareCompound")
+                .debug_struct("PrepareCompoundReward")
                 .field("vault", vault)
                 .field_first_element("reward_token_mint", reward_token_mints)
                 .finish(),
@@ -101,7 +101,7 @@ impl std::fmt::Debug for HarvestRestakingYieldState {
                 vault,
                 reward_token_mints,
             } => f
-                .debug_struct("ExecuteCompound")
+                .debug_struct("ExecuteCompoundReward")
                 .field("vault", vault)
                 .field_first_element("reward_token_mint", reward_token_mints)
                 .finish(),
@@ -113,12 +113,12 @@ impl std::fmt::Debug for HarvestRestakingYieldState {
                 .field("vault", vault)
                 .field_first_element("reward_token_mint", reward_token_mints)
                 .finish(),
-            Self::NewDistributeReward => write!(f, "NewDistribute"),
+            Self::NewDistributeReward => write!(f, "NewDistributeReward"),
             Self::PrepareDistributeReward {
                 vault,
                 reward_token_mints,
             } => f
-                .debug_struct("PrepareDistribute")
+                .debug_struct("PrepareDistributeReward")
                 .field("vault", vault)
                 .field_first_element("reward_token_mints", reward_token_mints)
                 .finish(),
@@ -126,7 +126,7 @@ impl std::fmt::Debug for HarvestRestakingYieldState {
                 vault,
                 reward_token_mints,
             } => f
-                .debug_struct("ExecuteDistribute")
+                .debug_struct("ExecuteDistributeReward")
                 .field("vault", vault)
                 .field_first_element("reward_token_mints", reward_token_mints)
                 .finish(),
@@ -170,11 +170,16 @@ impl SelfExecutable for HarvestRestakingYieldCommand {
     ) -> ExecutionResult {
         let (result, entry) = match &self.state {
             // 1. compounding reward
-            New | NewCompoundReward => self.execute_new_compound_command(ctx, None, None)?,
+            New | NewCompoundReward => self.execute_new_compound_reward_command(ctx, None, None)?,
             PrepareCompoundReward {
                 vault,
                 reward_token_mints,
-            } => self.execute_prepare_compound_command(ctx, accounts, vault, reward_token_mints)?,
+            } => self.execute_prepare_compound_reward_command(
+                ctx,
+                accounts,
+                vault,
+                reward_token_mints,
+            )?,
             PrepareSwap {
                 vault,
                 reward_token_mints,
@@ -182,25 +187,36 @@ impl SelfExecutable for HarvestRestakingYieldCommand {
             ExecuteCompoundReward {
                 vault,
                 reward_token_mints,
-            } => self.execute_execute_compound_command(ctx, accounts, vault, reward_token_mints)?,
+            } => self.execute_execute_compound_reward_command(
+                ctx,
+                accounts,
+                vault,
+                reward_token_mints,
+            )?,
             ExecuteSwap {
                 vault,
                 reward_token_mints,
             } => self.execute_execute_swap_command(ctx, accounts, vault, reward_token_mints)?,
             // 2. distributing reward
-            NewDistributeReward => self.execute_new_distribute_command(ctx, None, None)?,
+            NewDistributeReward => self.execute_new_distribute_reward_command(ctx, None, None)?,
             PrepareDistributeReward {
                 vault,
                 reward_token_mints,
-            } => {
-                self.execute_prepare_distribute_command(ctx, accounts, vault, reward_token_mints)?
-            }
+            } => self.execute_prepare_distribute_reward_command(
+                ctx,
+                accounts,
+                vault,
+                reward_token_mints,
+            )?,
             ExecuteDistributeReward {
                 vault,
                 reward_token_mints,
-            } => {
-                self.execute_execute_distribute_command(ctx, accounts, vault, reward_token_mints)?
-            }
+            } => self.execute_execute_distribute_reward_command(
+                ctx,
+                accounts,
+                vault,
+                reward_token_mints,
+            )?,
             // 3. compounding vault supported token
             NewCompoundVaultSupportedToken => {
                 self.execute_new_compound_vault_supported_token_command(ctx, None, None)?
@@ -222,7 +238,7 @@ impl SelfExecutable for HarvestRestakingYieldCommand {
 
 #[deny(clippy::wildcard_enum_match_arm)]
 impl HarvestRestakingYieldCommand {
-    fn execute_new_compound_command(
+    fn execute_new_compound_reward_command(
         &self,
         ctx: &OperationCommandContext,
         previous_vault: Option<&Pubkey>,
@@ -236,7 +252,7 @@ impl HarvestRestakingYieldCommand {
         )
     }
 
-    fn execute_new_distribute_command(
+    fn execute_new_distribute_reward_command(
         &self,
         ctx: &OperationCommandContext,
         previous_vault: Option<&Pubkey>,
@@ -300,7 +316,7 @@ impl HarvestRestakingYieldCommand {
             return match harvest_type {
                 // fallback: 2. distributing_reward
                 HarvestType::CompoundReward => {
-                    self.execute_new_distribute_command(ctx, None, previous_execution_result)
+                    self.execute_new_distribute_reward_command(ctx, None, previous_execution_result)
                 }
                 // fallback: 3. compounding_vault_supported_token
                 HarvestType::DistributeReward => self
@@ -528,7 +544,7 @@ impl HarvestRestakingYieldCommand {
     }
 
     #[inline(never)]
-    fn execute_prepare_compound_command<'info>(
+    fn execute_prepare_compound_reward_command<'info>(
         &self,
         ctx: &OperationCommandContext,
         accounts: &[&'info AccountInfo<'info>],
@@ -537,7 +553,7 @@ impl HarvestRestakingYieldCommand {
     ) -> ExecutionResult {
         if reward_token_mints.is_empty() {
             // fallback: next vault
-            return self.execute_new_compound_command(ctx, Some(vault), None);
+            return self.execute_new_compound_reward_command(ctx, Some(vault), None);
         }
 
         let fund_account = ctx.fund_account.load()?;
@@ -549,7 +565,7 @@ impl HarvestRestakingYieldCommand {
         let Some(entry) = (match receipt_token_pricing_source {
             Some(TokenPricingSource::JitoRestakingVault { .. })
             | Some(TokenPricingSource::SolvBTCVault { .. }) => self
-                .create_execute_compound_command_from_vault_ata(
+                .create_execute_compound_reward_command_from_vault_ata(
                     ctx,
                     accounts,
                     vault,
@@ -557,7 +573,7 @@ impl HarvestRestakingYieldCommand {
                     true,
                 )?,
             Some(TokenPricingSource::VirtualVault { .. }) => self
-                .create_execute_compound_command_from_vault_ata(
+                .create_execute_compound_reward_command_from_vault_ata(
                     ctx,
                     accounts,
                     vault,
@@ -587,7 +603,7 @@ impl HarvestRestakingYieldCommand {
             )?
             else {
                 // fallback: next vault
-                return self.execute_new_compound_command(ctx, Some(vault), None);
+                return self.execute_new_compound_reward_command(ctx, Some(vault), None);
             };
 
             return Ok((None, Some(entry)));
@@ -596,8 +612,8 @@ impl HarvestRestakingYieldCommand {
         Ok((None, Some(entry)))
     }
 
-    /// Create an ExecuteCompound or PrepareSwap command given that vault's ATA is the source reward token account.
-    fn create_execute_compound_command_from_vault_ata<'info>(
+    /// Create an ExecuteCompoundReward or PrepareSwap command given that vault's ATA is the source reward token account.
+    fn create_execute_compound_reward_command_from_vault_ata<'info>(
         &self,
         ctx: &OperationCommandContext,
         accounts: &[&'info AccountInfo<'info>],
@@ -706,7 +722,7 @@ impl HarvestRestakingYieldCommand {
     }
 
     #[inline(never)]
-    fn execute_prepare_distribute_command<'info>(
+    fn execute_prepare_distribute_reward_command<'info>(
         &self,
         ctx: &OperationCommandContext,
         accounts: &[&'info AccountInfo<'info>],
@@ -715,7 +731,7 @@ impl HarvestRestakingYieldCommand {
     ) -> ExecutionResult {
         if reward_token_mints.is_empty() {
             // fallback: next vault
-            return self.execute_new_distribute_command(ctx, Some(vault), None);
+            return self.execute_new_distribute_reward_command(ctx, Some(vault), None);
         }
 
         let fund_account = ctx.fund_account.load()?;
@@ -727,7 +743,7 @@ impl HarvestRestakingYieldCommand {
         let Some(entry) = (match receipt_token_pricing_source {
             Some(TokenPricingSource::JitoRestakingVault { .. })
             | Some(TokenPricingSource::SolvBTCVault { .. }) => self
-                .create_execute_distribute_command_from_vault_ata(
+                .create_execute_distribute_reward_command_from_vault_ata(
                     ctx,
                     accounts,
                     vault,
@@ -735,7 +751,7 @@ impl HarvestRestakingYieldCommand {
                     true,
                 )?,
             Some(TokenPricingSource::VirtualVault { .. }) => self
-                .create_execute_distribute_command_from_vault_ata(
+                .create_execute_distribute_reward_command_from_vault_ata(
                     ctx,
                     accounts,
                     vault,
@@ -765,7 +781,7 @@ impl HarvestRestakingYieldCommand {
             )?
             else {
                 // fallback: next vault
-                return self.execute_new_distribute_command(ctx, Some(vault), None);
+                return self.execute_new_distribute_reward_command(ctx, Some(vault), None);
             };
 
             return Ok((None, Some(entry)));
@@ -774,8 +790,8 @@ impl HarvestRestakingYieldCommand {
         Ok((None, Some(entry)))
     }
 
-    /// Create an ExecuteDistribute command given that vault's ATA is the source reward token account.
-    fn create_execute_distribute_command_from_vault_ata<'info>(
+    /// Create an ExecuteDistributeReward command given that vault's ATA is the source reward token account.
+    fn create_execute_distribute_reward_command_from_vault_ata<'info>(
         &self,
         ctx: &OperationCommandContext,
         accounts: &[&'info AccountInfo<'info>],
@@ -896,9 +912,9 @@ impl HarvestRestakingYieldCommand {
                 };
                 Some(command.without_required_accounts())
             }
+            Some(TokenPricingSource::VirtualVault { .. }) => None,
             // otherwise fails
-            Some(TokenPricingSource::VirtualVault { .. })
-            | Some(TokenPricingSource::SPLStakePool { .. })
+            Some(TokenPricingSource::SPLStakePool { .. })
             | Some(TokenPricingSource::MarinadeStakePool { .. })
             | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. })
             | Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { .. })
@@ -958,7 +974,7 @@ impl HarvestRestakingYieldCommand {
         reward_token_mints: &[Pubkey],
     ) -> ExecutionResult {
         if reward_token_mints.is_empty() {
-            return self.execute_new_compound_command(ctx, Some(vault), None);
+            return self.execute_new_compound_reward_command(ctx, Some(vault), None);
         }
 
         let fund_account = ctx.fund_account.load()?;
@@ -1002,7 +1018,7 @@ impl HarvestRestakingYieldCommand {
     }
 
     #[inline(never)]
-    fn execute_execute_compound_command<'info>(
+    fn execute_execute_compound_reward_command<'info>(
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
         mut accounts: &[&'info AccountInfo<'info>],
@@ -1011,7 +1027,7 @@ impl HarvestRestakingYieldCommand {
     ) -> ExecutionResult {
         if reward_token_mints.is_empty() {
             // fallback: next vault
-            return self.execute_new_compound_command(ctx, Some(vault), None);
+            return self.execute_new_compound_reward_command(ctx, Some(vault), None);
         }
 
         let fund_account = ctx.fund_account.load()?;
@@ -1107,7 +1123,7 @@ impl HarvestRestakingYieldCommand {
         )?
         else {
             // fallback: next vault
-            return self.execute_new_compound_command(ctx, Some(vault), result);
+            return self.execute_new_compound_reward_command(ctx, Some(vault), result);
         };
 
         Ok((result, Some(entry)))
@@ -1123,7 +1139,7 @@ impl HarvestRestakingYieldCommand {
     ) -> ExecutionResult {
         if reward_token_mints.is_empty() {
             // fallback: next vault
-            return self.execute_new_compound_command(ctx, Some(vault), None);
+            return self.execute_new_compound_reward_command(ctx, Some(vault), None);
         }
 
         let fund_account = ctx.fund_account.load()?;
@@ -1221,7 +1237,7 @@ impl HarvestRestakingYieldCommand {
         )?
         else {
             // fallback: next vault
-            return self.execute_new_compound_command(ctx, Some(vault), result);
+            return self.execute_new_compound_reward_command(ctx, Some(vault), result);
         };
 
         Ok((result, Some(entry)))
@@ -1409,7 +1425,7 @@ impl HarvestRestakingYieldCommand {
     }
 
     #[inline(never)]
-    fn execute_execute_distribute_command<'info>(
+    fn execute_execute_distribute_reward_command<'info>(
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
         mut accounts: &[&'info AccountInfo<'info>],
@@ -1418,7 +1434,7 @@ impl HarvestRestakingYieldCommand {
     ) -> ExecutionResult {
         if reward_token_mints.is_empty() {
             // fallback: next vault
-            return self.execute_new_distribute_command(ctx, Some(vault), None);
+            return self.execute_new_distribute_reward_command(ctx, Some(vault), None);
         }
 
         let result = (|| {
@@ -1586,7 +1602,7 @@ impl HarvestRestakingYieldCommand {
         )?
         else {
             // fallback: next vault
-            return self.execute_new_distribute_command(ctx, Some(vault), result);
+            return self.execute_new_distribute_reward_command(ctx, Some(vault), result);
         };
 
         Ok((result, Some(entry)))
@@ -1619,9 +1635,9 @@ impl HarvestRestakingYieldCommand {
 
                     (yield_token_amount, vault_supported_token_compounded_amount)
                 }
+                Some(TokenPricingSource::VirtualVault { .. }) => (0, 0),
                 // otherwise fails
-                Some(TokenPricingSource::VirtualVault { .. })
-                | Some(TokenPricingSource::SPLStakePool { .. })
+                Some(TokenPricingSource::SPLStakePool { .. })
                 | Some(TokenPricingSource::MarinadeStakePool { .. })
                 | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. })
                 | Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { .. })

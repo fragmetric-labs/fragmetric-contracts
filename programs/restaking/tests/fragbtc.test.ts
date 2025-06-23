@@ -3292,10 +3292,9 @@ describe('restaking.fragBTC test', async () => {
 
   test('fragBTC APY can be estimated through vault supported token compounded amount', async () => {
     /*
-    * VRT price can be same OR increased based solv protocol asset operation. (We assume VRT price doesn't decrease right now)
-    * Check two possible cases whether harvest_restaking_yield command emits correct event data
-    * Since harvest command iterate all vaults in fragBTC fund and runCommand returns last result,
-    * we use last vault - wBTC vault for testing.
+    * VRT price can be same OR increased based on how solv protocol operates deposited asset. (We assume VRT price doesn't decrease right now)
+    * Test two possible cases whether harvest_restaking_yield command emits correct event.
+    * Since harvest command iterate all vaults in fragBTC fund and runCommand returns last result, we use last vault(wBTC vault) for testing.
     */
 
     // reset VST compounded amount
@@ -3385,10 +3384,11 @@ describe('restaking.fragBTC test', async () => {
           .fields[0] as restakingTypes.HarvestRestakingYieldCommandResult
       : null;
 
-    // result value is None since there is no VRT price change, there is no compounded VST amount is 0
+    // result value is None since there is no VRT price change, compounded VST amount is 0
     expect(result).toBeNull();
 
-    // 1-2) VRT Amount increases
+
+    // 1-2) VRT Amount increases (user deposits vst -> restake vst command executed)
     await validator.airdropToken(
       user1.address!,
       '3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh',
@@ -3484,10 +3484,11 @@ describe('restaking.fragBTC test', async () => {
           .fields[0] as restakingTypes.HarvestRestakingYieldCommandResult
       : null;
 
-    // result value is None since there is no VRT price change, there is no compounded VST amount is 0
+    // result value is None since there is no VRT price change, compounded VST amount is 0
     expect(result).toBeNull();
 
-    // 1-3) VRT Amount decreases
+
+    // 1-3) VRT Amount decreases (user requests withdraw -> full command cycle executed)
     await user1.requestWithdrawal.execute({
       assetMint: '3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh',
       receiptTokenAmount: 10_0000_0000n,
@@ -3582,7 +3583,7 @@ describe('restaking.fragBTC test', async () => {
           .fields[0] as restakingTypes.HarvestRestakingYieldCommandResult
       : null;
 
-    // result value is None since there is no VRT price change, there is no compounded VST amount is 0
+    // result value is None since there is no VRT price change, compounded VST amount is 0
     expect(result).toBeNull();
 
     // 2) VRT Price increases
@@ -3810,12 +3811,10 @@ describe('restaking.fragBTC test', async () => {
       }
     `);
     
-    // *** trigger VRT price change by increasing SRT value ***
-    // (arguments are referenced from the previous resolve result)
-    
+    // trigger VRT price change by increasing SRT value ***    
     await solv.wBTC.completeDeposits.execute({
-      redeemedSolvReceiptTokenAmount: 1887568892n,
-      newOneSolvReceiptTokenAsMicroSupportedTokenAmount: 100000000000000n * 11n / 10n,
+      redeemedSolvReceiptTokenAmount: 18_8756_8892n,
+      newOneSolvReceiptTokenAsMicroSupportedTokenAmount: 1_0000_0000_000000n * 11n / 10n,
     });
 
     await ctx.fund.runCommand.executeChained({
@@ -3866,7 +3865,7 @@ describe('restaking.fragBTC test', async () => {
                     },
                     "vault": "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
                     "vaultSupportedTokenCompoundedAmount": 188756889n,
-                    "yieldTokenAmount": 3939996280000000n,
+                    "yieldTokenAmount": 3939996280n,
                     "yieldTokenMint": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
                   },
                 ],

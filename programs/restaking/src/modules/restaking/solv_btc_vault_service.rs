@@ -438,19 +438,11 @@ impl<'info> SolvBTCVaultService<'info> {
         let vault = self.vault_account.load()?;
         let vrt_supply = vault.get_vrt_supply();
 
-        if let Some((net_asset_value_as_micro_vst, vrt_supply_as_micro)) = {
+        Ok((
             vault
-                .get_net_asset_value_as_micro_vst()
-                .zip(vrt_supply.checked_mul(1_000_000))
-        } {
-            Ok((net_asset_value_as_micro_vst, vrt_supply_as_micro))
-        } else {
-            Ok((
-                vault
-                    .get_net_asset_value_as_vst()
-                    .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?,
-                vrt_supply,
-            ))
-        }
+                .get_net_asset_value_as_vst()
+                .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?,
+            vrt_supply,
+        ))
     }
 }
