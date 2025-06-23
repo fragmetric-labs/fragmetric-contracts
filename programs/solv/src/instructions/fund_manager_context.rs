@@ -114,17 +114,19 @@ pub fn process_request_withdrawal(ctx: Context<FundManagerContext>, vrt_amount: 
         .load_mut()?
         .enqueue_withdrawal_request(vrt_amount)?;
 
-    anchor_spl::token::burn(
-        CpiContext::new(
-            token_program.to_account_info(),
-            anchor_spl::token::Burn {
-                mint: vault_receipt_token_mint.to_account_info(),
-                from: payer_vault_receipt_token_account.to_account_info(),
-                authority: payer.to_account_info(),
-            },
-        ),
-        vrt_amount,
-    )?;
+    if vrt_amount > 0 {
+        anchor_spl::token::burn(
+            CpiContext::new(
+                token_program.to_account_info(),
+                anchor_spl::token::Burn {
+                    mint: vault_receipt_token_mint.to_account_info(),
+                    from: payer_vault_receipt_token_account.to_account_info(),
+                    authority: payer.to_account_info(),
+                },
+            ),
+            vrt_amount,
+        )?;
+    }
 
     Ok(())
 }
