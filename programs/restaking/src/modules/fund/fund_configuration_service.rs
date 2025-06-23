@@ -506,7 +506,6 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         token_withdrawable: bool,
         token_withdrawal_normal_reserve_rate_bps: u16,
         token_withdrawal_normal_reserve_max_amount: u64,
-        token_rebalancing_amount: Option<u64>,
         sol_allocation_weight: u64,
         sol_allocation_capacity_amount: u64,
     ) -> Result<events::FundManagerUpdatedFund> {
@@ -527,9 +526,6 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
             .set_normal_reserve_rate_bps(token_withdrawal_normal_reserve_rate_bps)?
             .set_normal_reserve_max_amount(token_withdrawal_normal_reserve_max_amount);
 
-        if let Some(token_rebalancing_amount) = token_rebalancing_amount {
-            supported_token.set_rebalancing_strategy(token_rebalancing_amount)?;
-        }
         supported_token
             .set_sol_allocation_strategy(sol_allocation_weight, sol_allocation_capacity_amount)?;
 

@@ -22,8 +22,7 @@ pub(super) struct SupportedToken {
     /// token deposit & withdrawal
     pub token: AssetState,
 
-    /// configuration: the amount requested to be unstaked as soon as possible regardless of current state, this value should be decreased by each unstaking requested amount.
-    pub rebalancing_amount: u64,
+    _padding2: [u8; 8],
 
     /// configuration: used for staking allocation strategy.
     pub sol_allocation_weight: u64,
@@ -86,18 +85,6 @@ impl SupportedToken {
     ) -> Result<()> {
         self.sol_allocation_weight = weight;
         self.sol_allocation_capacity_amount = sol_capacity_amount;
-
-        Ok(())
-    }
-
-    pub fn set_rebalancing_strategy(&mut self, token_amount: u64) -> Result<()> {
-        require_gte!(
-            self.token.operation_reserved_amount,
-            token_amount,
-            ErrorCode::FundInvalidConfigurationUpdateError
-        );
-
-        self.rebalancing_amount = token_amount;
 
         Ok(())
     }
