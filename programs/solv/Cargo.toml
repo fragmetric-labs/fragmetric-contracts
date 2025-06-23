@@ -37,3 +37,5 @@ bytemuck = { workspace = true }
 [dev-dependencies]
 anyhow = { workspace = true }
 proptest = { workspace = true }
+rust_decimal = { workspace = true }
+rust_decimal_macros = { workspace = true }
