@@ -123,11 +123,16 @@ pub mod solv {
     }
 
     // TODO/phase3: deprecate
-    pub fn solv_manager_set_solv_protocol_withdrawal_fee_rate(
+    pub fn solv_manager_set_protocol_fee_rate(
         ctx: Context<SolvManagerConfigurationContext>,
-        solv_protocol_withdrawal_fee_rate_bps: u16,
+        deposit_fee_rate_bps: u16,
+        withdrawal_fee_rate_bps: u16,
     ) -> Result<()> {
-        process_set_solv_protocol_withdrawal_fee_rate(ctx, solv_protocol_withdrawal_fee_rate_bps)
+        process_set_solv_protocol_withdrawal_fee_rate(
+            ctx,
+            deposit_fee_rate_bps,
+            withdrawal_fee_rate_bps,
+        )
     }
 
     ////////////////////////////////////////////

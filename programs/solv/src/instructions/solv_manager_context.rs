@@ -232,13 +232,15 @@ pub fn process_set_solv_protocol_wallet(
 // TODO/phase3: deprecate
 pub fn process_set_solv_protocol_withdrawal_fee_rate(
     ctx: Context<SolvManagerConfigurationContext>,
-    solv_protocol_withdrawal_fee_rate_bps: u16,
+    deposit_fee_rate_bps: u16,
+    withdrawal_fee_rate_bps: u16,
 ) -> Result<()> {
     let SolvManagerConfigurationContext { vault_account, .. } = ctx.accounts;
 
     vault_account
         .load_mut()?
-        .set_solv_protocol_withdrawal_fee_rate_bps(solv_protocol_withdrawal_fee_rate_bps)?;
+        .set_solv_protocol_deposit_fee_rate_bps(deposit_fee_rate_bps)?
+        .set_solv_protocol_withdrawal_fee_rate_bps(withdrawal_fee_rate_bps)?;
 
     Ok(())
 }
