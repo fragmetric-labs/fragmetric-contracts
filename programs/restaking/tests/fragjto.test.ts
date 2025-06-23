@@ -163,7 +163,6 @@ describe('restaking.fragJTO test', async () => {
             "tokenAccumulatedDepositCapacityAmount": 18446744073709551615n,
             "tokenDepositable": true,
             "tokenMint": "jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL",
-            "tokenRebalancingAmount": 0n,
             "tokenWithdrawable": true,
             "tokenWithdrawalNormalReserveMaxAmount": 18446744073709551615n,
             "tokenWithdrawalNormalReserveRateBps": 0,
