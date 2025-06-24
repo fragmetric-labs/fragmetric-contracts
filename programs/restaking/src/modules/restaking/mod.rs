@@ -4,20 +4,21 @@ pub mod solv_btc_vault_service;
 pub mod solv_btc_vault_value_provider;
 pub mod virtual_vault_service;
 
+#[allow(unused_imports)]
 pub use jito_restaking_vault_service::*;
 pub use jito_restaking_vault_value_provider::*;
+#[allow(unused_imports)]
 pub use solv_btc_vault_service::*;
 pub use solv_btc_vault_value_provider::*;
+#[allow(unused_imports)]
 pub use virtual_vault_service::*;
 
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::system_program;
 use anchor_spl::token_interface::Mint;
 
-use crate::constants::{JITO_VAULT_PROGRAM_ID, SOLV_PROGRAM_ID};
+use crate::constants::JITO_VAULT_PROGRAM_ID;
 use crate::errors::ErrorCode;
 use crate::modules::pricing::TokenPricingSource;
-use crate::utils::AsAccountInfo;
 
 /// Validate restaking vault pricing source
 pub(in crate::modules) fn validate_pricing_source<'info>(
@@ -33,8 +34,8 @@ pub(in crate::modules) fn validate_pricing_source<'info>(
             require_keys_eq!(*address, vault_account.key());
             JitoRestakingVaultService::validate_vault(
                 vault_account,
-                &vault_supported_token_mint,
-                &vault_receipt_token_mint,
+                vault_supported_token_mint,
+                vault_receipt_token_mint,
                 fund_account,
             )?
         }
@@ -42,8 +43,8 @@ pub(in crate::modules) fn validate_pricing_source<'info>(
             require_keys_eq!(*address, vault_account.key());
             SolvBTCVaultService::validate_vault(
                 vault_account,
-                &vault_supported_token_mint,
-                &vault_receipt_token_mint,
+                vault_supported_token_mint,
+                vault_receipt_token_mint,
                 fund_account,
             )?
         }
@@ -51,8 +52,8 @@ pub(in crate::modules) fn validate_pricing_source<'info>(
             require_keys_eq!(*address, vault_account.key());
             VirtualVaultService::validate_vault(
                 vault_account,
-                &vault_supported_token_mint,
-                &vault_receipt_token_mint,
+                vault_supported_token_mint,
+                vault_receipt_token_mint,
                 fund_account,
             )?
         }

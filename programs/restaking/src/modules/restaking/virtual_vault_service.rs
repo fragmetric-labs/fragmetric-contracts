@@ -1,18 +1,14 @@
 use anchor_lang::prelude::*;
-use anchor_spl::{associated_token, token_interface::Mint};
+use anchor_spl::token_interface::Mint;
 
 use crate::errors::ErrorCode;
 use crate::utils::AccountInfoExt;
 
 use super::ValidateVault;
 
-#[allow(dead_code)]
-pub(in crate::modules) struct VirtualVaultService<'info> {
-    vault_account: &'info AccountInfo<'info>,
-    vault_receipt_token_mint: &'info AccountInfo<'info>,
-}
+pub(in crate::modules) struct VirtualVaultService;
 
-impl ValidateVault for VirtualVaultService<'_> {
+impl ValidateVault for VirtualVaultService {
     fn validate_vault<'info>(
         vault_account: &'info AccountInfo<'info>,
         vault_supported_token_mint: &InterfaceAccount<Mint>,
@@ -41,20 +37,7 @@ impl ValidateVault for VirtualVaultService<'_> {
     }
 }
 
-impl<'info> VirtualVaultService<'info> {
-    #[allow(dead_code)]
-    pub fn new(
-        vault_account: &'info AccountInfo<'info>,
-        vault_receipt_token_mint: &'info AccountInfo<'info>,
-    ) -> Result<Self> {
-        require_keys_eq!(*vault_account.owner, System::id());
-
-        Ok(Self {
-            vault_account,
-            vault_receipt_token_mint,
-        })
-    }
-
+impl VirtualVaultService {
     pub fn find_vault_address<'a>(
         vault_receipt_token_mint: &'a Pubkey,
         fund_account: &'a Pubkey,

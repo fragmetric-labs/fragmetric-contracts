@@ -1,8 +1,6 @@
 use anchor_lang::prelude::*;
-use anchor_spl::{
-    token::Token,
-    token_interface::{Mint, TokenAccount},
-};
+use anchor_spl::token::Token;
+use anchor_spl::token_interface::{Mint, TokenAccount};
 use solv::states::VaultAccount;
 
 use crate::constants::SOLV_PROGRAM_ID;
@@ -39,11 +37,13 @@ impl<'info> SolvBTCVaultService<'info> {
         vault_program: &'info AccountInfo<'info>,
         vault_account: &'info AccountInfo<'info>,
     ) -> Result<Self> {
+        let vault_account = AccountLoader::try_from(vault_account)?;
+
         require_keys_eq!(SOLV_PROGRAM_ID, vault_program.key());
 
         Ok(Self {
             vault_program,
-            vault_account: AccountLoader::try_from(vault_account)?,
+            vault_account,
         })
     }
 
@@ -69,7 +69,6 @@ impl<'info> SolvBTCVaultService<'info> {
     fn find_accounts_to_cpi(&self) -> Result<impl Iterator<Item = (Pubkey, bool)>> {
         let vault = self.vault_account.load()?;
 
-        // todo! return required arrays
         let vault_address = self.vault_account.key();
         let vst_mint = vault.get_vst_mint();
         let accounts = Self::find_accounts_to_new(vault_address)?.chain([
