@@ -414,14 +414,6 @@ impl StakeSOLCommand {
             pool_token_program,
         )?;
 
-        // first update stake pool balance
-        spl_stake_pool_service.update_stake_pool_balance_if_needed(
-            withdraw_authority,
-            reserve_stake_account,
-            manager_fee_account,
-            validator_list_account,
-        )?;
-
         let (
             to_pool_token_account_amount,
             minted_pool_token_amount,
@@ -430,6 +422,7 @@ impl StakeSOLCommand {
             withdraw_authority,
             reserve_stake_account,
             manager_fee_account,
+            validator_list_account,
             fund_supported_token_reserve_account,
             fund_reserve_account,
             &[&ctx.fund_account.load()?.get_reserve_account_seeds()],
