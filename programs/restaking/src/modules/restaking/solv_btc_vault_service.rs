@@ -90,11 +90,6 @@ impl<'info> SolvBTCVaultService<'info> {
         Ok(accounts)
     }
 
-    pub fn get_supported_token_mint(&self) -> Result<Pubkey> {
-        let vault = self.vault_account.load()?;
-        Ok(vault.get_vst_mint())
-    }
-
     /// * (0) vault_program
     /// * (1) vault_account (writable)
     /// * (2) vault_receipt_token_mint (writable)
