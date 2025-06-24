@@ -2,7 +2,7 @@ use std::num::NonZeroU32;
 
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program;
-use anchor_spl::token_interface::{Mint, TokenAccount};
+use anchor_spl::token_interface::TokenAccount;
 use solana_program::stake::state::StakeStateV2;
 use spl_stake_pool::error::StakePoolError;
 use spl_stake_pool::state::{StakePool, ValidatorListHeader, ValidatorStakeInfo};
@@ -12,17 +12,16 @@ use crate::utils::SystemProgramExt;
 
 use super::ValidateStakePool;
 
-pub(in crate::modules) trait SPLStakePoolInterface: anchor_lang::Id {}
+pub trait SPLStakePoolInterface: anchor_lang::Id {}
+impl<T: anchor_lang::Id> SPLStakePoolInterface for T {}
 
-pub(in crate::modules) struct SPLStakePool;
+pub struct SPLStakePool;
 
 impl anchor_lang::Id for SPLStakePool {
     fn id() -> Pubkey {
         spl_stake_pool::ID
     }
 }
-
-impl SPLStakePoolInterface for SPLStakePool {}
 
 pub(in crate::modules) struct SPLStakePoolService<'info, T = SPLStakePool>
 where
@@ -35,11 +34,11 @@ where
 }
 
 impl<T: SPLStakePoolInterface> ValidateStakePool for SPLStakePoolService<'_, T> {
+    #[inline(never)]
     fn validate_stake_pool<'info>(
         pool_account: &'info AccountInfo<'info>,
         pool_token_mint: &Pubkey,
     ) -> Result<()> {
-        require_keys_eq!(*pool_account.owner, T::id());
         let pool_account_data = Self::deserialize_pool_account(pool_account)?;
 
         require_keys_eq!(pool_account_data.pool_mint, pool_token_mint.key());
@@ -56,7 +55,6 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
         pool_token_mint: &'info AccountInfo<'info>,
         pool_token_program: &'info AccountInfo<'info>,
     ) -> Result<Self> {
-        require_keys_eq!(*pool_account.owner, T::id());
         let pool_account_data = Self::deserialize_pool_account(pool_account)?;
 
         require_keys_eq!(pool_account_data.pool_mint, pool_token_mint.key());
@@ -77,6 +75,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
             StakePool::deserialize(&mut pool_account.try_borrow_data()?.as_ref())
                 .map_err(|_| error!(error::ErrorCode::AccountDidNotDeserialize))?;
 
+        require_keys_eq!(*pool_account.owner, T::id());
         require_eq!(pool_account_data.is_valid(), true);
 
         Ok(pool_account_data)
@@ -87,6 +86,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
     }
 
     pub(super) fn deserialize_stake_account(stake_account: &AccountInfo) -> Result<StakeStateV2> {
+        require_keys_eq!(*stake_account.owner, solana_program::stake::program::ID);
         StakeStateV2::deserialize(&mut stake_account.try_borrow_data()?.as_ref())
             .map_err(|_| error!(error::ErrorCode::AccountDidNotDeserialize))
     }

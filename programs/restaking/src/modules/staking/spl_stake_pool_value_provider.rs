@@ -2,11 +2,21 @@ use anchor_lang::prelude::*;
 
 use crate::modules::pricing::{Asset, TokenValue, TokenValueProvider};
 
-use super::SPLStakePoolService;
+use super::{SPLStakePool, SPLStakePoolInterface, SPLStakePoolService};
 
-pub struct SPLStakePoolValueProvider;
+pub struct SPLStakePoolValueProvider<T: SPLStakePoolInterface = SPLStakePool> {
+    _marker: std::marker::PhantomData<T>,
+}
 
-impl TokenValueProvider for SPLStakePoolValueProvider {
+impl<T: SPLStakePoolInterface> SPLStakePoolValueProvider<T> {
+    pub fn new() -> Self {
+        Self {
+            _marker: Default::default(),
+        }
+    }
+}
+
+impl<T: SPLStakePoolInterface> TokenValueProvider for SPLStakePoolValueProvider<T> {
     #[inline(never)]
     fn resolve_underlying_assets<'info>(
         self,
@@ -17,7 +27,7 @@ impl TokenValueProvider for SPLStakePoolValueProvider {
         require_eq!(pricing_source_accounts.len(), 1);
 
         let stake_pool =
-            <SPLStakePoolService>::deserialize_pool_account(pricing_source_accounts[0])?;
+            SPLStakePoolService::<T>::deserialize_pool_account(pricing_source_accounts[0])?;
         require_keys_eq!(stake_pool.pool_mint, *token_mint);
 
         result.numerator.clear();

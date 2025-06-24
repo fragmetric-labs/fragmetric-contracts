@@ -1,20 +1,14 @@
 use anchor_lang::prelude::*;
 
-use super::{SPLStakePoolInterface, SPLStakePoolService};
+use super::SPLStakePoolService;
 
-pub(in crate::modules) struct SanctumMultiValidatorSPLStakePool;
-
-impl SanctumMultiValidatorSPLStakePool {
-    const ID: Pubkey = pubkey!("SPMBzsVUuoHA4Jm6KunbsotaahvVikZs1JyTW6iJvbn");
-}
+pub struct SanctumMultiValidatorSPLStakePool;
 
 impl anchor_lang::Id for SanctumMultiValidatorSPLStakePool {
     fn id() -> Pubkey {
-        Self::ID
+        pubkey!("SPMBzsVUuoHA4Jm6KunbsotaahvVikZs1JyTW6iJvbn")
     }
 }
-
-impl SPLStakePoolInterface for SanctumMultiValidatorSPLStakePool {}
 
 /// For now, sanctum multi validator SPL stake pool is
 /// identical to SPL stake pool.
