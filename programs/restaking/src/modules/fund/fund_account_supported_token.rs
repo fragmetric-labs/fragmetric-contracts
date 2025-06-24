@@ -21,9 +21,6 @@ pub(super) struct SupportedToken {
 
     /// token deposit & withdrawal
     pub token: AssetState,
-
-    /// previous field:
-    /// rebalancing_amount: u64,
     _padding2: [u8; 8],
 
     /// configuration: used for staking allocation strategy.
