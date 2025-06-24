@@ -333,15 +333,12 @@ impl<'info> MarinadeStakePoolService<'info> {
         let withdrawal_ticket_account =
             Self::deserialize_withdrawal_ticket_account(new_withdrawal_ticket_account)?;
         let unstaking_sol_amount = withdrawal_ticket_account.lamports_amount;
-        let deducted_sol_fee_amount = {
-            let fee_numerator = self.pool_account.delayed_unstake_fee.bp_cents;
-            let fee_denominator = 1_000_000 - fee_numerator;
-            crate::utils::get_proportional_amount(
-                unstaking_sol_amount,
-                fee_numerator as u64,
-                fee_denominator as u64,
-            )?
-        };
+        // ref: https://github.com/marinade-finance/liquid-staking-program/blob/main/programs/marinade-finance/src/instructions/delayed_unstake/order_unstake.rs#L61
+        let deducted_sol_fee_amount = crate::utils::get_proportional_amount(
+            sol_amount,
+            pool_account.delayed_unstake_fee.bp_cents as u64,
+            1_000_000,
+        )?;
 
         msg!("UNSTAKE#marinade: pool_token_mint={}, burnt_pool_token_amount={}, deducted_sol_fee_amount={}, unstaked_sol_amount={}", self.pool_token_mint.key(), pool_token_amount, deducted_sol_fee_amount, unstaking_sol_amount);
 
