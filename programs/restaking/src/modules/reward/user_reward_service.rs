@@ -90,7 +90,7 @@ impl<'a, 'info> UserRewardService<'a, 'info> {
         let reward_id = reward_account.get_reward_id(&reward_token_mint.key())?;
 
         let (claimed_amount, total_claimed_amount) = user_reward_account.claim_reward(
-            &mut *reward_account,
+            &mut reward_account,
             authority.key,
             reward_id,
             is_bonus_pool,

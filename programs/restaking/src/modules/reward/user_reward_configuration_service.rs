@@ -51,15 +51,13 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
                 .map(|size| min_account_size.max(size as usize))
                 .unwrap_or(min_account_size);
 
-            let new_account_size = system_program.expand_account_size_if_needed(
+            system_program.expand_account_size_if_needed(
                 self.user_reward_account.as_ref(),
                 payer,
                 &[],
                 target_account_size,
                 None,
-            )?;
-
-            new_account_size
+            )?
         } else {
             let new_account_size = std::cmp::min(
                 solana_program::entrypoint::MAX_PERMITTED_DATA_INCREASE,

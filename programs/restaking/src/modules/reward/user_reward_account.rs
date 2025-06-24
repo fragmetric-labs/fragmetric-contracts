@@ -156,7 +156,7 @@ impl UserRewardAccount {
         delegate: Option<Pubkey>,
     ) -> Result<()> {
         self.assert_authority_is_user_or_delegate(authority)?;
-        self.delegate = delegate.unwrap_or_else(|| Pubkey::default());
+        self.delegate = delegate.unwrap_or_default();
 
         Ok(())
     }
