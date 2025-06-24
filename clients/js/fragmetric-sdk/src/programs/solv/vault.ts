@@ -292,30 +292,6 @@ export class SolvVaultAccountContext extends AccountContext<
 
   readonly solvProtocolWallet = new SolvProtocolWalletAccountContext(this);
 
-  // TODO/v0.2.1: deprecate
-  readonly closeAccountVersionOne = new TransactionTemplateContext(this, null, {
-    description: 'close vault account v1 for migration from v0 -> v2',
-    instructions: [
-      async (parent, args, overrides) => {
-        const vaultManager = (parent.program as SolvBTCVaultProgram)
-          .knownAddresses.initialVaultManager;
-
-        return Promise.all([
-          solv.getCloseVaultAccountVersionOneInstructionAsync(
-            {
-              payer: createNoopSigner(vaultManager as Address),
-              vaultReceiptTokenMint: parent.__seedReceiptTokenMint,
-              program: this.program.address,
-            },
-            {
-              programAddress: this.program.address,
-            }
-          ),
-        ]);
-      },
-    ],
-  });
-
   /** transactions authorized to vault manager **/
   readonly initializeReceiptTokenMint = new TransactionTemplateContext(
     this,
