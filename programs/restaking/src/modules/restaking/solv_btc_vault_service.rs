@@ -40,7 +40,6 @@ impl<'info> SolvBTCVaultService<'info> {
         vault_account: &'info AccountInfo<'info>,
     ) -> Result<Self> {
         require_keys_eq!(SOLV_PROGRAM_ID, vault_program.key());
-        require_keys_eq!(*vault_account.owner, vault_program.key());
 
         Ok(Self {
             vault_program,

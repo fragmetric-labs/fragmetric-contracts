@@ -37,21 +37,14 @@ impl ValidateVault for JitoRestakingVaultService<'_> {
         vault_account: &AccountInfo,
         vault_supported_token_mint: &InterfaceAccount<Mint>,
         vault_receipt_token_mint: &InterfaceAccount<Mint>,
-        _fund_account: &AccountInfo,
+        fund_account: &AccountInfo,
     ) -> Result<()> {
         let data = &Self::borrow_account_data(vault_account)?;
         let vault = Self::deserialize_account_data::<Vault>(data)?;
 
         require_keys_eq!(vault.supported_mint, vault_supported_token_mint.key());
-        require_keys_eq!(
-            *AsRef::<AccountInfo>::as_ref(vault_supported_token_mint).owner,
-            Token::id()
-        );
         require_keys_eq!(vault.vrt_mint, vault_receipt_token_mint.key());
-        require_keys_eq!(
-            *AsRef::<AccountInfo>::as_ref(vault_receipt_token_mint).owner,
-            Token::id()
-        );
+        require_keys_eq!(vault.delegation_admin, fund_account.key());
 
         Ok(())
     }
@@ -63,15 +56,13 @@ impl<'info> JitoRestakingVaultService<'info> {
         vault_config_account: &'info AccountInfo<'info>,
         vault_account: &'info AccountInfo<'info>,
     ) -> Result<Self> {
-        require_keys_eq!(JITO_VAULT_PROGRAM_ID, vault_program.key());
-        require_keys_eq!(JITO_VAULT_CONFIG_ADDRESS, vault_config_account.key());
-        require_keys_eq!(*vault_config_account.owner, vault_program.key());
-        require_keys_eq!(*vault_account.owner, vault_program.key());
-
         let vault_config_data = &Self::borrow_account_data(vault_config_account)?;
         let vault_config = Self::deserialize_account_data::<Config>(vault_config_data)?;
         let vault_data = &Self::borrow_account_data(vault_account)?;
         let vault = Self::deserialize_account_data::<Vault>(vault_data)?;
+
+        require_keys_eq!(JITO_VAULT_PROGRAM_ID, vault_program.key());
+        require_keys_eq!(JITO_VAULT_CONFIG_ADDRESS, vault_config_account.key());
 
         let num_operators = vault.operator_count();
         let current_slot = Clock::get()?.slot;
@@ -122,6 +113,7 @@ impl<'info> JitoRestakingVaultService<'info> {
     fn borrow_account_data<'a, 'b>(
         account: &'a AccountInfo<'b>,
     ) -> Result<std::cell::Ref<'a, &'b mut [u8]>> {
+        require_keys_eq!(*account.owner, JITO_VAULT_PROGRAM_ID);
         Ok(account
             .data
             .try_borrow()
