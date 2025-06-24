@@ -27,10 +27,11 @@ pub(in crate::modules) struct SPLStakePoolService<'info, T = SPLStakePool>
 where
     T: SPLStakePoolInterface,
 {
-    spl_stake_pool_program: Program<'info, T>,
+    spl_stake_pool_program: &'info AccountInfo<'info>,
     pool_account: &'info AccountInfo<'info>, // deserialize on-demand
     pool_token_mint: &'info AccountInfo<'info>,
     pool_token_program: &'info AccountInfo<'info>,
+    _marker: std::marker::PhantomData<T>,
 }
 
 impl<T: SPLStakePoolInterface> ValidateStakePool for SPLStakePoolService<'_, T> {
@@ -57,14 +58,16 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
     ) -> Result<Self> {
         let pool_account_data = Self::deserialize_pool_account(pool_account)?;
 
+        require_keys_eq!(T::id(), spl_stake_pool_program.key());
         require_keys_eq!(pool_account_data.pool_mint, pool_token_mint.key());
         require_keys_eq!(pool_account_data.token_program_id, pool_token_program.key());
 
         Ok(Self {
-            spl_stake_pool_program: Program::try_from(spl_stake_pool_program)?,
+            spl_stake_pool_program,
             pool_account,
             pool_token_mint,
             pool_token_program,
+            _marker: Default::default(),
         })
     }
 
@@ -298,8 +301,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
             let referral_fee = pool_account_data
                 .calc_pool_tokens_sol_referral_fee(total_fee)
                 .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-            let manager_fee = total_fee.saturating_sub(referral_fee);
-            manager_fee
+            total_fee.saturating_sub(referral_fee) // manager_fee
         };
 
         msg!(
@@ -535,7 +537,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
             .calc_pool_tokens_sol_withdrawal_fee(pool_token_amount)
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
 
-        msg!("UNSTAKE#spl: pool_token_mint={}, burnt_pool_token_amount={}, deducted_pool_token_fee_amount={}, to_sol_account_amount={}, unstaked_sol_amount={}, unstaking_sol_amount=0", self.pool_token_mint.key(), pool_token_amount, deducted_pool_token_fee_amount, to_sol_account_amount, unstaked_sol_amount);
+        msg!("UNSTAKE#spl: pool_token_mint={}, burnt_pool_token_amount={}, deducted_pool_token_fee_amount={}, to_sol_account_amount={}, unstaked_sol_amount={}", self.pool_token_mint.key(), pool_token_amount, deducted_pool_token_fee_amount, to_sol_account_amount, unstaked_sol_amount);
 
         Ok((
             pool_token_amount,
@@ -822,7 +824,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
         let stake_account_data = &Self::deserialize_stake_account(from_stake_account)?;
 
         let to_sol_account_amount_before = to_sol_account.lamports();
-        // SAFE unwrap: withdrawable stake account always have meta
+        #[allow(clippy::unwrap_used)] // withdrawable stake account always have meta
         let from_stake_account_rent = stake_account_data.meta().unwrap().rent_exempt_reserve;
         let unstaked_sol_amount = from_stake_account.lamports() - from_stake_account_rent;
 
@@ -896,8 +898,8 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
                 .stake(clock.epoch, stake_history, new_rate_activation_epoch)
         } else {
             // Assume full stake if the stake account hasn't been
-            //  de-activated, because in the future the exposed stake
-            //  might be higher than stake.stake() due to warmup
+            // de-activated, because in the future the exposed stake
+            // might be higher than stake.stake() due to warmup
             stake.delegation.stake
         };
 

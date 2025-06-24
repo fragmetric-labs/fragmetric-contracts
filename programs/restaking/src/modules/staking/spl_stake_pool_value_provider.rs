@@ -8,6 +8,12 @@ pub struct SPLStakePoolValueProvider<T: SPLStakePoolInterface = SPLStakePool> {
     _marker: std::marker::PhantomData<T>,
 }
 
+impl<T: SPLStakePoolInterface> Default for SPLStakePoolValueProvider<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T: SPLStakePoolInterface> SPLStakePoolValueProvider<T> {
     pub fn new() -> Self {
         Self {

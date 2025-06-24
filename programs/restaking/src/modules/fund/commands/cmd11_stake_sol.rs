@@ -479,11 +479,6 @@ impl StakeSOLCommand {
             pool_token_program,
         )?;
 
-        // minimum deposit amount
-        if item.allocated_sol_amount < marinade_stake_pool_service.get_min_deposit_sol_amount() {
-            return Ok(None);
-        }
-
         // no fee
         let (to_pool_token_account_amount, minted_pool_token_amount) = marinade_stake_pool_service
             .deposit_sol(
@@ -498,6 +493,11 @@ impl StakeSOLCommand {
                 &[&ctx.fund_account.load()?.get_reserve_account_seeds()],
                 item.allocated_sol_amount,
             )?;
+
+        // Nothing happened
+        if minted_pool_token_amount == 0 {
+            return Ok(None);
+        }
 
         // pricing service with updated token values
         let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
