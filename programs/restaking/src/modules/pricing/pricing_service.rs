@@ -1,3 +1,8 @@
+use anchor_lang::prelude::*;
+use bytemuck::Zeroable;
+use once_cell::unsync::OnceCell;
+use primitive_types::U256;
+
 use crate::errors::ErrorCode;
 use crate::modules::fund::FundReceiptTokenValueProvider;
 use crate::modules::normalization::NormalizedTokenPoolValueProvider;
@@ -7,14 +12,8 @@ use crate::modules::staking::{
     SanctumMultiValidatorSPLStakePool, SanctumSingleValidatorSPLStakePool,
 };
 use crate::modules::swap::OrcaDEXLiquidityPoolValueProvider;
-use anchor_lang::prelude::*;
-use bytemuck::Zeroable;
-use once_cell::unsync::OnceCell;
-use primitive_types::U256;
 
-#[cfg(all(test, not(feature = "idl-build")))]
-use super::MockPricingSourceValueProvider;
-use super::{Asset, TokenPricingSource, TokenValue, TokenValuePod, TokenValueProvider};
+use super::*;
 
 const PRICING_SERVICE_EXPECTED_TOKENS_SIZE: usize = 34; // MAX=34 (ST=16 + NT=1 + VRT=16 + RT=1)
 
