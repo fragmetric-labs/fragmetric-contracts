@@ -1,5 +1,6 @@
 #![allow(clippy::module_inception)]
 #![allow(clippy::inconsistent_digit_grouping)]
+#![allow(unused_imports)]
 pub mod ed25519;
 pub mod fund;
 pub mod normalization;

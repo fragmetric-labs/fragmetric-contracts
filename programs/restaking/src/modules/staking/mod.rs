@@ -5,7 +5,6 @@ mod sanctum_single_validator_spl_stake_pool_service;
 mod spl_stake_pool_service;
 mod spl_stake_pool_value_provider;
 
-#[allow(unused_imports)]
 pub use marinade_stake_pool_service::*;
 pub use marinade_stake_pool_value_provider::*;
 pub use sanctum_multi_validator_spl_stake_pool_service::*;

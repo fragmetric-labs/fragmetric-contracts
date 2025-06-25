@@ -1,15 +1,12 @@
 use anchor_lang::prelude::*;
 
-use super::{
-    DelegateVSTCommand, FundService, OperationCommandContext, OperationCommandEntry,
-    OperationCommandResult, SelfExecutable, WeightedAllocationParticipant,
-    WeightedAllocationStrategy, FUND_ACCOUNT_MAX_RESTAKING_VAULTS,
-};
+use crate::errors;
 use crate::modules::fund::FUND_ACCOUNT_MAX_SUPPORTED_TOKENS;
 use crate::modules::pricing::TokenPricingSource;
 use crate::modules::restaking::{JitoRestakingVaultService, SolvBTCVaultService};
 use crate::utils::PDASeeds;
-use crate::{errors, modules::pricing};
+
+use super::*;
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
 pub struct RestakeVSTCommand {
@@ -174,7 +171,7 @@ impl SelfExecutable for RestakeVSTCommand {
                     {
                         Some(TokenPricingSource::JitoRestakingVault { address }) => {
                             let [vault_program, vault_config, vault_account, ..] = accounts else {
-                                err!(ErrorCode::AccountNotEnoughKeys)?
+                                err!(error::ErrorCode::AccountNotEnoughKeys)?
                             };
                             require_keys_eq!(address, vault_account.key());
 
@@ -230,7 +227,7 @@ impl SelfExecutable for RestakeVSTCommand {
                         }
                         Some(TokenPricingSource::SolvBTCVault { address }) => {
                             let [vault_program, vault_account, ..] = accounts else {
-                                err!(ErrorCode::AccountNotEnoughKeys)?
+                                err!(error::ErrorCode::AccountNotEnoughKeys)?
                             };
                             require_keys_eq!(vault_account.key(), address);
 
@@ -301,7 +298,7 @@ impl SelfExecutable for RestakeVSTCommand {
                             let [vault_program, vault_config, vault_account, token_program, vault_receipt_token_mint, vault_receipt_token_fee_wallet_account, vault_supported_token_reserve_account, from_vault_supported_token_account, to_vault_receipt_token_account, fund_reserve_account, pricing_sources @ ..] =
                                 accounts
                             else {
-                                err!(ErrorCode::AccountNotEnoughKeys)?
+                                err!(error::ErrorCode::AccountNotEnoughKeys)?
                             };
                             require_keys_eq!(address, vault_account.key());
 
@@ -428,7 +425,7 @@ impl SelfExecutable for RestakeVSTCommand {
                             let [vault_program, vault_account, vault_receipt_token_mint, vault_supported_token_mint, vault_vault_supported_token_account, token_program, event_authority, fund_vault_supported_token_account, fund_vault_receipt_token_account, fund_reserve, pricing_sources @ ..] =
                                 accounts
                             else {
-                                err!(ErrorCode::AccountNotEnoughKeys)?
+                                err!(error::ErrorCode::AccountNotEnoughKeys)?
                             };
                             require_keys_eq!(address, vault_account.key());
 

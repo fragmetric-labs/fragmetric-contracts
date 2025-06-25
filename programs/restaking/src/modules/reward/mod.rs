@@ -11,23 +11,17 @@ mod user_reward_pool;
 mod user_reward_service;
 mod user_reward_settlement;
 
-#[allow(unused_imports)]
 pub use reward::*;
 pub use reward_account::*;
 pub use reward_configuration_service::*;
-#[allow(unused_imports)]
 pub use reward_pool::*;
 pub use reward_service::*;
-#[allow(unused_imports)]
 pub use reward_settlement::*;
-#[allow(unused_imports)]
 pub use token_allocated_amount::*;
 pub use user_reward_account::*;
 pub use user_reward_configuration_service::*;
-#[allow(unused_imports)]
 pub use user_reward_pool::*;
 pub use user_reward_service::*;
-#[allow(unused_imports)]
 pub use user_reward_settlement::*;
 
 #[cfg(test)]

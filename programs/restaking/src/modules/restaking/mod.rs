@@ -4,13 +4,10 @@ pub mod solv_btc_vault_service;
 pub mod solv_btc_vault_value_provider;
 pub mod virtual_vault_service;
 
-#[allow(unused_imports)]
 pub use jito_restaking_vault_service::*;
 pub use jito_restaking_vault_value_provider::*;
-#[allow(unused_imports)]
 pub use solv_btc_vault_service::*;
 pub use solv_btc_vault_value_provider::*;
-#[allow(unused_imports)]
 pub use virtual_vault_service::*;
 
 use anchor_lang::prelude::*;
