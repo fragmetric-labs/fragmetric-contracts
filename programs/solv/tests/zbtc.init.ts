@@ -34,8 +34,9 @@ export function initializeZBTCVault(testCtx: TestSuiteContext) {
         address: knownAddresses.solvProtocolWallet,
       }),
     () =>
-      ctx.setSolvProtocolWithdrawalFeeRate.execute({
-        feeRateBps: 80, // 0.8%
+      ctx.setSolvProtocolFeeRate.execute({
+        depositFeeRateBps: 20, // 0.2%
+        withdrawalFeeRateBps: 60, // 0.6%
       }),
   ].reduce(
     async (prevLogs, task) => {

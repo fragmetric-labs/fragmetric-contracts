@@ -74,6 +74,8 @@ export class SolvVaultAccountContext extends AccountContext<
                 r.vstWithdrawalTotalEstimatedAmount,
               supportedTokenLockedAmount: r.vstWithdrawalLockedAmount,
               solvReceiptTokenLockedAmount: r.srtWithdrawalLockedAmount,
+              oneSolvReceiptTokenAsSupportedTokenAmount: r.oneSrtAsMicroVst / 1_000_000n,
+              oneSolvReceiptTokenAsMicroSupportedTokenAmount: r.oneSrtAsMicroVst,
               state: r.state,
             };
           });
@@ -101,8 +103,12 @@ export class SolvVaultAccountContext extends AccountContext<
           supportedTokenAmount: supportedToken.data.amount,
           supportedTokenOperationReservedAmount:
             vault.data.vstOperationReservedAmount,
+          supportedTokenOperationReceivableAmount:
+            vault.data.vstOperationReceivableAmount,
 
           solvProtocolWallet: vault.data.solvProtocolWallet,
+          solvProtocolDepositFeeRate:
+            vault.data.solvProtocolDepositFeeRateBps / 10000,
           solvProtocolWithdrawalFeeRate:
             vault.data.solvProtocolWithdrawalFeeRateBps / 10000,
           solvReceiptTokenMint: vault.data.solvReceiptTokenMint,
@@ -1022,10 +1028,11 @@ export class SolvVaultAccountContext extends AccountContext<
     }
   );
 
-  readonly setSolvProtocolWithdrawalFeeRate = new TransactionTemplateContext(
+  readonly setSolvProtocolFeeRate = new TransactionTemplateContext(
     this,
     v.object({
-      feeRateBps: v.number(),
+      depositFeeRateBps: v.number(),
+      withdrawalFeeRateBps: v.number(),
     }),
     {
       description: 'delegate reward token mint',
@@ -1035,13 +1042,14 @@ export class SolvVaultAccountContext extends AccountContext<
           if (!vault) throw new Error('invalid context');
 
           return Promise.all([
-            solv.getSolvManagerSetSolvProtocolWithdrawalFeeRateInstructionAsync(
+            solv.getSolvManagerSetSolvProtocolFeeRateInstructionAsync(
               {
                 solvManager: createNoopSigner(vault.data.solvManager),
                 solvProtocolWallet: vault.data.solvProtocolWallet,
                 vaultReceiptTokenMint: vault.data.vaultReceiptTokenMint,
                 program: this.program.address,
-                solvProtocolWithdrawalFeeRateBps: args.feeRateBps,
+                depositFeeRateBps: args.depositFeeRateBps,
+                withdrawalFeeRateBps: args.withdrawalFeeRateBps,
               },
               {
                 programAddress: this.program.address,

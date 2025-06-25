@@ -137,7 +137,7 @@ describe('solv.zBTC test', async () => {
     });
 
     await expect(
-      ctx.solvProtocolWallet.supportedToken.resolve(true).then((a) => a.amount)
+      ctx.solvProtocolWallet.supportedToken.resolve(true).then((a) => a!.amount)
     ).resolves.toEqual(223456789n);
 
     // transfer srt to the vault with exact 1:1 rate + 1n
@@ -438,10 +438,10 @@ describe('solv.zBTC test', async () => {
     expect({
       supportedToken: await ctx.solvProtocolWallet.supportedToken
         .resolve(true)
-        .then((a) => a.amount),
+        .then((a) => a!.amount),
       solvReceiptToken: await ctx.solvProtocolWallet.solvReceiptToken
         .resolve(true)
-        .then((a) => a.amount),
+        .then((a) => a!.amount),
     }).toMatchInlineSnapshot(`
       {
         "solvReceiptToken": 9999999999n,
@@ -672,10 +672,10 @@ describe('solv.zBTC test', async () => {
 
     // claim it
     await expect(
-      ctx.fundManager.receiptToken.resolve(true).then((a) => a.amount)
+      ctx.fundManager.receiptToken.resolve(true).then((a) => a!.amount)
     ).resolves.toMatchInlineSnapshot(`0n`);
     await expect(
-      ctx.fundManager.supportedToken.resolve(true).then((a) => a.amount)
+      ctx.fundManager.supportedToken.resolve(true).then((a) => a!.amount)
     ).resolves.toMatchInlineSnapshot(`9700000000n`);
 
     await expect(
@@ -685,7 +685,7 @@ describe('solv.zBTC test', async () => {
     ).resolves.not.toThrowError();
 
     await expect(
-      ctx.fundManager.supportedToken.resolve(true).then((a) => a.amount)
+      ctx.fundManager.supportedToken.resolve(true).then((a) => a!.amount)
     ).resolves.toMatchInlineSnapshot(`10022344675n`);
     // 322344675n = 10022344675 - 9700000000
 

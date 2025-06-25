@@ -14,7 +14,6 @@ import {
   type ReadonlyUint8Array,
 } from '@solana/kit';
 import {
-  type ParsedCloseVaultAccountVersionOneInstruction,
   type ParsedFundManagerDepositInstruction,
   type ParsedFundManagerRequestWithdrawalInstruction,
   type ParsedFundManagerWithdrawInstruction,
@@ -23,8 +22,8 @@ import {
   type ParsedSolvManagerCompleteWithdrawalRequestsInstruction,
   type ParsedSolvManagerConfirmDepositsInstruction,
   type ParsedSolvManagerConfirmWithdrawalRequestsInstruction,
+  type ParsedSolvManagerSetSolvProtocolFeeRateInstruction,
   type ParsedSolvManagerSetSolvProtocolWalletInstruction,
-  type ParsedSolvManagerSetSolvProtocolWithdrawalFeeRateInstruction,
   type ParsedUpdateVaultAdminRoleInstruction,
   type ParsedVaultManagerInitializeVaultAccountInstruction,
   type ParsedVaultManagerUpdateVaultAccountIfNeededInstruction,
@@ -58,7 +57,6 @@ export function identifySolvAccount(
 }
 
 export enum SolvInstruction {
-  CloseVaultAccountVersionOne,
   FundManagerDeposit,
   FundManagerRequestWithdrawal,
   FundManagerWithdraw,
@@ -67,8 +65,8 @@ export enum SolvInstruction {
   SolvManagerCompleteWithdrawalRequests,
   SolvManagerConfirmDeposits,
   SolvManagerConfirmWithdrawalRequests,
+  SolvManagerSetSolvProtocolFeeRate,
   SolvManagerSetSolvProtocolWallet,
-  SolvManagerSetSolvProtocolWithdrawalFeeRate,
   UpdateVaultAdminRole,
   VaultManagerInitializeVaultAccount,
   VaultManagerUpdateVaultAccountIfNeeded,
@@ -78,17 +76,6 @@ export function identifySolvInstruction(
   instruction: { data: ReadonlyUint8Array } | ReadonlyUint8Array
 ): SolvInstruction {
   const data = 'data' in instruction ? instruction.data : instruction;
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([71, 53, 32, 110, 173, 58, 243, 130])
-      ),
-      0
-    )
-  ) {
-    return SolvInstruction.CloseVaultAccountVersionOne;
-  }
   if (
     containsBytes(
       data,
@@ -181,23 +168,23 @@ export function identifySolvInstruction(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([76, 63, 232, 98, 67, 66, 251, 177])
+      ),
+      0
+    )
+  ) {
+    return SolvInstruction.SolvManagerSetSolvProtocolFeeRate;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
         new Uint8Array([59, 28, 215, 147, 82, 154, 62, 141])
       ),
       0
     )
   ) {
     return SolvInstruction.SolvManagerSetSolvProtocolWallet;
-  }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([250, 221, 42, 4, 46, 132, 97, 96])
-      ),
-      0
-    )
-  ) {
-    return SolvInstruction.SolvManagerSetSolvProtocolWithdrawalFeeRate;
   }
   if (
     containsBytes(
@@ -241,9 +228,6 @@ export type ParsedSolvInstruction<
   TProgram extends string = '9beGuWXNoKPKCApT6xJUm5435Fz8EMGzoTTXgkcf3zAz',
 > =
   | ({
-      instructionType: SolvInstruction.CloseVaultAccountVersionOne;
-    } & ParsedCloseVaultAccountVersionOneInstruction<TProgram>)
-  | ({
       instructionType: SolvInstruction.FundManagerDeposit;
     } & ParsedFundManagerDepositInstruction<TProgram>)
   | ({
@@ -268,11 +252,11 @@ export type ParsedSolvInstruction<
       instructionType: SolvInstruction.SolvManagerConfirmWithdrawalRequests;
     } & ParsedSolvManagerConfirmWithdrawalRequestsInstruction<TProgram>)
   | ({
+      instructionType: SolvInstruction.SolvManagerSetSolvProtocolFeeRate;
+    } & ParsedSolvManagerSetSolvProtocolFeeRateInstruction<TProgram>)
+  | ({
       instructionType: SolvInstruction.SolvManagerSetSolvProtocolWallet;
     } & ParsedSolvManagerSetSolvProtocolWalletInstruction<TProgram>)
-  | ({
-      instructionType: SolvInstruction.SolvManagerSetSolvProtocolWithdrawalFeeRate;
-    } & ParsedSolvManagerSetSolvProtocolWithdrawalFeeRateInstruction<TProgram>)
   | ({
       instructionType: SolvInstruction.UpdateVaultAdminRole;
     } & ParsedUpdateVaultAdminRoleInstruction<TProgram>)
