@@ -112,7 +112,7 @@ pub mod solv {
     }
 
     // TODO/phase3: deprecate
-    pub fn solv_manager_set_protocol_fee_rate(
+    pub fn solv_manager_set_solv_protocol_fee_rate(
         ctx: Context<SolvManagerConfigurationContext>,
         deposit_fee_rate_bps: u16,
         withdrawal_fee_rate_bps: u16,
