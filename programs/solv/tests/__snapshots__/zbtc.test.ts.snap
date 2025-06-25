@@ -173,7 +173,7 @@ exports[`solv.zBTC test > solv.zBTC initializationTasks snapshot 1`] = `
   ],
   [
     "Program 9beGuWXNoKPKCApT6xJUm5435Fz8EMGzoTTXgkcf3zAz invoke [1]",
-    "Program log: Instruction: SolvManagerSetSolvProtocolWithdrawalFeeRate",
+    "Program log: Instruction: SolvManagerSetSolvProtocolFeeRate",
     "MASKED(/^Program \\w{32,44} consumed \\d+ of \\d+ compute units$/)",
     "Program 9beGuWXNoKPKCApT6xJUm5435Fz8EMGzoTTXgkcf3zAz success",
   ],

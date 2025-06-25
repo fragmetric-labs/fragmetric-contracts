@@ -935,6 +935,11 @@ impl VaultAccount {
         // Check exact amount
         require_eq!(srt_withdrawal_locked_amount, srt_amount);
 
+        // No completed requests
+        if vrt_withdrawal_requested_amount == 0 {
+            return Ok(());
+        }
+
         // Apply withdrawal fee
         let vst_withdrawal_fee_amount = div_util(
             vst_withdrawal_total_estimated_amount as u128
