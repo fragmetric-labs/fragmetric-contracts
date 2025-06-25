@@ -47,8 +47,7 @@ export type SupportedToken = {
   oneTokenAsSol: bigint;
   /** token deposit & withdrawal */
   token: AssetState;
-  /** configuration: the amount requested to be unstaked as soon as possible regardless of current state, this value should be decreased by each unstaking requested amount. */
-  rebalancingAmount: bigint;
+  padding2: ReadonlyUint8Array;
   /** configuration: used for staking allocation strategy. */
   solAllocationWeight: bigint;
   solAllocationCapacityAmount: bigint;
@@ -68,8 +67,7 @@ export type SupportedTokenArgs = {
   oneTokenAsSol: number | bigint;
   /** token deposit & withdrawal */
   token: AssetStateArgs;
-  /** configuration: the amount requested to be unstaked as soon as possible regardless of current state, this value should be decreased by each unstaking requested amount. */
-  rebalancingAmount: number | bigint;
+  padding2: ReadonlyUint8Array;
   /** configuration: used for staking allocation strategy. */
   solAllocationWeight: number | bigint;
   solAllocationCapacityAmount: number | bigint;
@@ -88,7 +86,7 @@ export function getSupportedTokenEncoder(): Encoder<SupportedTokenArgs> {
     ['pricingSource', getTokenPricingSourcePodEncoder()],
     ['oneTokenAsSol', getU64Encoder()],
     ['token', getAssetStateEncoder()],
-    ['rebalancingAmount', getU64Encoder()],
+    ['padding2', fixEncoderSize(getBytesEncoder(), 8)],
     ['solAllocationWeight', getU64Encoder()],
     ['solAllocationCapacityAmount', getU64Encoder()],
     ['pendingUnstakingAmountAsSol', getU64Encoder()],
@@ -106,7 +104,7 @@ export function getSupportedTokenDecoder(): Decoder<SupportedToken> {
     ['pricingSource', getTokenPricingSourcePodDecoder()],
     ['oneTokenAsSol', getU64Decoder()],
     ['token', getAssetStateDecoder()],
-    ['rebalancingAmount', getU64Decoder()],
+    ['padding2', fixDecoderSize(getBytesDecoder(), 8)],
     ['solAllocationWeight', getU64Decoder()],
     ['solAllocationCapacityAmount', getU64Decoder()],
     ['pendingUnstakingAmountAsSol', getU64Decoder()],

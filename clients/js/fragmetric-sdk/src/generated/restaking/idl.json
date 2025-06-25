@@ -4553,12 +4553,6 @@
         {
           "name": "token_allocation_capacity_amount",
           "type": "u64"
-        },
-        {
-          "name": "token_redelegating_amount",
-          "type": {
-            "option": "u64"
-          }
         }
       ]
     },
@@ -5122,12 +5116,6 @@
         {
           "name": "token_withdrawal_normal_reserve_max_amount",
           "type": "u64"
-        },
-        {
-          "name": "token_rebalancing_amount",
-          "type": {
-            "option": "u64"
-          }
         },
         {
           "name": "sol_allocation_weight",
@@ -12060,9 +12048,8 @@
             "name": "operation_receivable_amount",
             "docs": [
               "asset: receivable amount that the fund may charge the users requesting withdrawals.",
-              "It is accrued during either the preparation of the withdrawal obligation or rebalancing of LST like fees from (un)staking or (un)restaking.",
-              "And it shall be settled by the withdrawal fee normally. And it also can be written off by a donation operation.",
-              "Then it costs the rebalancing expense to the capital of the fund itself as an operation cost instead of charging the users requesting withdrawals."
+              "It is accrued during the preparation of the withdrawal obligation.",
+              "And it shall be settled by the withdrawal fee normally. And it also can be written off by a donation operation."
             ],
             "type": "u64"
           },
@@ -14960,18 +14947,11 @@
             "type": "u64"
           },
           {
-            "name": "supported_token_redelegating_amount",
-            "docs": [
-              "configuration: the amount requested to be undelegated as soon as possible regardless of current state, this value should be decreased by each undelegation requested amount."
-            ],
-            "type": "u64"
-          },
-          {
             "name": "_reserved",
             "type": {
               "array": [
                 "u8",
-                24
+                32
               ]
             }
           }
@@ -15582,11 +15562,13 @@
             }
           },
           {
-            "name": "rebalancing_amount",
-            "docs": [
-              "configuration: the amount requested to be unstaked as soon as possible regardless of current state, this value should be decreased by each unstaking requested amount."
-            ],
-            "type": "u64"
+            "name": "_padding2",
+            "type": {
+              "array": [
+                "u8",
+                8
+              ]
+            }
           },
           {
             "name": "sol_allocation_weight",

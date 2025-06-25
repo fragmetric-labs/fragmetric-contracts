@@ -60,7 +60,6 @@ export function initializeFragBTC(testCtx: TestSuiteContext) {
         tokenWithdrawable: true,
         tokenWithdrawalNormalReserveRateBps: 30, // 0.3%
         tokenWithdrawalNormalReserveMaxAmount: MAX_U64,
-        tokenRebalancingAmount: 0n,
         solAllocationWeight: 0n,
         solAllocationCapacityAmount: MAX_U64,
       }),
@@ -81,7 +80,6 @@ export function initializeFragBTC(testCtx: TestSuiteContext) {
         tokenWithdrawable: true,
         tokenWithdrawalNormalReserveRateBps: 30, // 0.3%
         tokenWithdrawalNormalReserveMaxAmount: MAX_U64,
-        tokenRebalancingAmount: 0n,
         solAllocationWeight: 0n,
         solAllocationCapacityAmount: MAX_U64,
       }),
@@ -102,7 +100,6 @@ export function initializeFragBTC(testCtx: TestSuiteContext) {
         tokenWithdrawable: true,
         tokenWithdrawalNormalReserveRateBps: 30, // 0.3%
         tokenWithdrawalNormalReserveMaxAmount: MAX_U64,
-        tokenRebalancingAmount: 0n,
         solAllocationWeight: 0n,
         solAllocationCapacityAmount: MAX_U64,
       }),

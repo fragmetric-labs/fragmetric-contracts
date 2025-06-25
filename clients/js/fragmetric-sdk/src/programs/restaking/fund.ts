@@ -909,7 +909,6 @@ export class RestakingFundAccountContext extends AccountContext<
               item.token.normalReserveRateBps,
             tokenWithdrawalNormalReserveMaxAmount:
               item.token.normalReserveMaxAmount,
-            tokenRebalancingAmount: item.rebalancingAmount,
             solAllocationWeight: item.solAllocationWeight,
             solAllocationCapacityAmount: item.solAllocationCapacityAmount,
           };
@@ -936,10 +935,6 @@ export class RestakingFundAccountContext extends AccountContext<
               v.description('1 reserve rate = 1bps = 0.01%')
             ),
             tokenWithdrawalNormalReserveMaxAmount: v.bigint(),
-            tokenRebalancingAmount: v.pipe(
-              v.bigint(),
-              v.description('unused now')
-            ),
             solAllocationWeight: v.bigint(),
             solAllocationCapacityAmount: v.bigint(),
           }) as v.GenericSchema<
@@ -1264,8 +1259,6 @@ export class RestakingFundAccountContext extends AccountContext<
                   delegationItem.supportedTokenAllocationWeight,
                 tokenAllocationCapacityAmount:
                   delegationItem.supportedTokenAllocationCapacityAmount,
-                tokenRedelegatingAmount:
-                  delegationItem.supportedTokenRedelegatingAmount,
               };
               return delegationStrategy;
             }),
