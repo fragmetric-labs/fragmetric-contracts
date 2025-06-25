@@ -31,13 +31,11 @@ import { initializeFragBTC } from './fragbtc.init';
  * 15. run enqueuWithdrawalBatch, processWithdrawalBatch command
  * 16. user1 withdraw from 1,2 requestIds
  * 17. user1 deposit 1~5 zBTC, cbBTC each
- * 18. delegate user2 reward account -> user1
- * 19. delegate user2 reward account -> user2
- * 20. settle with threshold
- *  20-1. settle not occurs by min amount threshold
- *  20-2. settle not occurs by timestamp threshold
- *  20-3. settle not fully occurs by max amount threshold
- *  20-4. settle occurs by all threshold conditions passed
+ * 18. settle with threshold
+ *  18-1. settle not occurs by min amount threshold
+ *  18-2. settle not occurs by timestamp threshold
+ *  18-3. settle not fully occurs by max amount threshold
+ *  18-4. settle occurs by all threshold conditions passed
  */
 
 describe('restaking.fragBTC test', async () => {
@@ -1152,35 +1150,6 @@ describe('restaking.fragBTC test', async () => {
     `);
   });
 
-  test('user can update reward pools and sync with global reward account anytime', async () => {
-    const user1Reward_1 = await user1.reward.resolve(true);
-
-    // user1 updateRewardPools
-    await user1.reward.updatePools.execute(null);
-
-    const user1Reward_2 = await user1.reward.resolve(true);
-
-    const elapsedSlots =
-      user1Reward_2?.basePool.updatedSlot! -
-      user1Reward_1?.basePool.updatedSlot!;
-    const increasedContribution =
-      user1Reward_2?.basePool.contribution! -
-      user1Reward_1?.basePool.contribution!;
-    expect(increasedContribution, 't7_1').toEqual(
-      elapsedSlots *
-        user1Reward_2?.basePool.tokenAllocatedAmount.records[0].amount! *
-        BigInt(
-          user1Reward_2?.basePool.tokenAllocatedAmount.records[0]
-            .contributionAccrualRate!
-        ) *
-        100n
-    );
-    expect(
-      user1Reward_2?.basePool.settlements[0].settledAmount,
-      't7_2'
-    ).toEqual(0n);
-  });
-
   /** 3. operation and reward **/
   test('fund can settle distributing rewards by operation', async () => {
     // drop distribution token to the vault
@@ -1899,54 +1868,7 @@ describe('restaking.fragBTC test', async () => {
     ]);
   });
 
-  /** 6. delegate */
-  test('delegate reward account from user2 to user1', async () => {
-    const user2DelegateRes = await user2.reward.delegate.execute(
-      { newDelegate: signer1.address },
-      { signers: [signer2] }
-    );
-    await expectMasked(user2DelegateRes).resolves.toMatchInlineSnapshot(`
-      {
-        "args": {
-          "delegate": null,
-          "newDelegate": "AWb2qUvuFzbVN5Eu7tZY8gM745pus5DhTGgo8U8Bd8X2",
-        },
-        "events": {
-          "unknown": [],
-          "userDelegatedRewardAccount": {
-            "delegate": {
-              "__option": "Some",
-              "value": "AWb2qUvuFzbVN5Eu7tZY8gM745pus5DhTGgo8U8Bd8X2",
-            },
-            "receiptTokenMint": "ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz",
-            "user": "CCgWk6XBuLqZTcDuJa4ZKGUM22cLXUFAxJSHiZdm3T3b",
-            "userRewardAccount": "5vjNrtqwKRB68nTfwN3gZayEADap2947MuZp43bCdLo1",
-          },
-        },
-        "signature": "MASKED(signature)",
-        "slot": "MASKED(/[.*S|s]lots?$/)",
-        "succeeded": true,
-      }
-    `);
-    await expect(
-      user2.reward.resolve(true).then((res) => res?.delegate)
-    ).resolves.toEqual(signer1.address);
-
-    await user2.reward.delegate.execute(
-      { delegate: signer1.address, newDelegate: signer2.address },
-      { signers: [signer1] }
-    );
-
-    // fails to delegate
-    await expect(
-      user2.reward.delegate.execute(
-        { delegate: signer1.address, newDelegate: signer2.address },
-        { signers: [signer1] }
-      )
-    ).rejects.toThrowError('Transaction simulation failed'); // reward: user reward account authority must be either user or delegate
-  });
-
-  /** 7. settle with threshold */
+  /** 6. settle with threshold */
   test('settle should not occur if threshold is not matched', async () => {
     const rewardTokenMint = 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq';
 
@@ -2058,7 +1980,7 @@ describe('restaking.fragBTC test', async () => {
   });
 
   // TODO: full operation test through cash in/out flow
-  /** 8. operation cycle */
+  /** 7. operation cycle */
   test('fragBTC does restake/unrestake assets into/from solvBTC vault', async () => {
     // no changes on fragBTC price
     await expectMasked(ctx.resolve(true)).resolves.toMatchInlineSnapshot(`
@@ -3289,10 +3211,10 @@ describe('restaking.fragBTC test', async () => {
 
   test('fragBTC APY can be estimated through vault supported token compounded amount', async () => {
     /*
-    * VRT price can be same OR increased based on how solv protocol operates deposited asset. (We assume VRT price doesn't decrease right now)
-    * Test two possible cases whether harvest_restaking_yield command emits correct event.
-    * Since harvest command iterate all vaults in fragBTC fund and runCommand returns last result, we use last vault(wBTC vault) for testing.
-    */
+     * VRT price can be same OR increased based on how solv protocol operates deposited asset. (We assume VRT price doesn't decrease right now)
+     * Test two possible cases whether harvest_restaking_yield command emits correct event.
+     * Since harvest command iterate all vaults in fragBTC fund and runCommand returns last result, we use last vault(wBTC vault) for testing.
+     */
 
     // reset VST compounded amount
     await ctx.fund.runCommand.executeChained({
@@ -3302,7 +3224,8 @@ describe('restaking.fragBTC test', async () => {
 
     // 1) VRT Price remains same
     // 1-1) VRT Amount remains same
-    await expectMasked(ctx.fund.restakingVaults[2].resolve(true)).resolves.toMatchInlineSnapshot(`
+    await expectMasked(ctx.fund.restakingVaults[2].resolve(true)).resolves
+      .toMatchInlineSnapshot(`
       {
         "admin": {
           "fundManager": "BEpVRdWw6VhvfwfQufB9iqcJ6acf51XRP1jETCvGDBVE",
@@ -3377,32 +3300,35 @@ describe('restaking.fragBTC test', async () => {
 
     let evt = res.events!.operatorRanFundCommand!;
     let result = isSome(evt.result)
-      ? evt.result.value
-          .fields[0] as restakingTypes.HarvestRestakingYieldCommandResult
+      ? (evt.result.value
+          .fields[0] as restakingTypes.HarvestRestakingYieldCommandResult)
       : null;
 
     // result value is None since there is no VRT price change, compounded VST amount is 0
     expect(result).toBeNull();
 
-
     // 1-2) VRT Amount increases (user deposits vst -> restake vst command executed)
     await validator.airdropToken(
       user1.address!,
       '3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh',
-      100_0000_0000n,
+      100_0000_0000n
     );
 
-    await user1.deposit.execute({
-      assetMint: '3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh',
-      assetAmount: 20_0000_0000n,
-    }, {signers: [signer1]});
+    await user1.deposit.execute(
+      {
+        assetMint: '3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh',
+        assetAmount: 20_0000_0000n,
+      },
+      { signers: [signer1] }
+    );
 
     await ctx.fund.runCommand.executeChained({
       forceResetCommand: 'RestakeVST',
       operator: restaking.knownAddresses.fundManager,
     });
 
-    await expectMasked(ctx.fund.restakingVaults[2].resolve(true)).resolves.toMatchInlineSnapshot(`
+    await expectMasked(ctx.fund.restakingVaults[2].resolve(true)).resolves
+      .toMatchInlineSnapshot(`
       {
         "admin": {
           "fundManager": "BEpVRdWw6VhvfwfQufB9iqcJ6acf51XRP1jETCvGDBVE",
@@ -3477,23 +3403,26 @@ describe('restaking.fragBTC test', async () => {
 
     evt = res.events!.operatorRanFundCommand!;
     result = isSome(evt.result)
-      ? evt.result.value
-          .fields[0] as restakingTypes.HarvestRestakingYieldCommandResult
+      ? (evt.result.value
+          .fields[0] as restakingTypes.HarvestRestakingYieldCommandResult)
       : null;
 
     // result value is None since there is no VRT price change, compounded VST amount is 0
     expect(result).toBeNull();
 
-
     // 1-3) VRT Amount decreases (user requests withdraw -> full command cycle executed)
-    await user1.requestWithdrawal.execute({
-      assetMint: '3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh',
-      receiptTokenAmount: 10_0000_0000n,
-    }, {signers: [signer1]});
-    
+    await user1.requestWithdrawal.execute(
+      {
+        assetMint: '3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh',
+        receiptTokenAmount: 10_0000_0000n,
+      },
+      { signers: [signer1] }
+    );
+
     await ctx.fund.runCommand.executeChained(null);
 
-    await expectMasked(ctx.fund.restakingVaults[2].resolve(true)).resolves.toMatchInlineSnapshot(`
+    await expectMasked(ctx.fund.restakingVaults[2].resolve(true)).resolves
+      .toMatchInlineSnapshot(`
       {
         "admin": {
           "fundManager": "BEpVRdWw6VhvfwfQufB9iqcJ6acf51XRP1jETCvGDBVE",
@@ -3552,7 +3481,7 @@ describe('restaking.fragBTC test', async () => {
         },
       }
     `);
-    
+
     await ctx.fund.runCommand.executeChained({
       forceResetCommand: 'ClaimUnrestakedVST',
       operator: restaking.knownAddresses.fundManager,
@@ -3576,8 +3505,8 @@ describe('restaking.fragBTC test', async () => {
 
     evt = res.events!.operatorRanFundCommand!;
     result = isSome(evt.result)
-      ? evt.result.value
-          .fields[0] as restakingTypes.HarvestRestakingYieldCommandResult
+      ? (evt.result.value
+          .fields[0] as restakingTypes.HarvestRestakingYieldCommandResult)
       : null;
 
     // result value is None since there is no VRT price change, compounded VST amount is 0
@@ -3588,11 +3517,12 @@ describe('restaking.fragBTC test', async () => {
     await validator.airdropToken(
       solv.wBTC.address!,
       'SoLvzL3ZVjofmNB5LYFrf94QtNhMUSea4DawFhnAau8',
-      100_0000_0000n,
+      100_0000_0000n
     );
     await solv.wBTC.setSolvProtocolWallet.execute({ address: feePayer });
-    
-    await expectMasked(ctx.fund.restakingVaults[2].resolve(true)).resolves.toMatchInlineSnapshot(`
+
+    await expectMasked(ctx.fund.restakingVaults[2].resolve(true)).resolves
+      .toMatchInlineSnapshot(`
       {
         "admin": {
           "fundManager": "BEpVRdWw6VhvfwfQufB9iqcJ6acf51XRP1jETCvGDBVE",
@@ -3660,19 +3590,21 @@ describe('restaking.fragBTC test', async () => {
     `);
 
     // user deposits wBTC to trigger VRT price change
-    await user1.deposit.execute({
-      assetMint: '3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh',
-      assetAmount: 10_0000_0000n,
-    }, {signers: [signer1]});
+    await user1.deposit.execute(
+      {
+        assetMint: '3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh',
+        assetAmount: 10_0000_0000n,
+      },
+      { signers: [signer1] }
+    );
 
     await ctx.fund.runCommand.executeChained({
       forceResetCommand: 'RestakeVST',
       operator: restaking.knownAddresses.fundManager,
     });
 
-    await expectMasked(
-      ctx.fund.restakingVaults[2].resolve(true)
-    ).resolves.toMatchInlineSnapshot(`
+    await expectMasked(ctx.fund.restakingVaults[2].resolve(true)).resolves
+      .toMatchInlineSnapshot(`
       {
         "admin": {
           "fundManager": "BEpVRdWw6VhvfwfQufB9iqcJ6acf51XRP1jETCvGDBVE",
@@ -3738,10 +3670,11 @@ describe('restaking.fragBTC test', async () => {
         },
       }
     `);
-    
+
     await solv.wBTC.confirmDeposits.execute(null);
-    
-    await expectMasked(ctx.fund.restakingVaults[2].resolve(true)).resolves.toMatchInlineSnapshot(`
+
+    await expectMasked(ctx.fund.restakingVaults[2].resolve(true)).resolves
+      .toMatchInlineSnapshot(`
       {
         "admin": {
           "fundManager": "BEpVRdWw6VhvfwfQufB9iqcJ6acf51XRP1jETCvGDBVE",
@@ -3807,11 +3740,12 @@ describe('restaking.fragBTC test', async () => {
         },
       }
     `);
-    
-    // trigger VRT price change by increasing SRT value ***    
+
+    // trigger VRT price change by increasing SRT value ***
     await solv.wBTC.completeDeposits.execute({
       redeemedSolvReceiptTokenAmount: 18_8756_8892n,
-      newOneSolvReceiptTokenAsMicroSupportedTokenAmount: 1_0000_0000_000000n * 11n / 10n,
+      newOneSolvReceiptTokenAsMicroSupportedTokenAmount:
+        (1_0000_0000_000000n * 11n) / 10n,
     });
 
     await ctx.fund.runCommand.executeChained({
@@ -3820,10 +3754,12 @@ describe('restaking.fragBTC test', async () => {
     });
 
     // harvest yield - VST compounded amount should be greater than 0
-    await expectMasked(ctx.fund.runCommand.executeChained({
-      forceResetCommand: 'HarvestRestakingYield',
-      operator: restaking.knownAddresses.fundManager,
-    })).resolves.toMatchInlineSnapshot(`
+    await expectMasked(
+      ctx.fund.runCommand.executeChained({
+        forceResetCommand: 'HarvestRestakingYield',
+        operator: restaking.knownAddresses.fundManager,
+      })
+    ).resolves.toMatchInlineSnapshot(`
       {
         "args": {
           "forceResetCommand": null,
