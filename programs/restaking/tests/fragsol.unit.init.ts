@@ -379,6 +379,17 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
     //     solAllocationCapacityAmount: MAX_U64,
     //   }),
 
+    // not needed at the real fragsol, but it's included for unit test
+    () =>
+      ctx.fund.addTokenSwapStrategy.execute({
+        fromTokenMint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+        toTokenMint: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
+        swapSource: {
+          __kind: 'OrcaDEXLiquidityPool',
+          address: 'G2FiE1yn9N9ZJx5e1E2LxxMnHvb1H3hCuHLPfKJ98smA',
+        },
+      }),
+
     // initialize reward account and configuration
     () =>
       ctx.reward.initializeOrUpdateAccount.executeChained({
