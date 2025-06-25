@@ -935,10 +935,6 @@ export class RestakingFundAccountContext extends AccountContext<
               v.description('1 reserve rate = 1bps = 0.01%')
             ),
             tokenWithdrawalNormalReserveMaxAmount: v.bigint(),
-            tokenRebalancingAmount: v.pipe(
-              v.bigint(),
-              v.description('unused now')
-            ),
             solAllocationWeight: v.bigint(),
             solAllocationCapacityAmount: v.bigint(),
           }) as v.GenericSchema<
