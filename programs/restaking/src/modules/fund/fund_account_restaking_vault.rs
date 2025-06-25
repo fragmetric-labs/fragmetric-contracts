@@ -52,7 +52,12 @@ pub(super) struct RestakingVault {
     pub supported_token_compounded_amount: i128,
     pub supported_token_to_receipt_token_exchange_ratio: TokenExchangeRatio,
     pub supported_token_to_receipt_token_exchange_ratio_updated_timestamp: i64,
-    _reserved: [u8; 816],
+
+    _padding5: [u8; 32],
+    /// expected amount of vst by unrestaking vrt
+    pub pending_supported_token_unrestaking_amount: u64,
+
+    _reserved: [u8; 776],
 }
 
 #[zero_copy]
