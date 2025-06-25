@@ -1259,8 +1259,6 @@ export class RestakingFundAccountContext extends AccountContext<
                   delegationItem.supportedTokenAllocationWeight,
                 tokenAllocationCapacityAmount:
                   delegationItem.supportedTokenAllocationCapacityAmount,
-                tokenRedelegatingAmount:
-                  delegationItem.supportedTokenRedelegatingAmount,
               };
               return delegationStrategy;
             }),

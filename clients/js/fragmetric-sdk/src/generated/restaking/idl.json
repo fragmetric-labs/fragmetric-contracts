@@ -4553,12 +4553,6 @@
         {
           "name": "token_allocation_capacity_amount",
           "type": "u64"
-        },
-        {
-          "name": "token_redelegating_amount",
-          "type": {
-            "option": "u64"
-          }
         }
       ]
     },
@@ -14953,18 +14947,11 @@
             "type": "u64"
           },
           {
-            "name": "supported_token_redelegating_amount",
-            "docs": [
-              "configuration: the amount requested to be undelegated as soon as possible regardless of current state, this value should be decreased by each undelegation requested amount."
-            ],
-            "type": "u64"
-          },
-          {
             "name": "_reserved",
             "type": {
               "array": [
                 "u8",
-                24
+                32
               ]
             }
           }
