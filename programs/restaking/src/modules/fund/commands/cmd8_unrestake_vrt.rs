@@ -1,22 +1,16 @@
-use std::cell::Ref;
 use std::iter::Peekable;
 use std::ops::Neg;
 
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token;
 
+use crate::errors;
 use crate::modules::normalization::NormalizedTokenPoolAccount;
 use crate::modules::pricing::TokenPricingSource;
-use crate::modules::restaking::JitoRestakingVaultService;
+use crate::modules::restaking::{JitoRestakingVaultService, SolvBTCVaultService};
 use crate::utils::{AccountInfoExt, PDASeeds};
-use crate::{errors, modules::restaking::SolvBTCVaultService};
 
-use super::{
-    FundAccount, FundService, OperationCommandContext, OperationCommandEntry,
-    OperationCommandResult, SelfExecutable, UndelegateVSTCommand, WeightedAllocationParticipant,
-    WeightedAllocationStrategy, FUND_ACCOUNT_MAX_RESTAKING_VAULTS,
-    FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
-};
+use super::*;
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
 pub struct UnrestakeVRTCommand {
@@ -459,7 +453,7 @@ impl UnrestakeVRTCommand {
         {
             Some(TokenPricingSource::JitoRestakingVault { address }) => {
                 let [vault_program, vault_config, vault_account, ..] = accounts else {
-                    err!(ErrorCode::AccountNotEnoughKeys)?
+                    err!(error::ErrorCode::AccountNotEnoughKeys)?
                 };
                 require_keys_eq!(address, vault_account.key());
 
@@ -520,7 +514,7 @@ impl UnrestakeVRTCommand {
             )),
             Some(TokenPricingSource::SolvBTCVault { address }) => {
                 let [vault_program, vault_account, ..] = accounts else {
-                    err!(ErrorCode::AccountNotEnoughKeys)?
+                    err!(error::ErrorCode::AccountNotEnoughKeys)?
                 };
                 require_keys_eq!(address, vault_account.key());
 
@@ -600,12 +594,12 @@ impl UnrestakeVRTCommand {
                 let [vault_program, vault_config, vault_account, token_program, associated_token, system_program, vault_receipt_token_mint, fund_vault_receipt_token_reserve_account, fund_reserve_account, remaining_accounts @ ..] =
                     accounts
                 else {
-                    err!(ErrorCode::AccountNotEnoughKeys)?
+                    err!(error::ErrorCode::AccountNotEnoughKeys)?
                 };
                 require_keys_eq!(address, vault_account.key());
                 let withdrawal_ticket_candidate_accounts = {
                     if remaining_accounts.len() < 15 {
-                        err!(ErrorCode::AccountNotEnoughKeys)?
+                        err!(error::ErrorCode::AccountNotEnoughKeys)?
                     }
                     &remaining_accounts[..15]
                 };
@@ -723,7 +717,7 @@ impl UnrestakeVRTCommand {
                 let [vault_program, vault_account, vault_receipt_token_mint, vault_supported_token_mint, vault_vault_supported_token_account, token_program, event_authority, fund_vault_supported_token_account, fund_vault_receipt_token_account, fund_reserve, ..] =
                     accounts
                 else {
-                    err!(ErrorCode::AccountNotEnoughKeys)?
+                    err!(error::ErrorCode::AccountNotEnoughKeys)?
                 };
                 require_keys_eq!(address, vault_account.key());
 

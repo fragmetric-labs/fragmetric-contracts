@@ -1,4 +1,5 @@
 #![allow(unexpected_cfgs)]
+#![allow(clippy::too_many_arguments)]
 use anchor_lang::prelude::*;
 use spl_discriminator::SplDiscriminate;
 use spl_transfer_hook_interface::instruction::{
@@ -433,7 +434,7 @@ pub mod restaking {
             &ctx.accounts.from_token_mint,
             &ctx.accounts.to_token_mint,
             swap_source,
-            &ctx.accounts.swap_source_account.as_account_info()
+            ctx.accounts.swap_source_account.as_account_info()
         )?);
 
         Ok(())
@@ -957,8 +958,8 @@ pub mod restaking {
                 .accounts
                 .slasher_normalized_token_withdrawal_ticket_account,
             ctx.bumps.slasher_normalized_token_withdrawal_ticket_account,
-            &mut ctx.accounts.slasher_normalized_token_account,
-            &mut ctx.accounts.slasher,
+            &ctx.accounts.slasher_normalized_token_account,
+            &ctx.accounts.slasher,
             ctx.remaining_accounts,
         )?;
 
@@ -981,14 +982,13 @@ pub mod restaking {
         .process_withdraw(
             &ctx.accounts.supported_token_mint,
             &ctx.accounts.supported_token_program,
-            &mut ctx
-                .accounts
+            &ctx.accounts
                 .normalized_token_pool_supported_token_reserve_account,
             &mut ctx
                 .accounts
                 .slasher_normalized_token_withdrawal_ticket_account,
             &ctx.accounts.slasher,
-            &mut ctx.accounts.destination_supported_token_account,
+            &ctx.accounts.destination_supported_token_account,
             &ctx.accounts.destination_rent_lamports_account,
         )?;
 

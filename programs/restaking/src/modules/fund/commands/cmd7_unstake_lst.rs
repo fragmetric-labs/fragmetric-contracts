@@ -1,5 +1,4 @@
 use anchor_lang::prelude::*;
-use std::ops::Neg;
 
 use crate::errors::ErrorCode;
 use crate::modules::fund::{WeightedAllocationParticipant, WeightedAllocationStrategy};
@@ -7,10 +6,7 @@ use crate::modules::pricing::TokenPricingSource;
 use crate::modules::staking::*;
 use crate::utils::{AccountInfoExt, AsAccountInfo, PDASeeds};
 
-use super::{
-    FundAccount, FundService, OperationCommandContext, OperationCommandEntry,
-    OperationCommandResult, SelfExecutable, UnrestakeVRTCommand, FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
-};
+use super::*;
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
 pub struct UnstakeLSTCommand {
@@ -756,14 +752,6 @@ impl UnstakeLSTCommand {
             pool_token_program,
         )?;
 
-        // first update stake pool balance
-        spl_stake_pool_service.update_stake_pool_balance_if_needed(
-            withdraw_authority,
-            reserve_stake_account,
-            manager_fee_account,
-            validator_list_account,
-        )?;
-
         let fund_account = ctx.fund_account.load()?;
 
         // Statistics
@@ -780,6 +768,7 @@ impl UnstakeLSTCommand {
                     withdraw_authority,
                     reserve_stake_account,
                     manager_fee_account,
+                    validator_list_account,
                     clock,
                     stake_history,
                     stake_program,
@@ -817,6 +806,7 @@ impl UnstakeLSTCommand {
                 spl_stake_pool_service.withdraw_stake(
                     ctx.system_program,
                     withdraw_authority,
+                    reserve_stake_account,
                     manager_fee_account,
                     validator_list_account,
                     clock,

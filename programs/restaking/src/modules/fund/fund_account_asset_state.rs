@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use bytemuck::Zeroable;
 
 use crate::errors::ErrorCode;
-use crate::modules::pricing::{Asset, PricingService, TokenValue, TokenValuePod};
+use crate::modules::pricing::{PricingService, TokenValuePod};
 
 use super::WithdrawalRequest;
 

@@ -1,5 +1,4 @@
 use anchor_lang::prelude::*;
-use anchor_spl::associated_token::spl_associated_token_account;
 
 use crate::errors::ErrorCode;
 use crate::utils::{PDASeeds, ZeroCopyHeader};

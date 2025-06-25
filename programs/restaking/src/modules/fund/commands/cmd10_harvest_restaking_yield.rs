@@ -8,7 +8,7 @@ use crate::modules::pricing::TokenPricingSource;
 use crate::modules::restaking::VirtualVaultService;
 use crate::modules::reward::{RewardAccount, RewardService};
 use crate::modules::swap::{OrcaDEXLiquidityPoolService, TokenSwapSource};
-use crate::utils::{AccountInfoExt, AsAccountInfo, PDASeeds};
+use crate::utils::{AccountInfoExt, PDASeeds};
 
 use super::*;
 

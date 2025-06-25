@@ -53,6 +53,7 @@ pub(in crate::modules) fn validate_swap_source<'info>(
     from_token_mint: &InterfaceAccount<Mint>,
     to_token_mint: &InterfaceAccount<Mint>,
 ) -> Result<()> {
+    #[deny(clippy::wildcard_enum_match_arm)]
     match swap_source {
         TokenSwapSource::OrcaDEXLiquidityPool { address } => {
             require_keys_eq!(*address, swap_source_account.key());
