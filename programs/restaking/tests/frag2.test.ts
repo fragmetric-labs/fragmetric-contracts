@@ -121,7 +121,6 @@ describe('restaking.frag2 test', async () => {
             "tokenAccumulatedDepositCapacityAmount": 18446744073709551615n,
             "tokenDepositable": true,
             "tokenMint": "FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5",
-            "tokenRebalancingAmount": 0n,
             "tokenWithdrawable": true,
             "tokenWithdrawalNormalReserveMaxAmount": 18446744073709551615n,
             "tokenWithdrawalNormalReserveRateBps": 0,

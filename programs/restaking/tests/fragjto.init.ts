@@ -61,7 +61,6 @@ export function initializeFragJTO(testCtx: TestSuiteContext) {
         tokenWithdrawable: true,
         tokenWithdrawalNormalReserveRateBps: 0,
         tokenWithdrawalNormalReserveMaxAmount: MAX_U64,
-        tokenRebalancingAmount: 0n,
         solAllocationWeight: 0n,
         solAllocationCapacityAmount: MAX_U64,
       }),

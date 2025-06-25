@@ -102,7 +102,6 @@ export type FundManagerUpdateSupportedTokenStrategyInstructionData = {
   tokenWithdrawable: boolean;
   tokenWithdrawalNormalReserveRateBps: number;
   tokenWithdrawalNormalReserveMaxAmount: bigint;
-  tokenRebalancingAmount: Option<bigint>;
   solAllocationWeight: bigint;
   solAllocationCapacityAmount: bigint;
 };
@@ -115,7 +114,6 @@ export type FundManagerUpdateSupportedTokenStrategyInstructionDataArgs = {
   tokenWithdrawable: boolean;
   tokenWithdrawalNormalReserveRateBps: number;
   tokenWithdrawalNormalReserveMaxAmount: number | bigint;
-  tokenRebalancingAmount: OptionOrNullable<number | bigint>;
   solAllocationWeight: number | bigint;
   solAllocationCapacityAmount: number | bigint;
 };
@@ -131,7 +129,6 @@ export function getFundManagerUpdateSupportedTokenStrategyInstructionDataEncoder
       ['tokenWithdrawable', getBooleanEncoder()],
       ['tokenWithdrawalNormalReserveRateBps', getU16Encoder()],
       ['tokenWithdrawalNormalReserveMaxAmount', getU64Encoder()],
-      ['tokenRebalancingAmount', getOptionEncoder(getU64Encoder())],
       ['solAllocationWeight', getU64Encoder()],
       ['solAllocationCapacityAmount', getU64Encoder()],
     ]),
@@ -152,7 +149,6 @@ export function getFundManagerUpdateSupportedTokenStrategyInstructionDataDecoder
     ['tokenWithdrawable', getBooleanDecoder()],
     ['tokenWithdrawalNormalReserveRateBps', getU16Decoder()],
     ['tokenWithdrawalNormalReserveMaxAmount', getU64Decoder()],
-    ['tokenRebalancingAmount', getOptionDecoder(getU64Decoder())],
     ['solAllocationWeight', getU64Decoder()],
     ['solAllocationCapacityAmount', getU64Decoder()],
   ]);
@@ -187,7 +183,6 @@ export type FundManagerUpdateSupportedTokenStrategyAsyncInput<
   tokenWithdrawable: FundManagerUpdateSupportedTokenStrategyInstructionDataArgs['tokenWithdrawable'];
   tokenWithdrawalNormalReserveRateBps: FundManagerUpdateSupportedTokenStrategyInstructionDataArgs['tokenWithdrawalNormalReserveRateBps'];
   tokenWithdrawalNormalReserveMaxAmount: FundManagerUpdateSupportedTokenStrategyInstructionDataArgs['tokenWithdrawalNormalReserveMaxAmount'];
-  tokenRebalancingAmount: FundManagerUpdateSupportedTokenStrategyInstructionDataArgs['tokenRebalancingAmount'];
   solAllocationWeight: FundManagerUpdateSupportedTokenStrategyInstructionDataArgs['solAllocationWeight'];
   solAllocationCapacityAmount: FundManagerUpdateSupportedTokenStrategyInstructionDataArgs['solAllocationCapacityAmount'];
 };
@@ -314,7 +309,6 @@ export type FundManagerUpdateSupportedTokenStrategyInput<
   tokenWithdrawable: FundManagerUpdateSupportedTokenStrategyInstructionDataArgs['tokenWithdrawable'];
   tokenWithdrawalNormalReserveRateBps: FundManagerUpdateSupportedTokenStrategyInstructionDataArgs['tokenWithdrawalNormalReserveRateBps'];
   tokenWithdrawalNormalReserveMaxAmount: FundManagerUpdateSupportedTokenStrategyInstructionDataArgs['tokenWithdrawalNormalReserveMaxAmount'];
-  tokenRebalancingAmount: FundManagerUpdateSupportedTokenStrategyInstructionDataArgs['tokenRebalancingAmount'];
   solAllocationWeight: FundManagerUpdateSupportedTokenStrategyInstructionDataArgs['solAllocationWeight'];
   solAllocationCapacityAmount: FundManagerUpdateSupportedTokenStrategyInstructionDataArgs['solAllocationCapacityAmount'];
 };

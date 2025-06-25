@@ -33,8 +33,6 @@ export type RestakingVaultDelegation = {
   /** informative field; these values shall be synced from remote state periodically. */
   supportedTokenDelegatedAmount: bigint;
   supportedTokenUndelegatingAmount: bigint;
-  /** configuration: the amount requested to be undelegated as soon as possible regardless of current state, this value should be decreased by each undelegation requested amount. */
-  supportedTokenRedelegatingAmount: bigint;
   reserved: ReadonlyUint8Array;
 };
 
@@ -46,8 +44,6 @@ export type RestakingVaultDelegationArgs = {
   /** informative field; these values shall be synced from remote state periodically. */
   supportedTokenDelegatedAmount: number | bigint;
   supportedTokenUndelegatingAmount: number | bigint;
-  /** configuration: the amount requested to be undelegated as soon as possible regardless of current state, this value should be decreased by each undelegation requested amount. */
-  supportedTokenRedelegatingAmount: number | bigint;
   reserved: ReadonlyUint8Array;
 };
 
@@ -58,8 +54,7 @@ export function getRestakingVaultDelegationEncoder(): Encoder<RestakingVaultDele
     ['supportedTokenAllocationCapacityAmount', getU64Encoder()],
     ['supportedTokenDelegatedAmount', getU64Encoder()],
     ['supportedTokenUndelegatingAmount', getU64Encoder()],
-    ['supportedTokenRedelegatingAmount', getU64Encoder()],
-    ['reserved', fixEncoderSize(getBytesEncoder(), 24)],
+    ['reserved', fixEncoderSize(getBytesEncoder(), 32)],
   ]);
 }
 
@@ -70,8 +65,7 @@ export function getRestakingVaultDelegationDecoder(): Decoder<RestakingVaultDele
     ['supportedTokenAllocationCapacityAmount', getU64Decoder()],
     ['supportedTokenDelegatedAmount', getU64Decoder()],
     ['supportedTokenUndelegatingAmount', getU64Decoder()],
-    ['supportedTokenRedelegatingAmount', getU64Decoder()],
-    ['reserved', fixDecoderSize(getBytesDecoder(), 24)],
+    ['reserved', fixDecoderSize(getBytesDecoder(), 32)],
   ]);
 }
 

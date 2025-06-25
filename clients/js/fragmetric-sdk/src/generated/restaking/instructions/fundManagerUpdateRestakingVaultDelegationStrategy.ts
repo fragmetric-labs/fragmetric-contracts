@@ -14,8 +14,6 @@ import {
   getAddressEncoder,
   getBytesDecoder,
   getBytesEncoder,
-  getOptionDecoder,
-  getOptionEncoder,
   getProgramDerivedAddress,
   getStructDecoder,
   getStructEncoder,
@@ -31,8 +29,6 @@ import {
   type IInstruction,
   type IInstructionWithAccounts,
   type IInstructionWithData,
-  type Option,
-  type OptionOrNullable,
   type ReadonlyAccount,
   type ReadonlySignerAccount,
   type ReadonlyUint8Array,
@@ -95,7 +91,6 @@ export type FundManagerUpdateRestakingVaultDelegationStrategyInstructionData = {
   operator: Address;
   tokenAllocationWeight: bigint;
   tokenAllocationCapacityAmount: bigint;
-  tokenRedelegatingAmount: Option<bigint>;
 };
 
 export type FundManagerUpdateRestakingVaultDelegationStrategyInstructionDataArgs =
@@ -104,7 +99,6 @@ export type FundManagerUpdateRestakingVaultDelegationStrategyInstructionDataArgs
     operator: Address;
     tokenAllocationWeight: number | bigint;
     tokenAllocationCapacityAmount: number | bigint;
-    tokenRedelegatingAmount: OptionOrNullable<number | bigint>;
   };
 
 export function getFundManagerUpdateRestakingVaultDelegationStrategyInstructionDataEncoder(): Encoder<FundManagerUpdateRestakingVaultDelegationStrategyInstructionDataArgs> {
@@ -115,7 +109,6 @@ export function getFundManagerUpdateRestakingVaultDelegationStrategyInstructionD
       ['operator', getAddressEncoder()],
       ['tokenAllocationWeight', getU64Encoder()],
       ['tokenAllocationCapacityAmount', getU64Encoder()],
-      ['tokenRedelegatingAmount', getOptionEncoder(getU64Encoder())],
     ]),
     (value) => ({
       ...value,
@@ -132,7 +125,6 @@ export function getFundManagerUpdateRestakingVaultDelegationStrategyInstructionD
     ['operator', getAddressDecoder()],
     ['tokenAllocationWeight', getU64Decoder()],
     ['tokenAllocationCapacityAmount', getU64Decoder()],
-    ['tokenRedelegatingAmount', getOptionDecoder(getU64Decoder())],
   ]);
 }
 
@@ -162,7 +154,6 @@ export type FundManagerUpdateRestakingVaultDelegationStrategyAsyncInput<
   operator: FundManagerUpdateRestakingVaultDelegationStrategyInstructionDataArgs['operator'];
   tokenAllocationWeight: FundManagerUpdateRestakingVaultDelegationStrategyInstructionDataArgs['tokenAllocationWeight'];
   tokenAllocationCapacityAmount: FundManagerUpdateRestakingVaultDelegationStrategyInstructionDataArgs['tokenAllocationCapacityAmount'];
-  tokenRedelegatingAmount: FundManagerUpdateRestakingVaultDelegationStrategyInstructionDataArgs['tokenRedelegatingAmount'];
 };
 
 export async function getFundManagerUpdateRestakingVaultDelegationStrategyInstructionAsync<
@@ -284,7 +275,6 @@ export type FundManagerUpdateRestakingVaultDelegationStrategyInput<
   operator: FundManagerUpdateRestakingVaultDelegationStrategyInstructionDataArgs['operator'];
   tokenAllocationWeight: FundManagerUpdateRestakingVaultDelegationStrategyInstructionDataArgs['tokenAllocationWeight'];
   tokenAllocationCapacityAmount: FundManagerUpdateRestakingVaultDelegationStrategyInstructionDataArgs['tokenAllocationCapacityAmount'];
-  tokenRedelegatingAmount: FundManagerUpdateRestakingVaultDelegationStrategyInstructionDataArgs['tokenRedelegatingAmount'];
 };
 
 export function getFundManagerUpdateRestakingVaultDelegationStrategyInstruction<

@@ -265,7 +265,6 @@ pub mod restaking {
         token_withdrawable: bool,
         token_withdrawal_normal_reserve_rate_bps: u16,
         token_withdrawal_normal_reserve_max_amount: u64,
-        token_rebalancing_amount: Option<u64>,
         sol_allocation_weight: u64,
         sol_allocation_capacity_amount: u64,
     ) -> Result<()> {
@@ -281,7 +280,6 @@ pub mod restaking {
             token_withdrawable,
             token_withdrawal_normal_reserve_rate_bps,
             token_withdrawal_normal_reserve_max_amount,
-            token_rebalancing_amount,
             sol_allocation_weight,
             sol_allocation_capacity_amount,
         )?);
@@ -314,7 +312,6 @@ pub mod restaking {
         operator: Pubkey,
         token_allocation_weight: u64,
         token_allocation_capacity_amount: u64,
-        token_redelegating_amount: Option<u64>,
     ) -> Result<()> {
         emit_cpi!(modules::fund::FundConfigurationService::new(
             &mut ctx.accounts.receipt_token_mint,
@@ -325,7 +322,6 @@ pub mod restaking {
             &operator,
             token_allocation_weight,
             token_allocation_capacity_amount,
-            token_redelegating_amount,
         )?);
 
         Ok(())

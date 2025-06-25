@@ -61,7 +61,6 @@ export async function initializeFrag2(testCtx: TestSuiteContext) {
         tokenWithdrawable: true,
         tokenWithdrawalNormalReserveRateBps: 0,
         tokenWithdrawalNormalReserveMaxAmount: MAX_U64,
-        tokenRebalancingAmount: 0n,
         solAllocationWeight: 0n,
         solAllocationCapacityAmount: MAX_U64,
       }),

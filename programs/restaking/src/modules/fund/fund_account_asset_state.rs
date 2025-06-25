@@ -45,9 +45,8 @@ pub(super) struct AssetState {
     pub withdrawal_user_reserved_amount: u64,
 
     /// asset: receivable amount that the fund may charge the users requesting withdrawals.
-    /// It is accrued during either the preparation of the withdrawal obligation or rebalancing of LST like fees from (un)staking or (un)restaking.
+    /// It is accrued during the preparation of the withdrawal obligation.
     /// And it shall be settled by the withdrawal fee normally. And it also can be written off by a donation operation.
-    /// Then it costs the rebalancing expense to the capital of the fund itself as an operation cost instead of charging the users requesting withdrawals.
     pub operation_receivable_amount: u64,
 
     /// asset: remaining asset for cash-in/out
