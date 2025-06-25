@@ -498,6 +498,7 @@ impl ClaimUnrestakedVSTCommand {
                 let (
                     fund_reserve_vault_supported_token_amount,
                     unrestaked_receipt_token_amount,
+                    expected_supported_token_amount,
                     claimed_supported_token_amount,
                     deducted_supported_token_fee_amount,
                     total_unrestaking_receipt_token_amount,
@@ -531,6 +532,9 @@ impl ClaimUnrestakedVSTCommand {
                     receipt_token_amount_denominator,
                 )?;
 
+                restaking_vault.pending_supported_token_unrestaking_amount -=
+                    expected_supported_token_amount;
+
                 drop(fund_account);
 
                 let mut fund_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?;
@@ -563,8 +567,8 @@ impl ClaimUnrestakedVSTCommand {
 
                 drop(fund_service);
 
-                let fund = ctx.fund_account.load()?;
-                let supported_token = fund.get_supported_token(&supported_token_mint)?;
+                let fund_account = ctx.fund_account.load()?;
+                let supported_token = fund_account.get_supported_token(&supported_token_mint)?;
 
                 require_gte!(
                     fund_reserve_vault_supported_token_amount,
