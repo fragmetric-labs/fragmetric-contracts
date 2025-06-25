@@ -1,3 +1,8 @@
+use anchor_lang::prelude::*;
+use bytemuck::Zeroable;
+use once_cell::unsync::OnceCell;
+use primitive_types::U256;
+
 use crate::errors::ErrorCode;
 use crate::modules::fund::FundReceiptTokenValueProvider;
 use crate::modules::normalization::NormalizedTokenPoolValueProvider;
@@ -7,14 +12,8 @@ use crate::modules::staking::{
     SanctumMultiValidatorSPLStakePool, SanctumSingleValidatorSPLStakePool,
 };
 use crate::modules::swap::OrcaDEXLiquidityPoolValueProvider;
-use anchor_lang::prelude::*;
-use bytemuck::Zeroable;
-use once_cell::unsync::OnceCell;
-use primitive_types::U256;
 
-#[cfg(all(test, not(feature = "idl-build")))]
-use super::MockPricingSourceValueProvider;
-use super::{Asset, AssetPod, TokenPricingSource, TokenValue, TokenValuePod, TokenValueProvider};
+use super::*;
 
 const PRICING_SERVICE_EXPECTED_TOKENS_SIZE: usize = 34; // MAX=34 (ST=16 + NT=1 + VRT=16 + RT=1)
 
@@ -112,8 +111,7 @@ impl<'info> PricingService<'info> {
             TokenPricingSource::SPLStakePool { address } => {
                 let pricing_source_accounts =
                     [self.get_token_pricing_source_account_info(address)?];
-                require_keys_eq!(SPLStakePool::id(), *pricing_source_accounts[0].owner);
-                SPLStakePoolValueProvider.resolve_underlying_assets(
+                SPLStakePoolValueProvider::<SPLStakePool>::new().resolve_underlying_assets(
                     token_mint,
                     &pricing_source_accounts,
                     &mut self.token_values[token_index],
@@ -167,11 +165,12 @@ impl<'info> PricingService<'info> {
             TokenPricingSource::SanctumSingleValidatorSPLStakePool { address } => {
                 let pricing_source_accounts =
                     [self.get_token_pricing_source_account_info(address)?];
-                SPLStakePoolValueProvider.resolve_underlying_assets(
-                    token_mint,
-                    &pricing_source_accounts,
-                    &mut self.token_values[token_index],
-                )?
+                SPLStakePoolValueProvider::<SanctumSingleValidatorSPLStakePool>::new()
+                    .resolve_underlying_assets(
+                        token_mint,
+                        &pricing_source_accounts,
+                        &mut self.token_values[token_index],
+                    )?
             }
             TokenPricingSource::PeggedToken { address } => {
                 require_keys_neq!(*address, *token_mint);
@@ -189,11 +188,12 @@ impl<'info> PricingService<'info> {
             TokenPricingSource::SanctumMultiValidatorSPLStakePool { address } => {
                 let pricing_source_accounts =
                     [self.get_token_pricing_source_account_info(address)?];
-                SPLStakePoolValueProvider.resolve_underlying_assets(
-                    token_mint,
-                    &pricing_source_accounts,
-                    &mut self.token_values[token_index],
-                )?
+                SPLStakePoolValueProvider::<SanctumMultiValidatorSPLStakePool>::new()
+                    .resolve_underlying_assets(
+                        token_mint,
+                        &pricing_source_accounts,
+                        &mut self.token_values[token_index],
+                    )?
             }
             TokenPricingSource::VirtualVault { .. } => {
                 self.token_values[token_index] = TokenValue::default();

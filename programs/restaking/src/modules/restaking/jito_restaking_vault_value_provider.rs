@@ -17,7 +17,7 @@ impl TokenValueProvider for JitoRestakingVaultValueProvider {
         require_eq!(pricing_source_accounts.len(), 1);
 
         let data = pricing_source_accounts[0].try_borrow_data()?;
-        let vault = Vault::try_from_slice_unchecked(&**data)?;
+        let vault = Vault::try_from_slice_unchecked(&data)?;
         require_keys_eq!(vault.vrt_mint, *token_mint);
 
         result.numerator.clear();

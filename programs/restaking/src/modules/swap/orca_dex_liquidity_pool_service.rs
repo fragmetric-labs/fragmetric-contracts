@@ -1,12 +1,12 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::{Mint, TokenAccount};
+use anchor_spl::token_interface::TokenAccount;
 use whirlpool_cpi::whirlpool::accounts::Whirlpool;
 
 use super::ValidateLiquidityPool;
 
 pub(in crate::modules) struct OrcaDEXLiquidityPoolService<'info> {
     whirlpool_program: &'info AccountInfo<'info>,
-    pool_account: Account<'info, Whirlpool>,
+    pool_account: &'info AccountInfo<'info>,
     token_mint_a: &'info AccountInfo<'info>,
     token_vault_a: &'info AccountInfo<'info>,
     token_program_a: &'info AccountInfo<'info>,
@@ -32,6 +32,7 @@ impl ValidateLiquidityPool for OrcaDEXLiquidityPoolService<'_> {
 }
 
 impl<'info> OrcaDEXLiquidityPoolService<'info> {
+    #[inline(never)]
     pub fn new(
         whirlpool_program: &'info AccountInfo<'info>,
         pool_account: &'info AccountInfo<'info>,
@@ -42,14 +43,14 @@ impl<'info> OrcaDEXLiquidityPoolService<'info> {
         token_vault_b: &'info AccountInfo<'info>,
         token_program_b: &'info AccountInfo<'info>,
     ) -> Result<Self> {
-        let pool_account = Self::deserialize_pool_account(pool_account)?;
+        let pool = &*Self::deserialize_pool_account(pool_account)?;
 
         require_keys_eq!(whirlpool_cpi::whirlpool::ID, whirlpool_program.key());
-        require_keys_eq!(pool_account.token_mint_a, token_mint_a.key());
-        require_keys_eq!(pool_account.token_vault_a, token_vault_a.key());
+        require_keys_eq!(pool.token_mint_a, token_mint_a.key());
+        require_keys_eq!(pool.token_vault_a, token_vault_a.key());
         require_keys_eq!(*token_mint_a.owner, token_program_a.key());
-        require_keys_eq!(pool_account.token_mint_b, token_mint_b.key());
-        require_keys_eq!(pool_account.token_vault_b, token_vault_b.key());
+        require_keys_eq!(pool.token_mint_b, token_mint_b.key());
+        require_keys_eq!(pool.token_vault_b, token_vault_b.key());
         require_keys_eq!(*token_mint_b.owner, token_program_b.key());
 
         Ok(Self {
@@ -237,12 +238,13 @@ impl<'info> OrcaDEXLiquidityPoolService<'info> {
 
         from_token_amount: u64,
     ) -> Result<(u64, u64)> {
+        let pool_account = &Self::deserialize_pool_account(self.pool_account)?;
         let mut from_token_account =
             InterfaceAccount::<TokenAccount>::try_from(from_token_account)?;
         let mut to_token_account = InterfaceAccount::<TokenAccount>::try_from(to_token_account)?;
 
         let a_to_b = Self::a_to_b(
-            &self.pool_account,
+            pool_account,
             &from_token_account.mint,
             &to_token_account.mint,
         )?;

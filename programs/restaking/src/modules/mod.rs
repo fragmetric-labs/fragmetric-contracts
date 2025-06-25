@@ -1,4 +1,3 @@
-#![allow(clippy::too_many_arguments)]
 #![allow(clippy::module_inception)]
 #![allow(clippy::inconsistent_digit_grouping)]
 #![allow(unused_imports)]

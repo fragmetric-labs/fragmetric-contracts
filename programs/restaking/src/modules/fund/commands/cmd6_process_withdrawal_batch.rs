@@ -3,8 +3,7 @@ use anchor_spl::associated_token::spl_associated_token_account;
 
 use crate::constants::PROGRAM_REVENUE_ADDRESS;
 use crate::errors;
-use crate::modules::fund::commands::OperationCommand::UnrestakeVRT;
-use crate::modules::pricing::{Asset, TokenPricingSource};
+use crate::modules::pricing::TokenPricingSource;
 use crate::modules::restaking::{JitoRestakingVaultService, SolvBTCVaultService};
 use crate::modules::staking::{
     MarinadeStakePoolService, SPLStakePoolService, SanctumMultiValidatorSPLStakePoolService,
@@ -12,10 +11,7 @@ use crate::modules::staking::{
 };
 use crate::utils::AccountInfoExt;
 
-use super::{
-    FundService, OperationCommandContext, OperationCommandEntry, OperationCommandResult,
-    SelfExecutable, UnstakeLSTCommand, FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
-};
+use super::*;
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
 pub struct ProcessWithdrawalBatchCommand {
@@ -200,7 +196,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                 let [program_revenue_account, program_supported_token_revenue_account, optional_associated_token_account_program, receipt_token_program, receipt_token_lock_account, fund_reserve_account, fund_treasury_account, optional_supported_token_mint, optional_supported_token_program, optional_fund_supported_token_reserve_account, optional_fund_supported_token_treasury_account, remaining_accounts @ ..] =
                     accounts
                 else {
-                    err!(ErrorCode::AccountNotEnoughKeys)?
+                    err!(error::ErrorCode::AccountNotEnoughKeys)?
                 };
 
                 let fund_account = ctx.fund_account.load()?;
@@ -272,7 +268,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         + num_supported_token_pricing_sources
                         + num_restaking_vault_pricing_sources
                 {
-                    err!(ErrorCode::AccountNotEnoughKeys)?;
+                    err!(error::ErrorCode::AccountNotEnoughKeys)?;
                 }
 
                 let (uninitialized_withdrawal_batch_accounts, remaining_accounts) =

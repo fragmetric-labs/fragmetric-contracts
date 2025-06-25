@@ -232,7 +232,7 @@ impl ClaimUnrestakedVSTCommand {
                         (fund_account.get_treasury_account_address()?, false),
                         (
                             fund_account.find_supported_token_treasury_account_address(
-                                &vault_service.get_supported_token_mint()?,
+                                &restaking_vault.supported_token_mint,
                             )?,
                             true,
                         ),

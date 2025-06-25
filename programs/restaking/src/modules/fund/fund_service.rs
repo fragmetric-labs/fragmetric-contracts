@@ -6,7 +6,7 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::errors::ErrorCode;
 use crate::events;
-use crate::modules::pricing::{Asset, AssetPod, PricingService, TokenPricingSource, TokenValue};
+use crate::modules::pricing::{AssetPod, PricingService, TokenPricingSource};
 use crate::modules::reward;
 use crate::utils::*;
 
