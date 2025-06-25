@@ -85,6 +85,9 @@ export type RestakingVault = {
   supportedTokenCompoundedAmount: bigint;
   supportedTokenToReceiptTokenExchangeRatio: TokenExchangeRatio;
   supportedTokenToReceiptTokenExchangeRatioUpdatedTimestamp: bigint;
+  padding5: ReadonlyUint8Array;
+  /** expected amount of vst by unrestaking vrt */
+  pendingSupportedTokenUnrestakingAmount: bigint;
   reserved: ReadonlyUint8Array;
 };
 
@@ -120,6 +123,9 @@ export type RestakingVaultArgs = {
   supportedTokenCompoundedAmount: number | bigint;
   supportedTokenToReceiptTokenExchangeRatio: TokenExchangeRatioArgs;
   supportedTokenToReceiptTokenExchangeRatioUpdatedTimestamp: number | bigint;
+  padding5: ReadonlyUint8Array;
+  /** expected amount of vst by unrestaking vrt */
+  pendingSupportedTokenUnrestakingAmount: number | bigint;
   reserved: ReadonlyUint8Array;
 };
 
@@ -166,7 +172,9 @@ export function getRestakingVaultEncoder(): Encoder<RestakingVaultArgs> {
       'supportedTokenToReceiptTokenExchangeRatioUpdatedTimestamp',
       getI64Encoder(),
     ],
-    ['reserved', fixEncoderSize(getBytesEncoder(), 816)],
+    ['padding5', fixEncoderSize(getBytesEncoder(), 32)],
+    ['pendingSupportedTokenUnrestakingAmount', getU64Encoder()],
+    ['reserved', fixEncoderSize(getBytesEncoder(), 776)],
   ]);
 }
 
@@ -213,7 +221,9 @@ export function getRestakingVaultDecoder(): Decoder<RestakingVault> {
       'supportedTokenToReceiptTokenExchangeRatioUpdatedTimestamp',
       getI64Decoder(),
     ],
-    ['reserved', fixDecoderSize(getBytesDecoder(), 816)],
+    ['padding5', fixDecoderSize(getBytesDecoder(), 32)],
+    ['pendingSupportedTokenUnrestakingAmount', getU64Decoder()],
+    ['reserved', fixDecoderSize(getBytesDecoder(), 776)],
   ]);
 }
 
