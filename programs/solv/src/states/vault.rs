@@ -520,6 +520,13 @@ impl VaultAccount {
         )
     }
 
+    pub fn get_vst_total_estimated_amount_from_withdrawal_requests(&self) -> u64 {
+        self.get_withdrawal_requests_iter()
+            .filter(|request| request.state == WITHDRAWAL_REQUEST_STATE_COMPLETED)
+            .map(|request| request.vst_withdrawal_total_estimated_amount)
+            .sum()
+    }
+
     /// Minimum amount of SRT required in vault token account
     pub(crate) fn get_srt_total_reserved_amount(&self) -> u64 {
         self.srt_operation_reserved_amount + self.srt_withdrawal_locked_amount
