@@ -558,7 +558,6 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         operator: &Pubkey,
         token_allocation_weight: u64,
         token_allocation_capacity_amount: u64,
-        token_redelegating_amount: Option<u64>,
     ) -> Result<events::FundManagerUpdatedFund> {
         let mut fund_account = self.fund_account.load_mut()?;
         let delegation = fund_account
@@ -569,9 +568,6 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
             token_allocation_weight,
             token_allocation_capacity_amount,
         )?;
-        if let Some(token_amount) = token_redelegating_amount {
-            delegation.set_supported_token_redelegating_amount(token_amount)?;
-        }
 
         self.create_fund_manager_updated_fund_event()
     }

@@ -311,7 +311,6 @@ pub mod restaking {
         operator: Pubkey,
         token_allocation_weight: u64,
         token_allocation_capacity_amount: u64,
-        token_redelegating_amount: Option<u64>,
     ) -> Result<()> {
         emit_cpi!(modules::fund::FundConfigurationService::new(
             &mut ctx.accounts.receipt_token_mint,
@@ -322,7 +321,6 @@ pub mod restaking {
             &operator,
             token_allocation_weight,
             token_allocation_capacity_amount,
-            token_redelegating_amount,
         )?);
 
         Ok(())

@@ -401,10 +401,7 @@ pub(super) struct RestakingVaultDelegation {
     pub supported_token_delegated_amount: u64,
     pub supported_token_undelegating_amount: u64,
 
-    /// configuration: the amount requested to be undelegated as soon as possible regardless of current state, this value should be decreased by each undelegation requested amount.
-    pub supported_token_redelegating_amount: u64,
-
-    _reserved: [u8; 24],
+    _reserved: [u8; 32],
 }
 
 impl RestakingVaultDelegation {
@@ -423,18 +420,6 @@ impl RestakingVaultDelegation {
     ) -> Result<()> {
         self.supported_token_allocation_weight = weight;
         self.supported_token_allocation_capacity_amount = supported_token_capacity_amount;
-
-        Ok(())
-    }
-
-    pub fn set_supported_token_redelegating_amount(&mut self, token_amount: u64) -> Result<()> {
-        require_gte!(
-            token_amount,
-            self.supported_token_delegated_amount,
-            ErrorCode::FundInvalidConfigurationUpdateError
-        );
-
-        self.supported_token_redelegating_amount = token_amount;
 
         Ok(())
     }
