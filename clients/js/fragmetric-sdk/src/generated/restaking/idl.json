@@ -14900,11 +14900,29 @@
             "type": "i64"
           },
           {
+            "name": "_padding5",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "pending_supported_token_unrestaking_amount",
+            "docs": [
+              "Expected amount of vst by unrestaking vrt.",
+              "This field is updated when the vault uses vst as expected receivable amount after unrestaking process is completed.",
+              "It does NOT include unrestaking amount as vrt."
+            ],
+            "type": "u64"
+          },
+          {
             "name": "_reserved",
             "type": {
               "array": [
                 "u8",
-                816
+                776
               ]
             }
           }
@@ -16140,6 +16158,30 @@
       }
     },
     {
+      "name": "UnrestakeVRTCommandItem",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "receipt_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "supported_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "allocated_receipt_token_amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
       "name": "UnrestakeVRTCommandResult",
       "type": {
         "kind": "struct",
@@ -16183,7 +16225,7 @@
                 "type": {
                   "vec": {
                     "defined": {
-                      "name": "UnrestakeVSTCommandItem"
+                      "name": "UnrestakeVRTCommandItem"
                     }
                   }
                 }
@@ -16198,36 +16240,12 @@
                 "type": {
                   "vec": {
                     "defined": {
-                      "name": "UnrestakeVSTCommandItem"
+                      "name": "UnrestakeVRTCommandItem"
                     }
                   }
                 }
               }
             ]
-          }
-        ]
-      }
-    },
-    {
-      "name": "UnrestakeVSTCommandItem",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "vault",
-            "type": "pubkey"
-          },
-          {
-            "name": "receipt_token_mint",
-            "type": "pubkey"
-          },
-          {
-            "name": "supported_token_mint",
-            "type": "pubkey"
-          },
-          {
-            "name": "allocated_receipt_token_amount",
-            "type": "u64"
           }
         ]
       }

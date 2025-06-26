@@ -321,7 +321,7 @@ impl<'info> SolvBTCVaultService<'info> {
         ))
     }
 
-    /// returns [payer_vault_supported_token_amount, unrestaked_receipt_token_amount, claimed_supported_token_amount, deducted_supported_token_fee_amount, total_unrestaking_vault_receipt_token_amount]
+    /// returns [payer_vault_supported_token_amount, unrestaked_receipt_token_amount, expected_supported_token_amount, claimed_supported_token_amount, deducted_supported_token_fee_amount, total_unrestaking_vault_receipt_token_amount]
     #[inline(never)]
     pub fn withdraw(
         &self,
@@ -339,7 +339,7 @@ impl<'info> SolvBTCVaultService<'info> {
         payer_vault_supported_token_account: &'info AccountInfo<'info>,
         payer: &AccountInfo<'info>,
         payer_seeds: &[&[&[u8]]],
-    ) -> Result<(u64, u64, u64, u64, u64)> {
+    ) -> Result<(u64, u64, u64, u64, u64, u64)> {
         let mut signer_seeds = Vec::with_capacity(2);
         if let Some(seeds) = fund_manager_seeds.first() {
             signer_seeds.push(*seeds);
@@ -359,6 +359,8 @@ impl<'info> SolvBTCVaultService<'info> {
         let vault = self.vault_account.load()?;
 
         let unrestaked_receipt_token_amount = vault.get_vrt_withdrawal_completed_amount();
+        let expected_supported_token_amount =
+            vault.get_vst_total_estimated_amount_from_completed_withdrawal_requests();
         let total_unrestaking_vault_receipt_token_amount =
             vault.get_vrt_withdrawal_incompleted_amount();
         let deducted_supported_token_fee_amount = vault.get_vst_deducted_fee_amount();
@@ -367,6 +369,7 @@ impl<'info> SolvBTCVaultService<'info> {
         if claimed_supported_token_amount == 0 {
             return Ok((
                 payer_vault_supported_token_amount_before,
+                0,
                 0,
                 0,
                 0,
@@ -410,10 +413,11 @@ impl<'info> SolvBTCVaultService<'info> {
             claimed_supported_token_amount
         );
 
-        msg!("CLAIM_UNRESTAKED#solv: receipt_token_mint={}, payer_vault_supported_token_account_amount={}, unrestaked_receipt_token_amount={}, claimed_supported_token_amount={}, deducted_supported_token_fee_amount={}",
+        msg!("CLAIM_UNRESTAKED#solv: receipt_token_mint={}, payer_vault_supported_token_account_amount={}, unrestaked_receipt_token_amount={}, expected_supported_token_amount={}, claimed_supported_token_amount={}, deducted_supported_token_fee_amount={}",
             vault_receipt_token_mint.key,
             payer_vault_supported_token_account_amount,
             unrestaked_receipt_token_amount,
+            expected_supported_token_amount,
             claimed_supported_token_amount,
             deducted_supported_token_fee_amount
         );
@@ -421,6 +425,7 @@ impl<'info> SolvBTCVaultService<'info> {
         Ok((
             payer_vault_supported_token_account_amount,
             unrestaked_receipt_token_amount,
+            expected_supported_token_amount,
             claimed_supported_token_amount,
             deducted_supported_token_fee_amount,
             total_unrestaking_vault_receipt_token_amount,

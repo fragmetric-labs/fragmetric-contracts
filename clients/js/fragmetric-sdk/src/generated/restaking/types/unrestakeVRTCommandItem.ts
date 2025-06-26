@@ -20,21 +20,21 @@ import {
   type Encoder,
 } from '@solana/kit';
 
-export type UnrestakeVSTCommandItem = {
+export type UnrestakeVRTCommandItem = {
   vault: Address;
   receiptTokenMint: Address;
   supportedTokenMint: Address;
   allocatedReceiptTokenAmount: bigint;
 };
 
-export type UnrestakeVSTCommandItemArgs = {
+export type UnrestakeVRTCommandItemArgs = {
   vault: Address;
   receiptTokenMint: Address;
   supportedTokenMint: Address;
   allocatedReceiptTokenAmount: number | bigint;
 };
 
-export function getUnrestakeVSTCommandItemEncoder(): Encoder<UnrestakeVSTCommandItemArgs> {
+export function getUnrestakeVRTCommandItemEncoder(): Encoder<UnrestakeVRTCommandItemArgs> {
   return getStructEncoder([
     ['vault', getAddressEncoder()],
     ['receiptTokenMint', getAddressEncoder()],
@@ -43,7 +43,7 @@ export function getUnrestakeVSTCommandItemEncoder(): Encoder<UnrestakeVSTCommand
   ]);
 }
 
-export function getUnrestakeVSTCommandItemDecoder(): Decoder<UnrestakeVSTCommandItem> {
+export function getUnrestakeVRTCommandItemDecoder(): Decoder<UnrestakeVRTCommandItem> {
   return getStructDecoder([
     ['vault', getAddressDecoder()],
     ['receiptTokenMint', getAddressDecoder()],
@@ -52,12 +52,12 @@ export function getUnrestakeVSTCommandItemDecoder(): Decoder<UnrestakeVSTCommand
   ]);
 }
 
-export function getUnrestakeVSTCommandItemCodec(): Codec<
-  UnrestakeVSTCommandItemArgs,
-  UnrestakeVSTCommandItem
+export function getUnrestakeVRTCommandItemCodec(): Codec<
+  UnrestakeVRTCommandItemArgs,
+  UnrestakeVRTCommandItem
 > {
   return combineCodec(
-    getUnrestakeVSTCommandItemEncoder(),
-    getUnrestakeVSTCommandItemDecoder()
+    getUnrestakeVRTCommandItemEncoder(),
+    getUnrestakeVRTCommandItemDecoder()
   );
 }

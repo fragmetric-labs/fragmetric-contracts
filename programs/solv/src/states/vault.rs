@@ -450,6 +450,10 @@ impl VaultAccount {
         )
     }
 
+    pub fn get_vst_total_estimated_amount_from_completed_withdrawal_requests(&self) -> u64 {
+        self.vst_reserved_amount_to_claim + self.vst_deducted_fee_amount
+    }
+
     pub(crate) fn get_srt_total_reserved_amount(&self) -> u64 {
         self.srt_operation_reserved_amount + self.srt_withdrawal_locked_amount
     }
