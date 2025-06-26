@@ -3747,10 +3747,15 @@ describe('restaking.fragBTC test', async () => {
     `);
 
     // trigger VRT price change by increasing SRT value ***
+    
+    const priceIncreasedAmountAsPercent = 10n;
+    const receivableSolvReceiptTokenAmount = 29_1378_2586n;
+    const expectedSupportedTokenAmount = receivableSolvReceiptTokenAmount;
+
     await solv.wBTC.completeDeposits.execute({
-      redeemedSolvReceiptTokenAmount: 29_1378_2586n,
+      redeemedSolvReceiptTokenAmount: receivableSolvReceiptTokenAmount,
       newOneSolvReceiptTokenAsMicroSupportedTokenAmount:
-        (1_0000_0000_000000n * 11n) / 10n,
+        1_0000_0000_000000n * (100n + priceIncreasedAmountAsPercent) / 100n
     });
 
     await ctx.fund.runCommand.executeChained({
@@ -3758,65 +3763,24 @@ describe('restaking.fragBTC test', async () => {
       operator: restaking.knownAddresses.fundManager,
     });
 
-    // harvest yield - VST compounded amount should be greater than 0
-    await expectMasked(
-      ctx.fund.runCommand.executeChained({
-        forceResetCommand: 'HarvestRestakingYield',
-        operator: restaking.knownAddresses.fundManager,
-      })
-    ).resolves.toMatchInlineSnapshot(`
-      {
-        "args": {
-          "forceResetCommand": null,
-          "operator": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx",
-        },
-        "events": {
-          "operatorRanFundCommand": {
-            "command": {
-              "__kind": "HarvestRestakingYield",
-              "fields": [
-                {
-                  "state": {
-                    "__kind": "ExecuteCompoundVaultSupportedToken",
-                    "vault": "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
-                  },
-                },
-              ],
-            },
-            "fundAccount": "BEpVRdWw6VhvfwfQufB9iqcJ6acf51XRP1jETCvGDBVE",
-            "nextSequence": 0,
-            "numOperated": 302n,
-            "receiptTokenMint": "ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz",
-            "result": {
-              "__option": "Some",
-              "value": {
-                "__kind": "HarvestRestakingYield",
-                "fields": [
-                  {
-                    "fundSupportedTokenCompoundedTokenAmount": 0n,
-                    "rewardTokenDistributedTokenAmount": 0n,
-                    "swappedTokenMint": {
-                      "__option": "None",
-                    },
-                    "updatedRewardAccount": {
-                      "__option": "None",
-                    },
-                    "vault": "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
-                    "vaultSupportedTokenCompoundedAmount": 291378258n,
-                    "yieldTokenAmount": 3939996280n,
-                    "yieldTokenMint": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
-                  },
-                ],
-              },
-            },
-          },
-          "unknown": [],
-        },
-        "signature": "MASKED(signature)",
-        "slot": "MASKED(/[.*S|s]lots?$/)",
-        "succeeded": true,
-      }
-    `);
+
+    // harvest yield - VST compounded amount should be 10%
+    res = await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestRestakingYield',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    evt = res.events!.operatorRanFundCommand!;
+    result = isSome(evt.result)
+      ? (evt.result.value
+          .fields[0] as restakingTypes.HarvestRestakingYieldCommandResult)
+      : null;
+    
+    // compounded vst amount should be 10% of expected supported token amount
+    expect(result?.vaultSupportedTokenCompoundedAmount).toEqual(expectedSupportedTokenAmount * priceIncreasedAmountAsPercent / 100n);
+
+    // check whether supported_token_compounded_amount value in RestakingVault struct is reset to '0'
+    expect(await ctx.fund.resolveAccount(true).then((fundAccount) => fundAccount!.data.restakingVaults[2].supportedTokenCompoundedAmount)).toEqual(0n);
   });
 
   test('duplicate withdrawal requests can be prevented by adopting pending_supported_token_unrestaking_amount', async () => {

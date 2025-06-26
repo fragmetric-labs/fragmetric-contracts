@@ -54,7 +54,9 @@ pub(super) struct RestakingVault {
     pub supported_token_to_receipt_token_exchange_ratio_updated_timestamp: i64,
 
     _padding5: [u8; 32],
-    /// expected amount of vst by unrestaking vrt
+    /// Expected amount of vst by unrestaking vrt.
+    /// This field is updated when the vault uses vst as expected receivable amount after unrestaking process is completed.
+    /// It does NOT include unrestaking amount as vrt.
     pub pending_supported_token_unrestaking_amount: u64,
 
     _reserved: [u8; 776],

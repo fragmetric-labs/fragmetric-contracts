@@ -360,7 +360,7 @@ impl<'info> SolvBTCVaultService<'info> {
 
         let unrestaked_receipt_token_amount = vault.get_vrt_withdrawal_completed_amount();
         let expected_supported_token_amount =
-            vault.get_vst_total_estimated_amount_from_withdrawal_requests();
+            vault.get_vst_total_estimated_amount_from_completed_withdrawal_requests();
         let total_unrestaking_vault_receipt_token_amount =
             vault.get_vrt_withdrawal_incompleted_amount();
         let deducted_supported_token_fee_amount = vault.get_vst_deducted_fee_amount();

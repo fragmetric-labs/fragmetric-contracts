@@ -14911,7 +14911,9 @@
           {
             "name": "pending_supported_token_unrestaking_amount",
             "docs": [
-              "expected amount of vst by unrestaking vrt"
+              "Expected amount of vst by unrestaking vrt.",
+              "This field is updated when the vault uses vst as expected receivable amount after unrestaking process is completed.",
+              "It does NOT include unrestaking amount as vrt."
             ],
             "type": "u64"
           },

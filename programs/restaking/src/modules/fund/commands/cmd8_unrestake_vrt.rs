@@ -745,7 +745,7 @@ impl UnrestakeVRTCommand {
                 let (
                     fund_vault_receipt_token_account_amount,
                     enqueued_vault_receipt_token_amount,
-                    expected_supported_token_account_amount,
+                    expected_supported_token_amount,
                     total_unrestaking_vault_receipt_token_amount,
                 ) = vault_service.request_withdrawal(
                     vault_receipt_token_mint,
@@ -769,10 +769,10 @@ impl UnrestakeVRTCommand {
                     let supported_token =
                         fund_account.get_supported_token_mut(&item.supported_token_mint)?;
                     supported_token.token.operation_receivable_amount +=
-                        expected_supported_token_account_amount;
+                        expected_supported_token_amount;
 
                     require_gte!(
-                        expected_supported_token_account_amount,
+                        expected_supported_token_amount,
                         pricing_service.get_token_amount_as_token(
                             vault_receipt_token_mint.key,
                             enqueued_vault_receipt_token_amount,
@@ -793,7 +793,7 @@ impl UnrestakeVRTCommand {
                         enqueued_vault_receipt_token_amount;
 
                     restaking_vault.pending_supported_token_unrestaking_amount +=
-                        expected_supported_token_account_amount;
+                        expected_supported_token_amount;
 
                     require_gte!(
                         fund_vault_receipt_token_account_amount,

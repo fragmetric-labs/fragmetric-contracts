@@ -86,7 +86,11 @@ export type RestakingVault = {
   supportedTokenToReceiptTokenExchangeRatio: TokenExchangeRatio;
   supportedTokenToReceiptTokenExchangeRatioUpdatedTimestamp: bigint;
   padding5: ReadonlyUint8Array;
-  /** expected amount of vst by unrestaking vrt */
+  /**
+   * Expected amount of vst by unrestaking vrt.
+   * This field is updated when the vault uses vst as expected receivable amount after unrestaking process is completed.
+   * It does NOT include unrestaking amount as vrt.
+   */
   pendingSupportedTokenUnrestakingAmount: bigint;
   reserved: ReadonlyUint8Array;
 };
@@ -124,7 +128,11 @@ export type RestakingVaultArgs = {
   supportedTokenToReceiptTokenExchangeRatio: TokenExchangeRatioArgs;
   supportedTokenToReceiptTokenExchangeRatioUpdatedTimestamp: number | bigint;
   padding5: ReadonlyUint8Array;
-  /** expected amount of vst by unrestaking vrt */
+  /**
+   * Expected amount of vst by unrestaking vrt.
+   * This field is updated when the vault uses vst as expected receivable amount after unrestaking process is completed.
+   * It does NOT include unrestaking amount as vrt.
+   */
   pendingSupportedTokenUnrestakingAmount: number | bigint;
   reserved: ReadonlyUint8Array;
 };

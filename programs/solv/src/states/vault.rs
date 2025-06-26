@@ -520,11 +520,8 @@ impl VaultAccount {
         )
     }
 
-    pub fn get_vst_total_estimated_amount_from_withdrawal_requests(&self) -> u64 {
-        self.get_withdrawal_requests_iter()
-            .filter(|request| request.state == WITHDRAWAL_REQUEST_STATE_COMPLETED)
-            .map(|request| request.vst_withdrawal_total_estimated_amount)
-            .sum()
+    pub fn get_vst_total_estimated_amount_from_completed_withdrawal_requests(&self) -> u64 {
+        self.vst_reserved_amount_to_claim + self.vst_deducted_fee_amount
     }
 
     /// Minimum amount of SRT required in vault token account
