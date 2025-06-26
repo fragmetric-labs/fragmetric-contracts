@@ -485,13 +485,11 @@ impl VaultAccount {
         let vst_operation_receivable_amount_as_micro =
             self.vst_operation_receivable_amount.checked_mul(MICRO)?;
 
-        Some(
-            vst_operation_reserved_amount_as_micro
-                + vst_operation_receivable_amount_as_micro
-                + srt_operation_reserved_amount_as_micro_vst
-                // TODO/phase3: deprecate srt_operation_receivable_amount
-                + srt_operation_receivable_amount_as_micro_vst,
-        )
+        vst_operation_reserved_amount_as_micro
+            .checked_add(vst_operation_receivable_amount_as_micro)?
+            .checked_add(srt_operation_reserved_amount_as_micro_vst)?
+            // TODO/phase3: deprecate srt_operation_receivable_amount
+            .checked_add(srt_operation_receivable_amount_as_micro_vst)
     }
 
     /// Minimum amount of VST required in vault token account
