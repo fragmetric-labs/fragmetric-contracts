@@ -114,6 +114,10 @@ impl ClaimUnrestakedVSTCommand {
                     command.with_required_accounts(required_accounts)
                 }
                 Some(TokenPricingSource::SolvBTCVault { address }) => {
+                    if restaking_vault.pending_supported_token_unrestaking_amount == 0 {
+                        return Ok(None);
+                    }
+
                     let required_accounts = SolvBTCVaultService::find_accounts_to_new(address)?;
                     let command = ClaimUnrestakedVSTCommand {
                         state: ClaimUnrestakedVSTCommandState::Prepare { vault: *vault },
