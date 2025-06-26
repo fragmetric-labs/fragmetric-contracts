@@ -18,7 +18,7 @@ pub struct UnrestakeVRTCommand {
 }
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
-pub struct UnrestakeVSTCommandItem {
+pub struct UnrestakeVRTCommandItem {
     vault: Pubkey,
     receipt_token_mint: Pubkey,
     supported_token_mint: Pubkey,
@@ -31,11 +31,11 @@ pub enum UnrestakeVRTCommandState {
     New,
     Prepare {
         #[max_len(FUND_ACCOUNT_MAX_SUPPORTED_TOKENS)]
-        items: Vec<UnrestakeVSTCommandItem>,
+        items: Vec<UnrestakeVRTCommandItem>,
     },
     Execute {
         #[max_len(FUND_ACCOUNT_MAX_SUPPORTED_TOKENS)]
-        items: Vec<UnrestakeVSTCommandItem>,
+        items: Vec<UnrestakeVRTCommandItem>,
     },
 }
 
@@ -239,9 +239,9 @@ impl UnrestakeVRTCommand {
 
         // now allocate extra unrestaking + own unrestaking amount to related restaking vaults for each tokens
         let mut items =
-            Vec::<UnrestakeVSTCommandItem>::with_capacity(FUND_ACCOUNT_MAX_RESTAKING_VAULTS);
+            Vec::<UnrestakeVRTCommandItem>::with_capacity(FUND_ACCOUNT_MAX_RESTAKING_VAULTS);
         for restaking_vault in fund_account.get_restaking_vaults_iter() {
-            items.push(UnrestakeVSTCommandItem {
+            items.push(UnrestakeVRTCommandItem {
                 vault: restaking_vault.vault,
                 receipt_token_mint: restaking_vault.receipt_token_mint,
                 supported_token_mint: restaking_vault.supported_token_mint,
@@ -350,6 +350,11 @@ impl UnrestakeVRTCommand {
             item.allocated_receipt_token_amount = item
                 .allocated_receipt_token_amount
                 .saturating_sub(restaking_vault.receipt_token_operation_receivable_amount)
+                .saturating_sub(pricing_service.get_token_amount_as_token(
+                    &restaking_vault.supported_token_mint,
+                    restaking_vault.pending_supported_token_unrestaking_amount,
+                    &restaking_vault.receipt_token_mint,
+                )?)
                 .min(restaking_vault.receipt_token_operation_reserved_amount);
             if pricing_service.get_token_amount_as_sol(
                 &item.receipt_token_mint,
@@ -376,7 +381,7 @@ impl UnrestakeVRTCommand {
     fn create_prepare_command_with_items<'info>(
         &self,
         ctx: &OperationCommandContext,
-        mut items: Peekable<impl Iterator<Item = UnrestakeVSTCommandItem>>,
+        mut items: Peekable<impl Iterator<Item = UnrestakeVRTCommandItem>>,
     ) -> Result<Option<OperationCommandEntry>> {
         Ok(if let Some(item) = items.peek() {
             Some(
@@ -435,7 +440,7 @@ impl UnrestakeVRTCommand {
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
-        items: &[UnrestakeVSTCommandItem],
+        items: &[UnrestakeVRTCommandItem],
     ) -> Result<(
         Option<OperationCommandResult>,
         Option<OperationCommandEntry>,
@@ -568,7 +573,7 @@ impl UnrestakeVRTCommand {
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
-        items: &[UnrestakeVSTCommandItem],
+        items: &[UnrestakeVRTCommandItem],
     ) -> Result<(
         Option<OperationCommandResult>,
         Option<OperationCommandEntry>,
@@ -740,7 +745,7 @@ impl UnrestakeVRTCommand {
                 let (
                     fund_vault_receipt_token_account_amount,
                     enqueued_vault_receipt_token_amount,
-                    expected_supported_token_account_amount,
+                    expected_supported_token_amount,
                     total_unrestaking_vault_receipt_token_amount,
                 ) = vault_service.request_withdrawal(
                     vault_receipt_token_mint,
@@ -764,10 +769,10 @@ impl UnrestakeVRTCommand {
                     let supported_token =
                         fund_account.get_supported_token_mut(&item.supported_token_mint)?;
                     supported_token.token.operation_receivable_amount +=
-                        expected_supported_token_account_amount;
+                        expected_supported_token_amount;
 
                     require_gte!(
-                        expected_supported_token_account_amount,
+                        expected_supported_token_amount,
                         pricing_service.get_token_amount_as_token(
                             vault_receipt_token_mint.key,
                             enqueued_vault_receipt_token_amount,
@@ -786,6 +791,9 @@ impl UnrestakeVRTCommand {
 
                     restaking_vault.receipt_token_operation_reserved_amount -=
                         enqueued_vault_receipt_token_amount;
+
+                    restaking_vault.pending_supported_token_unrestaking_amount +=
+                        expected_supported_token_amount;
 
                     require_gte!(
                         fund_vault_receipt_token_account_amount,
