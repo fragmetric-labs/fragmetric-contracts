@@ -826,4 +826,62 @@ describe('restaking.frag2 test', async () => {
           .totalSettledContribution
     );
   });
+
+  test('user can deposit large amount of token', async () => {
+    await validator.airdropToken(
+      signer1.address,
+      'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5',
+      1_000_000_000_000_000_000n
+    );
+    await expectMasked(
+      user1.deposit.execute(
+        {
+          assetMint: 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5',
+          assetAmount: 1_000_000_000_000_000_000n,
+        },
+        { signers: [signer1] }
+      )
+    ).resolves.toMatchInlineSnapshot(`
+      {
+        "args": {
+          "applyPresetComputeUnitLimit": true,
+          "assetAmount": 1000000000000000000n,
+          "assetMint": "FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5",
+          "metadata": null,
+        },
+        "events": {
+          "unknown": [],
+          "userDepositedToFund": {
+            "contributionAccrualRate": {
+              "__option": "None",
+            },
+            "depositedAmount": 1000000000000000000n,
+            "fundAccount": "4aQn7zN3sAYYbTjaJPRv9i9v2UipV2Lc49yYCW4Da5BZ",
+            "mintedReceiptTokenAmount": 781250000000000006n,
+            "receiptTokenMint": "DCoj5m7joWjP9T3iPH22q7bDBoGkgUX4ffoL1eQZstwk",
+            "supportedTokenMint": {
+              "__option": "Some",
+              "value": "FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5",
+            },
+            "updatedUserRewardAccounts": [
+              "EQn7pu4AaD8anmMHuzMxDnuTxUYGY98cfEBzosGMu9SJ",
+            ],
+            "user": "FrhgfmDgXvzCmx2zpoYkJN2Xmx3djpQji8eZNzpZEWYY",
+            "userFundAccount": "GygWDNHDXdAnbQaDDBTrEK3jfKZ3TzPBZykmvLQkSwkf",
+            "userReceiptTokenAccount": "H8zqWqrcdyTaBcpegwQCFPAgKUz2jnJfWn4NH2XW5sJE",
+            "userSupportedTokenAccount": {
+              "__option": "Some",
+              "value": "FKhVzVa7V7LABtY91H9tiYrKgKPZi4NZBh4nXGxj8PoW",
+            },
+            "walletProvider": {
+              "__option": "None",
+            },
+          },
+        },
+        "signature": "MASKED(signature)",
+        "slot": "MASKED(/[.*S|s]lots?$/)",
+        "succeeded": true,
+      }
+    `);
+  });
 });

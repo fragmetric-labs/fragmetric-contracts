@@ -123,7 +123,7 @@ impl UserRewardPool {
 
         // Update contribution
         let elapsed_slot = current_slot - self.updated_slot;
-        self.contribution += elapsed_slot as u128 * total_contribution_accrual_rate as u128;
+        self.contribution += elapsed_slot as u128 * total_contribution_accrual_rate;
         self.updated_slot = current_slot;
 
         Ok(())

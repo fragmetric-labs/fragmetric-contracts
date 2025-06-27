@@ -36,7 +36,7 @@ impl UserRewardSettlement {
     pub fn settle_reward(
         &mut self,
         reward_settlement: &mut RewardSettlement,
-        total_contribution_accrual_rate: u64,
+        total_contribution_accrual_rate: u128,
         last_contribution: u128,
         last_updated_slot: u64,
     ) -> Result<()> {
@@ -100,12 +100,12 @@ impl UserRewardSettlement {
         last_contribution: u128,
         last_updated_slot: u64,
         ending_slot: u64,
-        total_contribution_accrual_rate: u64,
+        total_contribution_accrual_rate: u128,
     ) -> u128 {
         let user_block_settled_contribution = last_contribution
             .saturating_sub(self.total_settled_contribution)
             + (ending_slot - self.last_settled_slot.max(last_updated_slot)) as u128
-                * total_contribution_accrual_rate as u128;
+                * total_contribution_accrual_rate;
 
         self.total_settled_contribution += user_block_settled_contribution;
         self.last_settled_slot = ending_slot;
