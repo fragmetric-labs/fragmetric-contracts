@@ -3721,7 +3721,7 @@ describe('restaking.fragBTC test', async () => {
     `);
 
     // trigger VRT price change by increasing SRT value ***
-    
+
     const priceIncreasedAmountAsPercent = 10n;
     const receivableSolvReceiptTokenAmount = 29_1378_2586n;
     const expectedSupportedTokenAmount = receivableSolvReceiptTokenAmount;
@@ -3729,14 +3729,13 @@ describe('restaking.fragBTC test', async () => {
     await solv.wBTC.completeDeposits.execute({
       redeemedSolvReceiptTokenAmount: receivableSolvReceiptTokenAmount,
       newOneSolvReceiptTokenAsMicroSupportedTokenAmount:
-        1_0000_0000_000000n * (100n + priceIncreasedAmountAsPercent) / 100n
+        (1_0000_0000_000000n * (100n + priceIncreasedAmountAsPercent)) / 100n,
     });
 
     await ctx.fund.runCommand.executeChained({
       forceResetCommand: 'ClaimUnrestakedVST',
       operator: restaking.knownAddresses.fundManager,
     });
-
 
     // harvest yield - VST compounded amount should be 10%
     res = await ctx.fund.runCommand.executeChained({
@@ -3749,12 +3748,21 @@ describe('restaking.fragBTC test', async () => {
       ? (evt.result.value
           .fields[0] as restakingTypes.HarvestRestakingYieldCommandResult)
       : null;
-    
+
     // compounded vst amount should be 10% of expected supported token amount
-    expect(result?.vaultSupportedTokenCompoundedAmount).toEqual(expectedSupportedTokenAmount * priceIncreasedAmountAsPercent / 100n);
+    expect(result?.vaultSupportedTokenCompoundedAmount).toEqual(
+      (expectedSupportedTokenAmount * priceIncreasedAmountAsPercent) / 100n
+    );
 
     // check whether supported_token_compounded_amount value in RestakingVault struct is reset to '0'
-    expect(await ctx.fund.resolveAccount(true).then((fundAccount) => fundAccount!.data.restakingVaults[2].supportedTokenCompoundedAmount)).toEqual(0n);
+    expect(
+      await ctx.fund
+        .resolveAccount(true)
+        .then(
+          (fundAccount) =>
+            fundAccount!.data.restakingVaults[2].supportedTokenCompoundedAmount
+        )
+    ).toEqual(0n);
   });
 
   test('duplicate withdrawal requests can be prevented by adopting pending_supported_token_unrestaking_amount', async () => {

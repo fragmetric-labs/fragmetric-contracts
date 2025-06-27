@@ -137,7 +137,7 @@ impl RewardPool {
             .token_allocated_amount
             .get_total_contribution_accrual_rate();
         self.contribution +=
-            (current_slot - self.updated_slot) as u128 * total_contribution_accrual_rate as u128;
+            (current_slot - self.updated_slot) as u128 * total_contribution_accrual_rate;
         self.updated_slot = current_slot;
     }
 
