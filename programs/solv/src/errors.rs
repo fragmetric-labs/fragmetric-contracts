@@ -47,14 +47,12 @@ pub enum VaultError {
     #[msg("non-delegable reward token mint")]
     NonDelegableRewardTokenMintError,
 
-    // TODO/phase3: deprecate
     #[msg("deposit in progress")]
     DepositInProgressError,
 
-    // TODO/phase3: deprecate
     #[msg("deposit not in progress")]
     DepositNotInProgressError,
 
-    #[msg("withdrawal request queue is not set")]
-    WithdrawalRequestQueueNotSetError,
+    #[msg("withdrawal request not found")]
+    WithdrawalRequestNotFoundError,
 }

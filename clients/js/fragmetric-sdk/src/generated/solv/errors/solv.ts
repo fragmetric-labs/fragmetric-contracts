@@ -46,8 +46,8 @@ export const SOLV_ERROR__NON_DELEGABLE_REWARD_TOKEN_MINT_ERROR = 0x177d; // 6013
 export const SOLV_ERROR__DEPOSIT_IN_PROGRESS_ERROR = 0x177e; // 6014
 /** DepositNotInProgressError: deposit not in progress */
 export const SOLV_ERROR__DEPOSIT_NOT_IN_PROGRESS_ERROR = 0x177f; // 6015
-/** WithdrawalRequestQueueNotSetError: withdrawal request queue is not set */
-export const SOLV_ERROR__WITHDRAWAL_REQUEST_QUEUE_NOT_SET_ERROR = 0x1780; // 6016
+/** WithdrawalRequestNotFoundError: withdrawal request not found */
+export const SOLV_ERROR__WITHDRAWAL_REQUEST_NOT_FOUND_ERROR = 0x1780; // 6016
 
 export type SolvError =
   | typeof SOLV_ERROR__CALCULATION_ARITHMETIC_EXCEPTION
@@ -66,7 +66,7 @@ export type SolvError =
   | typeof SOLV_ERROR__SOLV_RECEIPT_TOKEN_MINT_MISMATCH_ERROR
   | typeof SOLV_ERROR__VAULT_ADMIN_MISMATCH_ERROR
   | typeof SOLV_ERROR__VAULT_SUPPORTED_TOKEN_MINT_MISMATCH_ERROR
-  | typeof SOLV_ERROR__WITHDRAWAL_REQUEST_QUEUE_NOT_SET_ERROR;
+  | typeof SOLV_ERROR__WITHDRAWAL_REQUEST_NOT_FOUND_ERROR;
 
 let solvErrorMessages: Record<SolvError, string> | undefined;
 if (process.env.NODE_ENV !== 'production') {
@@ -87,7 +87,7 @@ if (process.env.NODE_ENV !== 'production') {
     [SOLV_ERROR__SOLV_RECEIPT_TOKEN_MINT_MISMATCH_ERROR]: `solv receipt token mint mismatch`,
     [SOLV_ERROR__VAULT_ADMIN_MISMATCH_ERROR]: `vault admin mismatch`,
     [SOLV_ERROR__VAULT_SUPPORTED_TOKEN_MINT_MISMATCH_ERROR]: `vault supported token mint mismatch`,
-    [SOLV_ERROR__WITHDRAWAL_REQUEST_QUEUE_NOT_SET_ERROR]: `withdrawal request queue is not set`,
+    [SOLV_ERROR__WITHDRAWAL_REQUEST_NOT_FOUND_ERROR]: `withdrawal request not found`,
   };
 }
 

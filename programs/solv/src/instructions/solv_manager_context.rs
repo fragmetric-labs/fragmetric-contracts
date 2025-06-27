@@ -94,21 +94,11 @@ pub fn process_confirm_deposits(ctx: Context<SolvManagerContext>) -> Result<()> 
 
     drop(vault);
 
-    let mut vault = vault_account.load_mut()?;
-
-    // TODO/phase3: calculate ∆vault_solv_receipt_token_account.amount
-    vault.deposit_vst(vst_amount)?;
-
-    // TODO/phase3: use validation code below
-    // require_gte!(
-    //     vault_solv_receipt_token_account.amount,
-    //     vault.get_srt_total_reserved_amount(),
-    // );
+    vault_account.load_mut()?.deposit_vst(vst_amount)?;
 
     Ok(())
 }
 
-// TODO/phase3: deprecate
 pub fn process_complete_deposits(
     ctx: Context<SolvManagerContext>,
     srt_amount: u64,
@@ -228,7 +218,7 @@ pub fn process_set_solv_protocol_wallet(
 }
 
 // TODO/phase3: deprecate
-pub fn process_set_solv_protocol_withdrawal_fee_rate(
+pub fn process_set_solv_protocol_fee_rate(
     ctx: Context<SolvManagerConfigurationContext>,
     deposit_fee_rate_bps: u16,
     withdrawal_fee_rate_bps: u16,

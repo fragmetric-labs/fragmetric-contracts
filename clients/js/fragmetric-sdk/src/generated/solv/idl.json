@@ -3976,8 +3976,8 @@
     },
     {
       "code": 6016,
-      "name": "WithdrawalRequestQueueNotSetError",
-      "msg": "withdrawal request queue is not set"
+      "name": "WithdrawalRequestNotFoundError",
+      "msg": "withdrawal request not found"
     }
   ],
   "types": [
@@ -4145,13 +4145,17 @@
           {
             "name": "vst_operation_receivable_amount",
             "docs": [
-              "VST receivable amount for operation - offsetted by fund manager",
+              "VST receivable amount for operation - offsetted by fund manager OR via donation",
               "",
               "## Where does VST receivables come from?",
               "",
               "During deposit & withdraw from solv protocol, there is a protocol fee.",
               "It will prevent the NAV loss considering fee as receivable.",
-              "Receivables will then be offsetted when fund manager withdraws VST, as a withdrawal fee."
+              "Receivables will then be offsetted when fund manager withdraws VST, as a withdrawal fee.",
+              "",
+              "Another scenario is when solv manager adjusts SRT exchange rate (to lower price).",
+              "By human fault, SRT exchange rate might be set higher (for example, missed protocol extra fee).",
+              "In this case, by adjusting SRT exchange rate, decreased net asset value will be VST receivable."
             ],
             "type": "u64"
           },
@@ -4227,6 +4231,9 @@
           },
           {
             "name": "srt_operation_receivable_amount",
+            "docs": [
+              "SRT receivable amount for operation - will be offsetted when deposit completes to solv protocol"
+            ],
             "type": "u64"
           },
           {
