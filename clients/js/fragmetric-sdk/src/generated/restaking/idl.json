@@ -2,7 +2,7 @@
   "address": "4qEHCzsLFUnw8jmhmRSmAK5VhZVoSD1iVqukAf92yHi5",
   "metadata": {
     "name": "restaking",
-    "version": "0.6.4",
+    "version": "0.6.5",
     "spec": "0.1.0",
     "description": "Fragmetric Liquid Restaking Program",
     "repository": "https://github.com/fragmetric-labs/contracts"
