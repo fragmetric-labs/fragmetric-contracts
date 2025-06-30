@@ -821,15 +821,18 @@ impl HarvestRewardCommand {
             return self.execute_new_compound_command(ctx, Some(vault), None);
         }
 
-        let fund_account = ctx.fund_account.load()?;
-        let result = if fund_account
+        let result = if ctx
+            .fund_account
+            .load()?
             .get_supported_token(&reward_token_mints[0])
             .is_err()
         {
             // Swap
             self.execute_swap(ctx, &mut accounts, vault, &reward_token_mints[0])?
         } else {
-            let receipt_token_pricing_source = fund_account
+            let receipt_token_pricing_source = ctx
+                .fund_account
+                .load()?
                 .get_restaking_vault(vault)?
                 .receipt_token_pricing_source
                 .try_deserialize()?;
@@ -862,8 +865,6 @@ impl HarvestRewardCommand {
                 }
             }
         };
-
-        drop(fund_account);
 
         if let Some(result) = &result {
             let supported_token_mint = result
@@ -901,8 +902,9 @@ impl HarvestRewardCommand {
         reward_token_mint: &Pubkey,
     ) -> Result<Option<HarvestRewardCommandResult>> {
         let fund_account = ctx.fund_account.load()?;
+        let restaking_vault = fund_account.get_restaking_vault(vault)?;
         let swap_strategy = fund_account.get_token_swap_strategy(reward_token_mint)?;
-        let supported_token_mint = &swap_strategy.to_token_mint;
+        let supported_token_mint = swap_strategy.to_token_mint;
 
         let swap_source = swap_strategy.swap_source.try_deserialize()?;
         let result = match swap_source {
@@ -918,12 +920,28 @@ impl HarvestRewardCommand {
                 require_keys_eq!(
                     fund_supported_token_reserve_account.key(),
                     fund_account
-                        .find_supported_token_reserve_account_address(supported_token_mint)?
+                        .find_supported_token_reserve_account_address(&supported_token_mint)?
                 );
 
                 let from_reward_token_account =
                     InterfaceAccount::<TokenAccount>::try_from(from_reward_token_account)?;
                 require_keys_eq!(from_reward_token_account.mint, *reward_token_mint);
+
+                let reward_token_amount = from_reward_token_account
+                    .amount
+                    .min(from_reward_token_account.delegated_amount);
+
+                // harvest threshold check
+                let current_timestamp = Clock::get()?.unix_timestamp;
+
+                let available_reward_token_amount_to_harvest = restaking_vault
+                    .get_compounding_reward_token(reward_token_mint)?
+                    .get_available_amount_to_harvest(reward_token_amount, current_timestamp);
+
+                if available_reward_token_amount_to_harvest == 0 {
+                    // threshold unmet yet
+                    return Ok(None);
+                }
 
                 let dex_service = OrcaDEXLiquidityPoolService::new(
                     pool_program,
@@ -946,20 +964,25 @@ impl HarvestRewardCommand {
                     fund_supported_token_reserve_account,
                     ctx.fund_account.as_ref(),
                     &[&fund_account.get_seeds()],
-                    from_reward_token_account
-                        .amount
-                        .min(from_reward_token_account.delegated_amount),
+                    available_reward_token_amount_to_harvest,
                 )?;
 
                 if to_token_swapped_amount == 0 {
                     return Ok(None);
                 }
 
+                drop(fund_account);
+                ctx.fund_account
+                    .load_mut()?
+                    .get_restaking_vault_mut(vault)?
+                    .get_compounding_reward_token_mut(reward_token_mint)?
+                    .last_harvested_at = current_timestamp;
+
                 HarvestRewardCommandResult {
                     vault: *vault,
                     reward_token_mint: *reward_token_mint,
                     reward_token_amount: from_token_swapped_amount,
-                    swapped_token_mint: Some(*supported_token_mint),
+                    swapped_token_mint: Some(supported_token_mint),
                     compounded_token_amount: to_token_swapped_amount,
                     distributed_token_amount: 0,
                     updated_reward_account: None,
@@ -1052,6 +1075,13 @@ impl HarvestRewardCommand {
             }
             _ => (),
         }
+
+        drop(fund_account);
+        ctx.fund_account
+            .load_mut()?
+            .get_restaking_vault_mut(vault)?
+            .get_compounding_reward_token_mut(&reward_token_mint.key())?
+            .last_harvested_at = current_timestamp;
 
         let result = HarvestRewardCommandResult {
             vault: *vault,

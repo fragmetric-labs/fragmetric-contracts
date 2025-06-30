@@ -482,7 +482,7 @@ describe('restaking.frag2 test', async () => {
   test('virtual vault harvest/compound should not occur by compounding threshold', async () => {
     const rewardTokenMint = 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5';
 
-    // 1. update reward amount threshold -> harvest would not occur
+    // 1. reward min amount threshold -> harvest would not occur
     await ctx.fund.updateRestakingVaultRewardHarvestThreshold.execute({
       vault: '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
       rewardTokenMint,
@@ -521,14 +521,13 @@ describe('restaking.frag2 test', async () => {
       fund_2_1_frag!.token.operationReservedAmount
     );
 
-    // 2. update reward interval second threshold -> harvest would not occur
+    // 2. reward interval second threshold -> harvest would not occur
     await ctx.fund.updateRestakingVaultRewardHarvestThreshold.execute({
       vault: '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
       rewardTokenMint,
       harvestThresholdMinAmount: 200_000_000n,
       harvestThresholdMaxAmount: 600_000_000n,
-      harvestThresholdIntervalSeconds:
-        BigInt(Math.floor(Date.now() / 1000)) + 100n,
+      harvestThresholdIntervalSeconds: 100n,
     });
 
     // try to harvest reward
@@ -548,7 +547,7 @@ describe('restaking.frag2 test', async () => {
       fund_2_1_frag!.token.operationReservedAmount
     );
 
-    // 3. update reward amount threshold, but harvest now occurs
+    // 3. reward max amount threshold -> only max amount harvested
     await ctx.fund.updateRestakingVaultRewardHarvestThreshold.execute({
       vault: '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
       rewardTokenMint,
