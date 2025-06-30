@@ -132,9 +132,14 @@ impl RestakingVault {
         &mut self,
         weight: u64,
         sol_capacity_amount: u64,
+        reward_commission_rate_bps: u16,
     ) -> Result<()> {
+        // hard limit on reward commission rate to be less than or equal to 10%
+        require_gte!(1000, reward_commission_rate_bps);
+
         self.sol_allocation_weight = weight;
         self.sol_allocation_capacity_amount = sol_capacity_amount;
+        self.reward_commission_rate_bps = reward_commission_rate_bps;
 
         Ok(())
     }
