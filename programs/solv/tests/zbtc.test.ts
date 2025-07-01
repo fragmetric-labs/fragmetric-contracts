@@ -805,7 +805,11 @@ describe('solv.zBTC test', async () => {
     });
 
     // cannot refresh to lower price
-    await expect(ctx.refreshSolvReceiptTokenRedemptionRate.execute({newOneSolvReceiptTokenAsMicroSupportedTokenAmount: 1_0000_0000_000000n })).rejects.toThrow();
+    await expect(
+      ctx.refreshSolvReceiptTokenRedemptionRate.execute({
+        newOneSolvReceiptTokenAsMicroSupportedTokenAmount: 1_0000_0000_000000n,
+      })
+    ).rejects.toThrow();
 
     // solv manager confirms deposit
     await ctx.confirmDeposits.execute(null);
@@ -829,7 +833,11 @@ describe('solv.zBTC test', async () => {
     ).to.equal(100000000n);
 
     // cannot refresh SRT price during deposit
-    await expect(ctx.refreshSolvReceiptTokenRedemptionRate.execute({newOneSolvReceiptTokenAsMicroSupportedTokenAmount: 1_1000_0000_000000n })).rejects.toThrow();
+    await expect(
+      ctx.refreshSolvReceiptTokenRedemptionRate.execute({
+        newOneSolvReceiptTokenAsMicroSupportedTokenAmount: 1_1000_0000_000000n,
+      })
+    ).rejects.toThrow();
 
     // solv manager completes deposit
     // Redeemed SRT 9071_8182 = (1_0000_0000 * 0.998 - 9999) / 1.1
@@ -864,7 +872,9 @@ describe('solv.zBTC test', async () => {
     ).to.equal(100000000n);
 
     // after few days SRT redemption rate increased (1%: 1.1 -> 1.111) so solv manager refreshed
-    await ctx.refreshSolvReceiptTokenRedemptionRate.execute({newOneSolvReceiptTokenAsMicroSupportedTokenAmount: 1_1110_0000_000000n});
+    await ctx.refreshSolvReceiptTokenRedemptionRate.execute({
+      newOneSolvReceiptTokenAsMicroSupportedTokenAmount: 1_1110_0000_000000n,
+    });
 
     await expect(ctx.resolve(true)).resolves.toMatchObject({
       oneReceiptTokenAsMicroSupportedTokenAmount: 100997900000000n,
@@ -883,7 +893,7 @@ describe('solv.zBTC test', async () => {
     expect(
       200000n + 10000n + (90718182n * 111100000000000n) / 100000000000000n
     ).to.equal(100997900n);
-  })
+  });
 
   test(`solv manager can adjust SRT price before confirm deposit, but must donate implied fee`, async () => {
     // actually SRT redemption rate increased by 0.1%, not 1%, so current redemption rate is 1.1011, not 1.111
@@ -907,11 +917,17 @@ describe('solv.zBTC test', async () => {
     });
     // net asset value check
     expect(
-      200000n + 10000n + 898110n + (90718182n * 110110000000000n) / 100000000000000n
+      200000n +
+        10000n +
+        898110n +
+        (90718182n * 110110000000000n) / 100000000000000n
     ).to.equal(100997900n);
 
     // now donate 0.00888110 VST, which is implied fee due to mistake
-    await ctx.confirmDonations.execute({redeemedSolvReceiptTokenAmount: 0n, redeemedVaultSupportedTokenAmount: 898110n});
+    await ctx.confirmDonations.execute({
+      redeemedSolvReceiptTokenAmount: 0n,
+      redeemedVaultSupportedTokenAmount: 898110n,
+    });
 
     await expect(ctx.resolve(true)).resolves.toMatchObject({
       oneReceiptTokenAsMicroSupportedTokenAmount: 100997900000000n,
@@ -928,9 +944,12 @@ describe('solv.zBTC test', async () => {
     });
     // net asset value check
     expect(
-      898110n + 200000n + 10000n + (90718182n * 110110000000000n) / 100000000000000n
+      898110n +
+        200000n +
+        10000n +
+        (90718182n * 110110000000000n) / 100000000000000n
     ).to.equal(100997900n);
-  })
+  });
 
   test(`solv manager cannot adjust SRT price during deposit`, async () => {
     // solv manager confirms deposit
@@ -951,7 +970,10 @@ describe('solv.zBTC test', async () => {
     });
     // net asset value check
     expect(
-      210000n + 1797n + (90718182n * 110110000000000n) / 100000000000000n + (814016n * 110110000000000n) / 100000000000000n
+      210000n +
+        1797n +
+        (90718182n * 110110000000000n) / 100000000000000n +
+        (814016n * 110110000000000n) / 100000000000000n
     ).to.equal(100997900n);
 
     // Now, assume that current SRT price is misconfigured: actually 1.08 but set to 1.1011 now.
@@ -973,7 +995,10 @@ describe('solv.zBTC test', async () => {
     // };
     // net asset value check
     expect(
-      2124154n + 1797n + (90718182n * 108000000000000n) / 100000000000000n + (829920n * 108000000000000n) / 100000000000000n
+      2124154n +
+        1797n +
+        (90718182n * 108000000000000n) / 100000000000000n +
+        (829920n * 108000000000000n) / 100000000000000n
     ).to.equal(100997900n);
 
     // cannot adjust SRT price during deposit
@@ -1001,14 +1026,17 @@ describe('solv.zBTC test', async () => {
       receiptTokenSupply: 100000000n,
       supportedTokenAmount: 75477168n,
       supportedTokenOperationReservedAmount: 0n,
-      supportedTokenOperationReceivableAmount: 2124154n + 1797n + 10000n, // 10000 = protocol extra fee, 
+      supportedTokenOperationReceivableAmount: 2124154n + 1797n + 10000n, // 10000 = protocol extra fee,
       solvReceiptTokenAmount: 90718182n + 820660n,
       solvReceiptTokenOperationReservedAmount: 90718182n + 820660n,
       solvReceiptTokenOperationReceivableAmount: 0n,
     };
     // net asset value check
     expect(
-      2124154n + 1797n + 10000n + ((90718182n + 820660n) * 108000000000000n) / 100000000000000n
+      2124154n +
+        1797n +
+        10000n +
+        ((90718182n + 820660n) * 108000000000000n) / 100000000000000n
     ).to.equal(100997900n);
 
     // To be like expected state, solv manager will
@@ -1037,7 +1065,9 @@ describe('solv.zBTC test', async () => {
     });
     // net asset value check
     expect(
-      210000n + 1797n + ((90718182n + 814016n) * 110110000000000n) / 100000000000000n
+      210000n +
+        1797n +
+        ((90718182n + 814016n) * 110110000000000n) / 100000000000000n
     ).to.equal(100997900n);
 
     // 2. adjust SRT price
@@ -1060,7 +1090,10 @@ describe('solv.zBTC test', async () => {
     });
     // net asset value check
     expect(
-      210000n + 1797n + 1931330n + ((90718182n + 814016n) * 108000000000000n) / 100000000000000n
+      210000n +
+        1797n +
+        1931330n +
+        ((90718182n + 814016n) * 108000000000000n) / 100000000000000n
     ).to.equal(100997900n);
 
     // 3. donate SRT, and reached expected final state
