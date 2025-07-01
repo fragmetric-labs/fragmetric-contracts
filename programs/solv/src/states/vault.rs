@@ -78,7 +78,6 @@ pub struct VaultAccount {
     /// During deposit & withdraw from solv protocol, there is a protocol fee.
     /// It will prevent the NAV loss considering fee as receivable.
     /// Receivables will then be offsetted when fund manager withdraws VST, as a withdrawal fee.
-    // TODO/phase3: remove the comment below
     ///
     /// Another scenario is when solv manager adjusts SRT exchange rate (to lower price).
     /// By human fault, SRT exchange rate might be set higher (for example, missed protocol extra fee).
@@ -536,11 +535,15 @@ impl VaultAccount {
         SRTExchangeRate::new(self.one_srt_as_micro_vst, self.solv_receipt_token_decimals)
     }
 
-    fn set_srt_exchange_rate_with_validation(
+    pub(crate) fn refresh_srt_exchange_rate_with_validation(
         &mut self,
         one_srt_as_micro_vst: u64,
         heuristic_validation: bool,
     ) -> Result<()> {
+        if self.is_deposit_in_progress() {
+            err!(VaultError::DepositInProgressError)?;
+        }
+
         // srt price must monotonically increase
         if self.one_srt_as_micro_vst > one_srt_as_micro_vst {
             err!(VaultError::InvalidSRTPriceError)?;
@@ -553,6 +556,44 @@ impl VaultAccount {
             err!(VaultError::InvalidSRTPriceError)?;
         }
 
+        self.one_srt_as_micro_vst = one_srt_as_micro_vst;
+        self.update_vrt_exchange_rate()?;
+
+        Ok(())
+    }
+
+    pub(crate) fn adjust_srt_exchange_rate_with_extra_vst_receivables(
+        &mut self,
+        one_srt_as_micro_vst: u64,
+        heuristic_validation: bool,
+    ) -> Result<()> {
+        if self.is_deposit_in_progress() {
+            err!(VaultError::DepositInProgressError)?;
+        }
+
+        if one_srt_as_micro_vst > self.one_srt_as_micro_vst {
+            err!(VaultError::InvalidSRTPriceError)?;
+        }
+
+        // TODO: deprecate this heuristic assertion
+        if heuristic_validation
+            && self.one_srt_as_micro_vst - one_srt_as_micro_vst > self.one_srt_as_micro_vst / 10
+        {
+            err!(VaultError::InvalidSRTPriceError)?;
+        }
+
+        let srt_operation_reserved_amount_as_vst = self
+            .get_srt_exchange_rate()
+            .get_srt_amount_as_vst(self.srt_operation_reserved_amount, false)
+            .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
+        let post_srt_operation_reserved_amount_as_vst =
+            SRTExchangeRate::new(one_srt_as_micro_vst, self.solv_receipt_token_decimals)
+                .get_srt_amount_as_vst(self.srt_operation_reserved_amount, false)
+                .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
+        let delta =
+            srt_operation_reserved_amount_as_vst - post_srt_operation_reserved_amount_as_vst;
+
+        self.vst_operation_receivable_amount += delta;
         self.one_srt_as_micro_vst = one_srt_as_micro_vst;
 
         Ok(())
@@ -590,6 +631,45 @@ impl VaultAccount {
         Ok(())
     }
 
+    /// Offset VST receivables with VST donation.
+    /// Cannot donate more than VST receivable.
+    pub(crate) fn donate_vst(&mut self, mut vst_amount: u64) -> Result<u64> {
+        vst_amount = std::cmp::min(vst_amount, self.vst_operation_receivable_amount);
+
+        self.vst_operation_reserved_amount += vst_amount;
+        self.vst_operation_receivable_amount -= vst_amount;
+
+        Ok(vst_amount)
+    }
+
+    /// Offset VST receivables with SRT donation.
+    /// Cannot donate more than VST receivable.
+    pub(crate) fn donate_srt(&mut self, mut srt_amount: u64) -> Result<u64> {
+        let srt_exchange_rate = self.get_srt_exchange_rate();
+
+        let maximum_possible_srt_donation_amount = srt_exchange_rate
+            .get_vst_amount_as_srt(self.vst_operation_receivable_amount, false)
+            .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
+        srt_amount = std::cmp::min(srt_amount, maximum_possible_srt_donation_amount);
+
+        let srt_operation_reserved_amount_as_vst = srt_exchange_rate
+            .get_srt_amount_as_vst(self.srt_operation_reserved_amount, false)
+            .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
+        let post_srt_operation_reserved_amount_as_vst = srt_exchange_rate
+            .get_srt_amount_as_vst(self.srt_operation_reserved_amount + srt_amount, false)
+            .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
+        let delta =
+            post_srt_operation_reserved_amount_as_vst - srt_operation_reserved_amount_as_vst;
+
+        // Validation
+        require_gte!(self.vst_operation_receivable_amount, delta);
+
+        self.vst_operation_receivable_amount -= delta;
+        self.srt_operation_reserved_amount += srt_amount;
+
+        Ok(srt_amount)
+    }
+
     /// VST fixed amount fee = max(floor(SRT receivable as VST (w/ old price)) - floor(SRT as VST (w/ new price)), 0) ≤ HARD LIMIT(20000)
     pub(crate) fn offset_srt_receivables(
         &mut self,
@@ -622,8 +702,10 @@ impl VaultAccount {
         self.srt_operation_reserved_amount += srt_amount;
         self.srt_operation_receivable_amount = 0;
 
-        self.set_srt_exchange_rate_with_validation(new_one_srt_as_micro_vst, heuristic_validation)?;
-        self.update_vrt_exchange_rate()?;
+        self.refresh_srt_exchange_rate_with_validation(
+            new_one_srt_as_micro_vst,
+            heuristic_validation,
+        )?;
 
         Ok(())
     }

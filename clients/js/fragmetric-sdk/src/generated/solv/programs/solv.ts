@@ -21,7 +21,10 @@ import {
   type ParsedSolvManagerCompleteDepositsInstruction,
   type ParsedSolvManagerCompleteWithdrawalRequestsInstruction,
   type ParsedSolvManagerConfirmDepositsInstruction,
+  type ParsedSolvManagerConfirmDonationsInstruction,
   type ParsedSolvManagerConfirmWithdrawalRequestsInstruction,
+  type ParsedSolvManagerImplySolvProtocolFeeInstruction,
+  type ParsedSolvManagerRefreshSolvReceiptTokenRedemptionRateInstruction,
   type ParsedSolvManagerSetSolvProtocolFeeRateInstruction,
   type ParsedSolvManagerSetSolvProtocolWalletInstruction,
   type ParsedUpdateVaultAdminRoleInstruction,
@@ -64,7 +67,10 @@ export enum SolvInstruction {
   SolvManagerCompleteDeposits,
   SolvManagerCompleteWithdrawalRequests,
   SolvManagerConfirmDeposits,
+  SolvManagerConfirmDonations,
   SolvManagerConfirmWithdrawalRequests,
+  SolvManagerImplySolvProtocolFee,
+  SolvManagerRefreshSolvReceiptTokenRedemptionRate,
   SolvManagerSetSolvProtocolFeeRate,
   SolvManagerSetSolvProtocolWallet,
   UpdateVaultAdminRole,
@@ -157,12 +163,45 @@ export function identifySolvInstruction(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([10, 181, 68, 255, 82, 15, 238, 243])
+      ),
+      0
+    )
+  ) {
+    return SolvInstruction.SolvManagerConfirmDonations;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
         new Uint8Array([127, 214, 165, 25, 146, 58, 240, 236])
       ),
       0
     )
   ) {
     return SolvInstruction.SolvManagerConfirmWithdrawalRequests;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([177, 178, 239, 204, 11, 158, 25, 64])
+      ),
+      0
+    )
+  ) {
+    return SolvInstruction.SolvManagerImplySolvProtocolFee;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([119, 3, 154, 59, 16, 59, 175, 79])
+      ),
+      0
+    )
+  ) {
+    return SolvInstruction.SolvManagerRefreshSolvReceiptTokenRedemptionRate;
   }
   if (
     containsBytes(
@@ -249,8 +288,17 @@ export type ParsedSolvInstruction<
       instructionType: SolvInstruction.SolvManagerConfirmDeposits;
     } & ParsedSolvManagerConfirmDepositsInstruction<TProgram>)
   | ({
+      instructionType: SolvInstruction.SolvManagerConfirmDonations;
+    } & ParsedSolvManagerConfirmDonationsInstruction<TProgram>)
+  | ({
       instructionType: SolvInstruction.SolvManagerConfirmWithdrawalRequests;
     } & ParsedSolvManagerConfirmWithdrawalRequestsInstruction<TProgram>)
+  | ({
+      instructionType: SolvInstruction.SolvManagerImplySolvProtocolFee;
+    } & ParsedSolvManagerImplySolvProtocolFeeInstruction<TProgram>)
+  | ({
+      instructionType: SolvInstruction.SolvManagerRefreshSolvReceiptTokenRedemptionRate;
+    } & ParsedSolvManagerRefreshSolvReceiptTokenRedemptionRateInstruction<TProgram>)
   | ({
       instructionType: SolvInstruction.SolvManagerSetSolvProtocolFeeRate;
     } & ParsedSolvManagerSetSolvProtocolFeeRateInstruction<TProgram>)

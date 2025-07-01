@@ -94,6 +94,28 @@ pub mod solv {
         process_complete_withdrawal_requests(ctx, srt_amount, vst_amount, old_one_srt_as_micro_vst)
     }
 
+    pub fn solv_manager_refresh_solv_receipt_token_redemption_rate(
+        ctx: Context<SolvManagerContext>,
+        new_one_srt_as_micro_vst: u64,
+    ) -> Result<()> {
+        process_refresh_solv_receipt_token_redemption_rate(ctx, new_one_srt_as_micro_vst)
+    }
+
+    pub fn solv_manager_imply_solv_protocol_fee(
+        ctx: Context<SolvManagerContext>,
+        new_one_srt_as_micro_vst: u64,
+    ) -> Result<()> {
+        process_imply_solv_protocol_fee(ctx, new_one_srt_as_micro_vst)
+    }
+
+    pub fn solv_manager_confirm_donations(
+        ctx: Context<SolvManagerContext>,
+        srt_amount: u64,
+        vst_amount: u64,
+    ) -> Result<()> {
+        process_confirm_donations(ctx, srt_amount, vst_amount)
+    }
+
     ////////////////////////////////////////////
     // SolvManagerConfigurationContext
     ////////////////////////////////////////////
