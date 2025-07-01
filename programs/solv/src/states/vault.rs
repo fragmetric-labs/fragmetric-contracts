@@ -963,7 +963,7 @@ impl VaultAccount {
         // TODO: deprecate this heuristic validation
         if old_one_srt_as_micro_vst < self.one_srt_as_micro_vst
             && heuristic_validation
-            && self.one_srt_as_micro_vst - old_one_srt_as_micro_vst < self.one_srt_as_micro_vst / 10
+            && self.one_srt_as_micro_vst - old_one_srt_as_micro_vst > self.one_srt_as_micro_vst / 10
         {
             err!(VaultError::InvalidSRTPriceError)?;
         }
