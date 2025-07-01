@@ -258,6 +258,7 @@ describe('restaking.fragJTO test', async () => {
               "__kind": "JitoRestakingVault",
               "address": "BmJvUzoiiNBRx3v2Gqsix9WvVtw8FaztrfBHQyqpMbTd",
             },
+            "rewardCommissionRateBps": 0,
             "solAllocationCapacityAmount": 18446744073709551615n,
             "solAllocationWeight": 1n,
             "vault": "BmJvUzoiiNBRx3v2Gqsix9WvVtw8FaztrfBHQyqpMbTd",

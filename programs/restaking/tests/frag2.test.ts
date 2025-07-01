@@ -160,6 +160,7 @@ describe('restaking.frag2 test', async () => {
               "__kind": "VirtualVault",
               "address": "6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK",
             },
+            "rewardCommissionRateBps": 0,
             "solAllocationCapacityAmount": 0n,
             "solAllocationWeight": 0n,
             "vault": "6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK",

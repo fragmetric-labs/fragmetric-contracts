@@ -726,6 +726,7 @@ describe('restaking.fragSOL test', async () => {
               "__kind": "JitoRestakingVault",
               "address": "HR1ANmDHjaEhknvsTaK48M5xZtbBiwNdXM5NTiWhAb4S",
             },
+            "rewardCommissionRateBps": 0,
             "solAllocationCapacityAmount": 18446744073709551615n,
             "solAllocationWeight": 1n,
             "vault": "HR1ANmDHjaEhknvsTaK48M5xZtbBiwNdXM5NTiWhAb4S",
