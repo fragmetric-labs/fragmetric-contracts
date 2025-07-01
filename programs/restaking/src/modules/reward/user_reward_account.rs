@@ -144,9 +144,9 @@ impl UserRewardAccount {
     /// authority = user or delegate (if exists)
     fn assert_authority_is_user_or_delegate(&self, authority: &Pubkey) -> Result<()> {
         if self.user != *authority
-            && !self
+            && self
                 .get_delegate()
-                .is_some_and(|delegate| delegate == authority)
+                .is_none_or(|delegate| delegate != authority)
         {
             err!(ErrorCode::RewardInvalidUserRewardAccountAuthorityError)?;
         }

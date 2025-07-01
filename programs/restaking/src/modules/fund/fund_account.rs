@@ -982,7 +982,7 @@ impl FundAccount {
         pricing_service: &PricingService,
     ) -> Result<u64> {
         let sol_net_operation_reserved_amount =
-            self.get_asset_net_operation_reserved_amount(None, true, &pricing_service)?;
+            self.get_asset_net_operation_reserved_amount(None, true, pricing_service)?;
         Ok(
             u64::try_from(sol_net_operation_reserved_amount.min(0).neg())?.saturating_sub(
                 self.get_supported_tokens_iter()

@@ -171,7 +171,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
                 staking::validate_pricing_source(
                     &pricing_source,
                     pool_account_info,
-                    &supported_token_mint,
+                    supported_token_mint,
                 )?
             }
             TokenPricingSource::OrcaDEXLiquidityPool { address } => {
@@ -320,8 +320,8 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         restaking::validate_pricing_source(
             &pricing_source,
             vault.as_account_info(),
-            &vault_supported_token_mint,
-            &vault_receipt_token_mint,
+            vault_supported_token_mint,
+            vault_receipt_token_mint,
             self.fund_account.as_ref(),
         )?;
 

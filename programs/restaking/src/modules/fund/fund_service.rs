@@ -53,8 +53,7 @@ impl<'a, 'info> FundService<'a, 'info> {
         let mut pricing_service = if pricing_sources
             .clone()
             .into_iter()
-            .find(|source| source.key() == self.fund_account.key())
-            .is_some()
+            .any(|source| source.key() == self.fund_account.key())
         {
             PricingService::new(pricing_sources)
         } else {
@@ -893,7 +892,7 @@ impl<'a, 'info> FundService<'a, 'info> {
                 transferred_asset_amount + offsetted_asset_amount,
                 asset_fee_amount_processing
             );
-            offsetted_asset_receivables.extend(offsetted_asset_receivables2.into_iter());
+            offsetted_asset_receivables.extend(offsetted_asset_receivables2);
             asset_fee_amount_processing = 0;
         }
 

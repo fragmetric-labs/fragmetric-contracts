@@ -32,6 +32,7 @@ too-many-arguments = "allow"
 module-inception = "allow"
 inconsistent-digit-grouping = "allow"
 enum-variant-names = "allow"
+type-complexity = "allow"
 # wildcard-enum-match-arms = "deny"
 
 [workspace.dependencies]
