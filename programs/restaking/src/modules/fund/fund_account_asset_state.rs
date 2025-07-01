@@ -108,7 +108,7 @@ impl AssetState {
 
     pub fn set_normal_reserve_rate_bps(&mut self, reserve_rate_bps: u16) -> Result<&mut Self> {
         require_gte!(
-            10_00, // 10%
+            100_00, // 100%
             reserve_rate_bps,
             ErrorCode::FundInvalidConfigurationUpdateError
         );
