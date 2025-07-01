@@ -157,7 +157,6 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
             supported_token_mint.key()
         );
 
-        #[deny(clippy::wildcard_enum_match_arm)]
         match pricing_source {
             TokenPricingSource::SPLStakePool { address }
             | TokenPricingSource::MarinadeStakePool { address }

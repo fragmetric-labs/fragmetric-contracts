@@ -50,7 +50,6 @@ pub struct UnrestakeVRTCommandResult {
 
 const RESTAKING_MINIMUM_WITHDRAWAL_LAMPORTS: u64 = 1_000_000_000;
 
-#[deny(clippy::wildcard_enum_match_arm)]
 impl SelfExecutable for UnrestakeVRTCommand {
     fn execute<'a, 'info>(
         &self,
@@ -77,7 +76,6 @@ impl SelfExecutable for UnrestakeVRTCommand {
     }
 }
 
-#[deny(clippy::wildcard_enum_match_arm)]
 impl UnrestakeVRTCommand {
     #[inline(never)]
     fn execute_new<'info>(

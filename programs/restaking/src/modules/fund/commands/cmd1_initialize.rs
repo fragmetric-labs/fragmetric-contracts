@@ -189,7 +189,6 @@ impl SelfExecutable for InitializeCommand {
     }
 }
 
-#[deny(clippy::wildcard_enum_match_arm)]
 impl InitializeCommand {
     #[inline(never)]
     fn execute_new_restaking_vault_update_command(

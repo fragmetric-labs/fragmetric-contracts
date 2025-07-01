@@ -160,7 +160,6 @@ impl SelfExecutable for UnstakeLSTCommand {
 }
 
 // These are implementations of each command state.
-#[deny(clippy::wildcard_enum_match_arm)]
 impl UnstakeLSTCommand {
     /// An initial state of `UnstakeLST` command.
     /// In this state, operator iterates the fund and

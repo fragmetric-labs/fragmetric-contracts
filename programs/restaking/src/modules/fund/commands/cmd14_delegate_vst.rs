@@ -74,7 +74,6 @@ impl SelfExecutable for DelegateVSTCommand {
     }
 }
 
-#[deny(clippy::wildcard_enum_match_arm)]
 impl DelegateVSTCommand {
     #[inline(never)]
     fn execute_new<'info>(

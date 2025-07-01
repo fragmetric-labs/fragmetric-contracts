@@ -105,7 +105,6 @@ impl SelfExecutable for StakeSOLCommand {
 }
 
 // These are implementations of each command state.
-#[deny(clippy::wildcard_enum_match_arm)]
 impl StakeSOLCommand {
     /// An initial state of `StakeSOL` command.
     /// In this state, operator iterates the fund and

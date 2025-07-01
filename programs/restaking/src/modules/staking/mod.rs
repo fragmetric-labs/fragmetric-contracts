@@ -24,7 +24,6 @@ pub(in crate::modules) fn validate_pricing_source<'info>(
     pool_account: &'info AccountInfo<'info>,
     pool_token_mint: &InterfaceAccount<Mint>,
 ) -> Result<()> {
-    #[deny(clippy::wildcard_enum_match_arm)]
     match pricing_source {
         TokenPricingSource::SPLStakePool { address } => {
             require_keys_eq!(*address, pool_account.key());

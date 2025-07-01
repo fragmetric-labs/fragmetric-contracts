@@ -69,7 +69,6 @@ impl SelfExecutable for ClaimUnrestakedVSTCommand {
     }
 }
 
-#[deny(clippy::wildcard_enum_match_arm)]
 impl ClaimUnrestakedVSTCommand {
     #[inline(never)]
     fn execute_new(

@@ -33,7 +33,7 @@ module-inception = "allow"
 inconsistent-digit-grouping = "allow"
 enum-variant-names = "allow"
 type-complexity = "allow"
-# wildcard-enum-match-arms = "deny"
+wildcard-enum-match-arm = "deny"
 
 [workspace.dependencies]
 anchor-lang = { version = "0.31.1", features = ["event-cpi"] }

@@ -131,7 +131,6 @@ impl SelfExecutable for ClaimUnstakedSOLCommand {
 }
 
 // These are implementations of each command state.
-#[deny(clippy::wildcard_enum_match_arm)]
 impl ClaimUnstakedSOLCommand {
     /// An initial state of `ClaimUnstakedSOL` command.
     /// In this state, operator iterates the fund and
