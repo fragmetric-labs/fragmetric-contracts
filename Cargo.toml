@@ -24,6 +24,16 @@ license = "MIT"
 readme = "README.md"
 edition = "2021"
 
+[workspace.lints.rust]
+unexpected-cfgs = "allow"
+
+[workspace.lints.clippy]
+too-many-arguments = "allow"
+module-inception = "allow"
+inconsistent-digit-grouping = "allow"
+enum-variant-names = "allow"
+# wildcard-enum-match-arms = "deny"
+
 [workspace.dependencies]
 anchor-lang = { version = "0.31.1", features = ["event-cpi"] }
 anchor-spl = { version = "0.31.1", features = ["memo"] }
