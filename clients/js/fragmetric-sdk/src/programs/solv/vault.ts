@@ -74,8 +74,10 @@ export class SolvVaultAccountContext extends AccountContext<
                 r.vstWithdrawalTotalEstimatedAmount,
               supportedTokenLockedAmount: r.vstWithdrawalLockedAmount,
               solvReceiptTokenLockedAmount: r.srtWithdrawalLockedAmount,
-              oneSolvReceiptTokenAsSupportedTokenAmount: r.oneSrtAsMicroVst / 1_000_000n,
-              oneSolvReceiptTokenAsMicroSupportedTokenAmount: r.oneSrtAsMicroVst,
+              oneSolvReceiptTokenAsSupportedTokenAmount:
+                r.oneSrtAsMicroVst / 1_000_000n,
+              oneSolvReceiptTokenAsMicroSupportedTokenAmount:
+                r.oneSrtAsMicroVst,
               state: r.state,
             };
           });

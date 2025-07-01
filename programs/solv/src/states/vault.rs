@@ -427,6 +427,8 @@ impl VaultAccount {
         self.vrt_supply += vrt_amount;
         self.vst_operation_reserved_amount += vst_amount;
 
+        self.update_vrt_exchange_rate()?;
+
         Ok(vrt_amount)
     }
 
@@ -814,6 +816,8 @@ impl VaultAccount {
 
         self.srt_operation_reserved_amount -= srt_withdrawal_locked_amount;
         self.srt_withdrawal_locked_amount += srt_withdrawal_locked_amount;
+
+        self.update_vrt_exchange_rate()?;
 
         Ok(vrt_amount)
     }

@@ -275,7 +275,8 @@ describe('solv.zBTC test', async () => {
       solvReceiptTokenOperationReceivableAmount: 0n,
     });
     const vaultReceiptTokenValueNumerator = 3_0000_0000n * 1_0743_3661_666666n;
-    const vaultNetValueNumerator = 2_9244_5442n * 1_0999_9999_123456n + 611002n * 1_0000_0000_000000n;
+    const vaultNetValueNumerator =
+      2_9244_5442n * 1_0999_9999_123456n + 611002n * 1_0000_0000_000000n;
     expect(
       (vaultReceiptTokenValueNumerator - vaultNetValueNumerator) /
         1_0000_0000_000000n
@@ -382,8 +383,8 @@ describe('solv.zBTC test', async () => {
             "mint": "ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq",
           },
         ],
-        "oneReceiptTokenAsMicroSupportedTokenAmount": 107433661666666n,
-        "oneReceiptTokenAsSupportedTokenAmount": 107433661n,
+        "oneReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+        "oneReceiptTokenAsSupportedTokenAmount": 100000000n,
         "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 109999999123456n,
         "oneSolvReceiptTokenAsSupportedTokenAmount": 109999999n,
         "receiptTokenDecimals": 8,
@@ -535,8 +536,8 @@ describe('solv.zBTC test', async () => {
             "mint": "ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq",
           },
         ],
-        "oneReceiptTokenAsMicroSupportedTokenAmount": 107433661666666n,
-        "oneReceiptTokenAsSupportedTokenAmount": 107433661n,
+        "oneReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+        "oneReceiptTokenAsSupportedTokenAmount": 100000000n,
         "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 109999999123456n,
         "oneSolvReceiptTokenAsSupportedTokenAmount": 109999999n,
         "receiptTokenDecimals": 8,
@@ -609,10 +610,10 @@ describe('solv.zBTC test', async () => {
       })
     ).resolves.not.toThrowError();
 
-    // withdrawals do not affect redemption rates
+    // withdrawals do not affect SRT redemption rates
     await expect(ctx.resolve(true)).resolves.toMatchObject({
-      oneReceiptTokenAsMicroSupportedTokenAmount: 107433661666666n,
-      oneReceiptTokenAsSupportedTokenAmount: 107433661n,
+      oneReceiptTokenAsMicroSupportedTokenAmount: 100000000000000n,
+      oneReceiptTokenAsSupportedTokenAmount: 100000000n,
       oneSolvReceiptTokenAsMicroSupportedTokenAmount: 109999999123456n,
       oneSolvReceiptTokenAsSupportedTokenAmount: 109999999n,
     });
@@ -635,8 +636,8 @@ describe('solv.zBTC test', async () => {
             "mint": "ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq",
           },
         ],
-        "oneReceiptTokenAsMicroSupportedTokenAmount": 107433661666666n,
-        "oneReceiptTokenAsSupportedTokenAmount": 107433661n,
+        "oneReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+        "oneReceiptTokenAsSupportedTokenAmount": 100000000n,
         "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 109999999123456n,
         "oneSolvReceiptTokenAsSupportedTokenAmount": 109999999n,
         "receiptTokenDecimals": 8,
@@ -736,8 +737,8 @@ describe('solv.zBTC test', async () => {
             "mint": "ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq",
           },
         ],
-        "oneReceiptTokenAsMicroSupportedTokenAmount": 107433661666666n,
-        "oneReceiptTokenAsSupportedTokenAmount": 107433661n,
+        "oneReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+        "oneReceiptTokenAsSupportedTokenAmount": 100000000n,
         "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 109999999123456n,
         "oneSolvReceiptTokenAsSupportedTokenAmount": 109999999n,
         "receiptTokenDecimals": 8,
