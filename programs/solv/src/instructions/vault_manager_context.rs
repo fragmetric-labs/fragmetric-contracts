@@ -71,7 +71,7 @@ pub struct VaultManagerVaultAccountUpdateContext<'info> {
 }
 
 pub fn process_initialize_vault_account(
-    ctx: Context<VaultManagerVaultAccountInitialContext>,
+    ctx: &mut Context<VaultManagerVaultAccountInitialContext>,
 ) -> Result<()> {
     let VaultManagerVaultAccountInitialContext {
         vault_manager,
@@ -113,7 +113,7 @@ pub fn process_initialize_vault_account(
 }
 
 pub fn process_update_vault_account_if_needed(
-    ctx: Context<VaultManagerVaultAccountUpdateContext>,
+    ctx: &mut Context<VaultManagerVaultAccountUpdateContext>,
 ) -> Result<()> {
     let VaultManagerVaultAccountUpdateContext {
         vault_manager,

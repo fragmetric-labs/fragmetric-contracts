@@ -57,7 +57,7 @@ pub struct SolvManagerContext<'info> {
     pub token_program: Program<'info, Token>,
 }
 
-pub fn process_confirm_deposits(ctx: Context<SolvManagerContext>) -> Result<()> {
+pub fn process_confirm_deposits(ctx: &mut Context<SolvManagerContext>) -> Result<()> {
     let SolvManagerContext {
         vault_account,
         vault_supported_token_mint,
@@ -100,7 +100,7 @@ pub fn process_confirm_deposits(ctx: Context<SolvManagerContext>) -> Result<()> 
 }
 
 pub fn process_complete_deposits(
-    ctx: Context<SolvManagerContext>,
+    ctx: &mut Context<SolvManagerContext>,
     srt_amount: u64,
     new_one_srt_as_micro_vst: u64,
 ) -> Result<()> {
@@ -122,7 +122,7 @@ pub fn process_complete_deposits(
     Ok(())
 }
 
-pub fn process_confirm_withdrawal_requests(ctx: Context<SolvManagerContext>) -> Result<()> {
+pub fn process_confirm_withdrawal_requests(ctx: &mut Context<SolvManagerContext>) -> Result<()> {
     let SolvManagerContext {
         vault_account,
         solv_receipt_token_mint,
@@ -156,7 +156,7 @@ pub fn process_confirm_withdrawal_requests(ctx: Context<SolvManagerContext>) -> 
 }
 
 pub fn process_complete_withdrawal_requests(
-    ctx: Context<SolvManagerContext>,
+    ctx: &mut Context<SolvManagerContext>,
     srt_amount: u64,
     vst_amount: u64,
     old_one_srt_as_micro_vst: u64,
@@ -182,7 +182,7 @@ pub fn process_complete_withdrawal_requests(
 }
 
 pub fn process_refresh_solv_receipt_token_redemption_rate(
-    ctx: Context<SolvManagerContext>,
+    ctx: &mut Context<SolvManagerContext>,
     new_one_srt_as_micro_vst: u64,
 ) -> Result<()> {
     let SolvManagerContext { vault_account, .. } = ctx.accounts;
@@ -195,7 +195,7 @@ pub fn process_refresh_solv_receipt_token_redemption_rate(
 }
 
 pub fn process_imply_solv_protocol_fee(
-    ctx: Context<SolvManagerContext>,
+    ctx: &mut Context<SolvManagerContext>,
     new_one_srt_as_micro_vst: u64,
 ) -> Result<()> {
     let SolvManagerContext { vault_account, .. } = ctx.accounts;
@@ -208,7 +208,7 @@ pub fn process_imply_solv_protocol_fee(
 }
 
 pub fn process_confirm_donations(
-    ctx: Context<SolvManagerContext>,
+    ctx: &mut Context<SolvManagerContext>,
     srt_amount: u64,
     vst_amount: u64,
 ) -> Result<()> {
@@ -257,7 +257,7 @@ pub struct SolvManagerConfigurationContext<'info> {
 
 // TODO/phase3: deprecate
 pub fn process_set_solv_protocol_wallet(
-    ctx: Context<SolvManagerConfigurationContext>,
+    ctx: &mut Context<SolvManagerConfigurationContext>,
 ) -> Result<()> {
     let SolvManagerConfigurationContext {
         vault_account,
@@ -274,7 +274,7 @@ pub fn process_set_solv_protocol_wallet(
 
 // TODO/phase3: deprecate
 pub fn process_set_solv_protocol_fee_rate(
-    ctx: Context<SolvManagerConfigurationContext>,
+    ctx: &mut Context<SolvManagerConfigurationContext>,
     deposit_fee_rate_bps: u16,
     withdrawal_fee_rate_bps: u16,
 ) -> Result<()> {

@@ -47,7 +47,7 @@ pub struct FundManagerContext<'info> {
     pub token_program: Program<'info, Token>,
 }
 
-pub fn process_deposit(ctx: Context<FundManagerContext>, vst_amount: u64) -> Result<()> {
+pub fn process_deposit(ctx: &mut Context<FundManagerContext>, vst_amount: u64) -> Result<()> {
     let FundManagerContext {
         payer,
         vault_account,
@@ -97,7 +97,10 @@ pub fn process_deposit(ctx: Context<FundManagerContext>, vst_amount: u64) -> Res
     Ok(())
 }
 
-pub fn process_request_withdrawal(ctx: Context<FundManagerContext>, vrt_amount: u64) -> Result<()> {
+pub fn process_request_withdrawal(
+    ctx: &mut Context<FundManagerContext>,
+    vrt_amount: u64,
+) -> Result<()> {
     let FundManagerContext {
         payer,
         vault_account,
@@ -131,7 +134,7 @@ pub fn process_request_withdrawal(ctx: Context<FundManagerContext>, vrt_amount: 
     Ok(())
 }
 
-pub fn process_withdraw(ctx: Context<FundManagerContext>) -> Result<()> {
+pub fn process_withdraw(ctx: &mut Context<FundManagerContext>) -> Result<()> {
     let FundManagerContext {
         vault_account,
         vault_supported_token_mint,
