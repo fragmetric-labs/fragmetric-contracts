@@ -1599,18 +1599,8 @@ impl HarvestRestakingYieldCommand {
         from_reward_token_account_signer_seeds: &[&[u8]],
         reward_token_amount: u64,
     ) -> Result<u64> {
-        let commission_accounts = CommissionAccounts::pop_from(accounts)?;
-
-        require_keys_eq!(
-            commission_accounts
-                .program_reward_token_revenue_account
-                .key(),
-            anchor_spl::associated_token::get_associated_token_address_with_program_id(
-                &PROGRAM_REVENUE_ADDRESS,
-                common_accounts.reward_token_mint.key,
-                common_accounts.reward_token_program.key,
-            )
-        );
+        let commission_accounts =
+            CommissionAccounts::pop_from(accounts, common_accounts.reward_token_mint)?;
 
         if !commission_accounts
             .program_reward_token_revenue_account
@@ -1917,7 +1907,7 @@ impl<'info> CommissionAccounts<'info> {
         required_accounts
     }
 
-    fn pop_from(accounts: &mut &[&'info AccountInfo<'info>]) -> Result<Self> {
+    fn pop_from(accounts: &mut &[&'info AccountInfo<'info>], mint: &AccountInfo) -> Result<Self> {
         let [program_revenue_account, program_reward_token_revenue_account, system_program, associated_token_program, remaining_accounts @ ..] =
             accounts
         else {
@@ -1926,6 +1916,14 @@ impl<'info> CommissionAccounts<'info> {
         *accounts = remaining_accounts;
 
         require_keys_eq!(program_revenue_account.key(), PROGRAM_REVENUE_ADDRESS);
+        require_keys_eq!(
+            program_reward_token_revenue_account.key(),
+            anchor_spl::associated_token::get_associated_token_address_with_program_id(
+                &PROGRAM_REVENUE_ADDRESS,
+                mint.key,
+                mint.owner,
+            )
+        );
 
         Ok(Self {
             program_revenue_account,
