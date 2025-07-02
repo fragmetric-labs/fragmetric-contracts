@@ -49,18 +49,18 @@ pub mod solv {
     ////////////////////////////////////////////
 
     pub fn fund_manager_deposit(ctx: Context<FundManagerContext>, vst_amount: u64) -> Result<()> {
-        fund_manager_context::process_deposit(ctx, vst_amount)
+        process_deposit(ctx, vst_amount)
     }
 
     pub fn fund_manager_request_withdrawal(
         ctx: Context<FundManagerContext>,
         vrt_amount: u64,
     ) -> Result<()> {
-        fund_manager_context::process_request_withdrawal(ctx, vrt_amount)
+        process_request_withdrawal(ctx, vrt_amount)
     }
 
     pub fn fund_manager_withdraw(ctx: Context<FundManagerContext>) -> Result<()> {
-        fund_manager_context::process_withdraw(ctx)
+        process_withdraw(ctx)
     }
 
     ////////////////////////////////////////////
@@ -68,22 +68,21 @@ pub mod solv {
     ////////////////////////////////////////////
 
     pub fn solv_manager_confirm_deposits(ctx: Context<SolvManagerContext>) -> Result<()> {
-        solv_manager_context::process_confirm_deposits(ctx)
+        process_confirm_deposits(ctx)
     }
 
-    // TODO/phase3: deprecate
     pub fn solv_manager_complete_deposits(
         ctx: Context<SolvManagerContext>,
         srt_amount: u64,
         new_one_srt_as_micro_vst: u64,
     ) -> Result<()> {
-        solv_manager_context::process_complete_deposits(ctx, srt_amount, new_one_srt_as_micro_vst)
+        process_complete_deposits(ctx, srt_amount, new_one_srt_as_micro_vst)
     }
 
     pub fn solv_manager_confirm_withdrawal_requests(
         ctx: Context<SolvManagerContext>,
     ) -> Result<()> {
-        solv_manager_context::process_confirm_withdrawal_requests(ctx)
+        process_confirm_withdrawal_requests(ctx)
     }
 
     pub fn solv_manager_complete_withdrawal_requests(
@@ -92,12 +91,29 @@ pub mod solv {
         vst_amount: u64,
         old_one_srt_as_micro_vst: u64,
     ) -> Result<()> {
-        solv_manager_context::process_complete_withdrawal_requests(
-            ctx,
-            srt_amount,
-            vst_amount,
-            old_one_srt_as_micro_vst,
-        )
+        process_complete_withdrawal_requests(ctx, srt_amount, vst_amount, old_one_srt_as_micro_vst)
+    }
+
+    pub fn solv_manager_refresh_solv_receipt_token_redemption_rate(
+        ctx: Context<SolvManagerContext>,
+        new_one_srt_as_micro_vst: u64,
+    ) -> Result<()> {
+        process_refresh_solv_receipt_token_redemption_rate(ctx, new_one_srt_as_micro_vst)
+    }
+
+    pub fn solv_manager_imply_solv_protocol_fee(
+        ctx: Context<SolvManagerContext>,
+        new_one_srt_as_micro_vst: u64,
+    ) -> Result<()> {
+        process_imply_solv_protocol_fee(ctx, new_one_srt_as_micro_vst)
+    }
+
+    pub fn solv_manager_confirm_donations(
+        ctx: Context<SolvManagerContext>,
+        srt_amount: u64,
+        vst_amount: u64,
+    ) -> Result<()> {
+        process_confirm_donations(ctx, srt_amount, vst_amount)
     }
 
     ////////////////////////////////////////////
@@ -117,11 +133,7 @@ pub mod solv {
         deposit_fee_rate_bps: u16,
         withdrawal_fee_rate_bps: u16,
     ) -> Result<()> {
-        process_set_solv_protocol_withdrawal_fee_rate(
-            ctx,
-            deposit_fee_rate_bps,
-            withdrawal_fee_rate_bps,
-        )
+        process_set_solv_protocol_fee_rate(ctx, deposit_fee_rate_bps, withdrawal_fee_rate_bps)
     }
 
     ////////////////////////////////////////////

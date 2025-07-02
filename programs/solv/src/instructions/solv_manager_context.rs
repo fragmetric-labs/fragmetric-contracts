@@ -94,21 +94,11 @@ pub fn process_confirm_deposits(ctx: Context<SolvManagerContext>) -> Result<()> 
 
     drop(vault);
 
-    let mut vault = vault_account.load_mut()?;
-
-    // TODO/phase3: calculate ∆vault_solv_receipt_token_account.amount
-    vault.deposit_vst(vst_amount)?;
-
-    // TODO/phase3: use validation code below
-    // require_gte!(
-    //     vault_solv_receipt_token_account.amount,
-    //     vault.get_srt_total_reserved_amount(),
-    // );
+    vault_account.load_mut()?.deposit_vst(vst_amount)?;
 
     Ok(())
 }
 
-// TODO/phase3: deprecate
 pub fn process_complete_deposits(
     ctx: Context<SolvManagerContext>,
     srt_amount: u64,
@@ -191,6 +181,61 @@ pub fn process_complete_withdrawal_requests(
     Ok(())
 }
 
+pub fn process_refresh_solv_receipt_token_redemption_rate(
+    ctx: Context<SolvManagerContext>,
+    new_one_srt_as_micro_vst: u64,
+) -> Result<()> {
+    let SolvManagerContext { vault_account, .. } = ctx.accounts;
+
+    vault_account
+        .load_mut()?
+        .refresh_srt_exchange_rate_with_validation(new_one_srt_as_micro_vst, true)?;
+
+    Ok(())
+}
+
+pub fn process_imply_solv_protocol_fee(
+    ctx: Context<SolvManagerContext>,
+    new_one_srt_as_micro_vst: u64,
+) -> Result<()> {
+    let SolvManagerContext { vault_account, .. } = ctx.accounts;
+
+    vault_account
+        .load_mut()?
+        .adjust_srt_exchange_rate_with_extra_vst_receivables(new_one_srt_as_micro_vst, true)?;
+
+    Ok(())
+}
+
+pub fn process_confirm_donations(
+    ctx: Context<SolvManagerContext>,
+    srt_amount: u64,
+    vst_amount: u64,
+) -> Result<()> {
+    let SolvManagerContext {
+        vault_account,
+        vault_vault_supported_token_account,
+        vault_solv_receipt_token_account,
+        ..
+    } = ctx.accounts;
+
+    let mut vault = vault_account.load_mut()?;
+
+    vault.donate_srt(srt_amount)?;
+    vault.donate_vst(vst_amount)?;
+
+    require_gte!(
+        vault_vault_supported_token_account.amount,
+        vault.get_vst_total_reserved_amount(),
+    );
+    require_gte!(
+        vault_solv_receipt_token_account.amount,
+        vault.get_srt_total_reserved_amount(),
+    );
+
+    Ok(())
+}
+
 // TODO/phase3: deprecate
 #[event_cpi]
 #[derive(Accounts)]
@@ -228,7 +273,7 @@ pub fn process_set_solv_protocol_wallet(
 }
 
 // TODO/phase3: deprecate
-pub fn process_set_solv_protocol_withdrawal_fee_rate(
+pub fn process_set_solv_protocol_fee_rate(
     ctx: Context<SolvManagerConfigurationContext>,
     deposit_fee_rate_bps: u16,
     withdrawal_fee_rate_bps: u16,

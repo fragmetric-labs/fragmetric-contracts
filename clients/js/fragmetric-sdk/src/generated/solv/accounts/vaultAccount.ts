@@ -107,13 +107,17 @@ export type VaultAccount = {
   /** VST reserved amount for operation - will be deposited to the Solv protocol */
   vstOperationReservedAmount: bigint;
   /**
-   * VST receivable amount for operation - offsetted by fund manager
+   * VST receivable amount for operation - offsetted by fund manager OR via donation
    *
    * ## Where does VST receivables come from?
    *
    * During deposit & withdraw from solv protocol, there is a protocol fee.
    * It will prevent the NAV loss considering fee as receivable.
    * Receivables will then be offsetted when fund manager withdraws VST, as a withdrawal fee.
+   *
+   * Another scenario is when solv manager adjusts SRT exchange rate (to lower price).
+   * By human fault, SRT exchange rate might be set higher (for example, missed protocol extra fee).
+   * In this case, by adjusting SRT exchange rate, decreased net asset value will be VST receivable.
    */
   vstOperationReceivableAmount: bigint;
   /** VST locked amount for withdrawal - will be locked until withdrawal is completed */
@@ -136,6 +140,7 @@ export type VaultAccount = {
   padding3: ReadonlyUint8Array;
   /** SRT reserved amount for operation - used to withdraw VST from the solv protocol */
   srtOperationReservedAmount: bigint;
+  /** SRT receivable amount for operation - will be offsetted when deposit completes to solv protocol */
   srtOperationReceivableAmount: bigint;
   /** SRT locked amount for withdrawal - will be sent to the Solv protocol when withdrawal starts */
   srtWithdrawalLockedAmount: bigint;
@@ -200,13 +205,17 @@ export type VaultAccountArgs = {
   /** VST reserved amount for operation - will be deposited to the Solv protocol */
   vstOperationReservedAmount: number | bigint;
   /**
-   * VST receivable amount for operation - offsetted by fund manager
+   * VST receivable amount for operation - offsetted by fund manager OR via donation
    *
    * ## Where does VST receivables come from?
    *
    * During deposit & withdraw from solv protocol, there is a protocol fee.
    * It will prevent the NAV loss considering fee as receivable.
    * Receivables will then be offsetted when fund manager withdraws VST, as a withdrawal fee.
+   *
+   * Another scenario is when solv manager adjusts SRT exchange rate (to lower price).
+   * By human fault, SRT exchange rate might be set higher (for example, missed protocol extra fee).
+   * In this case, by adjusting SRT exchange rate, decreased net asset value will be VST receivable.
    */
   vstOperationReceivableAmount: number | bigint;
   /** VST locked amount for withdrawal - will be locked until withdrawal is completed */
@@ -229,6 +238,7 @@ export type VaultAccountArgs = {
   padding3: ReadonlyUint8Array;
   /** SRT reserved amount for operation - used to withdraw VST from the solv protocol */
   srtOperationReservedAmount: number | bigint;
+  /** SRT receivable amount for operation - will be offsetted when deposit completes to solv protocol */
   srtOperationReceivableAmount: number | bigint;
   /** SRT locked amount for withdrawal - will be sent to the Solv protocol when withdrawal starts */
   srtWithdrawalLockedAmount: number | bigint;
