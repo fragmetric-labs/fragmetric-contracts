@@ -621,8 +621,6 @@ impl HarvestRestakingYieldCommand {
         reward_token_mints: &[Pubkey],
         is_delegate: bool,
     ) -> Result<Option<OperationCommandEntry>> {
-        let fund_account = ctx.fund_account.load()?;
-
         let [reward_token_mint, vault_reward_token_account, vault_reward_token_2022_account, ..] =
             accounts
         else {
@@ -650,14 +648,13 @@ impl HarvestRestakingYieldCommand {
             is_delegate,
         )?;
 
-        let restaking_vault = fund_account.get_restaking_vault(vault)?;
-
-        // harvest threshold check
-        let current_timestamp = Clock::get()?.unix_timestamp;
-
-        let available_reward_token_amount_to_harvest = restaking_vault
-            .get_compounding_reward_token(reward_token_mint.key)?
-            .get_available_amount_to_harvest(reward_token_amount, current_timestamp);
+        let available_reward_token_amount_to_harvest = self.apply_reward_harvest_threshold(
+            ctx,
+            vault,
+            &reward_token_mints[0],
+            HarvestType::CompoundReward,
+            reward_token_amount,
+        )?;
 
         // No reward to harvest (or threshold unmet), so move on to next item
         if available_reward_token_amount_to_harvest == 0 {
@@ -670,6 +667,7 @@ impl HarvestRestakingYieldCommand {
         } else {
             *vault
         };
+        let fund_account = ctx.fund_account.load()?;
         let entry = if fund_account
             .get_supported_token(reward_token_mint.key)
             .is_err()
@@ -897,15 +895,13 @@ impl HarvestRestakingYieldCommand {
             is_delegate,
         )?;
 
-        let fund_account = ctx.fund_account.load()?;
-        let restaking_vault = fund_account.get_restaking_vault(vault)?;
-
-        // harvest threshold check
-        let current_timestamp = Clock::get()?.unix_timestamp;
-
-        let available_reward_token_amount_to_harvest = restaking_vault
-            .get_distributing_reward_token(reward_token_mint.key)?
-            .get_available_amount_to_harvest(reward_token_amount, current_timestamp);
+        let available_reward_token_amount_to_harvest = self.apply_reward_harvest_threshold(
+            ctx,
+            vault,
+            &reward_token_mints[0],
+            HarvestType::DistributeReward,
+            reward_token_amount,
+        )?;
 
         // No reward to harvest (or threshold unmet), so move on to next item
         if available_reward_token_amount_to_harvest == 0 {
@@ -1586,27 +1582,14 @@ impl HarvestRestakingYieldCommand {
         let from_reward_token_account_owner =
             InterfaceAccount::<TokenAccount>::try_from(common_accounts.from_reward_token_account)?
                 .owner;
-        let need_delegate = if common_accounts.from_reward_token_account_signer.key()
-            == from_reward_token_account_owner
-        {
+        let from_reward_token_account_signer =
+            common_accounts.from_reward_token_account_signer.key();
+        let is_delegate = if from_reward_token_account_signer == from_reward_token_account_owner {
             false
-        } else if common_accounts.from_reward_token_account_signer.key() == ctx.fund_account.key() {
+        } else if from_reward_token_account_signer == ctx.fund_account.key() {
             true
         } else {
             err!(ErrorCode::FundOperationCommandExecutionFailedException)?
-        };
-
-        // check harvest threshold
-        let current_timestamp = Clock::get()?.unix_timestamp;
-
-        let fund_account = ctx.fund_account.load()?;
-        let restaking_vault = fund_account.get_restaking_vault(vault)?;
-        let reward_token = match harvest_type {
-            HarvestType::CompoundReward => restaking_vault.get_compounding_reward_token(mint)?,
-            HarvestType::DistributeReward => restaking_vault.get_distributing_reward_token(mint)?,
-            HarvestType::CompoundVaultSupportedToken => {
-                err!(ErrorCode::FundOperationCommandExecutionFailedException)?
-            }
         };
 
         let reward_token_amount = self.get_reward_token_amount(
@@ -1614,10 +1597,10 @@ impl HarvestRestakingYieldCommand {
             common_accounts.from_reward_token_account,
             &from_reward_token_account_owner,
             common_accounts.reward_token_mint.key,
-            need_delegate,
+            is_delegate,
         )?;
 
-        Ok(reward_token.get_available_amount_to_harvest(reward_token_amount, current_timestamp))
+        self.apply_reward_harvest_threshold(ctx, vault, mint, harvest_type, reward_token_amount)
     }
 
     fn get_reward_token_amount<'info>(
@@ -1649,6 +1632,30 @@ impl HarvestRestakingYieldCommand {
         }
 
         Ok(reward_token_amount)
+    }
+
+    fn apply_reward_harvest_threshold(
+        &self,
+        ctx: &OperationCommandContext,
+        vault: &Pubkey,
+        mint: &Pubkey,
+        harvest_type: HarvestType,
+        reward_token_amount: u64,
+    ) -> Result<u64> {
+        // check harvest threshold
+        let current_timestamp = Clock::get()?.unix_timestamp;
+
+        let fund_account = ctx.fund_account.load()?;
+        let restaking_vault = fund_account.get_restaking_vault(vault)?;
+        let reward_token = match harvest_type {
+            HarvestType::CompoundReward => restaking_vault.get_compounding_reward_token(mint)?,
+            HarvestType::DistributeReward => restaking_vault.get_distributing_reward_token(mint)?,
+            HarvestType::CompoundVaultSupportedToken => {
+                err!(ErrorCode::FundOperationCommandExecutionFailedException)?
+            }
+        };
+
+        Ok(reward_token.get_available_amount_to_harvest(reward_token_amount, current_timestamp))
     }
 
     /// returns deducted_amount
