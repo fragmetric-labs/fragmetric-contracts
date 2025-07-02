@@ -970,52 +970,32 @@ impl HarvestRestakingYieldCommand {
                 .receipt_token_pricing_source
                 .try_deserialize()?;
 
-            let compounded_token_amount = match receipt_token_pricing_source {
+            let (_, compounded_token_amount) = match receipt_token_pricing_source {
                 Some(TokenPricingSource::JitoRestakingVault { .. })
-                | Some(TokenPricingSource::SolvBTCVault { .. }) => {
-                    let deducted_amount = self.apply_commission(
+                | Some(TokenPricingSource::SolvBTCVault { .. }) => self
+                    .apply_commission_and_transfer_reward(
                         ctx,
                         &mut accounts,
                         &common_accounts,
                         vault,
-                        &fund_account.get_seeds(),
-                        available_reward_token_amount_to_harvest,
-                    )?;
-
-                    self.transfer_reward(
-                        &mut accounts,
-                        &common_accounts,
                         &fund_account.get_seeds(),
                         &fund_supported_token_account_address,
-                        available_reward_token_amount_to_harvest - deducted_amount,
-                    )?
-                }
-                Some(TokenPricingSource::VirtualVault { .. }) => {
-                    let deducted_amount = self.apply_commission(
+                        available_reward_token_amount_to_harvest,
+                    )?,
+                Some(TokenPricingSource::VirtualVault { .. }) => self
+                    .apply_commission_and_transfer_reward(
                         ctx,
                         &mut accounts,
                         &common_accounts,
                         vault,
-                        &VirtualVaultService::find_vault_address(
-                            &reward_token_mints[0],
-                            &ctx.fund_account.key(),
-                        )
-                        .get_seeds(),
-                        available_reward_token_amount_to_harvest,
-                    )?;
-
-                    self.transfer_reward(
-                        &mut accounts,
-                        &common_accounts,
                         &VirtualVaultService::find_vault_address(
                             &restaking_vault.receipt_token_mint,
                             &ctx.fund_account.key(),
                         )
                         .get_seeds(),
                         &fund_supported_token_account_address,
-                        available_reward_token_amount_to_harvest - deducted_amount,
-                    )?
-                }
+                        available_reward_token_amount_to_harvest,
+                    )?,
                 // otherwise fails
                 Some(TokenPricingSource::SPLStakePool { .. })
                 | Some(TokenPricingSource::MarinadeStakePool { .. })
@@ -1123,72 +1103,50 @@ impl HarvestRestakingYieldCommand {
                 .receipt_token_pricing_source
                 .try_deserialize()?;
 
-            let (reward_token_amount, compounded_token_amount) = match receipt_token_pricing_source
-            {
-                Some(TokenPricingSource::JitoRestakingVault { .. })
-                | Some(TokenPricingSource::SolvBTCVault { .. }) => {
-                    let deducted_amount = self.apply_commission(
-                        ctx,
-                        &mut accounts,
-                        &common_accounts,
-                        vault,
-                        &fund_account.get_seeds(),
-                        available_reward_token_amount_to_harvest,
-                    )?;
-
-                    self.swap_reward(
-                        ctx,
-                        &mut accounts,
-                        &common_accounts,
-                        &reward_token_mints[0],
-                        &fund_account.get_seeds(),
-                        &fund_supported_token_reserve_account_address,
-                        available_reward_token_amount_to_harvest - deducted_amount,
-                    )?
-                }
-                Some(TokenPricingSource::VirtualVault { .. }) => {
-                    let deducted_amount = self.apply_commission(
-                        ctx,
-                        &mut accounts,
-                        &common_accounts,
-                        vault,
-                        &VirtualVaultService::find_vault_address(
+            let (_, reward_token_amount, compounded_token_amount) =
+                match receipt_token_pricing_source {
+                    Some(TokenPricingSource::JitoRestakingVault { .. })
+                    | Some(TokenPricingSource::SolvBTCVault { .. }) => self
+                        .apply_commission_and_swap_reward(
+                            ctx,
+                            &mut accounts,
+                            &common_accounts,
+                            vault,
                             &reward_token_mints[0],
-                            &ctx.fund_account.key(),
-                        )
-                        .get_seeds(),
-                        available_reward_token_amount_to_harvest,
-                    )?;
-
-                    self.swap_reward(
-                        ctx,
-                        &mut accounts,
-                        &common_accounts,
-                        &reward_token_mints[0],
-                        &VirtualVaultService::find_vault_address(
-                            &restaking_vault.receipt_token_mint,
-                            &ctx.fund_account.key(),
-                        )
-                        .get_seeds(),
-                        &fund_supported_token_reserve_account_address,
-                        available_reward_token_amount_to_harvest - deducted_amount,
-                    )?
-                }
-                // otherwise fails
-                Some(TokenPricingSource::SPLStakePool { .. })
-                | Some(TokenPricingSource::MarinadeStakePool { .. })
-                | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. })
-                | Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { .. })
-                | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
-                | Some(TokenPricingSource::FragmetricRestakingFund { .. })
-                | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
-                | Some(TokenPricingSource::PeggedToken { .. })
-                | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
-                #[cfg(all(test, not(feature = "idl-build")))]
-                Some(TokenPricingSource::Mock { .. }) => {
-                    err!(ErrorCode::FundOperationCommandExecutionFailedException)?
-                }
-            };
+                            &fund_account.get_seeds(),
+                            &fund_supported_token_reserve_account_address,
+                            available_reward_token_amount_to_harvest,
+                        )?,
+                    Some(TokenPricingSource::VirtualVault { .. }) => self
+                        .apply_commission_and_swap_reward(
+                            ctx,
+                            &mut accounts,
+                            &common_accounts,
+                            vault,
+                            &reward_token_mints[0],
+                            &VirtualVaultService::find_vault_address(
+                                &restaking_vault.receipt_token_mint,
+                                &ctx.fund_account.key(),
+                            )
+                            .get_seeds(),
+                            &fund_supported_token_reserve_account_address,
+                            available_reward_token_amount_to_harvest,
+                        )?,
+                    // otherwise fails
+                    Some(TokenPricingSource::SPLStakePool { .. })
+                    | Some(TokenPricingSource::MarinadeStakePool { .. })
+                    | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. })
+                    | Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { .. })
+                    | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+                    | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+                    | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+                    | Some(TokenPricingSource::PeggedToken { .. })
+                    | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
+                    #[cfg(all(test, not(feature = "idl-build")))]
+                    Some(TokenPricingSource::Mock { .. }) => {
+                        err!(ErrorCode::FundOperationCommandExecutionFailedException)?
+                    }
+                };
 
             drop(fund_account);
 
@@ -1305,52 +1263,32 @@ impl HarvestRestakingYieldCommand {
                     .receipt_token_pricing_source
                     .try_deserialize()?;
 
-                let distributed_token_amount = match receipt_token_pricing_source {
+                let (_, distributed_token_amount) = match receipt_token_pricing_source {
                     Some(TokenPricingSource::JitoRestakingVault { .. })
-                    | Some(TokenPricingSource::SolvBTCVault { .. }) => {
-                        let deducted_amount = self.apply_commission(
+                    | Some(TokenPricingSource::SolvBTCVault { .. }) => self
+                        .apply_commission_and_transfer_reward(
                             ctx,
                             &mut accounts,
                             &common_accounts,
                             vault,
-                            &fund_account.get_seeds(),
-                            available_reward_token_amount_to_harvest,
-                        )?;
-
-                        self.transfer_reward(
-                            &mut accounts,
-                            &common_accounts,
                             &fund_account.get_seeds(),
                             &to_reward_token_account_address,
-                            available_reward_token_amount_to_harvest - deducted_amount,
-                        )?
-                    }
-                    Some(TokenPricingSource::VirtualVault { .. }) => {
-                        let deducted_amount = self.apply_commission(
+                            available_reward_token_amount_to_harvest,
+                        )?,
+                    Some(TokenPricingSource::VirtualVault { .. }) => self
+                        .apply_commission_and_transfer_reward(
                             ctx,
                             &mut accounts,
                             &common_accounts,
                             vault,
-                            &VirtualVaultService::find_vault_address(
-                                &reward_token_mints[0],
-                                &ctx.fund_account.key(),
-                            )
-                            .get_seeds(),
-                            available_reward_token_amount_to_harvest,
-                        )?;
-
-                        self.transfer_reward(
-                            &mut accounts,
-                            &common_accounts,
                             &VirtualVaultService::find_vault_address(
                                 &restaking_vault.receipt_token_mint,
                                 &ctx.fund_account.key(),
                             )
                             .get_seeds(),
                             &to_reward_token_account_address,
-                            available_reward_token_amount_to_harvest - deducted_amount,
-                        )?
-                    }
+                            available_reward_token_amount_to_harvest,
+                        )?,
                     // otherwise fails
                     Some(TokenPricingSource::SPLStakePool { .. })
                     | Some(TokenPricingSource::MarinadeStakePool { .. })
@@ -1587,6 +1525,71 @@ impl HarvestRestakingYieldCommand {
         };
 
         Ok(reward_token.get_available_amount_to_harvest(reward_token_amount, current_timestamp))
+    }
+
+    /// returns [deducted_amount, transferred_token_amount]
+    fn apply_commission_and_transfer_reward<'info>(
+        &self,
+        ctx: &OperationCommandContext<'info, '_>,
+        accounts: &mut &[&'info AccountInfo<'info>],
+        common_accounts: &CommonAccounts<'info>,
+        vault: &Pubkey,
+        from_reward_token_account_signer_seeds: &[&[u8]],
+        to_reward_token_account_address: &Pubkey,
+        reward_token_amount: u64,
+    ) -> Result<(u64, u64)> {
+        let deducted_amount = self.apply_commission(
+            ctx,
+            accounts,
+            common_accounts,
+            vault,
+            from_reward_token_account_signer_seeds,
+            reward_token_amount,
+        )?;
+
+        let transferred_amount = self.transfer_reward(
+            accounts,
+            common_accounts,
+            from_reward_token_account_signer_seeds,
+            to_reward_token_account_address,
+            reward_token_amount - deducted_amount,
+        )?;
+
+        Ok((deducted_amount, transferred_amount))
+    }
+
+    /// returns [deducted_amount, reward_token_amount, swapped_token_amount]
+    fn apply_commission_and_swap_reward<'info>(
+        &self,
+        ctx: &OperationCommandContext<'info, '_>,
+        accounts: &mut &[&'info AccountInfo<'info>],
+        common_accounts: &CommonAccounts<'info>,
+        vault: &Pubkey,
+        mint: &Pubkey,
+        from_reward_token_account_signer_seeds: &[&[u8]],
+        to_supported_token_account_address: &Pubkey,
+        reward_token_amount: u64,
+    ) -> Result<(u64, u64, u64)> {
+        let deducted_amount = self.apply_commission(
+            ctx,
+            accounts,
+            common_accounts,
+            vault,
+            from_reward_token_account_signer_seeds,
+            reward_token_amount,
+        )?;
+
+        let (reward_token_amount, swapped_token_amount) = self.swap_reward(
+            ctx,
+            accounts,
+            common_accounts,
+            mint,
+            from_reward_token_account_signer_seeds,
+            to_supported_token_account_address,
+            reward_token_amount - deducted_amount,
+        )?;
+
+        Ok((deducted_amount, reward_token_amount, swapped_token_amount))
     }
 
     /// returns deducted_amount
