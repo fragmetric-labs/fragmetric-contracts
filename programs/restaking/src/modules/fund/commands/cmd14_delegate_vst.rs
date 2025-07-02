@@ -56,9 +56,9 @@ pub struct DelegateVSTCommandResultDelegated {
 const RESTAKING_MINIMUM_DELEGATION_LAMPORTS: u64 = 1_000_000_000;
 
 impl SelfExecutable for DelegateVSTCommand {
-    fn execute<'a, 'info>(
+    fn execute<'info>(
         &self,
-        ctx: &mut OperationCommandContext<'info, 'a>,
+        ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
     ) -> Result<(
         Option<OperationCommandResult>,
@@ -76,9 +76,9 @@ impl SelfExecutable for DelegateVSTCommand {
 
 impl DelegateVSTCommand {
     #[inline(never)]
-    fn execute_new<'info>(
+    fn execute_new(
         &self,
-        ctx: &OperationCommandContext<'info, '_>,
+        ctx: &OperationCommandContext,
     ) -> Result<(
         Option<OperationCommandResult>,
         Option<OperationCommandEntry>,
@@ -92,9 +92,9 @@ impl DelegateVSTCommand {
         Ok((None, self.create_prepare_command(ctx, vaults)?))
     }
 
-    fn create_prepare_command<'info>(
+    fn create_prepare_command(
         &self,
-        ctx: &OperationCommandContext<'info, '_>,
+        ctx: &OperationCommandContext,
         vaults: Vec<Pubkey>,
     ) -> Result<Option<OperationCommandEntry>> {
         if vaults.is_empty() {
@@ -151,7 +151,7 @@ impl DelegateVSTCommand {
         }
 
         let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-            .new_pricing_service(accounts.into_iter().copied(), false)?;
+            .new_pricing_service(accounts.iter().copied(), false)?;
 
         let fund_account = ctx.fund_account.load()?;
         let restaking_vault = fund_account.get_restaking_vault(&vaults[0])?;

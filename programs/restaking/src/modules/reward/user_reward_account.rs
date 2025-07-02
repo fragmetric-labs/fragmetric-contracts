@@ -143,6 +143,7 @@ impl UserRewardAccount {
 
     /// authority = user or delegate (if exists)
     fn assert_authority_is_user_or_delegate(&self, authority: &Pubkey) -> Result<()> {
+        #[allow(clippy::nonminimal_bool)] // is_none_or method since = 1.82.0
         if self.user != *authority
             && !self
                 .get_delegate()

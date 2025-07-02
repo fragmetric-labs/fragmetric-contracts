@@ -51,9 +51,9 @@ pub struct UnrestakeVRTCommandResult {
 const RESTAKING_MINIMUM_WITHDRAWAL_LAMPORTS: u64 = 1_000_000_000;
 
 impl SelfExecutable for UnrestakeVRTCommand {
-    fn execute<'a, 'info>(
+    fn execute<'info>(
         &self,
-        ctx: &mut OperationCommandContext<'info, 'a>,
+        ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
     ) -> Result<(
         Option<OperationCommandResult>,
@@ -376,7 +376,7 @@ impl UnrestakeVRTCommand {
         Ok((None, self.create_prepare_command_with_items(ctx, items)?))
     }
 
-    fn create_prepare_command_with_items<'info>(
+    fn create_prepare_command_with_items(
         &self,
         ctx: &OperationCommandContext,
         mut items: Peekable<impl Iterator<Item = UnrestakeVRTCommandItem>>,
@@ -473,31 +473,27 @@ impl UnrestakeVRTCommand {
                         ),
                         (fund_account.get_reserve_account_address()?, true),
                     ])
-                    .chain(
-                        (0..5)
-                            .map(|index| {
-                                let ticket_base_account =
-                                    *FundAccount::find_unrestaking_ticket_account_address(
-                                        &ctx.fund_account.key(),
-                                        &item.vault,
-                                        index,
-                                    );
-                                let ticket_account = vault_service
-                                    .find_withdrawal_ticket_account(&ticket_base_account);
-                                let ticket_receipt_token_account =
-                                    associated_token::get_associated_token_address_with_program_id(
-                                        &ticket_account,
-                                        &item.receipt_token_mint,
-                                        &anchor_spl::token::ID,
-                                    );
-                                [
-                                    (ticket_account, true),
-                                    (ticket_receipt_token_account, true),
-                                    (ticket_base_account, false),
-                                ]
-                            })
-                            .flatten(),
-                    );
+                    .chain((0..5).flat_map(|index| {
+                        let ticket_base_account =
+                            *FundAccount::find_unrestaking_ticket_account_address(
+                                &ctx.fund_account.key(),
+                                &item.vault,
+                                index,
+                            );
+                        let ticket_account =
+                            vault_service.find_withdrawal_ticket_account(&ticket_base_account);
+                        let ticket_receipt_token_account =
+                            associated_token::get_associated_token_address_with_program_id(
+                                &ticket_account,
+                                &item.receipt_token_mint,
+                                &anchor_spl::token::ID,
+                            );
+                        [
+                            (ticket_account, true),
+                            (ticket_receipt_token_account, true),
+                            (ticket_base_account, false),
+                        ]
+                    }));
 
                 Ok((
                     None,

@@ -54,9 +54,9 @@ pub struct UndelegateVSTCommandResultUndelegated {
 }
 
 impl SelfExecutable for UndelegateVSTCommand {
-    fn execute<'a, 'info>(
+    fn execute<'info>(
         &self,
-        ctx: &mut OperationCommandContext<'info, 'a>,
+        ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
     ) -> Result<(
         Option<OperationCommandResult>,
@@ -79,9 +79,9 @@ impl SelfExecutable for UndelegateVSTCommand {
 
 impl UndelegateVSTCommand {
     #[inline(never)]
-    fn execute_new<'info>(
+    fn execute_new(
         &self,
-        ctx: &OperationCommandContext<'info, '_>,
+        ctx: &OperationCommandContext,
     ) -> Result<(
         Option<OperationCommandResult>,
         Option<OperationCommandEntry>,
@@ -95,9 +95,9 @@ impl UndelegateVSTCommand {
         Ok((None, self.create_prepare_command(ctx, vaults)?))
     }
 
-    fn create_prepare_command<'info>(
+    fn create_prepare_command(
         &self,
-        ctx: &OperationCommandContext<'info, '_>,
+        ctx: &OperationCommandContext,
         vaults: Vec<Pubkey>,
     ) -> Result<Option<OperationCommandEntry>> {
         if vaults.is_empty() {

@@ -81,9 +81,9 @@ pub struct NormalizeSTCommandResult {
 const NTP_MINIMUM_DEPOSIT_LAMPORTS: u64 = 1_000_000_000;
 
 impl SelfExecutable for NormalizeSTCommand {
-    fn execute<'a, 'info>(
+    fn execute<'info>(
         &self,
-        ctx: &mut OperationCommandContext<'info, 'a>,
+        ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
     ) -> Result<(
         Option<OperationCommandResult>,

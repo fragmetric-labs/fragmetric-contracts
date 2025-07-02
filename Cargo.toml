@@ -33,6 +33,8 @@ module-inception = "allow"
 inconsistent-digit-grouping = "allow"
 enum-variant-names = "allow"
 type-complexity = "allow"
+only-used-in-recursion = "allow"
+let-and-return = "allow"
 wildcard-enum-match-arm = "deny"
 
 [workspace.dependencies]
