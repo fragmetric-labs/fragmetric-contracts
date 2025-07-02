@@ -381,13 +381,10 @@ impl HarvestRestakingYieldCommand {
             Some(TokenPricingSource::JitoRestakingVault { .. })
             | Some(TokenPricingSource::SolvBTCVault { .. })
             | Some(TokenPricingSource::VirtualVault { .. }) => {
-                // We need to check vault's token account whether
-                // the account is delegated to fund account or not.
-                // Although we do not know whether the token
-                // belongs to token program or token 2022 program,
-                // we can try both ATAs.
-                let required_accounts =
-                    self.get_vault_ata_candidates(&vault, &reward_token_mints[0]);
+                let required_accounts = VaultRewardTokenAccountCandidates::find_accounts(
+                    &vault,
+                    &reward_token_mints[0],
+                );
 
                 let command = Self {
                     state: PrepareCompoundReward {
@@ -437,17 +434,14 @@ impl HarvestRestakingYieldCommand {
             Some(TokenPricingSource::JitoRestakingVault { .. })
             | Some(TokenPricingSource::SolvBTCVault { .. })
             | Some(TokenPricingSource::VirtualVault { .. }) => {
-                // We need to check vault's token account whether
-                // the account is delegated to fund account or not.
-                // Although we do not know whether the token
-                // belongs to token program or token 2022 program,
-                // we can try both ATAs.
-                let required_accounts = self
-                    .get_vault_ata_candidates(&vault, &reward_token_mints[0])
-                    .chain([(
-                        RewardAccount::find_account_address(&ctx.receipt_token_mint.key()),
-                        false,
-                    )]);
+                let required_accounts = VaultRewardTokenAccountCandidates::find_accounts(
+                    &vault,
+                    &reward_token_mints[0],
+                )
+                .chain([(
+                    RewardAccount::find_account_address(&ctx.receipt_token_mint.key()),
+                    false,
+                )]);
 
                 let command = Self {
                     state: PrepareDistributeReward {
@@ -514,33 +508,6 @@ impl HarvestRestakingYieldCommand {
         };
 
         Ok(Some(entry))
-    }
-
-    fn get_vault_ata_candidates(
-        &self,
-        vault: &Pubkey,
-        reward_token_mint: &Pubkey,
-    ) -> impl Iterator<Item = (Pubkey, bool)> {
-        [
-            (*reward_token_mint, false),
-            (
-                associated_token::get_associated_token_address_with_program_id(
-                    vault,
-                    reward_token_mint,
-                    &anchor_spl::token::ID,
-                ),
-                false,
-            ),
-            (
-                associated_token::get_associated_token_address_with_program_id(
-                    vault,
-                    reward_token_mint,
-                    &anchor_spl::token_2022::ID,
-                ),
-                false,
-            ),
-        ]
-        .into_iter()
     }
 
     #[inline(never)]
@@ -616,24 +583,15 @@ impl HarvestRestakingYieldCommand {
     fn create_execute_compound_reward_command_from_vault_ata<'info>(
         &self,
         ctx: &OperationCommandContext,
-        accounts: &[&'info AccountInfo<'info>],
+        mut accounts: &[&'info AccountInfo<'info>],
         vault: &Pubkey,
         reward_token_mints: &[Pubkey],
         is_delegate: bool,
     ) -> Result<Option<OperationCommandEntry>> {
-        let [reward_token_mint, vault_reward_token_account, vault_reward_token_2022_account, ..] =
-            accounts
-        else {
-            err!(error::ErrorCode::AccountNotEnoughKeys)?
-        };
-        require_keys_eq!(reward_token_mint.key(), reward_token_mints[0]);
-
-        let reward_token_program = reward_token_mint.owner;
-        let vault_reward_token_account = match *reward_token_program {
-            anchor_spl::token::ID => vault_reward_token_account,
-            anchor_spl::token_2022::ID => vault_reward_token_2022_account,
-            _ => err!(error::ErrorCode::InvalidProgramId)?,
-        };
+        let VaultRewardTokenAccountCandidates {
+            reward_token_mint,
+            vault_reward_token_account,
+        } = VaultRewardTokenAccountCandidates::pop_from(&mut accounts, &reward_token_mints[0])?;
 
         // Token account does not exist, so move on to next reward
         if !vault_reward_token_account.is_initialized() {
@@ -847,18 +805,19 @@ impl HarvestRestakingYieldCommand {
     fn create_execute_distribute_reward_command_from_vault_ata<'info>(
         &self,
         ctx: &OperationCommandContext,
-        accounts: &[&'info AccountInfo<'info>],
+        mut accounts: &[&'info AccountInfo<'info>],
         vault: &Pubkey,
         reward_token_mints: &[Pubkey],
         is_delegate: bool,
     ) -> Result<Option<OperationCommandEntry>> {
-        let [reward_token_mint, vault_reward_token_account, vault_reward_token_2022_account, reward_account, ..] =
-            accounts
-        else {
-            err!(error::ErrorCode::AccountNotEnoughKeys)?
-        };
+        let VaultRewardTokenAccountCandidates {
+            reward_token_mint,
+            vault_reward_token_account,
+        } = VaultRewardTokenAccountCandidates::pop_from(&mut accounts, &reward_token_mints[0])?;
 
-        require_keys_eq!(reward_token_mint.key(), reward_token_mints[0]);
+        let reward_account = accounts
+            .get(0)
+            .ok_or_else(|| error!(error::ErrorCode::AccountNotEnoughKeys))?;
         require_keys_eq!(
             reward_account.key(),
             RewardAccount::find_account_address(&ctx.receipt_token_mint.key()),
@@ -872,13 +831,6 @@ impl HarvestRestakingYieldCommand {
         else {
             // Reward is not claimable, so move on to next reward
             return Ok(None);
-        };
-
-        let reward_token_program = reward_token_mint.owner;
-        let vault_reward_token_account = match *reward_token_program {
-            anchor_spl::token::ID => vault_reward_token_account,
-            anchor_spl::token_2022::ID => vault_reward_token_2022_account,
-            _ => err!(error::ErrorCode::InvalidProgramId)?,
         };
 
         // Token account does not exist, so move on to next reward
@@ -915,7 +867,7 @@ impl HarvestRestakingYieldCommand {
             anchor_spl::associated_token::get_associated_token_address_with_program_id(
                 &PROGRAM_REVENUE_ADDRESS,
                 reward_token_mint.key,
-                reward_token_program,
+                reward_token_mint.owner,
             );
 
         let required_accounts = CommonAccounts::find_accounts(
@@ -1825,6 +1777,63 @@ impl HarvestRestakingYieldCommand {
                 ))
             }
         }
+    }
+}
+
+struct VaultRewardTokenAccountCandidates<'info> {
+    reward_token_mint: &'info AccountInfo<'info>,
+    vault_reward_token_account: &'info AccountInfo<'info>,
+}
+
+impl<'info> VaultRewardTokenAccountCandidates<'info> {
+    /// Although we do not know whether the token belongs to
+    /// token program or token 2022 program, we can try both ATAs.
+    /// * (0) reward token mint
+    /// * (1) vault reward token account (Token)
+    /// * (2) vault reward token account (Token2022)
+    fn find_accounts(vault: &Pubkey, mint: &Pubkey) -> impl Iterator<Item = (Pubkey, bool)> {
+        [
+            (*mint, false),
+            (
+                associated_token::get_associated_token_address_with_program_id(
+                    vault,
+                    mint,
+                    &anchor_spl::token::ID,
+                ),
+                false,
+            ),
+            (
+                associated_token::get_associated_token_address_with_program_id(
+                    vault,
+                    mint,
+                    &anchor_spl::token_2022::ID,
+                ),
+                false,
+            ),
+        ]
+        .into_iter()
+    }
+
+    fn pop_from(accounts: &mut &[&'info AccountInfo<'info>], mint: &Pubkey) -> Result<Self> {
+        let [reward_token_mint, vault_reward_token_account, vault_reward_token_2022_account, remaining_accounts @ ..] =
+            accounts
+        else {
+            err!(error::ErrorCode::AccountNotEnoughKeys)?
+        };
+        *accounts = remaining_accounts;
+
+        require_keys_eq!(reward_token_mint.key(), *mint);
+
+        let vault_reward_token_account = match *reward_token_mint.owner {
+            anchor_spl::token::ID => vault_reward_token_account,
+            anchor_spl::token_2022::ID => vault_reward_token_2022_account,
+            _ => err!(error::ErrorCode::InvalidProgramId)?,
+        };
+
+        Ok(Self {
+            reward_token_mint,
+            vault_reward_token_account,
+        })
     }
 }
 
