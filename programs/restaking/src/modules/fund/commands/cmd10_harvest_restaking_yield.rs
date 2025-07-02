@@ -1646,8 +1646,8 @@ impl HarvestRestakingYieldCommand {
                         to: commission_accounts
                             .program_reward_token_revenue_account
                             .to_account_info(),
-                        authority: commission_accounts
-                            .program_revenue_account
+                        authority: common_accounts
+                            .from_reward_token_account_signer
                             .to_account_info(),
                     },
                     &[from_reward_token_account_signer_seeds],
