@@ -640,12 +640,16 @@ impl HarvestRestakingYieldCommand {
             return Ok(None);
         }
 
+        let vault_reward_token_account_signer = if is_delegate {
+            ctx.fund_account.key()
+        } else {
+            *vault
+        };
+
         let reward_token_amount = self.get_reward_token_amount(
-            ctx,
             vault_reward_token_account,
-            vault,
+            &vault_reward_token_account_signer,
             &reward_token_mints[0],
-            is_delegate,
         )?;
 
         let available_reward_token_amount_to_harvest = self.apply_reward_harvest_threshold(
@@ -662,11 +666,6 @@ impl HarvestRestakingYieldCommand {
         }
 
         // Determine whether to swap or transfer
-        let vault_reward_token_account_signer = if is_delegate {
-            ctx.fund_account.key()
-        } else {
-            *vault
-        };
         let fund_account = ctx.fund_account.load()?;
         let entry = if fund_account
             .get_supported_token(reward_token_mint.key)
@@ -887,12 +886,16 @@ impl HarvestRestakingYieldCommand {
             return Ok(None);
         }
 
+        let vault_reward_token_account_signer = if is_delegate {
+            ctx.fund_account.key()
+        } else {
+            *vault
+        };
+
         let reward_token_amount = self.get_reward_token_amount(
-            ctx,
             vault_reward_token_account,
-            vault,
+            &vault_reward_token_account_signer,
             &reward_token_mints[0],
-            is_delegate,
         )?;
 
         let available_reward_token_amount_to_harvest = self.apply_reward_harvest_threshold(
@@ -908,11 +911,6 @@ impl HarvestRestakingYieldCommand {
             return Ok(None);
         }
 
-        let vault_reward_token_account_signer = if is_delegate {
-            ctx.fund_account.key()
-        } else {
-            *vault
-        };
         let program_reward_token_revenue_account =
             anchor_spl::associated_token::get_associated_token_address_with_program_id(
                 &PROGRAM_REVENUE_ADDRESS,
@@ -1579,25 +1577,10 @@ impl HarvestRestakingYieldCommand {
         mint: &Pubkey,
         harvest_type: HarvestType,
     ) -> Result<u64> {
-        let from_reward_token_account_owner =
-            InterfaceAccount::<TokenAccount>::try_from(common_accounts.from_reward_token_account)?
-                .owner;
-        let from_reward_token_account_signer =
-            common_accounts.from_reward_token_account_signer.key();
-        let is_delegate = if from_reward_token_account_signer == from_reward_token_account_owner {
-            false
-        } else if from_reward_token_account_signer == ctx.fund_account.key() {
-            true
-        } else {
-            err!(ErrorCode::FundOperationCommandExecutionFailedException)?
-        };
-
         let reward_token_amount = self.get_reward_token_amount(
-            ctx,
             common_accounts.from_reward_token_account,
-            &from_reward_token_account_owner,
+            common_accounts.from_reward_token_account_signer.key,
             common_accounts.reward_token_mint.key,
-            is_delegate,
         )?;
 
         self.apply_reward_harvest_threshold(ctx, vault, mint, harvest_type, reward_token_amount)
@@ -1605,30 +1588,26 @@ impl HarvestRestakingYieldCommand {
 
     fn get_reward_token_amount<'info>(
         &self,
-        ctx: &OperationCommandContext,
         reward_token_account: &'info AccountInfo<'info>,
-        owner: &Pubkey,
+        reward_token_account_signer: &Pubkey,
         reward_token_mint: &Pubkey,
-        is_delegate: bool,
     ) -> Result<u64> {
         // Validate vault reward token account
         let reward_token_account =
             InterfaceAccount::<TokenAccount>::try_from(reward_token_account)?;
         require_keys_eq!(reward_token_account.mint, reward_token_mint.key());
-        require_keys_eq!(reward_token_account.owner, *owner);
-
-        if is_delegate
-            && !reward_token_account
-                .delegate
-                .contains(&ctx.fund_account.key())
-        {
-            // Token account is not delegated to fund account, so move on to next reward
-            return Ok(0);
-        }
 
         let mut reward_token_amount = reward_token_account.amount;
-        if is_delegate {
-            reward_token_amount = reward_token_amount.min(reward_token_account.delegated_amount);
+        if reward_token_account.owner != *reward_token_account_signer {
+            reward_token_amount = if reward_token_account
+                .delegate
+                .contains(reward_token_account_signer)
+            {
+                reward_token_amount.min(reward_token_account.delegated_amount)
+            } else {
+                // Signer is neither owner nor delegate, so move on to next reward
+                0
+            };
         }
 
         Ok(reward_token_amount)
