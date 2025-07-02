@@ -1627,14 +1627,10 @@ impl HarvestRestakingYieldCommand {
 
         let fund_account = ctx.fund_account.load()?;
         let restaking_vault = fund_account.get_restaking_vault(vault)?;
+        let reward_commission_amount =
+            restaking_vault.get_reward_commission_amount(reward_token_amount)?;
 
-        if restaking_vault.reward_commission_rate_bps > 0 {
-            let amount_to_deduct = crate::utils::get_proportional_amount(
-                reward_token_amount,
-                restaking_vault.reward_commission_rate_bps as u64,
-                10_000,
-            )?;
-
+        if reward_commission_amount > 0 {
             let reward_token_mint =
                 InterfaceAccount::<Mint>::try_from(common_accounts.reward_token_mint)?;
 
@@ -1653,14 +1649,12 @@ impl HarvestRestakingYieldCommand {
                     },
                     &[from_reward_token_account_signer_seeds],
                 ),
-                amount_to_deduct,
+                reward_commission_amount,
                 reward_token_mint.decimals,
             )?;
-
-            return Ok(amount_to_deduct);
         }
 
-        Ok(0)
+        Ok(reward_commission_amount)
     }
 
     /// returns transferred_token_amount

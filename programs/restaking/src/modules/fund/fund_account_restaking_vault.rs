@@ -144,6 +144,14 @@ impl RestakingVault {
         Ok(())
     }
 
+    pub fn get_reward_commission_amount(&self, reward_token_amount: u64) -> Result<u64> {
+        crate::utils::get_proportional_amount(
+            reward_token_amount,
+            self.reward_commission_rate_bps as u64,
+            10_000,
+        )
+    }
+
     pub fn add_compounding_reward_token(
         &mut self,
         compounding_reward_token_mint: Pubkey,
