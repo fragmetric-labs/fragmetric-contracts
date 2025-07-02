@@ -547,11 +547,8 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         self.fund_account
             .load_mut()?
             .get_restaking_vault_mut(vault)?
-            .set_sol_allocation_strategy(
-                sol_allocation_weight,
-                sol_allocation_capacity_amount,
-                reward_commission_rate_bps,
-            )?;
+            .set_sol_allocation_strategy(sol_allocation_weight, sol_allocation_capacity_amount)?
+            .set_reward_commission_rate_bps(reward_commission_rate_bps)?;
 
         self.create_fund_manager_updated_fund_event()
     }
