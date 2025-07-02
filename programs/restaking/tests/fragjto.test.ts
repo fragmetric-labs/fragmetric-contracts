@@ -245,15 +245,7 @@ describe('restaking.fragJTO test', async () => {
                 "tokenAllocationWeight": 100n,
               },
             ],
-            "distributingRewardTokens": [
-              {
-                "harvestThresholdIntervalSeconds": 0n,
-                "harvestThresholdMaxAmount": 18446744073709551615n,
-                "harvestThresholdMinAmount": 0n,
-                "lastHarvestedAt": 0n,
-                "mint": "REALSWTCH7J8JdafNBLZpfSCLiFwpMCqod2RpkU4RNn",
-              },
-            ],
+            "distributingRewardTokens": [],
             "pricingSource": {
               "__kind": "JitoRestakingVault",
               "address": "BmJvUzoiiNBRx3v2Gqsix9WvVtw8FaztrfBHQyqpMbTd",

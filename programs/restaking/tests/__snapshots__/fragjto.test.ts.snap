@@ -607,15 +607,6 @@ exports[`restaking.fragJTO test > restaking.fragJTO initializationTasks snapshot
     "Program 4qEHCzsLFUnw8jmhmRSmAK5VhZVoSD1iVqukAf92yHi5 success",
   ],
   [
-    "Program 4qEHCzsLFUnw8jmhmRSmAK5VhZVoSD1iVqukAf92yHi5 invoke [1]",
-    "Program log: Instruction: FundManagerAddRestakingVaultDistributingRewardToken",
-    "Program 4qEHCzsLFUnw8jmhmRSmAK5VhZVoSD1iVqukAf92yHi5 invoke [2]",
-    "MASKED(/^Program \\w{32,44} consumed \\d+ of \\d+ compute units$/)",
-    "Program 4qEHCzsLFUnw8jmhmRSmAK5VhZVoSD1iVqukAf92yHi5 success",
-    "MASKED(/^Program \\w{32,44} consumed \\d+ of \\d+ compute units$/)",
-    "Program 4qEHCzsLFUnw8jmhmRSmAK5VhZVoSD1iVqukAf92yHi5 success",
-  ],
-  [
     "Program Vau1t6sLNxnzB7ZDsef8TLbPLfyZMYXH8WTNqUdm9g8 invoke [1]",
     "Program log: Instruction: InitializeVaultOperatorDelegation",
     "Program log: Initializing VaultOperatorDelegation at address 32Y9zKCeEqTww1AGUZo2ZZwJCQujtUp2bEVbxP854hQL",
