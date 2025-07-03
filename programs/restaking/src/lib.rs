@@ -1,5 +1,3 @@
-#![allow(unexpected_cfgs)]
-#![allow(clippy::too_many_arguments)]
 use anchor_lang::prelude::*;
 use spl_discriminator::SplDiscriminate;
 use spl_transfer_hook_interface::instruction::{

@@ -4,7 +4,6 @@ use anchor_spl::token::Mint;
 use crate::errors::VaultError;
 use crate::states::VaultAccount;
 
-#[allow(clippy::enum_variant_names)]
 #[derive(AnchorSerialize, AnchorDeserialize)]
 pub enum VaultAdminRole {
     VaultManager = 0,

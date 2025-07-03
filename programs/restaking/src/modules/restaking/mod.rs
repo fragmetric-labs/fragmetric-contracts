@@ -25,7 +25,6 @@ pub(in crate::modules) fn validate_pricing_source<'info>(
     vault_receipt_token_mint: &InterfaceAccount<Mint>,
     fund_account: &AccountInfo,
 ) -> Result<()> {
-    #[deny(clippy::wildcard_enum_match_arm)]
     match pricing_source {
         TokenPricingSource::JitoRestakingVault { address } => {
             require_keys_eq!(*address, vault_account.key());

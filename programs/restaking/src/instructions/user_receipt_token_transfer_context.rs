@@ -66,7 +66,7 @@ pub struct UserReceiptTokenTransferContext<'info> {
     // remaining extra accounts shall be provided through remaining_accounts
 }
 
-impl<'info> UserReceiptTokenTransferContext<'info> {
+impl UserReceiptTokenTransferContext<'_> {
     pub fn assert_is_transferring(&self) -> Result<()> {
         let source_token_account_info = self.source_receipt_token_account.to_account_info();
         let mut account_data_ref = source_token_account_info.try_borrow_mut_data()?;

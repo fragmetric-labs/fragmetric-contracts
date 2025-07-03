@@ -50,9 +50,9 @@ pub struct RestakeVSTCommandResult {
 }
 
 impl SelfExecutable for RestakeVSTCommand {
-    fn execute<'a, 'info>(
+    fn execute<'info>(
         &self,
-        ctx: &mut OperationCommandContext<'info, 'a>,
+        ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
     ) -> Result<(
         Option<OperationCommandResult>,
@@ -64,7 +64,7 @@ impl SelfExecutable for RestakeVSTCommand {
         match &self.state {
             RestakeVSTCommandState::New => {
                 let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-                    .new_pricing_service(accounts.into_iter().copied(), true)?;
+                    .new_pricing_service(accounts.iter().copied(), true)?;
                 let fund_account = ctx.fund_account.load()?;
 
                 // find restakable tokens with their restakable amount among ST and NT
@@ -127,7 +127,7 @@ impl SelfExecutable for RestakeVSTCommand {
                         );
 
                     strategy
-                        .put(pricing_service.get_token_amount_as_sol(&token_mint, token_amount)?)?;
+                        .put(pricing_service.get_token_amount_as_sol(token_mint, token_amount)?)?;
 
                     for (index, strategy_participant) in
                         strategy.get_participants_iter().enumerate()
@@ -135,7 +135,7 @@ impl SelfExecutable for RestakeVSTCommand {
                         let allocated_sol_amount = strategy_participant.get_last_put_amount()?;
                         // try to deposit extra lamports to compensate for flooring errors for each token
                         let allocated_token_amount = (pricing_service
-                            .get_sol_amount_as_token(&token_mint, allocated_sol_amount)?
+                            .get_sol_amount_as_token(token_mint, allocated_sol_amount)?
                             + 1)
                         .min(token_amount);
 
@@ -156,7 +156,7 @@ impl SelfExecutable for RestakeVSTCommand {
                     }
                 }
 
-                if items.len() > 0 {
+                if !items.is_empty() {
                     remaining_items = Some(items);
                 }
             }
@@ -223,7 +223,7 @@ impl SelfExecutable for RestakeVSTCommand {
                         }
                         Some(TokenPricingSource::VirtualVault { .. }) => {
                             remaining_items =
-                                Some(items.into_iter().skip(1).copied().collect::<Vec<_>>());
+                                Some(items.iter().skip(1).copied().collect::<Vec<_>>());
                         }
                         Some(TokenPricingSource::SolvBTCVault { address }) => {
                             let [vault_program, vault_account, ..] = accounts else {
@@ -348,10 +348,7 @@ impl SelfExecutable for RestakeVSTCommand {
 
                             let mut pricing_service =
                                 FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-                                    .new_pricing_service(
-                                        pricing_sources.into_iter().copied(),
-                                        false,
-                                    )?;
+                                    .new_pricing_service(pricing_sources.iter().copied(), false)?;
 
                             let mut fund_account = ctx.fund_account.load_mut()?;
                             match fund_account.get_normalized_token_mut() {
@@ -411,7 +408,7 @@ impl SelfExecutable for RestakeVSTCommand {
                             );
 
                             remaining_items =
-                                Some(items.into_iter().skip(1).copied().collect::<Vec<_>>());
+                                Some(items.iter().skip(1).copied().collect::<Vec<_>>());
 
                             drop(fund_account);
                             FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
@@ -419,7 +416,7 @@ impl SelfExecutable for RestakeVSTCommand {
                         }
                         Some(TokenPricingSource::VirtualVault { .. }) => {
                             remaining_items =
-                                Some(items.into_iter().skip(1).copied().collect::<Vec<_>>());
+                                Some(items.iter().skip(1).copied().collect::<Vec<_>>());
                         }
                         Some(TokenPricingSource::SolvBTCVault { address }) => {
                             let [vault_program, vault_account, vault_receipt_token_mint, vault_supported_token_mint, vault_vault_supported_token_account, token_program, event_authority, fund_vault_supported_token_account, fund_vault_receipt_token_account, fund_reserve, pricing_sources @ ..] =
@@ -472,10 +469,7 @@ impl SelfExecutable for RestakeVSTCommand {
 
                             let mut pricing_service =
                                 FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-                                    .new_pricing_service(
-                                        pricing_sources.into_iter().copied(),
-                                        false,
-                                    )?;
+                                    .new_pricing_service(pricing_sources.iter().copied(), false)?;
 
                             let mut fund_account = ctx.fund_account.load_mut()?;
 
@@ -518,7 +512,7 @@ impl SelfExecutable for RestakeVSTCommand {
                             );
 
                             remaining_items =
-                                Some(items.into_iter().skip(1).copied().collect::<Vec<_>>());
+                                Some(items.iter().skip(1).copied().collect::<Vec<_>>());
 
                             drop(fund_account);
                             FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
@@ -561,7 +555,7 @@ impl RestakeVSTCommand {
         ctx: &OperationCommandContext,
         remaining_items: Vec<RestakeVSTCommandItem>,
     ) -> Result<Option<OperationCommandEntry>> {
-        if remaining_items.len() == 0 {
+        if remaining_items.is_empty() {
             return Ok(None);
         }
 

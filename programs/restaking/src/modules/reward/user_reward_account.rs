@@ -141,13 +141,22 @@ impl UserRewardAccount {
         .0
     }
 
-    /// authority = user or delegate
+    /// authority = user or delegate (if exists)
     fn assert_authority_is_user_or_delegate(&self, authority: &Pubkey) -> Result<()> {
-        if self.user != *authority && self.delegate != *authority {
+        #[allow(clippy::nonminimal_bool)] // is_none_or method since = 1.82.0
+        if self.user != *authority
+            && !self
+                .get_delegate()
+                .is_some_and(|delegate| delegate == authority)
+        {
             err!(ErrorCode::RewardInvalidUserRewardAccountAuthorityError)?;
         }
 
         Ok(())
+    }
+
+    pub(super) fn get_delegate(&self) -> Option<&Pubkey> {
+        (self.delegate != Pubkey::default()).then_some(&self.delegate)
     }
 
     pub(super) fn set_delegate(

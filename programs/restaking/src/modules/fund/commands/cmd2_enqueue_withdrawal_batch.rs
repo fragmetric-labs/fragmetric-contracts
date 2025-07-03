@@ -23,9 +23,9 @@ pub struct EnqueueWithdrawalBatchCommandResult {
 }
 
 impl SelfExecutable for EnqueueWithdrawalBatchCommand {
-    fn execute<'a, 'info>(
+    fn execute<'info>(
         &self,
-        ctx: &mut OperationCommandContext<'info, 'a>,
+        ctx: &mut OperationCommandContext<'info, '_>,
         _accounts: &[&'info AccountInfo<'info>],
     ) -> Result<(
         Option<OperationCommandResult>,
