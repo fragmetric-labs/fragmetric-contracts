@@ -2,6 +2,7 @@ import { createKeyPairSignerFromBytes } from '@solana/kit';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { createTestSuiteContext, expectMasked } from '../../testutil';
 import { initializeFragJTO } from './fragjto.init';
+import { TokenAccountContext } from '@fragmetric-labs/sdk';
 
 describe('restaking.fragJTO test', async () => {
   const testCtx = initializeFragJTO(await createTestSuiteContext());
@@ -1637,5 +1638,206 @@ describe('restaking.fragJTO test', async () => {
         "updatedSlot": "MASKED(/[.*S|s]lots?$/)",
       }
     `);
+  });
+
+  test('reward is transferred to revenue account based on commission rate during harvest command execution (swap reward)', async () => {
+      await ctx.fund.runCommand.executeChained({
+        forceResetCommand: 'HarvestRestakingYield',
+        operator: restaking.knownAddresses.fundManager,
+      });
+  
+      // loosen compound reward harvest threshold
+      await ctx.fund.updateRestakingVaultRewardHarvestThreshold.execute({
+        vault: 'BmJvUzoiiNBRx3v2Gqsix9WvVtw8FaztrfBHQyqpMbTd',
+        rewardTokenMint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+        harvestThresholdMinAmount: 0n,
+        harvestThresholdMaxAmount: 18_446_744_073_709_551_615n,
+        harvestThresholdIntervalSeconds: 0n,
+      });
+      
+      await expectMasked(
+        ctx.fund.resolve(true)
+      ).resolves.toMatchInlineSnapshot(`
+        {
+          "assetStrategies": [
+            {
+              "solAccumulatedDepositAmount": 0n,
+              "solAccumulatedDepositCapacityAmount": 18446744073709551615n,
+              "solDepositable": false,
+              "solWithdrawable": false,
+              "solWithdrawalNormalReserveMaxAmount": 18446744073709551615n,
+              "solWithdrawalNormalReserveRateBps": 0,
+            },
+            {
+              "solAllocationCapacityAmount": 18446744073709551615n,
+              "solAllocationWeight": 0n,
+              "tokenAccumulatedDepositAmount": 1200000000000n,
+              "tokenAccumulatedDepositCapacityAmount": 18446744073709551615n,
+              "tokenDepositable": true,
+              "tokenMint": "jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL",
+              "tokenWithdrawable": true,
+              "tokenWithdrawalNormalReserveMaxAmount": 18446744073709551615n,
+              "tokenWithdrawalNormalReserveRateBps": 0,
+            },
+          ],
+          "generalStrategy": {
+            "depositEnabled": true,
+            "donationEnabled": true,
+            "operationEnabled": true,
+            "transferEnabled": true,
+            "withdrawalBatchThresholdSeconds": 1n,
+            "withdrawalEnabled": true,
+            "withdrawalFeeRateBps": 10,
+          },
+          "restakingVaultStrategies": [
+            {
+              "compoundingRewardTokens": [
+                {
+                  "harvestThresholdIntervalSeconds": 0n,
+                  "harvestThresholdMaxAmount": 18446744073709551615n,
+                  "harvestThresholdMinAmount": 0n,
+                  "lastHarvestedAt": "MASKED(/.*At?$/)",
+                  "mint": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
+                },
+              ],
+              "delegations": [
+                {
+                  "operator": "FzZ9EXmHv7ANCXijpALUBzCza6wYNprnsfaEHuoNx9sE",
+                  "tokenAllocationCapacityAmount": 18446744073709551615n,
+                  "tokenAllocationWeight": 90n,
+                },
+                {
+                  "operator": "LKFpfXtBkH5b7D9mo8dPcjCLZCZpmLQC9ELkbkyVdah",
+                  "tokenAllocationCapacityAmount": 18446744073709551615n,
+                  "tokenAllocationWeight": 90n,
+                },
+                {
+                  "operator": "GZxp4e2Tm3Pw9GyAaxuF6odT3XkRM96jpZkp3nxhoK4Y",
+                  "tokenAllocationCapacityAmount": 18446744073709551615n,
+                  "tokenAllocationWeight": 90n,
+                },
+                {
+                  "operator": "CA8PaNSoFWzvbCJ2oK3QxBEutgyHSTT5omEptpj8YHPY",
+                  "tokenAllocationCapacityAmount": 18446744073709551615n,
+                  "tokenAllocationWeight": 92n,
+                },
+                {
+                  "operator": "7yofWXChEHkPTSnyFdKx2Smq5iWVbGB4P1dkdC6zHWYR",
+                  "tokenAllocationCapacityAmount": 18446744073709551615n,
+                  "tokenAllocationWeight": 90n,
+                },
+                {
+                  "operator": "29rxXT5zbTR1ctiooHtb1Sa1TD4odzhQHsrLz3D78G5w",
+                  "tokenAllocationCapacityAmount": 18446744073709551615n,
+                  "tokenAllocationWeight": 90n,
+                },
+                {
+                  "operator": "BFEsrxFPsBcY2hR5kgyfKnpwgEc8wYQdngvRukLQXwG2",
+                  "tokenAllocationCapacityAmount": 18446744073709551615n,
+                  "tokenAllocationWeight": 90n,
+                },
+                {
+                  "operator": "2sHNuid4rus4sK2EmndLeZcPNKkgzuEoc8Vro3PH2qop",
+                  "tokenAllocationCapacityAmount": 18446744073709551615n,
+                  "tokenAllocationWeight": 0n,
+                },
+                {
+                  "operator": "5TGRFaLy3eF93pSNiPamCgvZUN3gzdYcs7jA3iCAsd1L",
+                  "tokenAllocationCapacityAmount": 18446744073709551615n,
+                  "tokenAllocationWeight": 90n,
+                },
+                {
+                  "operator": "6AxtdRGAaiAyqcwxVBHsH3xtqCbQuffaiE4epT4koTxk",
+                  "tokenAllocationCapacityAmount": 18446744073709551615n,
+                  "tokenAllocationWeight": 80n,
+                },
+                {
+                  "operator": "C6AF8qGCo2dL815ziRCmfdbFeL5xbRLuSTSZzTGBH68y",
+                  "tokenAllocationCapacityAmount": 18446744073709551615n,
+                  "tokenAllocationWeight": 100n,
+                },
+              ],
+              "distributingRewardTokens": [],
+              "pricingSource": {
+                "__kind": "JitoRestakingVault",
+                "address": "BmJvUzoiiNBRx3v2Gqsix9WvVtw8FaztrfBHQyqpMbTd",
+              },
+              "rewardCommissionRateBps": 0,
+              "solAllocationCapacityAmount": 18446744073709551615n,
+              "solAllocationWeight": 1n,
+              "vault": "BmJvUzoiiNBRx3v2Gqsix9WvVtw8FaztrfBHQyqpMbTd",
+            },
+          ],
+          "tokenSwapStrategies": [
+            {
+              "swapSource": {
+                "__kind": "OrcaDEXLiquidityPool",
+                "address": "G2FiE1yn9N9ZJx5e1E2LxxMnHvb1H3hCuHLPfKJ98smA",
+              },
+            },
+          ],
+        }
+      `);
+
+      // create vault ATA
+      await validator.airdropToken(
+          'BmJvUzoiiNBRx3v2Gqsix9WvVtw8FaztrfBHQyqpMbTd',
+          'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+          1_000_000_000n,
+      );
+      // jitoSOL delegation
+      await ctx.fund.restakingVaults[0].delegateRewardTokenAccount.execute({
+        mint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+        newDelegate: 'Ee1W9enx3w2zv3pkgyNSqWteCaNJwxXBLydDMdTdPUzC',
+      });  
+
+      const programRevenueTokenAccount = TokenAccountContext.fromAssociatedTokenSeeds(restaking, () =>
+        Promise.resolve({
+          owner: 'GuSruSKKCmAGuWMeMsiw3mbNhjeiRtNhnh9Eatgz33NA',
+          mint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+        })
+      );
+
+      for (let rewardCommissionRateBps = 10; rewardCommissionRateBps <= 1000; rewardCommissionRateBps += 10) {
+        await ctx.fund.updateRestakingVaultStrategy.execute({
+          vault: 'BmJvUzoiiNBRx3v2Gqsix9WvVtw8FaztrfBHQyqpMbTd',
+          rewardCommissionRateBps: (rewardCommissionRateBps as unknown as number),
+        });
+
+        const programRevenueCompoundRewardTokenAmountBefore =
+          await programRevenueTokenAccount.resolveAccount(true).then((account) => account? account.data.amount: 0n);
+
+        console.error("[DEBUG] revenue amount before: ", programRevenueCompoundRewardTokenAmountBefore);
+
+        await validator.airdropToken(
+          'BmJvUzoiiNBRx3v2Gqsix9WvVtw8FaztrfBHQyqpMbTd',
+          'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+          123_456_789_987_654_321n,
+        );
+
+        // harvest compounding reward
+        await ctx.fund.runCommand.executeChained({
+          forceResetCommand: 'HarvestRestakingYield',
+          operator: restaking.knownAddresses.fundManager,
+        });
+
+        const programRevenueCompoundRewardTokenAmountAfter =
+          await programRevenueTokenAccount.resolveAccount(true).then((account) => account? account.data.amount: 0n);
+
+        console.error("[DEBUG] revenue amount after: ", programRevenueCompoundRewardTokenAmountAfter);
+
+        expect(programRevenueCompoundRewardTokenAmountAfter - programRevenueCompoundRewardTokenAmountBefore)
+          .toEqual(123_456_789_987_654_321n * BigInt(rewardCommissionRateBps) / 10000n);
+      }
+  
+      // reset harvest threshold to 0
+      await expect(ctx.fund.updateRestakingVaultStrategy.execute({
+        vault: 'BmJvUzoiiNBRx3v2Gqsix9WvVtw8FaztrfBHQyqpMbTd',
+        rewardCommissionRateBps: 0,
+      })).resolves.not.toThrow();
+  });
+
+  test('run full opeeration cycle for regression', async () => {
+    await ctx.fund.runCommand.executeChained(null);
   });
 });

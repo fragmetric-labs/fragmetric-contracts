@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { createTestSuiteContext, expectMasked } from '../../testutil';
 import { initializeFrag2 } from './frag2.init';
+import { TokenAccountContext } from '@fragmetric-labs/sdk';
 
 describe('restaking.frag2 test', async () => {
   const testCtx = await initializeFrag2(await createTestSuiteContext());
@@ -963,7 +964,219 @@ describe('restaking.frag2 test', async () => {
     );
   });
 
-  /** 6. Operation */
+  test('reward is transferred to revenue account based on commission rate during harvest command execution (compound reward, distribute reward)', async () => {
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestRestakingYield',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    // loosen compound reward harvest threshold
+    await ctx.fund.updateRestakingVaultRewardHarvestThreshold.execute({
+      vault: '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
+      rewardTokenMint: 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5',
+      harvestThresholdMinAmount: 0n,
+      harvestThresholdMaxAmount: 18_446_744_073_709_551_615n,
+      harvestThresholdIntervalSeconds: 0n,
+    });
+
+    // loosen distribute reward harvest threshold
+    await ctx.fund.updateRestakingVaultRewardHarvestThreshold.execute({
+      vault: '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
+      rewardTokenMint: 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF',
+      harvestThresholdMinAmount: 0n,
+      harvestThresholdMaxAmount: 18_446_744_073_709_551_615n,
+      harvestThresholdIntervalSeconds: 0n,
+    });
+    
+    await expectMasked(
+      ctx.fund.resolve(true)
+    ).resolves.toMatchInlineSnapshot(`
+      {
+        "assetStrategies": [
+          {
+            "solAccumulatedDepositAmount": 0n,
+            "solAccumulatedDepositCapacityAmount": 18446744073709551615n,
+            "solDepositable": false,
+            "solWithdrawable": false,
+            "solWithdrawalNormalReserveMaxAmount": 18446744073709551615n,
+            "solWithdrawalNormalReserveRateBps": 0,
+          },
+          {
+            "solAllocationCapacityAmount": 18446744073709551615n,
+            "solAllocationWeight": 0n,
+            "tokenAccumulatedDepositAmount": 15000000000n,
+            "tokenAccumulatedDepositCapacityAmount": 18446744073709551615n,
+            "tokenDepositable": true,
+            "tokenMint": "FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5",
+            "tokenWithdrawable": true,
+            "tokenWithdrawalNormalReserveMaxAmount": 18446744073709551615n,
+            "tokenWithdrawalNormalReserveRateBps": 0,
+          },
+        ],
+        "generalStrategy": {
+          "depositEnabled": true,
+          "donationEnabled": false,
+          "operationEnabled": true,
+          "transferEnabled": true,
+          "withdrawalBatchThresholdSeconds": 1n,
+          "withdrawalEnabled": true,
+          "withdrawalFeeRateBps": 20,
+        },
+        "restakingVaultStrategies": [
+          {
+            "compoundingRewardTokens": [
+              {
+                "harvestThresholdIntervalSeconds": 0n,
+                "harvestThresholdMaxAmount": 18446744073709551615n,
+                "harvestThresholdMinAmount": 0n,
+                "lastHarvestedAt": "MASKED(/.*At?$/)",
+                "mint": "FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5",
+              },
+            ],
+            "delegations": [],
+            "distributingRewardTokens": [
+              {
+                "harvestThresholdIntervalSeconds": 0n,
+                "harvestThresholdMaxAmount": 18446744073709551615n,
+                "harvestThresholdMinAmount": 0n,
+                "lastHarvestedAt": "MASKED(/.*At?$/)",
+                "mint": "FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF",
+              },
+            ],
+            "pricingSource": {
+              "__kind": "VirtualVault",
+              "address": "6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK",
+            },
+            "rewardCommissionRateBps": 0,
+            "solAllocationCapacityAmount": 0n,
+            "solAllocationWeight": 0n,
+            "vault": "6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK",
+          },
+        ],
+        "tokenSwapStrategies": [],
+      }
+    `);
+
+    const programRevenueFragTokenAccount = TokenAccountContext.fromAssociatedTokenSeeds(restaking, () =>
+      Promise.resolve({
+        owner: 'GuSruSKKCmAGuWMeMsiw3mbNhjeiRtNhnh9Eatgz33NA',
+        mint: 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5',
+      })
+    );
+
+    const programRevenueFragVoteTokenAccount = TokenAccountContext.fromAssociatedTokenSeeds(restaking, () =>
+      Promise.resolve({
+        owner: 'GuSruSKKCmAGuWMeMsiw3mbNhjeiRtNhnh9Eatgz33NA',
+        mint: 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF',
+      })
+    );
+
+    for (let rewardCommissionRateBps = 0; rewardCommissionRateBps <= 1000; rewardCommissionRateBps += 70) {
+      await ctx.fund.runCommand.executeChained({
+        forceResetCommand: 'HarvestRestakingYield',
+        operator: restaking.knownAddresses.fundManager,
+      });
+
+      await ctx.fund.updateRestakingVaultStrategy.execute({
+        vault: '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
+        rewardCommissionRateBps: (rewardCommissionRateBps as unknown as number),
+      });
+
+      // 1) compound reward (frag Token)
+      const fragTokenStatusBefore = await ctx.fund.resolveAccount(true).then(
+      (fundAccount) => fundAccount!.data.supportedTokens
+        .filter(
+          (supportedToken) => supportedToken.mint == 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5'
+        )[0]
+      );
+      const fragTokenAmountBefore = fragTokenStatusBefore!.token.operationReservedAmount;
+
+      const programRevenueCompoundRewardTokenAmountBefore =
+        await programRevenueFragTokenAccount.resolveAccount(true).then((account) => account? account.data.amount: 0n);
+
+      // airdrop compound reward (frag token)
+      await validator.airdropToken(
+       '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
+       'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5',
+        5_000_000_000_000n,
+      );
+
+      // harvest compounding reward
+      await ctx.fund.runCommand.executeChained({
+        forceResetCommand: 'HarvestRestakingYield',
+        operator: restaking.knownAddresses.fundManager,
+      });
+
+      const fragTokenStatusAfter = await ctx.fund.resolveAccount(true).then(
+        (fundAccount) => fundAccount!.data.supportedTokens
+        .filter(
+          (supportedToken) => supportedToken.mint == 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5'
+        )[0]
+      );
+      const fragTokenAmountAfter = fragTokenStatusAfter!.token.operationReservedAmount;
+
+      const programRevenueCompoundRewardTokenAmountAfter =
+        await programRevenueFragTokenAccount.resolveAccount(true).then((account) => account? account.data.amount: 0n);
+
+      const programRevenueCompoundRewardTokenAmountDelta = programRevenueCompoundRewardTokenAmountAfter - programRevenueCompoundRewardTokenAmountBefore;
+      const supportedTokenAccountBalanceDelta = fragTokenAmountAfter - fragTokenAmountBefore;
+
+      expect(programRevenueCompoundRewardTokenAmountDelta).toEqual(5_000_000_000_000n * BigInt(rewardCommissionRateBps) / 10000n);
+      expect(programRevenueCompoundRewardTokenAmountDelta + supportedTokenAccountBalanceDelta).toEqual(5_000_000_000_000n);
+
+
+      // 2) distribute reward (frag vote Token)
+      const fragVoteTokenAmountBefore = (await ctx.reward.reserve.rewardTokens.resolve(true))
+        .filter((rewardToken) => rewardToken.mint == 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF')[0].amount;
+
+      const programRevenueDistributeRewardTokenAmountBefore =
+        await programRevenueFragVoteTokenAccount.resolveAccount(true).then((account) => account? account.data.amount: 0n);
+
+      // airdrop distribute reward (frag vote token)
+      await validator.airdropToken(
+        '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
+        'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF',
+        123_456_789_987_654_321n,
+      );
+
+      // harvest distributing reward
+      await ctx.fund.runCommand.executeChained({
+        forceResetCommand: 'HarvestRestakingYield',
+        operator: restaking.knownAddresses.fundManager,
+      });
+
+      const fragVoteTokenAmountAfter = (await ctx.reward.reserve.rewardTokens.resolve(true))
+        .filter((rewardToken) => rewardToken.mint == 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF')[0].amount;
+
+      const programRevenueDistributeRewardTokenAmountAfter =
+        await programRevenueFragVoteTokenAccount.resolveAccount(true).then((account) => account? account.data.amount: 0n);
+
+      const programRevenueDistributeRewardTokenAmountDelta = programRevenueDistributeRewardTokenAmountAfter - programRevenueDistributeRewardTokenAmountBefore;
+      const rewardTokenAccountBalanceDelta = BigInt(fragVoteTokenAmountAfter - fragVoteTokenAmountBefore);
+
+      expect(programRevenueDistributeRewardTokenAmountDelta).toEqual(123_456_789_987_654_321n * BigInt(rewardCommissionRateBps) / 10000n);
+      expect(programRevenueDistributeRewardTokenAmountDelta + rewardTokenAccountBalanceDelta).toEqual(123_456_789_987_654_321n);
+    }
+
+    // hard limit test (reward commission bps <= 10%)
+    await expect(ctx.fund.updateRestakingVaultStrategy.execute({
+      vault: '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
+      rewardCommissionRateBps: 1000,
+    })).resolves.not.toThrow();
+
+    await expect(ctx.fund.updateRestakingVaultStrategy.execute({
+      vault: '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
+      rewardCommissionRateBps: 1001,
+    })).rejects.toThrow();
+
+    // reset to 0
+    await expect(ctx.fund.updateRestakingVaultStrategy.execute({
+      vault: '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
+      rewardCommissionRateBps: 0,
+    })).resolves.not.toThrow();
+  });
+
+   /** 6. Operation */
   test('run full operation cycle for regression', async () => {
     // frag2 operation will only initialize -> enqueue withdrawal -> process withdrawal.
     // however this test case is to prevent breaking changes in other commands that affects the full cycle.
