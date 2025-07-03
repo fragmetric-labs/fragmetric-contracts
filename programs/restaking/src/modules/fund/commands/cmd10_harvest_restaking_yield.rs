@@ -816,7 +816,7 @@ impl HarvestRestakingYieldCommand {
         } = VaultRewardTokenAccountCandidates::pop_from(&mut accounts, &reward_token_mints[0])?;
 
         let reward_account = accounts
-            .get(0)
+            .first()
             .ok_or_else(|| error!(error::ErrorCode::AccountNotEnoughKeys))?;
         require_keys_eq!(
             reward_account.key(),
@@ -895,7 +895,7 @@ impl HarvestRestakingYieldCommand {
     }
 
     #[inline(never)]
-    fn execute_prepare_compound_vault_supported_token_command<'info>(
+    fn execute_prepare_compound_vault_supported_token_command(
         &self,
         ctx: &OperationCommandContext,
         vault: &Pubkey,
