@@ -961,4 +961,12 @@ describe('restaking.frag2 test', async () => {
         clearingBlockRemainingAmount
     );
   });
+
+  /** 6. Operation */
+  test('run full operation cycle for regression', async () => {
+    // frag2 operation will only initialize -> enqueue withdrawal -> process withdrawal.
+    // however this test case is to prevent breaking changes in other commands that affects the full cycle.
+    // For example, due to virtual vault's edge case, restaking-related command might be broken unless properly handled
+    await ctx.fund.runCommand.executeChained(null);
+  })
 });
