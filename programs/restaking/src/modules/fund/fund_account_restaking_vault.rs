@@ -70,7 +70,6 @@ pub(super) struct TokenExchangeRatio {
 }
 
 impl RestakingVault {
-    #[deny(clippy::wildcard_enum_match_arm)]
     pub fn initialize(
         &mut self,
         vault: Pubkey,

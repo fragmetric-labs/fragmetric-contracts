@@ -37,7 +37,6 @@ pub(super) struct SupportedToken {
 }
 
 impl SupportedToken {
-    #[deny(clippy::wildcard_enum_match_arm)]
     pub fn initialize(
         &mut self,
         mint: Pubkey,

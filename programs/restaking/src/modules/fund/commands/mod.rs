@@ -325,12 +325,10 @@ impl OperationCommand {
     }
 
     pub fn is_safe_with_unchecked_params(&self) -> bool {
-        match self {
-            Self::Initialize(_)
-            | Self::EnqueueWithdrawalBatch(_)
-            | Self::ProcessWithdrawalBatch(_) => true,
-            _ => false,
-        }
+        matches!(
+            self,
+            Self::Initialize(_) | Self::EnqueueWithdrawalBatch(_) | Self::ProcessWithdrawalBatch(_)
+        )
     }
 
     pub fn serialize_as_pod(&self, pod: &mut OperationCommandPod) -> Result<()> {
@@ -507,9 +505,9 @@ impl OperationCommandEntryPod {
 }
 
 impl SelfExecutable for OperationCommand {
-    fn execute<'a, 'info>(
+    fn execute<'info>(
         &self,
-        ctx: &mut OperationCommandContext<'info, 'a>,
+        ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
     ) -> ExecutionResult {
         match self {
@@ -537,9 +535,9 @@ type ExecutionResult = Result<(
 )>;
 
 pub(super) trait SelfExecutable: Into<OperationCommand> {
-    fn execute<'a, 'info>(
+    fn execute<'info>(
         &self,
-        ctx: &mut OperationCommandContext<'info, 'a>,
+        ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
     ) -> ExecutionResult;
 

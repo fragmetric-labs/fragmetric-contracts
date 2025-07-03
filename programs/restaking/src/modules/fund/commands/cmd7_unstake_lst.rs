@@ -123,9 +123,9 @@ struct UnstakeResult {
 const SPL_STAKE_MINIMUM_DELEGATION_LAMPORTS: u64 = 1_000_000_000;
 
 impl SelfExecutable for UnstakeLSTCommand {
-    fn execute<'a, 'info>(
+    fn execute<'info>(
         &self,
-        ctx: &mut OperationCommandContext<'info, 'a>,
+        ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
     ) -> Result<(
         Option<OperationCommandResult>,
@@ -160,7 +160,6 @@ impl SelfExecutable for UnstakeLSTCommand {
 }
 
 // These are implementations of each command state.
-#[deny(clippy::wildcard_enum_match_arm)]
 impl UnstakeLSTCommand {
     /// An initial state of `UnstakeLST` command.
     /// In this state, operator iterates the fund and
@@ -243,8 +242,7 @@ impl UnstakeLSTCommand {
                             }
                         })
                     })
-                    .collect::<Result<Vec<_>>>()?
-                    .into_iter(),
+                    .collect::<Result<Vec<_>>>()?,
             );
             unstaking_strategy.cut_greedy(
                 unstaking_obligated_amount_as_sol

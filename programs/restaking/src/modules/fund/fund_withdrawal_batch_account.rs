@@ -45,8 +45,8 @@ impl FundWithdrawalBatchAccount {
         [
             Self::SEED.to_vec(),
             receipt_token_mint.as_ref().to_vec(),
-            if supported_token_mint.is_some() {
-                supported_token_mint.unwrap().as_ref().to_vec()
+            if let Some(supported_token_mint) = supported_token_mint {
+                supported_token_mint.as_ref().to_vec()
             } else {
                 Pubkey::default().as_ref().to_vec()
             },

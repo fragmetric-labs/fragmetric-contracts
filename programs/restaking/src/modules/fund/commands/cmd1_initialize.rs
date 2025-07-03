@@ -138,9 +138,9 @@ pub struct InitializeCommandResultWrappedTokenHolderUpdate {
 }
 
 impl SelfExecutable for InitializeCommand {
-    fn execute<'a, 'info>(
+    fn execute<'info>(
         &self,
-        ctx: &mut OperationCommandContext<'info, 'a>,
+        ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
     ) -> ExecutionResult {
         let (result, entry) = match &self.state {
@@ -189,7 +189,6 @@ impl SelfExecutable for InitializeCommand {
     }
 }
 
-#[deny(clippy::wildcard_enum_match_arm)]
 impl InitializeCommand {
     #[inline(never)]
     fn execute_new_restaking_vault_update_command(
@@ -205,8 +204,7 @@ impl InitializeCommand {
         let Some(vault) = (if let Some(previous_vault) = previous_vault {
             vaults_iter
                 .skip_while(|vault| *vault != previous_vault)
-                .skip(1)
-                .next()
+                .nth(1)
         } else {
             vaults_iter.next()
         }) else {
@@ -454,8 +452,7 @@ impl InitializeCommand {
             .len()
             .min(RESTAKING_VAULT_UPDATE_DELEGATIONS_BATCH_SIZE);
         let mut items = Vec::with_capacity(RESTAKING_VAULT_UPDATE_DELEGATIONS_BATCH_SIZE);
-        for i in 0..batch_size {
-            let index = next_item_indices[i];
+        for &index in next_item_indices.iter().take(batch_size) {
             let operator = restaking_vault
                 .get_delegation_by_index(index as usize)?
                 .operator;
@@ -502,7 +499,7 @@ impl InitializeCommand {
             .get_holders_iter()
             .map(|holder| holder.token_account)
             .collect::<Vec<_>>();
-        if wrapped_token_accounts.len() > 0 {
+        if !wrapped_token_accounts.is_empty() {
             // pseudo-randomize the order
             let clock = Clock::get()?;
             let start_idx = clock.slot as usize % wrapped_token_accounts.len();

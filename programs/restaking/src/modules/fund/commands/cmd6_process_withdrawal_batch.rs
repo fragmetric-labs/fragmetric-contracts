@@ -56,9 +56,9 @@ pub struct ProcessWithdrawalBatchCommandResultAssetReceivable {
 }
 
 impl SelfExecutable for ProcessWithdrawalBatchCommand {
-    fn execute<'a, 'info>(
+    fn execute<'info>(
         &self,
-        ctx: &mut OperationCommandContext<'info, 'a>,
+        ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
     ) -> Result<(
         Option<OperationCommandResult>,
@@ -421,8 +421,8 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                     let mut fund_service =
                         FundService::new(ctx.receipt_token_mint, ctx.fund_account)?;
 
-                    let mut pricing_service = fund_service
-                        .new_pricing_service(pricing_sources.into_iter().copied(), false)?;
+                    let mut pricing_service =
+                        fund_service.new_pricing_service(pricing_sources.iter().copied(), false)?;
 
                     let (
                         processed_receipt_token_amount,

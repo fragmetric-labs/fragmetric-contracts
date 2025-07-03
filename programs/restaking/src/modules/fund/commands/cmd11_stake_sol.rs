@@ -79,9 +79,9 @@ pub struct StakeSOLCommandResult {
 }
 
 impl SelfExecutable for StakeSOLCommand {
-    fn execute<'a, 'info>(
+    fn execute<'info>(
         &self,
-        ctx: &mut OperationCommandContext<'info, 'a>,
+        ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
     ) -> Result<(
         Option<OperationCommandResult>,
@@ -105,7 +105,6 @@ impl SelfExecutable for StakeSOLCommand {
 }
 
 // These are implementations of each command state.
-#[deny(clippy::wildcard_enum_match_arm)]
 impl StakeSOLCommand {
     /// An initial state of `StakeSOL` command.
     /// In this state, operator iterates the fund and

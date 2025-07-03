@@ -236,7 +236,6 @@ impl SelfExecutable for HarvestRestakingYieldCommand {
     }
 }
 
-#[deny(clippy::wildcard_enum_match_arm)]
 impl HarvestRestakingYieldCommand {
     fn execute_new_compound_reward_command(
         &self,
