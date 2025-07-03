@@ -649,6 +649,64 @@ describe('restaking.fragSOL unit test', async () => {
     ).toEqual(0n);
   });
 
+  test('user can deposit large amount of token', async () => {
+    await validator.airdropToken(
+      signer1.address,
+      'FRAGME9aN7qzxkHPmVP22tDhG87srsR9pr5SY9XdRd9R',
+      1_000_000_000_000_000_000n
+    );
+    await expectMasked(
+      user1.deposit.execute(
+        {
+          assetMint: 'FRAGME9aN7qzxkHPmVP22tDhG87srsR9pr5SY9XdRd9R',
+          assetAmount: 1_000_000_000_000_000_000n,
+        },
+        { signers: [signer1] }
+      )
+    ).resolves.toMatchInlineSnapshot(`
+      {
+        "args": {
+          "applyPresetComputeUnitLimit": true,
+          "assetAmount": 1000000000000000000n,
+          "assetMint": "FRAGME9aN7qzxkHPmVP22tDhG87srsR9pr5SY9XdRd9R",
+          "metadata": null,
+        },
+        "events": {
+          "unknown": [],
+          "userDepositedToFund": {
+            "contributionAccrualRate": {
+              "__option": "None",
+            },
+            "depositedAmount": 1000000000000000000n,
+            "fundAccount": "7xraTDZ4QWgvgJ5SCZp4hyJN2XEfyGRySQjdG49iZfU8",
+            "mintedReceiptTokenAmount": 830540552187657575n,
+            "receiptTokenMint": "Cs29UiPhAkM2v8fZW7qCJ1UjhF1UAhgrsKj61yGGYizD",
+            "supportedTokenMint": {
+              "__option": "Some",
+              "value": "FRAGME9aN7qzxkHPmVP22tDhG87srsR9pr5SY9XdRd9R",
+            },
+            "updatedUserRewardAccounts": [
+              "DWgJYd9xnUMH6eeMt6mymDLSzNCda7RWnxC6rNthZHWS",
+            ],
+            "user": "AWb2qUvuFzbVN5Eu7tZY8gM745pus5DhTGgo8U8Bd8X2",
+            "userFundAccount": "8FYBsBTMsvx8a9UoDtD8DtV2815GxGbFNEwdR4mPLfQk",
+            "userReceiptTokenAccount": "GQAbtLfueaLzuxAq8aLDMu2gGfDiUpPrmdyuc3SaSEUV",
+            "userSupportedTokenAccount": {
+              "__option": "Some",
+              "value": "9hXqo1QhxTqinenGB7M7iFYPPb59sg5Kr6Uvnq3c7ZNM",
+            },
+            "walletProvider": {
+              "__option": "None",
+            },
+          },
+        },
+        "signature": "MASKED(signature)",
+        "slot": "MASKED(/[.*S|s]lots?$/)",
+        "succeeded": true,
+      }
+    `);
+  });
+
   /** jupsol & sanctum-multi-validator test **/
   test('new supported token with new pricing source deposits & withdraws without any issue', async () => {
     // 1) unstake test from jupSOL stake pool validators
@@ -726,8 +784,8 @@ describe('restaking.fragSOL unit test', async () => {
                 "__kind": "EnqueueWithdrawalBatch",
                 "fields": [
                   {
-                    "enqueuedReceiptTokenAmount": 83048479174n,
-                    "totalQueuedReceiptTokenAmount": 83048479174n,
+                    "enqueuedReceiptTokenAmount": 83048479175n,
+                    "totalQueuedReceiptTokenAmount": 83048479175n,
                   },
                 ],
               },
@@ -913,7 +971,7 @@ describe('restaking.fragSOL unit test', async () => {
                       "__option": "None",
                     },
                     "numProcessingBatches": 1,
-                    "receiptTokenAmount": 83048479174n,
+                    "receiptTokenAmount": 83048479175n,
                   },
                 },
               ],
@@ -931,7 +989,7 @@ describe('restaking.fragSOL unit test', async () => {
                     "assetTokenMint": {
                       "__option": "None",
                     },
-                    "deductedAssetFeeAmount": 200268947n,
+                    "deductedAssetFeeAmount": 200268946n,
                     "offsettedAssetReceivables": [
                       {
                         "assetAmount": 100134473n,
@@ -940,11 +998,11 @@ describe('restaking.fragSOL unit test', async () => {
                         },
                       },
                     ],
-                    "processedReceiptTokenAmount": 83048479174n,
-                    "requestedReceiptTokenAmount": 83048479174n,
+                    "processedReceiptTokenAmount": 83048479175n,
+                    "requestedReceiptTokenAmount": 83048479175n,
                     "requiredAssetAmount": 0n,
-                    "reservedAssetUserAmount": 99934204698n,
-                    "transferredAssetRevenueAmount": 102417354n,
+                    "reservedAssetUserAmount": 99934204699n,
+                    "transferredAssetRevenueAmount": 102417353n,
                     "withdrawalFeeRateBps": 20,
                   },
                 ],
@@ -973,7 +1031,7 @@ describe('restaking.fragSOL unit test', async () => {
           "unknown": [],
           "userWithdrewFromFund": {
             "batchId": 1n,
-            "burntReceiptTokenAmount": 83048479174n,
+            "burntReceiptTokenAmount": 83048479175n,
             "deductedFeeAmount": 200268947n,
             "fundAccount": "7xraTDZ4QWgvgJ5SCZp4hyJN2XEfyGRySQjdG49iZfU8",
             "fundWithdrawalBatchAccount": "BSAf3XCVkGJthdmprrf9faibAhcDW8m67DJuHk15tkM7",
@@ -989,7 +1047,7 @@ describe('restaking.fragSOL unit test', async () => {
             "userSupportedTokenAccount": {
               "__option": "None",
             },
-            "withdrawnAmount": 99934204698n,
+            "withdrawnAmount": 99934204699n,
           },
         },
         "signature": "MASKED(signature)",
@@ -1008,64 +1066,14 @@ describe('restaking.fragSOL unit test', async () => {
     );
 
     // 2-2) run 'StakeSOL'command to stake SOL & get jupSOL
-    await expectMasked(
-      ctx.fund.runCommand.executeChained({
+    const amountBefore = await ctx.fund.resolveAccount(true).then((fund) => fund!.data.supportedTokens.find((token) => token.mint == 'jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v')!.token.operationReservedAmount);
+    await ctx.fund.runCommand.executeChained({
         forceResetCommand: 'StakeSOL',
         operator: restaking.knownAddresses.fundManager,
-      })
-    ).resolves.toMatchInlineSnapshot(`
-      {
-        "args": {
-          "forceResetCommand": null,
-          "operator": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx",
-        },
-        "events": {
-          "operatorRanFundCommand": {
-            "command": {
-              "__kind": "StakeSOL",
-              "fields": [
-                {
-                  "state": {
-                    "__kind": "Execute",
-                    "items": [
-                      {
-                        "allocatedSolAmount": 7142857142n,
-                        "tokenMint": "FRAGME9aN7qzxkHPmVP22tDhG87srsR9pr5SY9XdRd9R",
-                      },
-                    ],
-                  },
-                },
-              ],
-            },
-            "fundAccount": "7xraTDZ4QWgvgJ5SCZp4hyJN2XEfyGRySQjdG49iZfU8",
-            "nextSequence": 0,
-            "numOperated": 22n,
-            "receiptTokenMint": "Cs29UiPhAkM2v8fZW7qCJ1UjhF1UAhgrsKj61yGGYizD",
-            "result": {
-              "__option": "Some",
-              "value": {
-                "__kind": "StakeSOL",
-                "fields": [
-                  {
-                    "deductedSolFeeAmount": 0n,
-                    "mintedTokenAmount": 7132785870n,
-                    "operationReceivableSolAmount": 0n,
-                    "operationReservedSolAmount": 6n,
-                    "operationReservedTokenAmount": 7132785870n,
-                    "stakedSolAmount": 7142857142n,
-                    "tokenMint": "FRAGME9aN7qzxkHPmVP22tDhG87srsR9pr5SY9XdRd9R",
-                  },
-                ],
-              },
-            },
-          },
-          "unknown": [],
-        },
-        "signature": "MASKED(signature)",
-        "slot": "MASKED(/[.*S|s]lots?$/)",
-        "succeeded": true,
-      }
-    `);
+    });
+    const amountAfter = await ctx.fund.resolveAccount(true).then((fund) => fund!.data.supportedTokens.find((token) => token.mint == 'jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v')!.token.operationReservedAmount);
+
+    expect(amountAfter).toBeGreaterThan(amountBefore);
   });
 
   /** operation **/
@@ -1131,7 +1139,7 @@ describe('restaking.fragSOL unit test', async () => {
             },
             "depositedAmount": 10000000000n,
             "fundAccount": "7xraTDZ4QWgvgJ5SCZp4hyJN2XEfyGRySQjdG49iZfU8",
-            "mintedReceiptTokenAmount": 10000000001n,
+            "mintedReceiptTokenAmount": 10000000000n,
             "receiptTokenMint": "Cs29UiPhAkM2v8fZW7qCJ1UjhF1UAhgrsKj61yGGYizD",
             "supportedTokenMint": {
               "__option": "Some",

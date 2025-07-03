@@ -345,15 +345,17 @@ impl UnrestakeVRTCommand {
             fund_account.get_restaking_vaults_iter().enumerate()
         {
             let item = &mut items[restaking_vault_index];
-            item.allocated_receipt_token_amount = item
-                .allocated_receipt_token_amount
-                .saturating_sub(restaking_vault.receipt_token_operation_receivable_amount)
-                .saturating_sub(pricing_service.get_token_amount_as_token(
-                    &restaking_vault.supported_token_mint,
-                    restaking_vault.pending_supported_token_unrestaking_amount,
-                    &restaking_vault.receipt_token_mint,
-                )?)
-                .min(restaking_vault.receipt_token_operation_reserved_amount);
+            if item.allocated_receipt_token_amount > 0 {
+                item.allocated_receipt_token_amount = item
+                    .allocated_receipt_token_amount
+                    .saturating_sub(restaking_vault.receipt_token_operation_receivable_amount)
+                    .saturating_sub(pricing_service.get_token_amount_as_token(
+                        &restaking_vault.supported_token_mint,
+                        restaking_vault.pending_supported_token_unrestaking_amount,
+                        &restaking_vault.receipt_token_mint,
+                    )?)
+                    .min(restaking_vault.receipt_token_operation_reserved_amount);
+            }
             if pricing_service.get_token_amount_as_sol(
                 &item.receipt_token_mint,
                 item.allocated_receipt_token_amount,
