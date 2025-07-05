@@ -843,6 +843,10 @@ impl<'a, 'info> FundService<'a, 'info> {
                 // offset asset_user_amount by asset_operation_reserved_amount
                 let mut fund_account = self.fund_account.load_mut()?;
                 let asset = fund_account.get_asset_state_mut(supported_token_mint_key)?;
+                if asset.operation_reserved_amount < asset_user_amount {
+                    // prevent over-allocation due to conversion precision error
+                    asset_user_amount = asset.operation_reserved_amount;
+                }
                 asset.operation_reserved_amount -= asset_user_amount;
                 asset.withdrawal_user_reserved_amount += asset_user_amount;
                 if asset_user_amount_processing < asset_user_amount {
