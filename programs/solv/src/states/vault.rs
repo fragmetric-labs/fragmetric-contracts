@@ -613,9 +613,12 @@ impl VaultAccount {
     }
 
     /// Fixed amount fee is not accounted here - we don't know exact amount now
-    /// * VRT protocol deposit fee = ceil(VST * solv_protocol_deposit_fee_rate)  
+    /// * VST protocol deposit fee = ceil(VST * solv_protocol_deposit_fee_rate)  
     /// * SRT expected = ceil((VST - protocol fee) as SRT)
-    pub(crate) fn deposit_vst(&mut self, vst_amount: u64) -> Result<()> {
+    pub(crate) fn deposit_vst(
+        &mut self,
+        vst_amount: u64,
+    ) -> Result<events::SolvManagerConfirmedDeposits> {
         if self.is_deposit_in_progress() {
             err!(VaultError::DepositInProgressError)?;
         }
@@ -637,7 +640,20 @@ impl VaultAccount {
         self.vst_operation_receivable_amount += solv_protocol_deposit_fee_amount_as_vst;
         self.srt_operation_receivable_amount = srt_expected_amount;
 
-        Ok(())
+        Ok(events::SolvManagerConfirmedDeposits {
+            vault: Pubkey::default(),
+            solv_protocol_wallet: self.solv_protocol_wallet,
+            solv_manager: self.solv_manager,
+
+            vst_mint: self.vault_supported_token_mint,
+            vrt_mint: self.vault_receipt_token_mint,
+            srt_mint: self.solv_receipt_token_mint,
+
+            solv_deposited_vst_amount: vst_amount,
+            srt_receivable_amount_for_deposit: self.srt_operation_receivable_amount,
+            deposit_fee_as_vst: solv_protocol_deposit_fee_amount_as_vst,
+            one_srt_as_micro_vst: self.one_srt_as_micro_vst,
+        })
     }
 
     /// Offset VST receivables with VST donation.
@@ -685,7 +701,7 @@ impl VaultAccount {
         srt_amount: u64,
         new_one_srt_as_micro_vst: u64,
         heuristic_validation: bool,
-    ) -> Result<()> {
+    ) -> Result<events::SolvManagerCompletedDeposits> {
         if !self.is_deposit_in_progress() {
             err!(VaultError::DepositNotInProgressError)?;
         }
@@ -711,12 +727,27 @@ impl VaultAccount {
         self.srt_operation_reserved_amount += srt_amount;
         self.srt_operation_receivable_amount = 0;
 
+        let old_one_srt_as_micro_vst = self.one_srt_as_micro_vst;
         self.refresh_srt_exchange_rate_with_validation(
             new_one_srt_as_micro_vst,
             heuristic_validation,
         )?;
 
-        Ok(())
+        Ok(events::SolvManagerCompletedDeposits {
+            vault: Pubkey::default(),
+            solv_protocol_wallet: self.solv_protocol_wallet,
+            solv_manager: self.solv_manager,
+
+            vst_mint: self.vault_supported_token_mint,
+            vrt_mint: self.vault_receipt_token_mint,
+            srt_mint: self.solv_receipt_token_mint,
+
+            received_srt_amount: srt_amount,
+            srt_total_reserved_amount: self.get_srt_total_reserved_amount(),
+            old_one_srt_as_micro_vst,
+            new_one_srt_as_micro_vst,
+            extra_deposit_fee_as_vst: solv_protocol_extra_deposit_fee_amount_as_vst,
+        })
     }
 
     fn get_withdrawal_requests_iter_mut(&mut self) -> impl Iterator<Item = &mut WithdrawalRequest> {
@@ -946,7 +977,19 @@ impl VaultAccount {
 
         self.srt_withdrawal_locked_amount = 0;
 
-        Ok(srt_amount_to_withdraw)
+        Ok(events::SolvManagerConfirmedWithdrawalRequests {
+            vault: Pubkey::default(),
+            solv_protocol_wallet: self.solv_protocol_wallet,
+            solv_manager: self.solv_manager,
+
+            vst_mint: self.vault_supported_token_mint,
+            vrt_mint: self.vault_receipt_token_mint,
+            srt_mint: self.solv_receipt_token_mint,
+
+            confirmed_srt_amount: srt_amount_to_withdraw,
+            processing_vrt_amount: self.vrt_withdrawal_processing_amount,
+            vst_receivable_amount_to_claim: self.vst_receivable_amount_to_claim,
+        })
     }
 
     pub(crate) fn complete_withdrawal_requests(
@@ -955,7 +998,7 @@ impl VaultAccount {
         vst_amount: u64,
         old_one_srt_as_micro_vst: u64, // SRT price which request processed at
         heuristic_validation: bool,
-    ) -> Result<()> {
+    ) -> Result<events::SolvManagerCompletedWithdrawalRequests> {
         if self.is_deposit_in_progress() {
             err!(VaultError::DepositInProgressError)?;
         }
@@ -1073,7 +1116,21 @@ impl VaultAccount {
             err!(VaultError::InvalidSRTPriceError)?;
         }
 
-        Ok(())
+        Ok(events::SolvManagerCompletedWithdrawalRequests {
+            vault: Pubkey::default(),
+            solv_protocol_wallet: self.solv_protocol_wallet,
+            solv_manager: self.solv_manager,
+
+            vst_mint: self.vault_supported_token_mint,
+            vrt_mint: self.vault_receipt_token_mint,
+            srt_mint: self.solv_receipt_token_mint,
+
+            burnt_srt_amount: srt_amount,
+            withdrawan_vst_amount: vst_amount,
+            vst_reserved_amount_to_claim: self.vst_reserved_amount_to_claim,
+            vst_extra_amount_to_claim: self.vst_extra_amount_to_claim,
+            vst_deducted_fee_amount: self.vst_deducted_fee_amount,
+        })
     }
 
     /// returns claimed_vst_amount

@@ -81,7 +81,13 @@ pub mod solv {
     ////////////////////////////////////////////
 
     pub fn solv_manager_confirm_deposits(mut ctx: Context<SolvManagerContext>) -> Result<()> {
-        process_confirm_deposits(&mut ctx)
+        let event = process_confirm_deposits(&mut ctx)?;
+
+        if let Some(event) = event {
+            emit_cpi!(event);
+        }
+
+        Ok(())
     }
 
     pub fn solv_manager_complete_deposits(
@@ -89,13 +95,21 @@ pub mod solv {
         srt_amount: u64,
         new_one_srt_as_micro_vst: u64,
     ) -> Result<()> {
-        process_complete_deposits(&mut ctx, srt_amount, new_one_srt_as_micro_vst)
+        emit_cpi!(process_complete_deposits(
+            &mut ctx,
+            srt_amount,
+            new_one_srt_as_micro_vst
+        )?);
+
+        Ok(())
     }
 
     pub fn solv_manager_confirm_withdrawal_requests(
         mut ctx: Context<SolvManagerContext>,
     ) -> Result<()> {
-        process_confirm_withdrawal_requests(&mut ctx)
+        emit_cpi!(process_confirm_withdrawal_requests(&mut ctx)?);
+
+        Ok(())
     }
 
     pub fn solv_manager_complete_withdrawal_requests(
@@ -104,12 +118,14 @@ pub mod solv {
         vst_amount: u64,
         old_one_srt_as_micro_vst: u64,
     ) -> Result<()> {
-        process_complete_withdrawal_requests(
+        emit_cpi!(process_complete_withdrawal_requests(
             &mut ctx,
             srt_amount,
             vst_amount,
             old_one_srt_as_micro_vst,
-        )
+        )?);
+
+        Ok(())
     }
 
     pub fn solv_manager_refresh_solv_receipt_token_redemption_rate(
