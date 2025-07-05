@@ -1846,6 +1846,52 @@ describe('restaking.fragJTO test', async () => {
     });
   });
 
+  /** 5. harvest reward via swap */
+  test('jitoSOL reward is swapped to JTO then compounded', async () => {
+    // jitoSOL reward
+    await validator.airdropToken(
+      'BmJvUzoiiNBRx3v2Gqsix9WvVtw8FaztrfBHQyqpMbTd',
+      'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+      1_000n
+    );
+    // delegate reward token account
+    await ctx.fund
+      .restakingVault(
+        'BmJvUzoiiNBRx3v2Gqsix9WvVtw8FaztrfBHQyqpMbTd',
+        'Vau1t6sLNxnzB7ZDsef8TLbPLfyZMYXH8WTNqUdm9g8'
+      )!
+      // @ts-ignore - Property 'delegateRewardTokenAccount' does not exist on type 'SolvVaultAccountContext | JitoVaultAccountContext | VirtualVaultAccountContext'.
+      .delegateRewardTokenAccount.execute({
+        mint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+        newDelegate: 'Ee1W9enx3w2zv3pkgyNSqWteCaNJwxXBLydDMdTdPUzC',
+      });
+
+    await ctx.fund.reserve.supportedTokens.resolve(true);
+    const supportedTokenOperationReservedAmountBefore =
+      ctx.fund.reserve.supportedTokens.children.find(
+        (token) =>
+          token.account!.data.mint ==
+          'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL'
+      )!.account!.data.amount;
+
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestRestakingYield',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    await ctx.fund.reserve.supportedTokens.resolve(true);
+    const supportedTokenOperationReservedAmountAfter =
+      ctx.fund.reserve.supportedTokens.children.find(
+        (token) =>
+          token.account!.data.mint ==
+          'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL'
+      )!.account!.data.amount;
+
+    expect(supportedTokenOperationReservedAmountAfter).toBeGreaterThan(
+      supportedTokenOperationReservedAmountBefore
+    );
+  });
+
   /** 6. operation cycle */
   test('run operation cycles through multiple epoches to test cash-in/out flows including (un)stake/(un)restake', async () => {
     await expect(
