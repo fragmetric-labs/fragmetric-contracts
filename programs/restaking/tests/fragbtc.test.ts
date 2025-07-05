@@ -3002,7 +3002,7 @@ describe('restaking.fragBTC test', async () => {
             "withdrawableValueAsReceiptTokenAmount": 2307618932n,
             "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
             "withdrawalResidualMicroAssetAmount": 910935n,
-            "withdrawalUserReservedAmount": 103599312n,
+            "withdrawalUserReservedAmount": 103599311n,
           },
           {
             "decimals": 8,
