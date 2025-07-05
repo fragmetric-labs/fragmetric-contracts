@@ -1,8 +1,8 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::Mint;
 
-use crate::constants;
 use crate::errors::VaultError;
+use crate::{constants, events};
 
 #[constant]
 /// ## Version History
@@ -420,7 +420,10 @@ impl VaultAccount {
     /// VRT mint amount = floor(VST * VRT supply / NAV) ?? VST
     /// * VRT price = NAV / VRT supply
     /// * NAV = VST (operation reserved + receivable) + floor(SRT (operation reserved) as VST) + floor(SRT (operation receivable) as VST)
-    pub(crate) fn mint_vrt(&mut self, vst_amount: u64) -> Result<u64> {
+    pub(crate) fn mint_vrt(
+        &mut self,
+        vst_amount: u64,
+    ) -> Result<events::FundManagerDepositedToVault> {
         let vrt_amount = self.get_vrt_amount_to_mint(vst_amount)?;
 
         self.vrt_supply += vrt_amount;
@@ -428,7 +431,13 @@ impl VaultAccount {
 
         self.update_vrt_exchange_rate()?;
 
-        Ok(vrt_amount)
+        Ok(events::FundManagerDepositedToVault {
+            vault: Pubkey::default(),
+            vst_mint: self.vault_supported_token_mint,
+            vrt_mint: self.vault_receipt_token_mint,
+            vst_amount,
+            minted_vrt_amount: vrt_amount,
+        })
     }
 
     /// VRT mint amount = floor(VST * VRT supply / NAV) ?? VST
@@ -716,7 +725,10 @@ impl VaultAccount {
 
     /// returns ∆vrt_withdrawal_enqueued_amount, which "might" be less than given vrt_amount,
     /// due to srt operation receivable amount.
-    pub(crate) fn enqueue_withdrawal_request(&mut self, mut vrt_amount: u64) -> Result<u64> {
+    pub(crate) fn enqueue_withdrawal_request(
+        &mut self,
+        mut vrt_amount: u64,
+    ) -> Result<Option<events::FundManagerRequestedWithdrawalFromVault>> {
         let srt_exchange_rate = self.get_srt_exchange_rate();
         let srt_operation_reserved_amount_as_vst = srt_exchange_rate
             .get_srt_amount_as_vst(self.srt_operation_reserved_amount, false)
@@ -747,7 +759,7 @@ impl VaultAccount {
 
         // Ignore empty request
         if vrt_amount == 0 {
-            return Ok(0);
+            return Ok(None);
         }
 
         // Withdrawal request is full
@@ -901,11 +913,18 @@ impl VaultAccount {
 
         self.update_vrt_exchange_rate()?;
 
-        Ok(vrt_amount)
+        Ok(Some(events::FundManagerRequestedWithdrawalFromVault {
+            vault: Pubkey::default(),
+            vst_mint: self.vault_supported_token_mint,
+            vrt_mint: self.vault_receipt_token_mint,
+            burnt_vrt_amount: vrt_amount,
+            vst_estimated_amount: vst_withdrawal_total_estimated_amount,
+        }))
     }
 
-    /// returns srt_amount_to_withdraw
-    pub(crate) fn confirm_withdrawal_requests(&mut self) -> Result<u64> {
+    pub(crate) fn confirm_withdrawal_requests(
+        &mut self,
+    ) -> Result<events::SolvManagerConfirmedWithdrawalRequests> {
         let srt_amount_to_withdraw = self.srt_withdrawal_locked_amount;
 
         // Start
@@ -1058,7 +1077,7 @@ impl VaultAccount {
     }
 
     /// returns claimed_vst_amount
-    pub(crate) fn claim_vst(&mut self) -> Result<u64> {
+    pub(crate) fn claim_vst(&mut self) -> Result<events::FundManagerWithdrewFromVault> {
         let vst_amount = self.get_vst_claimable_amount();
 
         // Clear completed withdrawal requests
@@ -1077,7 +1096,13 @@ impl VaultAccount {
         self.vst_extra_amount_to_claim = 0;
         self.vst_deducted_fee_amount = 0;
 
-        Ok(vst_amount)
+        Ok(events::FundManagerWithdrewFromVault {
+            vault: Pubkey::default(),
+            vst_mint: self.vault_supported_token_mint,
+            vrt_mint: self.vault_receipt_token_mint,
+
+            claimed_vst_amount: vst_amount,
+        })
     }
 
     pub fn get_vst_claimable_amount(&self) -> u64 {

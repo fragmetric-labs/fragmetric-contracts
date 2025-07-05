@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 
 mod constants;
 mod errors;
+mod events;
 mod instructions;
 pub mod states;
 
@@ -51,18 +52,28 @@ pub mod solv {
         mut ctx: Context<FundManagerContext>,
         vst_amount: u64,
     ) -> Result<()> {
-        process_deposit(&mut ctx, vst_amount)
+        emit_cpi!(process_deposit(&mut ctx, vst_amount)?);
+
+        Ok(())
     }
 
     pub fn fund_manager_request_withdrawal(
         mut ctx: Context<FundManagerContext>,
         vrt_amount: u64,
     ) -> Result<()> {
-        process_request_withdrawal(&mut ctx, vrt_amount)
+        let event = process_request_withdrawal(&mut ctx, vrt_amount)?;
+
+        if let Some(event) = event {
+            emit_cpi!(event);
+        }
+
+        Ok(())
     }
 
     pub fn fund_manager_withdraw(mut ctx: Context<FundManagerContext>) -> Result<()> {
-        process_withdraw(&mut ctx)
+        emit_cpi!(process_withdraw(&mut ctx)?);
+
+        Ok(())
     }
 
     ////////////////////////////////////////////
