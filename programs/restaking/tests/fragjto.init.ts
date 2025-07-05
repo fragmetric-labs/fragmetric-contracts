@@ -125,11 +125,6 @@ export function initializeFragJTO(testCtx: TestSuiteContext) {
         vault: 'BmJvUzoiiNBRx3v2Gqsix9WvVtw8FaztrfBHQyqpMbTd',
         rewardTokenMint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
       }),
-    () =>
-      ctx.fund.addRestakingVaultDistributingReward.execute({
-        vault: 'BmJvUzoiiNBRx3v2Gqsix9WvVtw8FaztrfBHQyqpMbTd',
-        rewardTokenMint: 'REALSWTCH7J8JdafNBLZpfSCLiFwpMCqod2RpkU4RNn',
-      }),
 
     // configure operator delegations
     () =>

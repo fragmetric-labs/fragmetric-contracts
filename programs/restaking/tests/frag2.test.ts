@@ -392,6 +392,62 @@ describe('restaking.frag2 test', async () => {
     `);
   });
 
+  /** 3. withdraw */
+  test('user can withdraw receipt token as frag', async () => {
+    await expect(
+      user1.requestWithdrawal.execute(
+        {
+          assetMint: 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5',
+          receiptTokenAmount: 1_000_000_000n,
+        },
+        { signers: [signer1] }
+      )
+    ).resolves.toMatchObject({
+      events: {
+        userRequestedWithdrawalFromFund: {
+          supportedTokenMint: {
+            __option: 'Some',
+            value: 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5',
+          },
+          requestedReceiptTokenAmount: 1_000_000_000n,
+        },
+      },
+    });
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'EnqueueWithdrawalBatch',
+    });
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'ProcessWithdrawalBatch',
+    });
+    await expect(
+      ctx.fund
+        .resolveAccount(true)
+        .then(
+          (account) =>
+            account?.data.supportedTokens.find(
+              (token) =>
+                token.mint == 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5'
+            )?.token.withdrawalLastProcessedBatchId
+        )
+    ).resolves.toEqual(1n);
+
+    const res = await user1.withdraw.execute(
+      {
+        assetMint: 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5',
+        requestId: 1n,
+      },
+      { signers: [signer1] }
+    );
+    const evt = res.events!.userWithdrewFromFund!;
+    expect(
+      evt.burntReceiptTokenAmount,
+      'burntReceiptTokenAmount = withdrawnAmount + deductedFeeAmount + [optional remainder]'
+    ).toBeOneOf([
+      evt.withdrawnAmount + evt.deductedFeeAmount,
+      evt.withdrawnAmount + evt.deductedFeeAmount + 1n,
+    ]);
+  });
+
   /** 3. virtual vault harvest */
   test('virtual vault harvest/compound', async () => {
     const fragRewardAmount = 1_000_000_000n; // 20% of current fund NAV
@@ -441,10 +497,10 @@ describe('restaking.frag2 test', async () => {
         "depositResidualMicroReceiptTokenAmount": 0n,
         "metadata": null,
         "normalizedToken": null,
-        "oneReceiptTokenAsSOL": 1444644923n,
+        "oneReceiptTokenAsSOL": 1504838461n,
         "receiptTokenDecimals": 9,
         "receiptTokenMint": "DCoj5m7joWjP9T3iPH22q7bDBoGkgUX4ffoL1eQZstwk",
-        "receiptTokenSupply": 5000000000n,
+        "receiptTokenSupply": 4000000000n,
         "restakingVaultReceiptTokens": [
           {
             "mint": "VVRTiZKXoPdME1ssmRdzowNG2VFVFG6Rmy9VViXaWa8",
@@ -461,17 +517,17 @@ describe('restaking.frag2 test', async () => {
             "decimals": 9,
             "depositable": true,
             "mint": "FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5",
-            "oneTokenAsReceiptToken": 833333333n,
+            "oneTokenAsReceiptToken": 799999999n,
             "oneTokenAsSol": 1203870769n,
             "operationReceivableAmount": 0n,
-            "operationReservedAmount": 6000000000n,
-            "operationTotalAmount": 6000000000n,
+            "operationReservedAmount": 5000000001n,
+            "operationTotalAmount": 5000000001n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
             "unstakingAmountAsSOL": 0n,
             "withdrawable": true,
-            "withdrawableValueAsReceiptTokenAmount": 5000000000n,
+            "withdrawableValueAsReceiptTokenAmount": 4000000000n,
             "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
-            "withdrawalResidualMicroAssetAmount": 0n,
+            "withdrawalResidualMicroAssetAmount": 999999n,
             "withdrawalUserReservedAmount": 0n,
           },
         ],
@@ -608,7 +664,7 @@ describe('restaking.frag2 test', async () => {
     ).toEqual(voteRewardAmount);
   });
 
-  /** 5. reward settlement with clearing **/
+  /** 4. reward settlement with clearing **/
   test('reward settlement clears one block before block addition when block queue is full', async () => {
     // ensure a few blocks filled
     await validator.airdropToken(
@@ -725,11 +781,11 @@ describe('restaking.frag2 test', async () => {
           "tokenAllocatedAmount": {
             "records": [
               {
-                "amount": 5000000000n,
+                "amount": 4000000000n,
                 "contributionAccrualRate": 1,
               },
             ],
-            "totalAmount": 5000000000n,
+            "totalAmount": 4000000000n,
           },
           "updatedSlot": "MASKED(/[.*S|s]lots?$/)",
         },
@@ -739,11 +795,11 @@ describe('restaking.frag2 test', async () => {
           "tokenAllocatedAmount": {
             "records": [
               {
-                "amount": 5000000000n,
+                "amount": 4000000000n,
                 "contributionAccrualRate": 1,
               },
             ],
-            "totalAmount": 5000000000n,
+            "totalAmount": 4000000000n,
           },
           "updatedSlot": "MASKED(/[.*S|s]lots?$/)",
         },
@@ -788,11 +844,11 @@ describe('restaking.frag2 test', async () => {
           "tokenAllocatedAmount": {
             "records": [
               {
-                "amount": 5000000000n,
+                "amount": 4000000000n,
                 "contributionAccrualRate": 1,
               },
             ],
-            "totalAmount": 5000000000n,
+            "totalAmount": 4000000000n,
           },
           "updatedSlot": "MASKED(/[.*S|s]lots?$/)",
         },
@@ -802,11 +858,11 @@ describe('restaking.frag2 test', async () => {
           "tokenAllocatedAmount": {
             "records": [
               {
-                "amount": 5000000000n,
+                "amount": 4000000000n,
                 "contributionAccrualRate": 1,
               },
             ],
-            "totalAmount": 5000000000n,
+            "totalAmount": 4000000000n,
           },
           "updatedSlot": "MASKED(/[.*S|s]lots?$/)",
         },
@@ -962,11 +1018,11 @@ describe('restaking.frag2 test', async () => {
     );
   });
 
-  /** 6. Operation */
+  /** 5. Operation */
   test('run full operation cycle for regression', async () => {
     // frag2 operation will only initialize -> enqueue withdrawal -> process withdrawal.
     // however this test case is to prevent breaking changes in other commands that affects the full cycle.
     // For example, due to virtual vault's edge case, restaking-related command might be broken unless properly handled
     await ctx.fund.runCommand.executeChained(null);
-  })
+  });
 });
