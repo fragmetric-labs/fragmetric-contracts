@@ -1921,7 +1921,7 @@ describe('restaking.fragSOL test', async () => {
     ).resolves.toEqual(5_000_000_000n);
   });
 
-  /** 5. Operation **/
+  /** 5. operation cycle **/
   test('run operation cycles through multiple epoches to test cash-in/out flows including (un)stake/(un)restake', async () => {
     await user1.resolveAddress(true);
 

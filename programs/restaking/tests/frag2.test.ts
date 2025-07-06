@@ -1,7 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { createTestSuiteContext, expectMasked } from '../../testutil';
 import { initializeFrag2 } from './frag2.init';
-import { TokenAccountContext } from '@fragmetric-labs/sdk';
 
 describe('restaking.frag2 test', async () => {
   const testCtx = await initializeFrag2(await createTestSuiteContext());
@@ -9,7 +8,7 @@ describe('restaking.frag2 test', async () => {
   beforeAll(() => testCtx.initializationTasks);
   afterAll(() => testCtx.validator.quit());
 
-  const { validator, feePayer, restaking, initializationTasks } = testCtx;
+  const { validator, feePayer, restaking, initializationTasks, sdk } = testCtx;
   const ctx = restaking.frag2;
 
   const [signer1, signer2] = await Promise.all([
@@ -394,7 +393,63 @@ describe('restaking.frag2 test', async () => {
     `);
   });
 
-  /** 3. virtual vault harvest */
+  /** 3. withdraw */
+  test('user can withdraw receipt token as frag', async () => {
+    await expect(
+      user1.requestWithdrawal.execute(
+        {
+          assetMint: 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5',
+          receiptTokenAmount: 1_000_000_000n,
+        },
+        { signers: [signer1] }
+      )
+    ).resolves.toMatchObject({
+      events: {
+        userRequestedWithdrawalFromFund: {
+          supportedTokenMint: {
+            __option: 'Some',
+            value: 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5',
+          },
+          requestedReceiptTokenAmount: 1_000_000_000n,
+        },
+      },
+    });
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'EnqueueWithdrawalBatch',
+    });
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'ProcessWithdrawalBatch',
+    });
+    await expect(
+      ctx.fund
+        .resolveAccount(true)
+        .then(
+          (account) =>
+            account?.data.supportedTokens.find(
+              (token) =>
+                token.mint == 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5'
+            )?.token.withdrawalLastProcessedBatchId
+        )
+    ).resolves.toEqual(1n);
+
+    const res = await user1.withdraw.execute(
+      {
+        assetMint: 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5',
+        requestId: 1n,
+      },
+      { signers: [signer1] }
+    );
+    const evt = res.events!.userWithdrewFromFund!;
+    expect(
+      evt.burntReceiptTokenAmount,
+      'burntReceiptTokenAmount = withdrawnAmount + deductedFeeAmount + [optional remainder]'
+    ).toBeOneOf([
+      evt.withdrawnAmount + evt.deductedFeeAmount,
+      evt.withdrawnAmount + evt.deductedFeeAmount + 1n,
+    ]);
+  });
+
+  /** 4. virtual vault harvest */
   test('virtual vault harvest/compound', async () => {
     const fragRewardAmount = 1_000_000_000n; // 20% of current fund NAV
     await validator.airdropToken(
@@ -443,10 +498,10 @@ describe('restaking.frag2 test', async () => {
         "depositResidualMicroReceiptTokenAmount": 0n,
         "metadata": null,
         "normalizedToken": null,
-        "oneReceiptTokenAsSOL": 1444644923n,
+        "oneReceiptTokenAsSOL": 1504838461n,
         "receiptTokenDecimals": 9,
         "receiptTokenMint": "DCoj5m7joWjP9T3iPH22q7bDBoGkgUX4ffoL1eQZstwk",
-        "receiptTokenSupply": 5000000000n,
+        "receiptTokenSupply": 4000000000n,
         "restakingVaultReceiptTokens": [
           {
             "mint": "VVRTiZKXoPdME1ssmRdzowNG2VFVFG6Rmy9VViXaWa8",
@@ -463,17 +518,17 @@ describe('restaking.frag2 test', async () => {
             "decimals": 9,
             "depositable": true,
             "mint": "FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5",
-            "oneTokenAsReceiptToken": 833333333n,
+            "oneTokenAsReceiptToken": 799999999n,
             "oneTokenAsSol": 1203870769n,
             "operationReceivableAmount": 0n,
-            "operationReservedAmount": 6000000000n,
-            "operationTotalAmount": 6000000000n,
+            "operationReservedAmount": 5000000001n,
+            "operationTotalAmount": 5000000001n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
             "unstakingAmountAsSOL": 0n,
             "withdrawable": true,
-            "withdrawableValueAsReceiptTokenAmount": 5000000000n,
+            "withdrawableValueAsReceiptTokenAmount": 4000000000n,
             "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
-            "withdrawalResidualMicroAssetAmount": 0n,
+            "withdrawalResidualMicroAssetAmount": 999999n,
             "withdrawalUserReservedAmount": 0n,
           },
         ],
@@ -610,7 +665,7 @@ describe('restaking.frag2 test', async () => {
     ).toEqual(voteRewardAmount);
   });
 
-  /** 5. reward settlement with clearing **/
+  /** 5. reward **/
   test('reward settlement clears one block before block addition when block queue is full', async () => {
     // ensure a few blocks filled
     await validator.airdropToken(
@@ -727,11 +782,11 @@ describe('restaking.frag2 test', async () => {
           "tokenAllocatedAmount": {
             "records": [
               {
-                "amount": 5000000000n,
+                "amount": 4000000000n,
                 "contributionAccrualRate": 1,
               },
             ],
-            "totalAmount": 5000000000n,
+            "totalAmount": 4000000000n,
           },
           "updatedSlot": "MASKED(/[.*S|s]lots?$/)",
         },
@@ -741,11 +796,11 @@ describe('restaking.frag2 test', async () => {
           "tokenAllocatedAmount": {
             "records": [
               {
-                "amount": 5000000000n,
+                "amount": 4000000000n,
                 "contributionAccrualRate": 1,
               },
             ],
-            "totalAmount": 5000000000n,
+            "totalAmount": 4000000000n,
           },
           "updatedSlot": "MASKED(/[.*S|s]lots?$/)",
         },
@@ -790,11 +845,11 @@ describe('restaking.frag2 test', async () => {
           "tokenAllocatedAmount": {
             "records": [
               {
-                "amount": 5000000000n,
+                "amount": 4000000000n,
                 "contributionAccrualRate": 1,
               },
             ],
-            "totalAmount": 5000000000n,
+            "totalAmount": 4000000000n,
           },
           "updatedSlot": "MASKED(/[.*S|s]lots?$/)",
         },
@@ -804,11 +859,11 @@ describe('restaking.frag2 test', async () => {
           "tokenAllocatedAmount": {
             "records": [
               {
-                "amount": 5000000000n,
+                "amount": 4000000000n,
                 "contributionAccrualRate": 1,
               },
             ],
-            "totalAmount": 5000000000n,
+            "totalAmount": 4000000000n,
           },
           "updatedSlot": "MASKED(/[.*S|s]lots?$/)",
         },
@@ -987,10 +1042,8 @@ describe('restaking.frag2 test', async () => {
       harvestThresholdMaxAmount: 18_446_744_073_709_551_615n,
       harvestThresholdIntervalSeconds: 0n,
     });
-    
-    await expectMasked(
-      ctx.fund.resolve(true)
-    ).resolves.toMatchInlineSnapshot(`
+
+    await expectMasked(ctx.fund.resolve(true)).resolves.toMatchInlineSnapshot(`
       {
         "assetStrategies": [
           {
@@ -1057,21 +1110,27 @@ describe('restaking.frag2 test', async () => {
       }
     `);
 
-    const programRevenueFragTokenAccount = TokenAccountContext.fromAssociatedTokenSeeds(restaking, () =>
-      Promise.resolve({
-        owner: 'GuSruSKKCmAGuWMeMsiw3mbNhjeiRtNhnh9Eatgz33NA',
-        mint: 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5',
-      })
-    );
+    const programRevenueFragTokenAccount =
+      sdk.TokenAccountContext.fromAssociatedTokenSeeds(restaking, () =>
+        Promise.resolve({
+          owner: 'GuSruSKKCmAGuWMeMsiw3mbNhjeiRtNhnh9Eatgz33NA',
+          mint: 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5',
+        })
+      );
 
-    const programRevenueFragVoteTokenAccount = TokenAccountContext.fromAssociatedTokenSeeds(restaking, () =>
-      Promise.resolve({
-        owner: 'GuSruSKKCmAGuWMeMsiw3mbNhjeiRtNhnh9Eatgz33NA',
-        mint: 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF',
-      })
-    );
+    const programRevenueFragVoteTokenAccount =
+      sdk.TokenAccountContext.fromAssociatedTokenSeeds(restaking, () =>
+        Promise.resolve({
+          owner: 'GuSruSKKCmAGuWMeMsiw3mbNhjeiRtNhnh9Eatgz33NA',
+          mint: 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF',
+        })
+      );
 
-    for (let rewardCommissionRateBps = 0; rewardCommissionRateBps <= 1000; rewardCommissionRateBps += 70) {
+    for (
+      let rewardCommissionRateBps = 0;
+      rewardCommissionRateBps <= 1000;
+      rewardCommissionRateBps += 70
+    ) {
       await ctx.fund.runCommand.executeChained({
         forceResetCommand: 'HarvestRestakingYield',
         operator: restaking.knownAddresses.fundManager,
@@ -1079,26 +1138,33 @@ describe('restaking.frag2 test', async () => {
 
       await ctx.fund.updateRestakingVaultStrategy.execute({
         vault: '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
-        rewardCommissionRateBps: (rewardCommissionRateBps as unknown as number),
+        rewardCommissionRateBps: rewardCommissionRateBps as unknown as number,
       });
 
       // 1) compound reward (frag Token)
-      const fragTokenStatusBefore = await ctx.fund.resolveAccount(true).then(
-      (fundAccount) => fundAccount!.data.supportedTokens
-        .filter(
-          (supportedToken) => supportedToken.mint == 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5'
-        )[0]
-      );
-      const fragTokenAmountBefore = fragTokenStatusBefore!.token.operationReservedAmount;
+      const fragTokenStatusBefore = await ctx.fund
+        .resolveAccount(true)
+        .then(
+          (fundAccount) =>
+            fundAccount!.data.supportedTokens.filter(
+              (supportedToken) =>
+                supportedToken.mint ==
+                'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5'
+            )[0]
+        );
+      const fragTokenAmountBefore =
+        fragTokenStatusBefore!.token.operationReservedAmount;
 
       const programRevenueCompoundRewardTokenAmountBefore =
-        await programRevenueFragTokenAccount.resolveAccount(true).then((account) => account? account.data.amount: 0n);
+        await programRevenueFragTokenAccount
+          .resolveAccount(true)
+          .then((account) => (account ? account.data.amount : 0n));
 
       // airdrop compound reward (frag token)
       await validator.airdropToken(
-       '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
-       'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5',
-        5_000_000_000_000n,
+        '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
+        'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5',
+        5_000_000_000_000n
       );
 
       // harvest compounding reward
@@ -1107,36 +1173,56 @@ describe('restaking.frag2 test', async () => {
         operator: restaking.knownAddresses.fundManager,
       });
 
-      const fragTokenStatusAfter = await ctx.fund.resolveAccount(true).then(
-        (fundAccount) => fundAccount!.data.supportedTokens
-        .filter(
-          (supportedToken) => supportedToken.mint == 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5'
-        )[0]
-      );
-      const fragTokenAmountAfter = fragTokenStatusAfter!.token.operationReservedAmount;
+      const fragTokenStatusAfter = await ctx.fund
+        .resolveAccount(true)
+        .then(
+          (fundAccount) =>
+            fundAccount!.data.supportedTokens.filter(
+              (supportedToken) =>
+                supportedToken.mint ==
+                'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5'
+            )[0]
+        );
+      const fragTokenAmountAfter =
+        fragTokenStatusAfter!.token.operationReservedAmount;
 
       const programRevenueCompoundRewardTokenAmountAfter =
-        await programRevenueFragTokenAccount.resolveAccount(true).then((account) => account? account.data.amount: 0n);
+        await programRevenueFragTokenAccount
+          .resolveAccount(true)
+          .then((account) => (account ? account.data.amount : 0n));
 
-      const programRevenueCompoundRewardTokenAmountDelta = programRevenueCompoundRewardTokenAmountAfter - programRevenueCompoundRewardTokenAmountBefore;
-      const supportedTokenAccountBalanceDelta = fragTokenAmountAfter - fragTokenAmountBefore;
+      const programRevenueCompoundRewardTokenAmountDelta =
+        programRevenueCompoundRewardTokenAmountAfter -
+        programRevenueCompoundRewardTokenAmountBefore;
+      const supportedTokenAccountBalanceDelta =
+        fragTokenAmountAfter - fragTokenAmountBefore;
 
-      expect(programRevenueCompoundRewardTokenAmountDelta).toEqual(5_000_000_000_000n * BigInt(rewardCommissionRateBps) / 10000n);
-      expect(programRevenueCompoundRewardTokenAmountDelta + supportedTokenAccountBalanceDelta).toEqual(5_000_000_000_000n);
-
+      expect(programRevenueCompoundRewardTokenAmountDelta).toEqual(
+        (5_000_000_000_000n * BigInt(rewardCommissionRateBps)) / 10000n
+      );
+      expect(
+        programRevenueCompoundRewardTokenAmountDelta +
+          supportedTokenAccountBalanceDelta
+      ).toEqual(5_000_000_000_000n);
 
       // 2) distribute reward (frag vote Token)
-      const fragVoteTokenAmountBefore = (await ctx.reward.reserve.rewardTokens.resolve(true))
-        .filter((rewardToken) => rewardToken.mint == 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF')[0].amount;
+      const fragVoteTokenAmountBefore = (
+        await ctx.reward.reserve.rewardTokens.resolve(true)
+      ).filter(
+        (rewardToken) =>
+          rewardToken.mint == 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF'
+      )[0].amount;
 
       const programRevenueDistributeRewardTokenAmountBefore =
-        await programRevenueFragVoteTokenAccount.resolveAccount(true).then((account) => account? account.data.amount: 0n);
+        await programRevenueFragVoteTokenAccount
+          .resolveAccount(true)
+          .then((account) => (account ? account.data.amount : 0n));
 
       // airdrop distribute reward (frag vote token)
       await validator.airdropToken(
         '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
         'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF',
-        123_456_789_987_654_321n,
+        123_456_789_987_654_321n
       );
 
       // harvest distributing reward
@@ -1145,42 +1231,63 @@ describe('restaking.frag2 test', async () => {
         operator: restaking.knownAddresses.fundManager,
       });
 
-      const fragVoteTokenAmountAfter = (await ctx.reward.reserve.rewardTokens.resolve(true))
-        .filter((rewardToken) => rewardToken.mint == 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF')[0].amount;
+      const fragVoteTokenAmountAfter = (
+        await ctx.reward.reserve.rewardTokens.resolve(true)
+      ).filter(
+        (rewardToken) =>
+          rewardToken.mint == 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF'
+      )[0].amount;
 
       const programRevenueDistributeRewardTokenAmountAfter =
-        await programRevenueFragVoteTokenAccount.resolveAccount(true).then((account) => account? account.data.amount: 0n);
+        await programRevenueFragVoteTokenAccount
+          .resolveAccount(true)
+          .then((account) => (account ? account.data.amount : 0n));
 
-      const programRevenueDistributeRewardTokenAmountDelta = programRevenueDistributeRewardTokenAmountAfter - programRevenueDistributeRewardTokenAmountBefore;
-      const rewardTokenAccountBalanceDelta = BigInt(fragVoteTokenAmountAfter - fragVoteTokenAmountBefore);
+      const programRevenueDistributeRewardTokenAmountDelta =
+        programRevenueDistributeRewardTokenAmountAfter -
+        programRevenueDistributeRewardTokenAmountBefore;
+      const rewardTokenAccountBalanceDelta = BigInt(
+        fragVoteTokenAmountAfter - fragVoteTokenAmountBefore
+      );
 
-      expect(programRevenueDistributeRewardTokenAmountDelta).toEqual(123_456_789_987_654_321n * BigInt(rewardCommissionRateBps) / 10000n);
-      expect(programRevenueDistributeRewardTokenAmountDelta + rewardTokenAccountBalanceDelta).toEqual(123_456_789_987_654_321n);
+      expect(programRevenueDistributeRewardTokenAmountDelta).toEqual(
+        (123_456_789_987_654_321n * BigInt(rewardCommissionRateBps)) / 10000n
+      );
+      expect(
+        programRevenueDistributeRewardTokenAmountDelta +
+          rewardTokenAccountBalanceDelta
+      ).toEqual(123_456_789_987_654_321n);
     }
 
     // hard limit test (reward commission bps <= 10%)
-    await expect(ctx.fund.updateRestakingVaultStrategy.execute({
-      vault: '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
-      rewardCommissionRateBps: 1000,
-    })).resolves.not.toThrow();
+    await expect(
+      ctx.fund.updateRestakingVaultStrategy.execute({
+        vault: '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
+        rewardCommissionRateBps: 1000,
+      })
+    ).resolves.not.toThrow();
 
-    await expect(ctx.fund.updateRestakingVaultStrategy.execute({
-      vault: '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
-      rewardCommissionRateBps: 1001,
-    })).rejects.toThrow();
+    await expect(
+      ctx.fund.updateRestakingVaultStrategy.execute({
+        vault: '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
+        rewardCommissionRateBps: 1001,
+      })
+    ).rejects.toThrow();
 
     // reset to 0
-    await expect(ctx.fund.updateRestakingVaultStrategy.execute({
-      vault: '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
-      rewardCommissionRateBps: 0,
-    })).resolves.not.toThrow();
+    await expect(
+      ctx.fund.updateRestakingVaultStrategy.execute({
+        vault: '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
+        rewardCommissionRateBps: 0,
+      })
+    ).resolves.not.toThrow();
   });
 
-   /** 6. Operation */
+  /** 6. Operation */
   test('run full operation cycle for regression', async () => {
     // frag2 operation will only initialize -> enqueue withdrawal -> process withdrawal.
     // however this test case is to prevent breaking changes in other commands that affects the full cycle.
     // For example, due to virtual vault's edge case, restaking-related command might be broken unless properly handled
     await ctx.fund.runCommand.executeChained(null);
-  })
+  });
 });

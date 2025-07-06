@@ -1153,7 +1153,7 @@ describe('restaking.fragBTC test', async () => {
     `);
   });
 
-  /** 3. operation and reward **/
+  /** 3. reward settlement by operation **/
   test('fund can settle distributing rewards by operation', async () => {
     // drop distribution token to the vault
     await validator.airdropToken(
@@ -1517,9 +1517,132 @@ describe('restaking.fragBTC test', async () => {
     const user2Reward_2 = await user2.reward.resolve(true);
   });
 
-  /** 4. claim */
+  test('settle should not occur if threshold is not matched', async () => {
+    const rewardTokenMint = 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq';
+
+    // 1. update distributing reward amount threshold -> settle would not occur
+    await ctx.fund.updateRestakingVaultRewardHarvestThreshold.execute({
+      vault: solv.zBTC.address!,
+      rewardTokenMint,
+      harvestThresholdMinAmount: 600_000_000n,
+      harvestThresholdMaxAmount: 700_000_000n,
+      harvestThresholdIntervalSeconds: 1n,
+    });
+
+    // drop distribution token to the vault
+    await validator.airdropToken(
+      solv.zBTC.address!,
+      rewardTokenMint,
+      500_000_000n
+    );
+
+    const globalReward_4 = await ctx.reward.resolve(true);
+
+    // try to settle global reward
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestRestakingYield',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    const globalReward_5 = await ctx.reward.resolve(true);
+
+    // settle not occurs
+    expect(
+      globalReward_5?.basePool.settlements[0].settlementBlocksLastSlot!
+    ).toEqual(
+      globalReward_4?.basePool.settlements[0].settlementBlocksLastSlot!
+    );
+
+    // 2. update distributing reward interval second threshold -> settle would not occur
+    await ctx.fund.updateRestakingVaultRewardHarvestThreshold.execute({
+      vault: solv.zBTC.address!,
+      rewardTokenMint,
+      harvestThresholdMinAmount: 200_000_000n,
+      harvestThresholdMaxAmount: 300_000_000n,
+      harvestThresholdIntervalSeconds: 100n,
+    });
+
+    // try to settle global reward
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestRestakingYield',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    const globalReward_6 = await ctx.reward.resolve(true);
+
+    // settle not occurs
+    expect(
+      globalReward_6?.basePool.settlements[0].settlementBlocksLastSlot!
+    ).toEqual(
+      globalReward_4?.basePool.settlements[0].settlementBlocksLastSlot!
+    );
+
+    // 3. update distributing reward interval second threshold -> now settle would occur but not fully settled due to max amount threshold
+    await ctx.fund.updateRestakingVaultRewardHarvestThreshold.execute({
+      vault: solv.zBTC.address!,
+      rewardTokenMint,
+      harvestThresholdMinAmount: 200_000_000n,
+      harvestThresholdMaxAmount: 300_000_000n,
+      harvestThresholdIntervalSeconds: 0n,
+    });
+
+    // now settle occurs but not fully settled
+    await validator.skipSlots(1n);
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestRestakingYield',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    const globalReward_7 = await ctx.reward.resolve(true);
+
+    expect(
+      globalReward_7?.basePool.settlements[0].settlementBlocksLastSlot!
+    ).toBeGreaterThan(
+      globalReward_4?.basePool.settlements[0].settlementBlocksLastSlot!
+    );
+
+    expect(
+      globalReward_7?.basePool.settlements[0].settledAmount! -
+        globalReward_4?.basePool.settlements[0].settledAmount!
+    ).toEqual(300_000_000n);
+
+    // 4. now fully settled
+    await validator.skipSlots(1n);
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestRestakingYield',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    const globalReward_8 = await ctx.reward.resolve(true);
+
+    expect(
+      globalReward_8?.basePool.settlements[0].settlementBlocksLastSlot!
+    ).toBeGreaterThan(
+      globalReward_7?.basePool.settlements[0].settlementBlocksLastSlot!
+    );
+
+    expect(
+      globalReward_8?.basePool.settlements[0].settledAmount! -
+        globalReward_7?.basePool.settlements[0].settledAmount!
+    ).toEqual(200_000_000n);
+  });
+
+  /** 4. reward claim */
   test('user can claim reward token after settlement', async () => {
-    const claimRes = await user1.reward.claim.execute(
+    const rewardBefore = (await ctx.reward.resolve(true))!;
+    const userRewardBefore = (await user1.reward.resolve(true))!;
+    const userRewardAmountBefore = await user1.rewardTokens
+      .resolve(true)
+      .then(
+        (tokens) =>
+          tokens.find(
+            (token) =>
+              token !== null &&
+              token.mint == 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq'
+          )?.amount ?? 0n
+      );
+
+    const res = await user1.reward.claim.execute(
       {
         mint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
         amount: null,
@@ -1529,41 +1652,35 @@ describe('restaking.fragBTC test', async () => {
     );
 
     const claimedRewardAmount =
-      claimRes.events?.userClaimedReward?.claimedRewardTokenAmount;
+      res.events?.userClaimedReward?.claimedRewardTokenAmount;
+
+    const rewardAfter = (await ctx.reward.resolve(true))!;
+    const userRewardAfter = (await user1.reward.resolve(true))!;
+    const userRewardAmountAfter = await user1.rewardTokens
+      .resolve(true)
+      .then(
+        (tokens) =>
+          tokens.find(
+            (token) =>
+              token !== null &&
+              token.mint == 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq'
+          )!.amount
+      );
 
     // check claimed amount at settlement equals to real claimed amount from claim event
-    const user1Reward_4 = await user1.reward.resolve(true);
     expect(
-      user1Reward_4?.basePool.settlements.map(
-        (settlement) => settlement.claimedAmount
-      ),
-      't9_1'
-    ).toEqual([claimedRewardAmount]);
+      rewardAfter.basePool.settlements[0].claimedAmount -
+        rewardBefore.basePool.settlements[0].claimedAmount
+    ).toEqual(claimedRewardAmount);
+    expect(
+      userRewardAfter.basePool.settlements[0].claimedAmount -
+        userRewardBefore.basePool.settlements[0].claimedAmount
+    ).toEqual(claimedRewardAmount);
 
     // check claimed amount has moved to user1's reward token account
-    await expect(
-      user1.rewardTokens
-        .resolve(true)
-        .then((tokens) => tokens.map((token) => token?.amount)),
-      't9_2'
-    ).resolves.toEqual([undefined, claimedRewardAmount]);
-
-    const user1RewardTokenAccounts = await user1.rewardTokens.resolve(true);
-    const user1ZeusRewardTokenAccount = user1RewardTokenAccounts.filter(
-      (tokenAccount) =>
-        tokenAccount !== null &&
-        tokenAccount.mint.toString() ==
-          'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq'
-    )[0];
-    expect(user1ZeusRewardTokenAccount.amount, 't9_3').toEqual(
+    expect(userRewardAmountAfter - userRewardAmountBefore).toEqual(
       claimedRewardAmount
     );
-
-    const globalReward_2 = await ctx.reward.resolve(true);
-    expect(
-      globalReward_2?.basePool.settlements[0].claimedAmount,
-      't9_4'
-    ).toEqual(user1Reward_4?.basePool.settlements[0].claimedAmount);
   });
 
   test('settle -> everyone claim -> update reward pool -> check the remaining amount', async () => {
@@ -1576,16 +1693,21 @@ describe('restaking.fragBTC test', async () => {
       rewardAmount
     );
 
-    const globalReward_2 = await ctx.reward.resolve(true);
-    const user1Reward_4 = await user1.reward.resolve(true);
-    const user2Reward_2 = await user2.reward.resolve(true);
+    await ctx.reward.updatePools.execute(null);
+    await user1.reward.updatePools.execute(null);
+    await user2.reward.updatePools.execute(null);
+
+    const globalReward_0 = (await ctx.reward.resolve(true))!;
+    const user1Reward_0 = (await user1.reward.resolve(true))!;
+    const user2Reward_0 = (await user2.reward.resolve(true))!;
 
     // settle global reward
-    const settleRewardRes = await ctx.reward.settleReward.execute({
-      mint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
-      amount: rewardAmount,
-    });
-    await expectMasked(settleRewardRes).resolves.toMatchInlineSnapshot(`
+    await expectMasked(
+      ctx.reward.settleReward.execute({
+        mint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
+        amount: rewardAmount,
+      })
+    ).resolves.toMatchInlineSnapshot(`
       {
         "args": {
           "amount": 100000000000n,
@@ -1605,22 +1727,42 @@ describe('restaking.fragBTC test', async () => {
       }
     `);
 
+    const globalReward_1 = (await ctx.reward.resolve(true))!;
+
     // check global reward pool settlement amount delta
-    const globalReward_3 = await ctx.reward.resolve(true);
+    const globalSettlement_0 = globalReward_0.basePool.settlements[0];
+    const globalSettlement_1 = globalReward_1.basePool.settlements[0];
+    const lastSettlementBlock_1 =
+      globalSettlement_1.blocks[globalSettlement_1.blocks.length - 1];
+    const globalSettledContribution_1 =
+      lastSettlementBlock_1.endingContribution -
+      lastSettlementBlock_1.startingContribution;
+    expect(
+      globalSettlement_1.settledAmount - globalSettlement_0.settledAmount
+    ).toEqual(rewardAmount);
+    expect(
+      globalSettlement_1.settlementBlocksLastRewardPoolContribution -
+        globalSettlement_0.settlementBlocksLastRewardPoolContribution
+    ).toEqual(globalSettledContribution_1);
 
-    const settledAmountDeltas = globalReward_3?.basePool.settlements.map(
-      (afterSettlement, i) => {
-        const beforeSettlement = globalReward_2?.basePool.settlements[i];
-        const beforeSettledAmount = beforeSettlement?.settledAmount ?? 0n;
-        return afterSettlement.settledAmount - beforeSettledAmount;
-      }
+    // update user1 reward
+    await user1.reward.updatePools.execute(null);
+
+    const user1Reward_1 = (await user1.reward.resolve(true))!;
+
+    // check user1 reward pool settlement amount delta
+    const user1Settlement_0 = user1Reward_0.basePool.settlements[0];
+    const user1Settlement_1 = user1Reward_1.basePool.settlements[0];
+    const user1SettledContribution_1 =
+      user1Settlement_1.settledContribution -
+      user1Settlement_0.settledContribution;
+    expect(
+      user1Settlement_1.settledAmount - user1Settlement_0.settledAmount
+    ).toEqual(
+      (rewardAmount * user1SettledContribution_1) / globalSettledContribution_1
     );
-    expect(settledAmountDeltas, 't10_1').toEqual([rewardAmount]);
 
-    await user1.reward.updatePools.execute(null); // just did updatedPools to check abount claimedRewardTokenAmount at the event is correct
-    const user1Reward_5 = await user1.reward.resolve(true);
-
-    // user1 claim total
+    // user1 claims
     const user1ClaimRes = await user1.reward.claim.execute(
       {
         mint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
@@ -1630,34 +1772,14 @@ describe('restaking.fragBTC test', async () => {
       { signers: [signer1] }
     );
 
-    // check user1 reward pool settlement amount delta
-    const user1Reward_6 = await user1.reward.resolve(true);
+    const user1Reward_2 = (await user1.reward.resolve(true))!;
 
-    const globalSettledContribution_1 =
-      globalReward_3?.basePool.settlements[0].blocks[0].endingContribution! -
-      globalReward_3?.basePool.settlements[0].blocks[0].startingContribution!;
-
+    const user1Settlement_2 = user1Reward_2.basePool.settlements[0];
     expect(
-      user1ClaimRes.events?.userClaimedReward?.claimedRewardTokenAmount,
-      't10_2'
+      user1ClaimRes.events?.userClaimedReward?.claimedRewardTokenAmount
     ).toEqual(
-      user1Reward_5?.basePool.settlements[0].settledAmount! -
-        user1Reward_5?.basePool.settlements[0].claimedAmount!
+      user1Settlement_1.settledAmount! - user1Settlement_1.claimedAmount!
     );
-
-    const user1SettledAmountDeltas = user1Reward_6?.basePool.settlements.map(
-      (afterSettlement, i) => {
-        const beforeSettlement = user1Reward_4?.basePool.settlements[i];
-        const beforeSettledAmount = beforeSettlement?.settledAmount ?? 0n;
-        return afterSettlement.settledAmount - beforeSettledAmount;
-      }
-    );
-    expect(user1SettledAmountDeltas!, 't10_3').toEqual([
-      (rewardAmount *
-        (user1Reward_6?.basePool.settlements[0].settledContribution! -
-          user1Reward_4?.basePool.settlements[0].settledContribution!)) /
-        globalSettledContribution_1,
-    ]);
 
     // user2 claim total
     await user2.reward.claim.execute(
@@ -1669,32 +1791,39 @@ describe('restaking.fragBTC test', async () => {
       { signers: [signer2] }
     );
 
-    const user2Reward_3 = await user2.reward.resolve(true);
+    const user2Reward_2 = (await user2.reward.resolve(true))!;
 
-    const user2SettledAmountDeltas = user2Reward_3?.basePool.settlements.map(
-      (afterSettlement, i) => {
-        const beforeSettlement = user2Reward_2?.basePool.settlements[i];
-        const beforeSettledAmount = beforeSettlement?.settledAmount ?? 0n;
-        return afterSettlement.settledAmount - beforeSettledAmount;
-      }
+    // check user2 reward pool settlement amount delta
+    const user2Settlement_0 = user2Reward_0.basePool.settlements[0];
+    const user2Settlement_2 = user2Reward_2.basePool.settlements[0];
+    const user2SettledContribution_1 =
+      user2Settlement_2.settledContribution -
+      user2Settlement_0.settledContribution;
+    expect(
+      user2Settlement_2.settledAmount - user2Settlement_0.settledAmount
+    ).toEqual(
+      (rewardAmount * user2SettledContribution_1) / globalSettledContribution_1
     );
-    expect(user2SettledAmountDeltas!, ' t10_4').toEqual([
-      (rewardAmount *
-        (user2Reward_3?.basePool.settlements[0].settledContribution! -
-          user2Reward_2?.basePool.settlements[0].settledContribution!)) /
-        globalSettledContribution_1,
-    ]);
 
-    // update global reward
-    await validator.skipSlots(2n);
+    // update
     await ctx.reward.updatePools.execute(null);
+    await user1.reward.updatePools.execute(null);
+
+    const globalReward_2 = (await ctx.reward.resolve(true))!;
 
     // check remaing amount == 1
-    const globalReward_4 = await ctx.reward.resolve(true);
+    const globalSettlement_2 = globalReward_2.basePool.settlements[0];
+    expect(
+      globalSettlement_2.remainingAmount - globalSettlement_1.remainingAmount
+    ).toEqual(1n);
 
-    expect(globalReward_4?.basePool.settlements[0].claimedAmount).toEqual(
-      user1Reward_6?.basePool.settlements[0].claimedAmount! +
-        user2Reward_3?.basePool.settlements[0].claimedAmount!
+    expect(
+      globalSettlement_2.claimedAmount - globalSettlement_1.claimedAmount
+    ).toEqual(
+      user1Settlement_2.claimedAmount -
+        user1Settlement_1.claimedAmount +
+        user2Settlement_2.claimedAmount -
+        user2Settlement_0.claimedAmount
     );
   });
 
@@ -1871,119 +2000,8 @@ describe('restaking.fragBTC test', async () => {
     ]);
   });
 
-  /** 6. settle with threshold */
-  test('settle should not occur if threshold is not matched', async () => {
-    const rewardTokenMint = 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq';
-
-    // 1. update distributing reward amount threshold -> settle would not occur
-    await ctx.fund.updateRestakingVaultRewardHarvestThreshold.execute({
-      vault: solv.zBTC.address!,
-      rewardTokenMint,
-      harvestThresholdMinAmount: 600_000_000n,
-      harvestThresholdMaxAmount: 700_000_000n,
-      harvestThresholdIntervalSeconds: 1n,
-    });
-
-    // drop distribution token to the vault
-    await validator.airdropToken(
-      solv.zBTC.address!,
-      rewardTokenMint,
-      500_000_000n
-    );
-
-    const globalReward_4 = await ctx.reward.resolve(true);
-
-    // try to settle global reward
-    await ctx.fund.runCommand.executeChained({
-      forceResetCommand: 'HarvestRestakingYield',
-      operator: restaking.knownAddresses.fundManager,
-    });
-
-    const globalReward_5 = await ctx.reward.resolve(true);
-
-    // settle not occurs
-    expect(
-      globalReward_5?.basePool.settlements[0].settlementBlocksLastSlot!
-    ).toEqual(
-      globalReward_4?.basePool.settlements[0].settlementBlocksLastSlot!
-    );
-
-    // 2. update distributing reward interval second threshold -> settle would not occur
-    await ctx.fund.updateRestakingVaultRewardHarvestThreshold.execute({
-      vault: solv.zBTC.address!,
-      rewardTokenMint,
-      harvestThresholdMinAmount: 200_000_000n,
-      harvestThresholdMaxAmount: 300_000_000n,
-      harvestThresholdIntervalSeconds: 100n,
-    });
-
-    // try to settle global reward
-    await ctx.fund.runCommand.executeChained({
-      forceResetCommand: 'HarvestRestakingYield',
-      operator: restaking.knownAddresses.fundManager,
-    });
-
-    const globalReward_6 = await ctx.reward.resolve(true);
-
-    // settle not occurs
-    expect(
-      globalReward_6?.basePool.settlements[0].settlementBlocksLastSlot!
-    ).toEqual(
-      globalReward_4?.basePool.settlements[0].settlementBlocksLastSlot!
-    );
-
-    // 3. update distributing reward interval second threshold -> now settle would occur but not fully settled due to max amount threshold
-    await ctx.fund.updateRestakingVaultRewardHarvestThreshold.execute({
-      vault: solv.zBTC.address!,
-      rewardTokenMint,
-      harvestThresholdMinAmount: 200_000_000n,
-      harvestThresholdMaxAmount: 300_000_000n,
-      harvestThresholdIntervalSeconds: 0n,
-    });
-
-    // now settle occurs but not fully settled
-    await validator.skipSlots(1n);
-    await ctx.fund.runCommand.executeChained({
-      forceResetCommand: 'HarvestRestakingYield',
-      operator: restaking.knownAddresses.fundManager,
-    });
-
-    const globalReward_7 = await ctx.reward.resolve(true);
-
-    expect(
-      globalReward_7?.basePool.settlements[0].settlementBlocksLastSlot!
-    ).toBeGreaterThan(
-      globalReward_4?.basePool.settlements[0].settlementBlocksLastSlot!
-    );
-
-    expect(
-      globalReward_7?.basePool.settlements[0].settledAmount! -
-        globalReward_4?.basePool.settlements[0].settledAmount!
-    ).toEqual(300_000_000n);
-
-    // 4. now fully settled
-    await validator.skipSlots(1n);
-    await ctx.fund.runCommand.executeChained({
-      forceResetCommand: 'HarvestRestakingYield',
-      operator: restaking.knownAddresses.fundManager,
-    });
-
-    const globalReward_8 = await ctx.reward.resolve(true);
-
-    expect(
-      globalReward_8?.basePool.settlements[0].settlementBlocksLastSlot!
-    ).toBeGreaterThan(
-      globalReward_7?.basePool.settlements[0].settlementBlocksLastSlot!
-    );
-
-    expect(
-      globalReward_8?.basePool.settlements[0].settledAmount! -
-        globalReward_7?.basePool.settlements[0].settledAmount!
-    ).toEqual(200_000_000n);
-  });
-
   // TODO: full operation test through cash in/out flow
-  /** 7. operation cycle */
+  /** 6. operation cycle */
   test('fragBTC does restake/unrestake assets into/from solvBTC vault', async () => {
     // no changes on fragBTC price
     await expectMasked(ctx.resolve(true)).resolves.toMatchInlineSnapshot(`
@@ -2987,7 +3005,7 @@ describe('restaking.fragBTC test', async () => {
             "withdrawableValueAsReceiptTokenAmount": 2307618932n,
             "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
             "withdrawalResidualMicroAssetAmount": 910935n,
-            "withdrawalUserReservedAmount": 103599312n,
+            "withdrawalUserReservedAmount": 103599311n,
           },
           {
             "decimals": 8,
