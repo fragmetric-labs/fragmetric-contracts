@@ -539,7 +539,7 @@ impl VaultAccount {
         &mut self,
         one_srt_as_micro_vst: u64,
         heuristic_validation: bool,
-    ) -> Result<()> {
+    ) -> Result<(u64, u64, u64, u64)> {
         if self.is_deposit_in_progress() {
             err!(VaultError::DepositInProgressError)?;
         }
@@ -556,17 +556,25 @@ impl VaultAccount {
             err!(VaultError::InvalidSRTPriceError)?;
         }
 
+        let old_one_srt_as_micro_vst = self.one_srt_as_micro_vst;
+        let old_one_vrt_as_micro_vst = self.one_vrt_as_micro_vst;
+
         self.one_srt_as_micro_vst = one_srt_as_micro_vst;
         self.update_vrt_exchange_rate()?;
 
-        Ok(())
+        Ok((
+            old_one_srt_as_micro_vst,
+            self.one_srt_as_micro_vst,
+            old_one_vrt_as_micro_vst,
+            self.one_vrt_as_micro_vst,
+        ))
     }
 
     pub(crate) fn adjust_srt_exchange_rate_with_extra_vst_receivables(
         &mut self,
         one_srt_as_micro_vst: u64,
         heuristic_validation: bool,
-    ) -> Result<()> {
+    ) -> Result<(u64, u64, u64, u64)> {
         if self.is_deposit_in_progress() {
             err!(VaultError::DepositInProgressError)?;
         }
@@ -596,7 +604,12 @@ impl VaultAccount {
         self.vst_operation_receivable_amount += delta;
         self.one_srt_as_micro_vst = one_srt_as_micro_vst;
 
-        Ok(())
+        Ok((
+            self.one_srt_as_micro_vst,
+            one_srt_as_micro_vst,
+            delta,
+            self.vst_operation_receivable_amount,
+        ))
     }
 
     fn is_deposit_in_progress(&self) -> bool {

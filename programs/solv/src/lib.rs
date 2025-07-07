@@ -136,14 +136,24 @@ pub mod solv {
         mut ctx: Context<SolvManagerContext>,
         new_one_srt_as_micro_vst: u64,
     ) -> Result<()> {
-        process_refresh_solv_receipt_token_redemption_rate(&mut ctx, new_one_srt_as_micro_vst)
+        emit_cpi!(process_refresh_solv_receipt_token_redemption_rate(
+            &mut ctx,
+            new_one_srt_as_micro_vst
+        )?);
+
+        Ok(())
     }
 
     pub fn solv_manager_imply_solv_protocol_fee(
         mut ctx: Context<SolvManagerContext>,
         new_one_srt_as_micro_vst: u64,
     ) -> Result<()> {
-        process_imply_solv_protocol_fee(&mut ctx, new_one_srt_as_micro_vst)
+        emit_cpi!(process_imply_solv_protocol_fee(
+            &mut ctx,
+            new_one_srt_as_micro_vst
+        )?);
+
+        Ok(())
     }
 
     pub fn solv_manager_confirm_donations(
@@ -151,7 +161,9 @@ pub mod solv {
         srt_amount: u64,
         vst_amount: u64,
     ) -> Result<()> {
-        process_confirm_donations(&mut ctx, srt_amount, vst_amount)
+        emit_cpi!(process_confirm_donations(&mut ctx, srt_amount, vst_amount)?);
+
+        Ok(())
     }
 
     ////////////////////////////////////////////
