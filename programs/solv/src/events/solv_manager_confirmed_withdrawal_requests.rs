@@ -6,11 +6,11 @@ pub struct SolvManagerConfirmedWithdrawalRequests {
     pub solv_protocol_wallet: Pubkey,
     pub solv_manager: Pubkey,
 
-    pub vst_mint: Pubkey,
-    pub vrt_mint: Pubkey,
-    pub srt_mint: Pubkey,
+    pub vault_supported_token_mint: Pubkey,
+    pub vault_receipt_token_mint: Pubkey,
+    pub solv_receipt_token_mint: Pubkey,
 
     pub confirmed_srt_amount: u64,
     pub processing_vrt_amount: u64,
-    pub vst_receivable_amount_to_claim: u64,
+    pub estimated_vst_amount: u64,
 }

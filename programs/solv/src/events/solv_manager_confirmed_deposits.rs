@@ -6,12 +6,12 @@ pub struct SolvManagerConfirmedDeposits {
     pub solv_protocol_wallet: Pubkey,
     pub solv_manager: Pubkey,
 
-    pub vst_mint: Pubkey,
-    pub vrt_mint: Pubkey,
-    pub srt_mint: Pubkey,
+    pub vault_supported_token_mint: Pubkey,
+    pub vault_receipt_token_mint: Pubkey,
+    pub solv_receipt_token_mint: Pubkey,
 
-    pub solv_deposited_vst_amount: u64,
-    pub srt_receivable_amount_for_deposit: u64,
-    pub deposit_fee_as_vst: u64,
+    pub confirmed_vst_amount: u64,
+    pub deducted_vst_deposit_fee_amount: u64,
+    pub expected_srt_amount: u64,
     pub one_srt_as_micro_vst: u64,
 }

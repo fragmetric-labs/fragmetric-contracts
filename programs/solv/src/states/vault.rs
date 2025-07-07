@@ -1,8 +1,8 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::Mint;
 
+use crate::constants;
 use crate::errors::VaultError;
-use crate::{constants, events};
 
 #[constant]
 /// ## Version History
@@ -420,10 +420,7 @@ impl VaultAccount {
     /// VRT mint amount = floor(VST * VRT supply / NAV) ?? VST
     /// * VRT price = NAV / VRT supply
     /// * NAV = VST (operation reserved + receivable) + floor(SRT (operation reserved) as VST) + floor(SRT (operation receivable) as VST)
-    pub(crate) fn mint_vrt(
-        &mut self,
-        vst_amount: u64,
-    ) -> Result<events::FundManagerDepositedToVault> {
+    pub(crate) fn mint_vrt(&mut self, vst_amount: u64) -> Result<u64> {
         let vrt_amount = self.get_vrt_amount_to_mint(vst_amount)?;
 
         self.vrt_supply += vrt_amount;
@@ -431,13 +428,7 @@ impl VaultAccount {
 
         self.update_vrt_exchange_rate()?;
 
-        Ok(events::FundManagerDepositedToVault {
-            vault: Pubkey::default(),
-            vst_mint: self.vault_supported_token_mint,
-            vrt_mint: self.vault_receipt_token_mint,
-            vst_amount,
-            minted_vrt_amount: vrt_amount,
-        })
+        Ok(vrt_amount)
     }
 
     /// VRT mint amount = floor(VST * VRT supply / NAV) ?? VST
@@ -615,10 +606,9 @@ impl VaultAccount {
     /// Fixed amount fee is not accounted here - we don't know exact amount now
     /// * VST protocol deposit fee = ceil(VST * solv_protocol_deposit_fee_rate)  
     /// * SRT expected = ceil((VST - protocol fee) as SRT)
-    pub(crate) fn deposit_vst(
-        &mut self,
-        vst_amount: u64,
-    ) -> Result<events::SolvManagerConfirmedDeposits> {
+    ///
+    /// returns (one_srt_as_micro_vst, solv_protocol_deposit_fee_amount, srt_expected_amount)
+    pub(crate) fn deposit_vst(&mut self, vst_amount: u64) -> Result<(u64, u64, u64)> {
         if self.is_deposit_in_progress() {
             err!(VaultError::DepositInProgressError)?;
         }
@@ -640,20 +630,11 @@ impl VaultAccount {
         self.vst_operation_receivable_amount += solv_protocol_deposit_fee_amount_as_vst;
         self.srt_operation_receivable_amount = srt_expected_amount;
 
-        Ok(events::SolvManagerConfirmedDeposits {
-            vault: Pubkey::default(),
-            solv_protocol_wallet: self.solv_protocol_wallet,
-            solv_manager: self.solv_manager,
-
-            vst_mint: self.vault_supported_token_mint,
-            vrt_mint: self.vault_receipt_token_mint,
-            srt_mint: self.solv_receipt_token_mint,
-
-            solv_deposited_vst_amount: vst_amount,
-            srt_receivable_amount_for_deposit: self.srt_operation_receivable_amount,
-            deposit_fee_as_vst: solv_protocol_deposit_fee_amount_as_vst,
-            one_srt_as_micro_vst: self.one_srt_as_micro_vst,
-        })
+        Ok((
+            self.one_srt_as_micro_vst,
+            solv_protocol_deposit_fee_amount_as_vst,
+            srt_expected_amount,
+        ))
     }
 
     /// Offset VST receivables with VST donation.
@@ -696,12 +677,14 @@ impl VaultAccount {
     }
 
     /// VST fixed amount fee = max(floor(SRT receivable as VST (w/ old price)) - floor(SRT as VST (w/ new price)), 0) ≤ HARD LIMIT(20000)
+    ///
+    /// returns (old_one_srt_as_micro_vst, solv_protocol_extra_fee_amount, srt_operation_reserved_amount)
     pub(crate) fn offset_srt_receivables(
         &mut self,
         srt_amount: u64,
         new_one_srt_as_micro_vst: u64,
         heuristic_validation: bool,
-    ) -> Result<events::SolvManagerCompletedDeposits> {
+    ) -> Result<(u64, u64, u64)> {
         if !self.is_deposit_in_progress() {
             err!(VaultError::DepositNotInProgressError)?;
         }
@@ -733,33 +716,21 @@ impl VaultAccount {
             heuristic_validation,
         )?;
 
-        Ok(events::SolvManagerCompletedDeposits {
-            vault: Pubkey::default(),
-            solv_protocol_wallet: self.solv_protocol_wallet,
-            solv_manager: self.solv_manager,
-
-            vst_mint: self.vault_supported_token_mint,
-            vrt_mint: self.vault_receipt_token_mint,
-            srt_mint: self.solv_receipt_token_mint,
-
-            received_srt_amount: srt_amount,
-            srt_total_reserved_amount: self.get_srt_total_reserved_amount(),
+        Ok((
             old_one_srt_as_micro_vst,
-            new_one_srt_as_micro_vst,
-            extra_deposit_fee_as_vst: solv_protocol_extra_deposit_fee_amount_as_vst,
-        })
+            solv_protocol_extra_deposit_fee_amount_as_vst,
+            self.srt_operation_reserved_amount,
+        ))
     }
 
     fn get_withdrawal_requests_iter_mut(&mut self) -> impl Iterator<Item = &mut WithdrawalRequest> {
         self.withdrawal_requests[..self.num_withdrawal_requests as usize].iter_mut()
     }
 
-    /// returns ∆vrt_withdrawal_enqueued_amount, which "might" be less than given vrt_amount,
+    /// returns (vrt_withdrawal_enqueued_amount, estimated_vst_withdrawal_amount).
+    /// vrt_withdrawal_enqueued_amount "might" be less than given vrt_amount,
     /// due to srt operation receivable amount.
-    pub(crate) fn enqueue_withdrawal_request(
-        &mut self,
-        mut vrt_amount: u64,
-    ) -> Result<Option<events::FundManagerRequestedWithdrawalFromVault>> {
+    pub(crate) fn enqueue_withdrawal_request(&mut self, mut vrt_amount: u64) -> Result<(u64, u64)> {
         let srt_exchange_rate = self.get_srt_exchange_rate();
         let srt_operation_reserved_amount_as_vst = srt_exchange_rate
             .get_srt_amount_as_vst(self.srt_operation_reserved_amount, false)
@@ -790,7 +761,7 @@ impl VaultAccount {
 
         // Ignore empty request
         if vrt_amount == 0 {
-            return Ok(None);
+            return Ok((0, 0));
         }
 
         // Withdrawal request is full
@@ -944,19 +915,13 @@ impl VaultAccount {
 
         self.update_vrt_exchange_rate()?;
 
-        Ok(Some(events::FundManagerRequestedWithdrawalFromVault {
-            vault: Pubkey::default(),
-            vst_mint: self.vault_supported_token_mint,
-            vrt_mint: self.vault_receipt_token_mint,
-            burnt_vrt_amount: vrt_amount,
-            vst_estimated_amount: vst_withdrawal_total_estimated_amount,
-        }))
+        Ok((vrt_amount, vst_withdrawal_total_estimated_amount))
     }
 
-    pub(crate) fn confirm_withdrawal_requests(
-        &mut self,
-    ) -> Result<events::SolvManagerConfirmedWithdrawalRequests> {
+    /// returns (srt_amount_to_withdraw, vrt_withdrawal_processing_amount, vst_receivable_amount_to_claim)
+    pub(crate) fn confirm_withdrawal_requests(&mut self) -> Result<(u64, u64, u64)> {
         let srt_amount_to_withdraw = self.srt_withdrawal_locked_amount;
+        let vrt_withdrawal_processing_amount = self.vrt_withdrawal_enqueued_amount;
 
         // Start
         let mut vst_receivable_amount_to_claim = 0;
@@ -970,35 +935,28 @@ impl VaultAccount {
         }
 
         // Update accountings
-        self.vrt_withdrawal_processing_amount += self.vrt_withdrawal_enqueued_amount;
+        self.vrt_withdrawal_processing_amount += vrt_withdrawal_processing_amount;
         self.vrt_withdrawal_enqueued_amount = 0;
 
         self.vst_receivable_amount_to_claim += vst_receivable_amount_to_claim;
 
         self.srt_withdrawal_locked_amount = 0;
 
-        Ok(events::SolvManagerConfirmedWithdrawalRequests {
-            vault: Pubkey::default(),
-            solv_protocol_wallet: self.solv_protocol_wallet,
-            solv_manager: self.solv_manager,
-
-            vst_mint: self.vault_supported_token_mint,
-            vrt_mint: self.vault_receipt_token_mint,
-            srt_mint: self.solv_receipt_token_mint,
-
-            confirmed_srt_amount: srt_amount_to_withdraw,
-            processing_vrt_amount: self.vrt_withdrawal_processing_amount,
-            vst_receivable_amount_to_claim: self.vst_receivable_amount_to_claim,
-        })
+        Ok((
+            srt_amount_to_withdraw,
+            vrt_withdrawal_processing_amount,
+            vst_receivable_amount_to_claim,
+        ))
     }
 
+    /// returns (vst_reserved_amount_to_claim, vst_extra_amount_to_claim, vst_deducted_fee_amount)
     pub(crate) fn complete_withdrawal_requests(
         &mut self,
         srt_amount: u64,
         vst_amount: u64,
         old_one_srt_as_micro_vst: u64, // SRT price which request processed at
         heuristic_validation: bool,
-    ) -> Result<events::SolvManagerCompletedWithdrawalRequests> {
+    ) -> Result<(u64, u64, u64)> {
         if self.is_deposit_in_progress() {
             err!(VaultError::DepositInProgressError)?;
         }
@@ -1116,25 +1074,15 @@ impl VaultAccount {
             err!(VaultError::InvalidSRTPriceError)?;
         }
 
-        Ok(events::SolvManagerCompletedWithdrawalRequests {
-            vault: Pubkey::default(),
-            solv_protocol_wallet: self.solv_protocol_wallet,
-            solv_manager: self.solv_manager,
-
-            vst_mint: self.vault_supported_token_mint,
-            vrt_mint: self.vault_receipt_token_mint,
-            srt_mint: self.solv_receipt_token_mint,
-
-            burnt_srt_amount: srt_amount,
-            withdrawan_vst_amount: vst_amount,
-            vst_reserved_amount_to_claim: self.vst_reserved_amount_to_claim,
-            vst_extra_amount_to_claim: self.vst_extra_amount_to_claim,
-            vst_deducted_fee_amount: self.vst_deducted_fee_amount,
-        })
+        Ok((
+            vst_reserved_amount_to_claim,
+            vst_extra_amount_to_claim,
+            vst_deducted_fee_amount,
+        ))
     }
 
     /// returns claimed_vst_amount
-    pub(crate) fn claim_vst(&mut self) -> Result<events::FundManagerWithdrewFromVault> {
+    pub(crate) fn claim_vst(&mut self) -> Result<u64> {
         let vst_amount = self.get_vst_claimable_amount();
 
         // Clear completed withdrawal requests
@@ -1153,13 +1101,7 @@ impl VaultAccount {
         self.vst_extra_amount_to_claim = 0;
         self.vst_deducted_fee_amount = 0;
 
-        Ok(events::FundManagerWithdrewFromVault {
-            vault: Pubkey::default(),
-            vst_mint: self.vault_supported_token_mint,
-            vrt_mint: self.vault_receipt_token_mint,
-
-            claimed_vst_amount: vst_amount,
-        })
+        Ok(vst_amount)
     }
 
     pub fn get_vst_claimable_amount(&self) -> u64 {
@@ -1702,7 +1644,7 @@ mod tests {
                 false,
             )
             .unwrap();
-            let vrt_amount = vault.enqueue_withdrawal_request(vault.vrt_supply).unwrap();
+            let (vrt_amount, _) = vault.enqueue_withdrawal_request(vault.vrt_supply).unwrap();
 
             assert_eq!(vrt_amount, expected_vrt_amount);
             assert_eq!(vault.vrt_supply + expected_vrt_amount, old_vault.vrt_supply);
@@ -1742,7 +1684,7 @@ mod tests {
                 false,
             )
             .unwrap();
-            let vrt_amount = vault.enqueue_withdrawal_request(vault.vrt_supply).unwrap();
+            let (vrt_amount, _) = vault.enqueue_withdrawal_request(vault.vrt_supply).unwrap();
 
             assert_eq!(vrt_amount, expected_vrt_amount);
             assert_eq!(vault.vrt_supply + expected_vrt_amount, old_vault.vrt_supply);
@@ -1780,7 +1722,7 @@ mod tests {
                 false,
             )
             .unwrap();
-            let post_vrt_amount = vault.enqueue_withdrawal_request(vrt_amount).unwrap();
+            let (post_vrt_amount, _) = vault.enqueue_withdrawal_request(vrt_amount).unwrap();
 
             assert_eq!(post_vrt_amount, vrt_amount);
             assert_eq!(vault.vrt_supply + vrt_amount, old_vault.vrt_supply);
@@ -1819,7 +1761,7 @@ mod tests {
                 false,
             )
             .unwrap();
-            let post_vrt_amount = vault.enqueue_withdrawal_request(vrt_amount).unwrap();
+            let (post_vrt_amount, _) = vault.enqueue_withdrawal_request(vrt_amount).unwrap();
 
             assert_eq!(post_vrt_amount, vrt_amount);
             assert_eq!(vault.vrt_supply + vrt_amount, old_vault.vrt_supply);

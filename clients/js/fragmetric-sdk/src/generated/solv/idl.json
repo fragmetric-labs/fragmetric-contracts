@@ -5298,6 +5298,99 @@
       ]
     }
   ],
+  "events": [
+    {
+      "name": "FundManagerDepositedToVault",
+      "discriminator": [
+        98,
+        202,
+        168,
+        50,
+        17,
+        11,
+        21,
+        216
+      ]
+    },
+    {
+      "name": "FundManagerRequestedWithdrawalFromVault",
+      "discriminator": [
+        253,
+        191,
+        181,
+        163,
+        128,
+        139,
+        221,
+        69
+      ]
+    },
+    {
+      "name": "FundManagerWithdrewFromVault",
+      "discriminator": [
+        47,
+        207,
+        171,
+        199,
+        11,
+        246,
+        73,
+        105
+      ]
+    },
+    {
+      "name": "SolvManagerCompletedDeposits",
+      "discriminator": [
+        175,
+        72,
+        252,
+        102,
+        189,
+        250,
+        149,
+        23
+      ]
+    },
+    {
+      "name": "SolvManagerCompletedWithdrawalRequests",
+      "discriminator": [
+        70,
+        228,
+        95,
+        28,
+        180,
+        19,
+        243,
+        95
+      ]
+    },
+    {
+      "name": "SolvManagerConfirmedDeposits",
+      "discriminator": [
+        93,
+        34,
+        243,
+        171,
+        210,
+        71,
+        136,
+        126
+      ]
+    },
+    {
+      "name": "SolvManagerConfirmedWithdrawalRequests",
+      "discriminator": [
+        129,
+        98,
+        133,
+        96,
+        161,
+        27,
+        7,
+        237
+      ]
+    }
+  ],
   "errors": [
     {
       "code": 6000,
@@ -5386,6 +5479,282 @@
     }
   ],
   "types": [
+    {
+      "name": "FundManagerDepositedToVault",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "vault_supported_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "vault_receipt_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "deposited_vst_amount",
+            "type": "u64"
+          },
+          {
+            "name": "minted_vrt_amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "FundManagerRequestedWithdrawalFromVault",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "vault_supported_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "vault_receipt_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "requested_vrt_amount",
+            "type": "u64"
+          },
+          {
+            "name": "estimated_vst_withdrawal_amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "FundManagerWithdrewFromVault",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "vault_supported_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "vault_receipt_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "claimed_vst_amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SolvManagerCompletedDeposits",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "solv_protocol_wallet",
+            "type": "pubkey"
+          },
+          {
+            "name": "solv_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "vault_supported_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "vault_receipt_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "solv_receipt_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "received_srt_amount",
+            "type": "u64"
+          },
+          {
+            "name": "operation_reserved_srt_amount",
+            "type": "u64"
+          },
+          {
+            "name": "deducted_vst_extra_fee_amount",
+            "type": "u64"
+          },
+          {
+            "name": "old_one_srt_as_micro_vst",
+            "type": "u64"
+          },
+          {
+            "name": "new_one_srt_as_micro_vst",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SolvManagerCompletedWithdrawalRequests",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "solv_protocol_wallet",
+            "type": "pubkey"
+          },
+          {
+            "name": "solv_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "vst_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "vrt_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "srt_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "burnt_srt_amount",
+            "type": "u64"
+          },
+          {
+            "name": "withdrawn_vst_amount",
+            "type": "u64"
+          },
+          {
+            "name": "vst_reserved_amount_to_claim",
+            "type": "u64"
+          },
+          {
+            "name": "vst_extra_amount_to_claim",
+            "type": "u64"
+          },
+          {
+            "name": "vst_deducted_fee_amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SolvManagerConfirmedDeposits",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "solv_protocol_wallet",
+            "type": "pubkey"
+          },
+          {
+            "name": "solv_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "vault_supported_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "vault_receipt_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "solv_receipt_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "confirmed_vst_amount",
+            "type": "u64"
+          },
+          {
+            "name": "deducted_vst_deposit_fee_amount",
+            "type": "u64"
+          },
+          {
+            "name": "expected_srt_amount",
+            "type": "u64"
+          },
+          {
+            "name": "one_srt_as_micro_vst",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SolvManagerConfirmedWithdrawalRequests",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "solv_protocol_wallet",
+            "type": "pubkey"
+          },
+          {
+            "name": "solv_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "vault_supported_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "vault_receipt_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "solv_receipt_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "confirmed_srt_amount",
+            "type": "u64"
+          },
+          {
+            "name": "processing_vrt_amount",
+            "type": "u64"
+          },
+          {
+            "name": "estimated_vst_amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
     {
       "name": "VaultAccount",
       "serialization": "bytemuck",

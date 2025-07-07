@@ -67,8 +67,7 @@ pub fn process_deposit(
     require_gt!(vst_amount, 0);
     require_gte!(payer_vault_supported_token_account.amount, vst_amount);
 
-    let mut event = vault_account.load_mut()?.mint_vrt(vst_amount)?;
-    event.vault = vault_account.key();
+    let vrt_amount = vault_account.load_mut()?.mint_vrt(vst_amount)?;
 
     anchor_spl::token::transfer_checked(
         CpiContext::new(
@@ -84,7 +83,7 @@ pub fn process_deposit(
         vault_supported_token_mint.decimals,
     )?;
 
-    if event.minted_vrt_amount > 0 {
+    if vrt_amount > 0 {
         anchor_spl::token::mint_to(
             CpiContext::new_with_signer(
                 token_program.to_account_info(),
@@ -95,11 +94,17 @@ pub fn process_deposit(
                 },
                 &[&vault_account.load()?.get_seeds()],
             ),
-            event.minted_vrt_amount,
+            vrt_amount,
         )?;
     }
 
-    Ok(event)
+    Ok(events::FundManagerDepositedToVault {
+        vault: vault_account.key(),
+        vault_supported_token_mint: vault_supported_token_mint.key(),
+        vault_receipt_token_mint: vault_receipt_token_mint.key(),
+        deposited_vst_amount: vst_amount,
+        minted_vrt_amount: vrt_amount,
+    })
 }
 
 pub fn process_request_withdrawal(
@@ -110,6 +115,7 @@ pub fn process_request_withdrawal(
         payer,
         vault_account,
         vault_receipt_token_mint,
+        vault_supported_token_mint,
         payer_vault_receipt_token_account,
         token_program,
         ..
@@ -118,36 +124,41 @@ pub fn process_request_withdrawal(
     require_gt!(vrt_amount, 0);
     require_gte!(payer_vault_receipt_token_account.amount, vrt_amount);
 
-    let mut event = vault_account
+    let (requested_vrt_amount, estimated_vst_withdrawal_amount) = vault_account
         .load_mut()?
         .enqueue_withdrawal_request(vrt_amount)?;
 
-    if let Some(event) = event.as_mut() {
-        event.vault = vault_account.key();
-
-        if event.burnt_vrt_amount > 0 {
-            anchor_spl::token::burn(
-                CpiContext::new(
-                    token_program.to_account_info(),
-                    anchor_spl::token::Burn {
-                        mint: vault_receipt_token_mint.to_account_info(),
-                        from: payer_vault_receipt_token_account.to_account_info(),
-                        authority: payer.to_account_info(),
-                    },
-                ),
-                event.burnt_vrt_amount,
-            )?;
-        }
+    if requested_vrt_amount == 0 {
+        return Ok(None);
     }
 
-    Ok(event)
+    anchor_spl::token::burn(
+        CpiContext::new(
+            token_program.to_account_info(),
+            anchor_spl::token::Burn {
+                mint: vault_receipt_token_mint.to_account_info(),
+                from: payer_vault_receipt_token_account.to_account_info(),
+                authority: payer.to_account_info(),
+            },
+        ),
+        requested_vrt_amount,
+    )?;
+
+    Ok(Some(events::FundManagerRequestedWithdrawalFromVault {
+        vault: vault_account.key(),
+        vault_supported_token_mint: vault_supported_token_mint.key(),
+        vault_receipt_token_mint: vault_receipt_token_mint.key(),
+        requested_vrt_amount,
+        estimated_vst_withdrawal_amount,
+    }))
 }
 
 pub fn process_withdraw(
     ctx: &mut Context<FundManagerContext>,
-) -> Result<events::FundManagerWithdrewFromVault> {
+) -> Result<Option<events::FundManagerWithdrewFromVault>> {
     let FundManagerContext {
         vault_account,
+        vault_receipt_token_mint,
         vault_supported_token_mint,
         payer_vault_supported_token_account,
         vault_vault_supported_token_account,
@@ -155,25 +166,31 @@ pub fn process_withdraw(
         ..
     } = ctx.accounts;
 
-    let mut event = vault_account.load_mut()?.claim_vst()?;
-    event.vault = vault_account.key();
+    let vst_amount = vault_account.load_mut()?.claim_vst()?;
 
-    if event.claimed_vst_amount > 0 {
-        anchor_spl::token::transfer_checked(
-            CpiContext::new_with_signer(
-                token_program.to_account_info(),
-                anchor_spl::token::TransferChecked {
-                    from: vault_vault_supported_token_account.to_account_info(),
-                    mint: vault_supported_token_mint.to_account_info(),
-                    to: payer_vault_supported_token_account.to_account_info(),
-                    authority: vault_account.to_account_info(),
-                },
-                &[&vault_account.load()?.get_seeds()],
-            ),
-            event.claimed_vst_amount,
-            vault_supported_token_mint.decimals,
-        )?;
+    if vst_amount == 0 {
+        return Ok(None);
     }
 
-    Ok(event)
+    anchor_spl::token::transfer_checked(
+        CpiContext::new_with_signer(
+            token_program.to_account_info(),
+            anchor_spl::token::TransferChecked {
+                from: vault_vault_supported_token_account.to_account_info(),
+                mint: vault_supported_token_mint.to_account_info(),
+                to: payer_vault_supported_token_account.to_account_info(),
+                authority: vault_account.to_account_info(),
+            },
+            &[&vault_account.load()?.get_seeds()],
+        ),
+        vst_amount,
+        vault_supported_token_mint.decimals,
+    )?;
+
+    Ok(Some(events::FundManagerWithdrewFromVault {
+        vault: vault_account.key(),
+        vault_supported_token_mint: vault_supported_token_mint.key(),
+        vault_receipt_token_mint: vault_receipt_token_mint.key(),
+        claimed_vst_amount: vst_amount,
+    }))
 }

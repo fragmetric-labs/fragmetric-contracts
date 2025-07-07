@@ -71,7 +71,11 @@ pub mod solv {
     }
 
     pub fn fund_manager_withdraw(mut ctx: Context<FundManagerContext>) -> Result<()> {
-        emit_cpi!(process_withdraw(&mut ctx)?);
+        let event = process_withdraw(&mut ctx)?;
+
+        if let Some(event) = event {
+            emit_cpi!(event);
+        }
 
         Ok(())
     }

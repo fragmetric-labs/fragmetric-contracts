@@ -6,4 +6,11 @@
  * @see https://github.com/codama-idl/codama
  */
 
+export * from './fundManagerDepositedToVault';
+export * from './fundManagerRequestedWithdrawalFromVault';
+export * from './fundManagerWithdrewFromVault';
+export * from './solvManagerCompletedDeposits';
+export * from './solvManagerCompletedWithdrawalRequests';
+export * from './solvManagerConfirmedDeposits';
+export * from './solvManagerConfirmedWithdrawalRequests';
 export * from './vaultAccount';

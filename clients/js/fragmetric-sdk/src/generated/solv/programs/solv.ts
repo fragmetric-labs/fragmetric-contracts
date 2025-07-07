@@ -37,6 +37,13 @@ export const SOLV_PROGRAM_ADDRESS =
 
 export enum SolvAccount {
   VaultAccount,
+  FundManagerDepositedToVault,
+  FundManagerRequestedWithdrawalFromVault,
+  FundManagerWithdrewFromVault,
+  SolvManagerCompletedDeposits,
+  SolvManagerCompletedWithdrawalRequests,
+  SolvManagerConfirmedDeposits,
+  SolvManagerConfirmedWithdrawalRequests,
 }
 
 export function identifySolvAccount(
@@ -53,6 +60,83 @@ export function identifySolvAccount(
     )
   ) {
     return SolvAccount.VaultAccount;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([98, 202, 168, 50, 17, 11, 21, 216])
+      ),
+      0
+    )
+  ) {
+    return SolvAccount.FundManagerDepositedToVault;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([253, 191, 181, 163, 128, 139, 221, 69])
+      ),
+      0
+    )
+  ) {
+    return SolvAccount.FundManagerRequestedWithdrawalFromVault;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([47, 207, 171, 199, 11, 246, 73, 105])
+      ),
+      0
+    )
+  ) {
+    return SolvAccount.FundManagerWithdrewFromVault;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([175, 72, 252, 102, 189, 250, 149, 23])
+      ),
+      0
+    )
+  ) {
+    return SolvAccount.SolvManagerCompletedDeposits;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([70, 228, 95, 28, 180, 19, 243, 95])
+      ),
+      0
+    )
+  ) {
+    return SolvAccount.SolvManagerCompletedWithdrawalRequests;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([93, 34, 243, 171, 210, 71, 136, 126])
+      ),
+      0
+    )
+  ) {
+    return SolvAccount.SolvManagerConfirmedDeposits;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([129, 98, 133, 96, 161, 27, 7, 237])
+      ),
+      0
+    )
+  ) {
+    return SolvAccount.SolvManagerConfirmedWithdrawalRequests;
   }
   throw new Error(
     'The provided account could not be identified as a solv account.'
