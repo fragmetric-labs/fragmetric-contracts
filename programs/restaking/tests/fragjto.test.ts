@@ -9,7 +9,7 @@ describe('restaking.fragJTO test', async () => {
   beforeAll(() => testCtx.initializationTasks);
   afterAll(() => testCtx.validator.quit());
 
-  const { validator, feePayer, restaking, initializationTasks } = testCtx;
+  const { validator, feePayer, restaking, initializationTasks, sdk } = testCtx;
   const ctx = restaking.fragJTO;
   const AMOUNT_PER_FRAGJTO = 1_000_000_000n;
   const AMOUNT_PER_WFRAGJTO = 1_000_000_000n;
@@ -250,6 +250,7 @@ describe('restaking.fragJTO test', async () => {
               "__kind": "JitoRestakingVault",
               "address": "BmJvUzoiiNBRx3v2Gqsix9WvVtw8FaztrfBHQyqpMbTd",
             },
+            "rewardCommissionRateBps": 0,
             "solAllocationCapacityAmount": 18446744073709551615n,
             "solAllocationWeight": 1n,
             "vault": "BmJvUzoiiNBRx3v2Gqsix9WvVtw8FaztrfBHQyqpMbTd",
@@ -1636,7 +1637,9 @@ describe('restaking.fragJTO test', async () => {
 
   /** 3. deposit */
   test('user can deposit JTO', async () => {
-    const amountBefore = await user1.receiptToken.resolve(true).then((res) => res!.amount);
+    const amountBefore = await user1.receiptToken
+      .resolve(true)
+      .then((res) => res!.amount);
 
     await expectMasked(
       user1.deposit.execute(
@@ -1719,7 +1722,9 @@ describe('restaking.fragJTO test', async () => {
 
   /** 4. withdraw */
   test('user can withdraw receipt token as JTO', async () => {
-    const user1Amount = await user1.receiptToken.resolve(true).then((res) => res!.amount);
+    const user1Amount = await user1.receiptToken
+      .resolve(true)
+      .then((res) => res!.amount);
     await expect(
       user1.requestWithdrawal.execute(
         {
@@ -1736,11 +1741,14 @@ describe('restaking.fragJTO test', async () => {
             value: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
           },
           requestedReceiptTokenAmount: user1Amount,
+          requestId: 1n,
         },
       },
     });
 
-    const user2Amount = await user2.receiptToken.resolve(true).then((res) => res!.amount);
+    const user2Amount = await user2.receiptToken
+      .resolve(true)
+      .then((res) => res!.amount);
     await expect(
       user2.requestWithdrawal.execute(
         {
@@ -1757,11 +1765,14 @@ describe('restaking.fragJTO test', async () => {
             value: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
           },
           requestedReceiptTokenAmount: user2Amount,
+          requestId: 2n,
         },
       },
     });
 
-    const user3Amount = await user3.receiptToken.resolve(true).then((res) => res!.amount);
+    const user3Amount = await user3.receiptToken
+      .resolve(true)
+      .then((res) => res!.amount);
     await expect(
       user3.requestWithdrawal.execute(
         {
@@ -1778,11 +1789,14 @@ describe('restaking.fragJTO test', async () => {
             value: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
           },
           requestedReceiptTokenAmount: user3Amount,
+          requestId: 3n,
         },
       },
     });
-    
-    const user4Amount = await user4.receiptToken.resolve(true).then((res) => res!.amount);
+
+    const user4Amount = await user4.receiptToken
+      .resolve(true)
+      .then((res) => res!.amount);
     await expect(
       user4.requestWithdrawal.execute(
         {
@@ -1799,6 +1813,7 @@ describe('restaking.fragJTO test', async () => {
             value: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
           },
           requestedReceiptTokenAmount: user4Amount,
+          requestId: 4n,
         },
       },
     });
@@ -1821,20 +1836,68 @@ describe('restaking.fragJTO test', async () => {
         )
     ).resolves.toEqual(1n);
 
-    const res = await user1.withdraw.execute(
+    const res1 = await user1.withdraw.execute(
       {
         assetMint: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
         requestId: 1n,
       },
       { signers: [signer1] }
     );
-    const evt = res.events!.userWithdrewFromFund!;
+    const evt1 = res1.events!.userWithdrewFromFund!;
     expect(
-      evt.burntReceiptTokenAmount,
+      evt1.burntReceiptTokenAmount,
       'burntReceiptTokenAmount = withdrawnAmount + deductedFeeAmount + [optional remainder]'
     ).toBeOneOf([
-      evt.withdrawnAmount + evt.deductedFeeAmount,
-      evt.withdrawnAmount + evt.deductedFeeAmount + 1n,
+      evt1.withdrawnAmount + evt1.deductedFeeAmount,
+      evt1.withdrawnAmount + evt1.deductedFeeAmount + 1n,
+    ]);
+
+    const res2 = await user2.withdraw.execute(
+      {
+        assetMint: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
+        requestId: 2n,
+      },
+      { signers: [signer2] }
+    );
+    const evt2 = res2.events!.userWithdrewFromFund!;
+    expect(
+      evt2.burntReceiptTokenAmount,
+      'burntReceiptTokenAmount = withdrawnAmount + deductedFeeAmount + [optional remainder]'
+    ).toBeOneOf([
+      evt2.withdrawnAmount + evt2.deductedFeeAmount,
+      evt2.withdrawnAmount + evt2.deductedFeeAmount + 1n,
+    ]);
+
+    const res3 = await user3.withdraw.execute(
+      {
+        assetMint: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
+        requestId: 3n,
+      },
+      { signers: [signer3] }
+    );
+    const evt3 = res3.events!.userWithdrewFromFund!;
+    expect(
+      evt3.burntReceiptTokenAmount,
+      'burntReceiptTokenAmount = withdrawnAmount + deductedFeeAmount + [optional remainder]'
+    ).toBeOneOf([
+      evt3.withdrawnAmount + evt3.deductedFeeAmount,
+      evt3.withdrawnAmount + evt3.deductedFeeAmount + 1n,
+    ]);
+
+    const res4 = await user4.withdraw.execute(
+      {
+        assetMint: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
+        requestId: 4n,
+      },
+      { signers: [signer4] }
+    );
+    const evt4 = res4.events!.userWithdrewFromFund!;
+    expect(
+      evt4.burntReceiptTokenAmount,
+      'burntReceiptTokenAmount = withdrawnAmount + deductedFeeAmount + [optional remainder]'
+    ).toBeOneOf([
+      evt4.withdrawnAmount + evt4.deductedFeeAmount,
+      evt4.withdrawnAmount + evt4.deductedFeeAmount + 1n,
     ]);
 
     await expect(
@@ -1846,7 +1909,7 @@ describe('restaking.fragJTO test', async () => {
     });
   });
 
-  /** 5. harvest reward via swap */
+  /** 5. reward */
   test('jitoSOL reward is swapped to JTO then compounded', async () => {
     // jitoSOL reward
     await validator.airdropToken(
@@ -1892,13 +1955,80 @@ describe('restaking.fragJTO test', async () => {
     );
   });
 
+  test('reward is transferred to revenue account based on commission rate during harvest command execution (swap reward)', async () => {
+    // create vault ATA
+    await validator.airdropToken(
+      'BmJvUzoiiNBRx3v2Gqsix9WvVtw8FaztrfBHQyqpMbTd',
+      'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+      1_000_000_000n
+    );
+    // jitoSOL delegation
+    await ctx.fund.restakingVaults[0].delegateRewardTokenAccount.execute({
+      mint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+      newDelegate: 'Ee1W9enx3w2zv3pkgyNSqWteCaNJwxXBLydDMdTdPUzC',
+    });
+
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestRestakingYield',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    const programRevenueTokenAccount =
+      sdk.TokenAccountContext.fromAssociatedTokenSeeds(restaking, () =>
+        Promise.resolve({
+          owner: 'GuSruSKKCmAGuWMeMsiw3mbNhjeiRtNhnh9Eatgz33NA',
+          mint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+        })
+      );
+
+    for (let rewardCommissionRateBps = 10; rewardCommissionRateBps <= 1000; rewardCommissionRateBps += 90) {
+      await ctx.fund.updateRestakingVaultStrategy.execute({
+        vault: 'BmJvUzoiiNBRx3v2Gqsix9WvVtw8FaztrfBHQyqpMbTd',
+        rewardCommissionRateBps,
+      });
+
+      const programRevenueCompoundRewardTokenAmountBefore =
+        await programRevenueTokenAccount.resolveAccount(true).then((account) => account!.data.amount);
+
+      await validator.airdropToken(
+        'BmJvUzoiiNBRx3v2Gqsix9WvVtw8FaztrfBHQyqpMbTd',
+        'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+        1_123_456_789n,
+      );
+
+      // harvest compounding reward
+      await ctx.fund.runCommand.executeChained({
+        forceResetCommand: 'HarvestRestakingYield',
+        operator: restaking.knownAddresses.fundManager,
+      });
+
+      const programRevenueCompoundRewardTokenAmountAfter =
+        await programRevenueTokenAccount.resolveAccount(true).then((account) => account!.data.amount);
+
+      expect(programRevenueCompoundRewardTokenAmountAfter - programRevenueCompoundRewardTokenAmountBefore)
+        .toEqual(1_123_456_789n * BigInt(rewardCommissionRateBps) / 10000n);
+    }
+
+    // reset commision rate to 0
+    await expect(
+      ctx.fund.updateRestakingVaultStrategy.execute({
+        vault: 'BmJvUzoiiNBRx3v2Gqsix9WvVtw8FaztrfBHQyqpMbTd',
+        rewardCommissionRateBps: 0,
+      })
+    ).resolves.not.toThrow();
+  });
+
   /** 6. operation cycle */
   test('run operation cycles through multiple epoches to test cash-in/out flows including (un)stake/(un)restake', async () => {
+    const tokenAmount = 1_000_000_000_000n;
+
+    await validator.airdropToken(user1.address!, 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL', tokenAmount);
+
     await expect(
       user1.deposit.execute(
         {
           assetMint: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
-          assetAmount: 100_000_000_000n,
+          assetAmount: tokenAmount,
         },
         {
           signers: [signer1],
@@ -1915,7 +2045,7 @@ describe('restaking.fragJTO test', async () => {
       .toMatchInlineSnapshot(`
       [
         {
-          "amount": 799200000038n,
+          "amount": 3n,
           "closeAuthority": {
             "__option": "None",
           },
@@ -1934,14 +2064,11 @@ describe('restaking.fragJTO test', async () => {
     `);
 
     // now trigger cash-out flow
-    const receiptTokenAmount = await user1.receiptToken
-      .resolve(true)
-      .then((token) => token!.amount);
     await expect(
       user1.requestWithdrawal.execute(
         {
           assetMint: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
-          receiptTokenAmount,
+          receiptTokenAmount: tokenAmount,
         },
         { signers: [signer1] }
       )
@@ -1952,7 +2079,7 @@ describe('restaking.fragJTO test', async () => {
             __option: 'Some',
             value: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
           },
-          requestedReceiptTokenAmount: receiptTokenAmount,
+          requestedReceiptTokenAmount: tokenAmount,
         },
       },
     });
@@ -1995,15 +2122,15 @@ describe('restaking.fragJTO test', async () => {
       .toMatchInlineSnapshot(`
       [
         {
-          "assetFeeAmount": 100000075n,
-          "assetUserAmount": 99900075351n,
+          "assetFeeAmount": 2040676312n,
+          "assetUserAmount": 2038635636164n,
           "batchId": 2n,
           "claimedAssetUserAmount": 0n,
           "claimedReceiptTokenAmount": 0n,
           "numClaimedRequests": 0n,
           "numRequests": 1n,
           "processedAt": "MASKED(/.*At?$/)",
-          "receiptTokenAmount": 100000000000n,
+          "receiptTokenAmount": 1000000000000n,
           "receiptTokenMint": "bxn2sjQkkoe1MevsZHWQdVeaY18uTNr9KYUjJsYmC7v",
           "supportedTokenMint": {
             "__option": "Some",

@@ -132,11 +132,31 @@ impl RestakingVault {
         &mut self,
         weight: u64,
         sol_capacity_amount: u64,
-    ) -> Result<()> {
+    ) -> Result<&mut Self> {
         self.sol_allocation_weight = weight;
         self.sol_allocation_capacity_amount = sol_capacity_amount;
 
-        Ok(())
+        Ok(self)
+    }
+
+    pub fn set_reward_commission_rate_bps(
+        &mut self,
+        reward_commission_rate_bps: u16,
+    ) -> Result<&mut Self> {
+        // hard limit on reward commission rate to be less than or equal to 10%
+        require_gte!(1000, reward_commission_rate_bps);
+
+        self.reward_commission_rate_bps = reward_commission_rate_bps;
+
+        Ok(self)
+    }
+
+    pub fn get_reward_commission_amount(&self, reward_token_amount: u64) -> Result<u64> {
+        crate::utils::get_proportional_amount(
+            reward_token_amount,
+            self.reward_commission_rate_bps as u64,
+            10_000,
+        )
     }
 
     pub fn add_compounding_reward_token(
