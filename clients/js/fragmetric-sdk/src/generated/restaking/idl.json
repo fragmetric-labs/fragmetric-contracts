@@ -4747,6 +4747,10 @@
         {
           "name": "sol_allocation_capacity_amount",
           "type": "u64"
+        },
+        {
+          "name": "reward_commission_rate_bps",
+          "type": "u16"
         }
       ]
     },

@@ -542,11 +542,13 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         vault: &Pubkey,
         sol_allocation_weight: u64,
         sol_allocation_capacity_amount: u64,
+        reward_commission_rate_bps: u16,
     ) -> Result<events::FundManagerUpdatedFund> {
         self.fund_account
             .load_mut()?
             .get_restaking_vault_mut(vault)?
-            .set_sol_allocation_strategy(sol_allocation_weight, sol_allocation_capacity_amount)?;
+            .set_sol_allocation_strategy(sol_allocation_weight, sol_allocation_capacity_amount)?
+            .set_reward_commission_rate_bps(reward_commission_rate_bps)?;
 
         self.create_fund_manager_updated_fund_event()
     }

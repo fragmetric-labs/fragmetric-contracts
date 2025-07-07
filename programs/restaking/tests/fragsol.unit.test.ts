@@ -1066,12 +1066,28 @@ describe('restaking.fragSOL unit test', async () => {
     );
 
     // 2-2) run 'StakeSOL'command to stake SOL & get jupSOL
-    const amountBefore = await ctx.fund.resolveAccount(true).then((fund) => fund!.data.supportedTokens.find((token) => token.mint == 'jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v')!.token.operationReservedAmount);
+    const amountBefore = await ctx.fund
+      .resolveAccount(true)
+      .then(
+        (fund) =>
+          fund!.data.supportedTokens.find(
+            (token) =>
+              token.mint == 'jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v'
+          )!.token.operationReservedAmount
+      );
     await ctx.fund.runCommand.executeChained({
-        forceResetCommand: 'StakeSOL',
-        operator: restaking.knownAddresses.fundManager,
+      forceResetCommand: 'StakeSOL',
+      operator: restaking.knownAddresses.fundManager,
     });
-    const amountAfter = await ctx.fund.resolveAccount(true).then((fund) => fund!.data.supportedTokens.find((token) => token.mint == 'jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v')!.token.operationReservedAmount);
+    const amountAfter = await ctx.fund
+      .resolveAccount(true)
+      .then(
+        (fund) =>
+          fund!.data.supportedTokens.find(
+            (token) =>
+              token.mint == 'jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v'
+          )!.token.operationReservedAmount
+      );
 
     expect(amountAfter).toBeGreaterThan(amountBefore);
   });
