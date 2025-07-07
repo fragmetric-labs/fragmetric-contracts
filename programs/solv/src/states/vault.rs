@@ -13,7 +13,7 @@ pub const VAULT_ACCOUNT_CURRENT_VERSION: u16 = 2;
 pub const MAX_WITHDRAWAL_REQUESTS: usize = 60;
 pub const MAX_DELEGATED_REWARD_TOKEN_MINTS: usize = 30;
 
-const SOLV_PROTOCOL_MAX_FIXED_AMOUNT_FEE: u64 = 20_000;
+const SOLV_PROTOCOL_MAX_EXTRA_FEE_AMOUNT: u64 = 20_000;
 
 #[repr(C)]
 #[account(zero_copy)]
@@ -603,7 +603,7 @@ impl VaultAccount {
         self.srt_operation_receivable_amount > 0
     }
 
-    /// Fixed amount fee is not accounted here - we don't know exact amount now
+    /// Protocol extra fee is not accounted here - we don't know exact amount now
     /// * VST protocol deposit fee = ceil(VST * solv_protocol_deposit_fee_rate)  
     /// * SRT expected = ceil((VST - protocol fee) as SRT)
     ///
@@ -676,7 +676,7 @@ impl VaultAccount {
         Ok(srt_amount)
     }
 
-    /// VST fixed amount fee = max(floor(SRT receivable as VST (w/ old price)) - floor(SRT as VST (w/ new price)), 0) ≤ HARD LIMIT(20000)
+    /// VST protocol extra fee = max(floor(SRT receivable as VST (w/ old price)) - floor(SRT as VST (w/ new price)), 0) ≤ HARD LIMIT(20000)
     ///
     /// returns (old_one_srt_as_micro_vst, solv_protocol_extra_fee_amount, srt_operation_reserved_amount)
     pub(crate) fn offset_srt_receivables(
@@ -698,15 +698,14 @@ impl VaultAccount {
             .get_srt_amount_as_vst(self.srt_operation_receivable_amount, false)
             .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
 
-        // fixed amount fee
-        let solv_protocol_extra_deposit_fee_amount_as_vst =
+        let solv_protocol_extra_fee_amount_as_vst =
             srt_operation_receivable_amount_as_vst.saturating_sub(srt_amount_as_vst);
 
-        if solv_protocol_extra_deposit_fee_amount_as_vst > SOLV_PROTOCOL_MAX_FIXED_AMOUNT_FEE {
-            err!(VaultError::InvalidSolvProtocolFixedAmountFeeError)?;
+        if solv_protocol_extra_fee_amount_as_vst > SOLV_PROTOCOL_MAX_EXTRA_FEE_AMOUNT {
+            err!(VaultError::InvalidSolvProtocolExtraFeeAmountError)?;
         }
 
-        self.vst_operation_receivable_amount += solv_protocol_extra_deposit_fee_amount_as_vst;
+        self.vst_operation_receivable_amount += solv_protocol_extra_fee_amount_as_vst;
         self.srt_operation_reserved_amount += srt_amount;
         self.srt_operation_receivable_amount = 0;
 
@@ -718,7 +717,7 @@ impl VaultAccount {
 
         Ok((
             old_one_srt_as_micro_vst,
-            solv_protocol_extra_deposit_fee_amount_as_vst,
+            solv_protocol_extra_fee_amount_as_vst,
             self.srt_operation_reserved_amount,
         ))
     }
@@ -981,13 +980,11 @@ impl VaultAccount {
             let expected_vst_amount =
                 srt_amount_as_vst - solv_protocol_withdrawal_fee_amount_as_vst;
 
-            // fixed amount fee
-            let solv_protocol_extra_withdrawal_fee_amount_as_vst =
+            let solv_protocol_extra_fee_amount_as_vst =
                 expected_vst_amount.saturating_sub(vst_amount);
 
-            if solv_protocol_extra_withdrawal_fee_amount_as_vst > SOLV_PROTOCOL_MAX_FIXED_AMOUNT_FEE
-            {
-                err!(VaultError::InvalidSolvProtocolFixedAmountFeeError)?;
+            if solv_protocol_extra_fee_amount_as_vst > SOLV_PROTOCOL_MAX_EXTRA_FEE_AMOUNT {
+                err!(VaultError::InvalidSolvProtocolExtraFeeAmountError)?;
             }
         }
 
@@ -1522,14 +1519,14 @@ mod tests {
         #[test]
         fn test_offset_srt_receivables_no_price_increase(
             mut vault in vault(),
-            fixed_amount_fee_as_srt in 0..SOLV_PROTOCOL_MAX_FIXED_AMOUNT_FEE / 3,
+            extra_fee_amount_as_srt in 0..SOLV_PROTOCOL_MAX_EXTRA_FEE_AMOUNT / 3,
         ) {
             vault
                 .deposit_vst(vault.vst_operation_reserved_amount)
                 .unwrap();
             let old_vault = vault.clone();
 
-            let srt_amount = vault.srt_operation_receivable_amount - fixed_amount_fee_as_srt;
+            let srt_amount = vault.srt_operation_receivable_amount - extra_fee_amount_as_srt;
             let new_one_srt_as_micro_vst = vault.one_srt_as_micro_vst;
 
             vault.offset_srt_receivables(
@@ -1541,9 +1538,9 @@ mod tests {
 
             let vst_operation_receivable_amount_delta = vault.vst_operation_receivable_amount
                 - old_vault.vst_operation_receivable_amount;
-            let fixed_amount_fee_as_vst = old_vault
+            let extra_fee_amount_as_vst = old_vault
                 .get_srt_exchange_rate()
-                .get_srt_amount_as_vst(fixed_amount_fee_as_srt, false)
+                .get_srt_amount_as_vst(extra_fee_amount_as_srt, false)
                 .unwrap();
 
             assert_eq!(
@@ -1554,8 +1551,8 @@ mod tests {
                 vault.srt_operation_receivable_amount,
                 0,
             );
-            assert!(vst_operation_receivable_amount_delta >= fixed_amount_fee_as_vst);
-            assert!(vst_operation_receivable_amount_delta <= fixed_amount_fee_as_vst + 1);
+            assert!(vst_operation_receivable_amount_delta >= extra_fee_amount_as_vst);
+            assert!(vst_operation_receivable_amount_delta <= extra_fee_amount_as_vst + 1);
 
             vault.assert_invariants().unwrap();
             vault.assert_price_increased(&old_vault).unwrap();
@@ -1564,7 +1561,7 @@ mod tests {
         #[test]
         fn test_offset_srt_receivables_with_price_increase(
             mut vault in vault(),
-            fixed_amount_fee_as_srt in 0..SOLV_PROTOCOL_MAX_FIXED_AMOUNT_FEE / 3,
+            extra_fee_amount_as_srt in 0..SOLV_PROTOCOL_MAX_EXTRA_FEE_AMOUNT / 3,
         ) {
             vault
                 .deposit_vst(vault.vst_operation_reserved_amount)
@@ -1572,7 +1569,7 @@ mod tests {
             let old_vault = vault.clone();
 
             let srt_amount = ((vault.srt_operation_receivable_amount as u128 * 20 / 21) as u64)
-                .saturating_sub(fixed_amount_fee_as_srt);
+                .saturating_sub(extra_fee_amount_as_srt);
             let new_one_srt_as_micro_vst =
                 ((vault.one_srt_as_micro_vst as u128 + 19) * 21 / 20) as u64;
 
@@ -1582,9 +1579,9 @@ mod tests {
 
             let vst_operation_receivable_amount_delta =
                 vault.vst_operation_receivable_amount - old_vault.vst_operation_receivable_amount;
-            let fixed_amount_fee_as_vst = vault
+            let extra_fee_amount_as_vst = vault
                 .get_srt_exchange_rate()
-                .get_srt_amount_as_vst(fixed_amount_fee_as_srt + 1, false)
+                .get_srt_amount_as_vst(extra_fee_amount_as_srt + 1, false)
                 .unwrap();
 
             assert_eq!(
@@ -1592,7 +1589,7 @@ mod tests {
                 old_vault.srt_operation_reserved_amount + srt_amount,
             );
             assert_eq!(vault.srt_operation_receivable_amount, 0);
-            assert!(vst_operation_receivable_amount_delta <= fixed_amount_fee_as_vst + 2);
+            assert!(vst_operation_receivable_amount_delta <= extra_fee_amount_as_vst + 2);
 
             vault.assert_invariants().unwrap();
             vault.assert_price_increased(&old_vault).unwrap();
@@ -1811,7 +1808,7 @@ mod tests {
         #[test]
         fn test_complete_withdrawal_request_one_by_one(
             mut vault in vault(),
-            fixed_amount_fee_as_vst in 0..=SOLV_PROTOCOL_MAX_FIXED_AMOUNT_FEE,
+            extra_fee_amount_as_vst in 0..=SOLV_PROTOCOL_MAX_EXTRA_FEE_AMOUNT,
         ) {
             vault.solv_protocol_deposit_fee_rate_bps = 0;
             vault.solv_protocol_withdrawal_fee_rate_bps = 0;
@@ -1840,7 +1837,7 @@ mod tests {
                     .get_srt_exchange_rate()
                     .get_srt_amount_as_vst(srt_amount, false)
                     .unwrap()
-                    .saturating_sub(fixed_amount_fee_as_vst);
+                    .saturating_sub(extra_fee_amount_as_vst);
                 shortage += vault.withdrawal_requests[i].vst_withdrawal_total_estimated_amount
                     - vst_amount;
 
@@ -1889,7 +1886,7 @@ mod tests {
         #[test]
         fn test_complete_withdrawal_request_bulk(
             mut vault in vault(),
-            fixed_amount_fee_as_vst in 0..=SOLV_PROTOCOL_MAX_FIXED_AMOUNT_FEE,
+            extra_fee_amount_as_vst in 0..=SOLV_PROTOCOL_MAX_EXTRA_FEE_AMOUNT,
         ) {
             vault.solv_protocol_deposit_fee_rate_bps = 0;
             vault.solv_protocol_withdrawal_fee_rate_bps = 0;
@@ -1918,7 +1915,7 @@ mod tests {
                 .get_srt_exchange_rate()
                 .get_srt_amount_as_vst(srt_amount, false)
                 .unwrap()
-                .saturating_sub(fixed_amount_fee_as_vst);
+                .saturating_sub(extra_fee_amount_as_vst);
             let shortage = vault.vst_receivable_amount_to_claim - vst_amount;
 
             vault
@@ -1965,7 +1962,7 @@ mod tests {
         #[test]
         fn test_complete_withdrawal_request_with_higher_price(
             mut vault in vault(),
-            fixed_amount_fee_as_vst in 0..=SOLV_PROTOCOL_MAX_FIXED_AMOUNT_FEE,
+            extra_fee_amount_as_vst in 0..=SOLV_PROTOCOL_MAX_EXTRA_FEE_AMOUNT,
         ) {
             if vault.vst_operation_reserved_amount > (1 << 62) {
                 vault.vst_operation_reserved_amount = 1 << 62;
@@ -1993,7 +1990,7 @@ mod tests {
             let vst_amount = new_srt_exchange_rate
                 .get_srt_amount_as_vst(srt_amount, false)
                 .unwrap()
-                .saturating_sub(fixed_amount_fee_as_vst);
+                .saturating_sub(extra_fee_amount_as_vst);
             let surplus_or_shortage =
                 vst_amount as i128 - vault.vst_receivable_amount_to_claim as i128;
 
@@ -2018,7 +2015,7 @@ mod tests {
             vault.assert_price_increased(&old_vault).unwrap();
         }
 
-        // If there is no fixed amount fee then total withdrawal fee ≤ solv deposit + withdrawal fee
+        // If there is no extra fee then total withdrawal fee ≤ solv deposit + withdrawal fee
         #[test]
         fn test_complete_withdrawal_request_with_fee(
             mut vault in vault(),
@@ -2083,33 +2080,33 @@ mod tests {
     }
 
     #[test]
-    fn test_offset_srt_receivables_invalid_fixed_amount_fee() {
+    fn test_offset_srt_receivables_invalid_extra_fee_amount() {
         let mut vault = VaultAccount::dummy();
         vault.solv_protocol_deposit_fee_rate_bps = 0;
 
         vault
-            .mint_vrt(SOLV_PROTOCOL_MAX_FIXED_AMOUNT_FEE + 1)
+            .mint_vrt(SOLV_PROTOCOL_MAX_EXTRA_FEE_AMOUNT + 1)
             .unwrap();
         vault
-            .deposit_vst(SOLV_PROTOCOL_MAX_FIXED_AMOUNT_FEE + 1)
+            .deposit_vst(SOLV_PROTOCOL_MAX_EXTRA_FEE_AMOUNT + 1)
             .unwrap();
         vault
             .offset_srt_receivables(1, vault.one_srt_as_micro_vst, true)
             .unwrap();
 
-        vault.mint_vrt(SOLV_PROTOCOL_MAX_FIXED_AMOUNT_FEE).unwrap();
+        vault.mint_vrt(SOLV_PROTOCOL_MAX_EXTRA_FEE_AMOUNT).unwrap();
         vault
-            .deposit_vst(SOLV_PROTOCOL_MAX_FIXED_AMOUNT_FEE)
+            .deposit_vst(SOLV_PROTOCOL_MAX_EXTRA_FEE_AMOUNT)
             .unwrap();
         vault
             .offset_srt_receivables(0, vault.one_srt_as_micro_vst, true)
             .unwrap();
 
         vault
-            .mint_vrt(SOLV_PROTOCOL_MAX_FIXED_AMOUNT_FEE + 1)
+            .mint_vrt(SOLV_PROTOCOL_MAX_EXTRA_FEE_AMOUNT + 1)
             .unwrap();
         vault
-            .deposit_vst(SOLV_PROTOCOL_MAX_FIXED_AMOUNT_FEE + 1)
+            .deposit_vst(SOLV_PROTOCOL_MAX_EXTRA_FEE_AMOUNT + 1)
             .unwrap();
         vault
             .offset_srt_receivables(0, vault.one_srt_as_micro_vst, true)

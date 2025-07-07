@@ -26,8 +26,8 @@ pub enum VaultError {
     InvalidSolvProtocolWithdrawalFeeRateError,
 
     // TODO/phase3: deprecate
-    #[msg("invalid srt fixed amount fee")]
-    InvalidSolvProtocolFixedAmountFeeError,
+    #[msg("invalid srt extra fee amount")]
+    InvalidSolvProtocolExtraFeeAmountError,
 
     #[msg("vault supported token mint mismatch")]
     VaultSupportedTokenMintMismatchError,
