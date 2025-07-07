@@ -5,6 +5,7 @@ use crate::errors::ErrorCode;
 use crate::modules::pricing::{TokenPricingSource, TokenPricingSourcePod};
 
 pub const FUND_ACCOUNT_MAX_RESTAKING_VAULT_DELEGATIONS: usize = 30;
+pub const FUND_ACCOUNT_MAX_REWARD_COMMISSION_RATE_BPS: usize = 2_500;
 pub const FUND_ACCOUNT_MAX_RESTAKING_VAULT_COMPOUNDING_REWARD_TOKENS: usize = 4;
 pub const FUND_ACCOUNT_MAX_RESTAKING_VAULT_DISTRIBUTING_REWARD_TOKENS: usize = 30;
 
@@ -144,7 +145,10 @@ impl RestakingVault {
         reward_commission_rate_bps: u16,
     ) -> Result<&mut Self> {
         // hard limit on reward commission rate to be less than or equal to 25%
-        require_gte!(2_500, reward_commission_rate_bps);
+        require_gte!(
+            FUND_ACCOUNT_MAX_REWARD_COMMISSION_RATE_BPS,
+            reward_commission_rate_bps as usize
+        );
 
         self.reward_commission_rate_bps = reward_commission_rate_bps;
 
