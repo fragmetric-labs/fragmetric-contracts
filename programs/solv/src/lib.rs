@@ -193,6 +193,12 @@ pub mod solv {
     pub fn reward_manager_delegate_reward_token_account(
         mut ctx: Context<RewardManagerContext>,
     ) -> Result<()> {
-        process_delegate_reward_token_account(&mut ctx)
+        let event = process_delegate_reward_token_account(&mut ctx)?;
+
+        if let Some(event) = event {
+            emit_cpi!(event);
+        }
+
+        Ok(())
     }
 }
