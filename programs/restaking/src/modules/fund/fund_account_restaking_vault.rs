@@ -143,8 +143,8 @@ impl RestakingVault {
         &mut self,
         reward_commission_rate_bps: u16,
     ) -> Result<&mut Self> {
-        // hard limit on reward commission rate to be less than or equal to 10%
-        require_gte!(1000, reward_commission_rate_bps);
+        // hard limit on reward commission rate to be less than or equal to 25%
+        require_gte!(2_500, reward_commission_rate_bps);
 
         self.reward_commission_rate_bps = reward_commission_rate_bps;
 
