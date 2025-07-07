@@ -1128,8 +1128,8 @@ describe('restaking.frag2 test', async () => {
 
     for (
       let rewardCommissionRateBps = 0;
-      rewardCommissionRateBps <= 1000;
-      rewardCommissionRateBps += 70
+      rewardCommissionRateBps <= 2500;
+      rewardCommissionRateBps += 130
     ) {
       await ctx.fund.runCommand.executeChained({
         forceResetCommand: 'HarvestRestakingYield',
@@ -1263,14 +1263,14 @@ describe('restaking.frag2 test', async () => {
     await expect(
       ctx.fund.updateRestakingVaultStrategy.execute({
         vault: '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
-        rewardCommissionRateBps: 1000,
+        rewardCommissionRateBps: 2500,
       })
     ).resolves.not.toThrow();
 
     await expect(
       ctx.fund.updateRestakingVaultStrategy.execute({
         vault: '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
-        rewardCommissionRateBps: 1001,
+        rewardCommissionRateBps: 2501,
       })
     ).rejects.toThrow();
 
