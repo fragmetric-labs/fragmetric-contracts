@@ -176,9 +176,11 @@ export class LiteSVMValidator extends TestValidator<'litesvm'> {
 
     const clockTimeout = setInterval(
       () => {
-        // advance clock
+        // advance clock and epoch
         const clock = svm.getClock();
+        const schedule = svm.getEpochSchedule();
         clock.slot++;
+        clock.epoch = clock.slot / schedule.slotsPerEpoch;
         clock.unixTimestamp = BigInt(Math.floor(Date.now() / 1000));
         svm.setClock(clock);
 
