@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
 use crate::errors::VaultError;
+use crate::events;
 use crate::states::VaultAccount;
 
 #[event_cpi]
@@ -57,10 +58,16 @@ pub struct SolvManagerContext<'info> {
     pub token_program: Program<'info, Token>,
 }
 
-pub fn process_confirm_deposits(ctx: &mut Context<SolvManagerContext>) -> Result<()> {
+pub fn process_confirm_deposits(
+    ctx: &mut Context<SolvManagerContext>,
+) -> Result<Option<events::SolvManagerConfirmedDeposits>> {
     let SolvManagerContext {
+        solv_manager,
+        solv_protocol_wallet,
         vault_account,
+        vault_receipt_token_mint,
         vault_supported_token_mint,
+        solv_receipt_token_mint,
         vault_vault_supported_token_account,
         solv_protocol_wallet_vault_supported_token_account,
         token_program,
@@ -70,10 +77,12 @@ pub fn process_confirm_deposits(ctx: &mut Context<SolvManagerContext>) -> Result
     let vault = vault_account.load()?;
 
     let vst_amount = vault.get_vst_operation_reserved_amount();
+    let one_srt_as_micro_vst = vault.get_one_srt_as_micro_vst();
+
     if vst_amount == 0 {
         // nothing to deposit
         // => just skip deposit
-        return Ok(());
+        return Ok(None);
     }
 
     // TODO/phase3: CPI call to the Solv protocol - now just transfer
@@ -94,37 +103,84 @@ pub fn process_confirm_deposits(ctx: &mut Context<SolvManagerContext>) -> Result
 
     drop(vault);
 
-    vault_account.load_mut()?.deposit_vst(vst_amount)?;
+    let (estimated_srt_amount, deducted_vst_deposit_fee_amount) =
+        vault_account.load_mut()?.deposit_vst(vst_amount)?;
 
-    Ok(())
+    Ok(Some(events::SolvManagerConfirmedDeposits {
+        vault: vault_account.key(),
+        solv_protocol_wallet: solv_protocol_wallet.key(),
+        solv_manager: solv_manager.key(),
+
+        vault_supported_token_mint: vault_supported_token_mint.key(),
+        vault_receipt_token_mint: vault_receipt_token_mint.key(),
+        solv_receipt_token_mint: solv_receipt_token_mint.key(),
+
+        confirmed_vst_amount: vst_amount,
+        deducted_vst_deposit_fee_amount,
+        estimated_srt_amount,
+        one_srt_as_micro_vst,
+    }))
 }
 
 pub fn process_complete_deposits(
     ctx: &mut Context<SolvManagerContext>,
     srt_amount: u64,
     new_one_srt_as_micro_vst: u64,
-) -> Result<()> {
+) -> Result<events::SolvManagerCompletedDeposits> {
     let SolvManagerContext {
+        solv_manager,
+        solv_protocol_wallet,
         vault_account,
+        vault_receipt_token_mint,
+        vault_supported_token_mint,
+        solv_receipt_token_mint,
         vault_solv_receipt_token_account,
         ..
     } = ctx.accounts;
 
     let mut vault = vault_account.load_mut()?;
 
-    vault.offset_srt_receivables(srt_amount, new_one_srt_as_micro_vst, true)?;
+    let old_one_srt_as_micro_vst = vault.get_one_srt_as_micro_vst();
+    let old_one_vrt_as_micro_vst = vault.get_one_vrt_as_micro_vst();
+
+    let (operation_reserved_srt_amount, deducted_vst_extra_fee_amount) =
+        vault.offset_srt_receivables(srt_amount, new_one_srt_as_micro_vst, true)?;
+
+    let new_one_vrt_as_micro_vst = vault.get_one_vrt_as_micro_vst();
 
     require_gte!(
         vault_solv_receipt_token_account.amount,
         vault.get_srt_total_reserved_amount(),
     );
 
-    Ok(())
+    Ok(events::SolvManagerCompletedDeposits {
+        vault: vault_account.key(),
+        solv_protocol_wallet: solv_protocol_wallet.key(),
+        solv_manager: solv_manager.key(),
+
+        vault_supported_token_mint: vault_supported_token_mint.key(),
+        vault_receipt_token_mint: vault_receipt_token_mint.key(),
+        solv_receipt_token_mint: solv_receipt_token_mint.key(),
+
+        received_srt_amount: srt_amount,
+        operation_reserved_srt_amount,
+        deducted_vst_extra_fee_amount,
+        old_one_srt_as_micro_vst,
+        new_one_srt_as_micro_vst,
+        old_one_vrt_as_micro_vst,
+        new_one_vrt_as_micro_vst,
+    })
 }
 
-pub fn process_confirm_withdrawal_requests(ctx: &mut Context<SolvManagerContext>) -> Result<()> {
+pub fn process_confirm_withdrawal_requests(
+    ctx: &mut Context<SolvManagerContext>,
+) -> Result<events::SolvManagerConfirmedWithdrawalRequests> {
     let SolvManagerContext {
+        solv_manager,
+        solv_protocol_wallet,
         vault_account,
+        vault_receipt_token_mint,
+        vault_supported_token_mint,
         solv_receipt_token_mint,
         vault_solv_receipt_token_account,
         solv_protocol_wallet_solv_receipt_token_account,
@@ -132,10 +188,15 @@ pub fn process_confirm_withdrawal_requests(ctx: &mut Context<SolvManagerContext>
         ..
     } = ctx.accounts;
 
-    let srt_amount_to_withdraw = vault_account.load_mut()?.confirm_withdrawal_requests()?;
+    let mut vault = vault_account.load_mut()?;
+
+    let (confirmed_srt_amount, estimated_vst_amount) = vault.confirm_withdrawal_requests()?;
+    let one_srt_as_micro_vst = vault.get_one_srt_as_micro_vst();
+
+    drop(vault);
 
     // TODO/phase3: CPI call to the Solv protocol - now just transfer
-    if srt_amount_to_withdraw > 0 {
+    if confirmed_srt_amount > 0 {
         anchor_spl::token::transfer_checked(
             CpiContext::new_with_signer(
                 token_program.to_account_info(),
@@ -147,12 +208,24 @@ pub fn process_confirm_withdrawal_requests(ctx: &mut Context<SolvManagerContext>
                 },
                 &[&vault_account.load()?.get_seeds()],
             ),
-            srt_amount_to_withdraw,
+            confirmed_srt_amount,
             solv_receipt_token_mint.decimals,
         )?;
     }
 
-    Ok(())
+    Ok(events::SolvManagerConfirmedWithdrawalRequests {
+        vault: vault_account.key(),
+        solv_protocol_wallet: solv_protocol_wallet.key(),
+        solv_manager: solv_manager.key(),
+
+        vault_supported_token_mint: vault_supported_token_mint.key(),
+        vault_receipt_token_mint: vault_receipt_token_mint.key(),
+        solv_receipt_token_mint: solv_receipt_token_mint.key(),
+
+        confirmed_srt_amount,
+        estimated_vst_amount,
+        one_srt_as_micro_vst,
+    })
 }
 
 pub fn process_complete_withdrawal_requests(
@@ -160,9 +233,14 @@ pub fn process_complete_withdrawal_requests(
     srt_amount: u64,
     vst_amount: u64,
     old_one_srt_as_micro_vst: u64,
-) -> Result<()> {
+) -> Result<events::SolvManagerCompletedWithdrawalRequests> {
     let SolvManagerContext {
+        solv_manager,
+        solv_protocol_wallet,
         vault_account,
+        vault_receipt_token_mint,
+        vault_supported_token_mint,
+        solv_receipt_token_mint,
         vault_vault_supported_token_account,
         ..
     } = ctx.accounts;
@@ -171,58 +249,129 @@ pub fn process_complete_withdrawal_requests(
 
     let mut vault = vault_account.load_mut()?;
 
-    vault.complete_withdrawal_requests(srt_amount, vst_amount, old_one_srt_as_micro_vst, true)?;
+    let (claimable_vst_amount, extra_vst_amount, deducted_vst_fee_amount) = vault
+        .complete_withdrawal_requests(srt_amount, vst_amount, old_one_srt_as_micro_vst, true)?;
+    let total_claimable_vst_amount = vault.get_vst_total_claimable_amount();
 
     require_gte!(
         vault_vault_supported_token_account.amount,
         vault.get_vst_total_reserved_amount(),
     );
 
-    Ok(())
+    Ok(events::SolvManagerCompletedWithdrawalRequests {
+        vault: vault_account.key(),
+        solv_protocol_wallet: solv_protocol_wallet.key(),
+        solv_manager: solv_manager.key(),
+
+        vault_supported_token_mint: vault_supported_token_mint.key(),
+        vault_receipt_token_mint: vault_receipt_token_mint.key(),
+        solv_receipt_token_mint: solv_receipt_token_mint.key(),
+
+        burnt_srt_amount: srt_amount,
+        received_vst_amount: vst_amount,
+        claimable_vst_amount,
+        total_claimable_vst_amount,
+        extra_vst_amount,
+        deducted_vst_fee_amount,
+    })
 }
 
 pub fn process_refresh_solv_receipt_token_redemption_rate(
     ctx: &mut Context<SolvManagerContext>,
     new_one_srt_as_micro_vst: u64,
-) -> Result<()> {
-    let SolvManagerContext { vault_account, .. } = ctx.accounts;
+) -> Result<events::SolvManagerRefreshedSRTRedemptionRate> {
+    let SolvManagerContext {
+        solv_manager,
+        solv_protocol_wallet,
+        vault_account,
+        vault_supported_token_mint,
+        vault_receipt_token_mint,
+        solv_receipt_token_mint,
+        ..
+    } = ctx.accounts;
 
-    vault_account
-        .load_mut()?
-        .refresh_srt_exchange_rate_with_validation(new_one_srt_as_micro_vst, true)?;
+    let mut vault = vault_account.load_mut()?;
 
-    Ok(())
+    let old_one_srt_as_micro_vst = vault.get_one_srt_as_micro_vst();
+    let old_one_vrt_as_micro_vst = vault.get_one_vrt_as_micro_vst();
+
+    vault.refresh_srt_exchange_rate_with_validation(new_one_srt_as_micro_vst, true)?;
+
+    let new_one_vrt_as_micro_vst = vault.get_one_vrt_as_micro_vst();
+
+    Ok(events::SolvManagerRefreshedSRTRedemptionRate {
+        vault: vault_account.key(),
+        solv_protocol_wallet: solv_protocol_wallet.key(),
+        solv_manager: solv_manager.key(),
+
+        vault_supported_token_mint: vault_supported_token_mint.key(),
+        vault_receipt_token_mint: vault_receipt_token_mint.key(),
+        solv_receipt_token_mint: solv_receipt_token_mint.key(),
+
+        old_one_srt_as_micro_vst,
+        new_one_srt_as_micro_vst,
+        old_one_vrt_as_micro_vst,
+        new_one_vrt_as_micro_vst,
+    })
 }
 
 pub fn process_imply_solv_protocol_fee(
     ctx: &mut Context<SolvManagerContext>,
     new_one_srt_as_micro_vst: u64,
-) -> Result<()> {
-    let SolvManagerContext { vault_account, .. } = ctx.accounts;
+) -> Result<events::SolvManagerImpliedSolvProtocolFee> {
+    let SolvManagerContext {
+        solv_manager,
+        solv_protocol_wallet,
+        vault_account,
+        vault_supported_token_mint,
+        vault_receipt_token_mint,
+        solv_receipt_token_mint,
+        ..
+    } = ctx.accounts;
 
-    vault_account
-        .load_mut()?
+    let mut vault = vault_account.load_mut()?;
+
+    let old_one_srt_as_micro_vst = vault.get_one_srt_as_micro_vst();
+
+    let implied_vst_fee_amount = vault
         .adjust_srt_exchange_rate_with_extra_vst_receivables(new_one_srt_as_micro_vst, true)?;
 
-    Ok(())
+    Ok(events::SolvManagerImpliedSolvProtocolFee {
+        vault: vault_account.key(),
+        solv_protocol_wallet: solv_protocol_wallet.key(),
+        solv_manager: solv_manager.key(),
+
+        vault_supported_token_mint: vault_supported_token_mint.key(),
+        vault_receipt_token_mint: vault_receipt_token_mint.key(),
+        solv_receipt_token_mint: solv_receipt_token_mint.key(),
+
+        old_one_srt_as_micro_vst,
+        new_one_srt_as_micro_vst,
+        implied_vst_fee_amount,
+    })
 }
 
 pub fn process_confirm_donations(
     ctx: &mut Context<SolvManagerContext>,
     srt_amount: u64,
     vst_amount: u64,
-) -> Result<()> {
+) -> Result<events::SolvManagerConfirmedDonations> {
     let SolvManagerContext {
+        solv_manager,
+        solv_protocol_wallet,
         vault_account,
         vault_vault_supported_token_account,
         vault_solv_receipt_token_account,
+        vault_supported_token_mint,
+        vault_receipt_token_mint,
+        solv_receipt_token_mint,
         ..
     } = ctx.accounts;
 
     let mut vault = vault_account.load_mut()?;
 
-    vault.donate_srt(srt_amount)?;
-    vault.donate_vst(vst_amount)?;
+    let srt_amount = vault.donate_srt(srt_amount)?;
+    let vst_amount = vault.donate_vst(vst_amount)?;
 
     require_gte!(
         vault_vault_supported_token_account.amount,
@@ -233,7 +382,18 @@ pub fn process_confirm_donations(
         vault.get_srt_total_reserved_amount(),
     );
 
-    Ok(())
+    Ok(events::SolvManagerConfirmedDonations {
+        vault: vault_account.key(),
+        solv_protocol_wallet: solv_protocol_wallet.key(),
+        solv_manager: solv_manager.key(),
+
+        vault_supported_token_mint: vault_supported_token_mint.key(),
+        vault_receipt_token_mint: vault_receipt_token_mint.key(),
+        solv_receipt_token_mint: solv_receipt_token_mint.key(),
+
+        donated_srt_amount: srt_amount,
+        donated_vst_amount: vst_amount,
+    })
 }
 
 // TODO/phase3: deprecate

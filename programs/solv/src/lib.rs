@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 
 mod constants;
 mod errors;
+mod events;
 mod instructions;
 pub mod states;
 
@@ -51,18 +52,32 @@ pub mod solv {
         mut ctx: Context<FundManagerContext>,
         vst_amount: u64,
     ) -> Result<()> {
-        process_deposit(&mut ctx, vst_amount)
+        emit_cpi!(process_deposit(&mut ctx, vst_amount)?);
+
+        Ok(())
     }
 
     pub fn fund_manager_request_withdrawal(
         mut ctx: Context<FundManagerContext>,
         vrt_amount: u64,
     ) -> Result<()> {
-        process_request_withdrawal(&mut ctx, vrt_amount)
+        let event = process_request_withdrawal(&mut ctx, vrt_amount)?;
+
+        if let Some(event) = event {
+            emit_cpi!(event);
+        }
+
+        Ok(())
     }
 
     pub fn fund_manager_withdraw(mut ctx: Context<FundManagerContext>) -> Result<()> {
-        process_withdraw(&mut ctx)
+        let event = process_withdraw(&mut ctx)?;
+
+        if let Some(event) = event {
+            emit_cpi!(event);
+        }
+
+        Ok(())
     }
 
     ////////////////////////////////////////////
@@ -70,7 +85,13 @@ pub mod solv {
     ////////////////////////////////////////////
 
     pub fn solv_manager_confirm_deposits(mut ctx: Context<SolvManagerContext>) -> Result<()> {
-        process_confirm_deposits(&mut ctx)
+        let event = process_confirm_deposits(&mut ctx)?;
+
+        if let Some(event) = event {
+            emit_cpi!(event);
+        }
+
+        Ok(())
     }
 
     pub fn solv_manager_complete_deposits(
@@ -78,13 +99,21 @@ pub mod solv {
         srt_amount: u64,
         new_one_srt_as_micro_vst: u64,
     ) -> Result<()> {
-        process_complete_deposits(&mut ctx, srt_amount, new_one_srt_as_micro_vst)
+        emit_cpi!(process_complete_deposits(
+            &mut ctx,
+            srt_amount,
+            new_one_srt_as_micro_vst
+        )?);
+
+        Ok(())
     }
 
     pub fn solv_manager_confirm_withdrawal_requests(
         mut ctx: Context<SolvManagerContext>,
     ) -> Result<()> {
-        process_confirm_withdrawal_requests(&mut ctx)
+        emit_cpi!(process_confirm_withdrawal_requests(&mut ctx)?);
+
+        Ok(())
     }
 
     pub fn solv_manager_complete_withdrawal_requests(
@@ -93,26 +122,38 @@ pub mod solv {
         vst_amount: u64,
         old_one_srt_as_micro_vst: u64,
     ) -> Result<()> {
-        process_complete_withdrawal_requests(
+        emit_cpi!(process_complete_withdrawal_requests(
             &mut ctx,
             srt_amount,
             vst_amount,
             old_one_srt_as_micro_vst,
-        )
+        )?);
+
+        Ok(())
     }
 
     pub fn solv_manager_refresh_solv_receipt_token_redemption_rate(
         mut ctx: Context<SolvManagerContext>,
         new_one_srt_as_micro_vst: u64,
     ) -> Result<()> {
-        process_refresh_solv_receipt_token_redemption_rate(&mut ctx, new_one_srt_as_micro_vst)
+        emit_cpi!(process_refresh_solv_receipt_token_redemption_rate(
+            &mut ctx,
+            new_one_srt_as_micro_vst
+        )?);
+
+        Ok(())
     }
 
     pub fn solv_manager_imply_solv_protocol_fee(
         mut ctx: Context<SolvManagerContext>,
         new_one_srt_as_micro_vst: u64,
     ) -> Result<()> {
-        process_imply_solv_protocol_fee(&mut ctx, new_one_srt_as_micro_vst)
+        emit_cpi!(process_imply_solv_protocol_fee(
+            &mut ctx,
+            new_one_srt_as_micro_vst
+        )?);
+
+        Ok(())
     }
 
     pub fn solv_manager_confirm_donations(
@@ -120,7 +161,9 @@ pub mod solv {
         srt_amount: u64,
         vst_amount: u64,
     ) -> Result<()> {
-        process_confirm_donations(&mut ctx, srt_amount, vst_amount)
+        emit_cpi!(process_confirm_donations(&mut ctx, srt_amount, vst_amount)?);
+
+        Ok(())
     }
 
     ////////////////////////////////////////////
