@@ -37,17 +37,16 @@ import {
   type ReadonlyUint8Array,
 } from '@solana/kit';
 
-export const SOLV_MANAGER_CONFIRMED_DEPOSITS_DISCRIMINATOR = new Uint8Array([
-  93, 34, 243, 171, 210, 71, 136, 126,
-]);
+export const SOLV_MANAGER_REFRESHED_S_R_T_REDEMPTION_RATE_DISCRIMINATOR =
+  new Uint8Array([11, 141, 194, 159, 166, 173, 222, 223]);
 
-export function getSolvManagerConfirmedDepositsDiscriminatorBytes() {
+export function getSolvManagerRefreshedSRTRedemptionRateDiscriminatorBytes() {
   return fixEncoderSize(getBytesEncoder(), 8).encode(
-    SOLV_MANAGER_CONFIRMED_DEPOSITS_DISCRIMINATOR
+    SOLV_MANAGER_REFRESHED_S_R_T_REDEMPTION_RATE_DISCRIMINATOR
   );
 }
 
-export type SolvManagerConfirmedDeposits = {
+export type SolvManagerRefreshedSRTRedemptionRate = {
   discriminator: ReadonlyUint8Array;
   vault: Address;
   solvProtocolWallet: Address;
@@ -55,13 +54,13 @@ export type SolvManagerConfirmedDeposits = {
   vaultSupportedTokenMint: Address;
   vaultReceiptTokenMint: Address;
   solvReceiptTokenMint: Address;
-  confirmedVstAmount: bigint;
-  deductedVstDepositFeeAmount: bigint;
-  estimatedSrtAmount: bigint;
-  oneSrtAsMicroVst: bigint;
+  oldOneSrtAsMicroVst: bigint;
+  newOneSrtAsMicroVst: bigint;
+  oldOneVrtAsMicroVst: bigint;
+  newOneVrtAsMicroVst: bigint;
 };
 
-export type SolvManagerConfirmedDepositsArgs = {
+export type SolvManagerRefreshedSRTRedemptionRateArgs = {
   discriminator?: ReadonlyUint8Array;
   vault: Address;
   solvProtocolWallet: Address;
@@ -69,13 +68,13 @@ export type SolvManagerConfirmedDepositsArgs = {
   vaultSupportedTokenMint: Address;
   vaultReceiptTokenMint: Address;
   solvReceiptTokenMint: Address;
-  confirmedVstAmount: number | bigint;
-  deductedVstDepositFeeAmount: number | bigint;
-  estimatedSrtAmount: number | bigint;
-  oneSrtAsMicroVst: number | bigint;
+  oldOneSrtAsMicroVst: number | bigint;
+  newOneSrtAsMicroVst: number | bigint;
+  oldOneVrtAsMicroVst: number | bigint;
+  newOneVrtAsMicroVst: number | bigint;
 };
 
-export function getSolvManagerConfirmedDepositsEncoder(): Encoder<SolvManagerConfirmedDepositsArgs> {
+export function getSolvManagerRefreshedSRTRedemptionRateEncoder(): Encoder<SolvManagerRefreshedSRTRedemptionRateArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
@@ -85,20 +84,21 @@ export function getSolvManagerConfirmedDepositsEncoder(): Encoder<SolvManagerCon
       ['vaultSupportedTokenMint', getAddressEncoder()],
       ['vaultReceiptTokenMint', getAddressEncoder()],
       ['solvReceiptTokenMint', getAddressEncoder()],
-      ['confirmedVstAmount', getU64Encoder()],
-      ['deductedVstDepositFeeAmount', getU64Encoder()],
-      ['estimatedSrtAmount', getU64Encoder()],
-      ['oneSrtAsMicroVst', getU64Encoder()],
+      ['oldOneSrtAsMicroVst', getU64Encoder()],
+      ['newOneSrtAsMicroVst', getU64Encoder()],
+      ['oldOneVrtAsMicroVst', getU64Encoder()],
+      ['newOneVrtAsMicroVst', getU64Encoder()],
     ]),
     (value) => ({
       ...value,
       discriminator:
-        value.discriminator ?? SOLV_MANAGER_CONFIRMED_DEPOSITS_DISCRIMINATOR,
+        value.discriminator ??
+        SOLV_MANAGER_REFRESHED_S_R_T_REDEMPTION_RATE_DISCRIMINATOR,
     })
   );
 }
 
-export function getSolvManagerConfirmedDepositsDecoder(): Decoder<SolvManagerConfirmedDeposits> {
+export function getSolvManagerRefreshedSRTRedemptionRateDecoder(): Decoder<SolvManagerRefreshedSRTRedemptionRate> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
     ['vault', getAddressDecoder()],
@@ -107,54 +107,54 @@ export function getSolvManagerConfirmedDepositsDecoder(): Decoder<SolvManagerCon
     ['vaultSupportedTokenMint', getAddressDecoder()],
     ['vaultReceiptTokenMint', getAddressDecoder()],
     ['solvReceiptTokenMint', getAddressDecoder()],
-    ['confirmedVstAmount', getU64Decoder()],
-    ['deductedVstDepositFeeAmount', getU64Decoder()],
-    ['estimatedSrtAmount', getU64Decoder()],
-    ['oneSrtAsMicroVst', getU64Decoder()],
+    ['oldOneSrtAsMicroVst', getU64Decoder()],
+    ['newOneSrtAsMicroVst', getU64Decoder()],
+    ['oldOneVrtAsMicroVst', getU64Decoder()],
+    ['newOneVrtAsMicroVst', getU64Decoder()],
   ]);
 }
 
-export function getSolvManagerConfirmedDepositsCodec(): Codec<
-  SolvManagerConfirmedDepositsArgs,
-  SolvManagerConfirmedDeposits
+export function getSolvManagerRefreshedSRTRedemptionRateCodec(): Codec<
+  SolvManagerRefreshedSRTRedemptionRateArgs,
+  SolvManagerRefreshedSRTRedemptionRate
 > {
   return combineCodec(
-    getSolvManagerConfirmedDepositsEncoder(),
-    getSolvManagerConfirmedDepositsDecoder()
+    getSolvManagerRefreshedSRTRedemptionRateEncoder(),
+    getSolvManagerRefreshedSRTRedemptionRateDecoder()
   );
 }
 
-export function decodeSolvManagerConfirmedDeposits<
+export function decodeSolvManagerRefreshedSRTRedemptionRate<
   TAddress extends string = string,
 >(
   encodedAccount: EncodedAccount<TAddress>
-): Account<SolvManagerConfirmedDeposits, TAddress>;
-export function decodeSolvManagerConfirmedDeposits<
+): Account<SolvManagerRefreshedSRTRedemptionRate, TAddress>;
+export function decodeSolvManagerRefreshedSRTRedemptionRate<
   TAddress extends string = string,
 >(
   encodedAccount: MaybeEncodedAccount<TAddress>
-): MaybeAccount<SolvManagerConfirmedDeposits, TAddress>;
-export function decodeSolvManagerConfirmedDeposits<
+): MaybeAccount<SolvManagerRefreshedSRTRedemptionRate, TAddress>;
+export function decodeSolvManagerRefreshedSRTRedemptionRate<
   TAddress extends string = string,
 >(
   encodedAccount: EncodedAccount<TAddress> | MaybeEncodedAccount<TAddress>
 ):
-  | Account<SolvManagerConfirmedDeposits, TAddress>
-  | MaybeAccount<SolvManagerConfirmedDeposits, TAddress> {
+  | Account<SolvManagerRefreshedSRTRedemptionRate, TAddress>
+  | MaybeAccount<SolvManagerRefreshedSRTRedemptionRate, TAddress> {
   return decodeAccount(
     encodedAccount as MaybeEncodedAccount<TAddress>,
-    getSolvManagerConfirmedDepositsDecoder()
+    getSolvManagerRefreshedSRTRedemptionRateDecoder()
   );
 }
 
-export async function fetchSolvManagerConfirmedDeposits<
+export async function fetchSolvManagerRefreshedSRTRedemptionRate<
   TAddress extends string = string,
 >(
   rpc: Parameters<typeof fetchEncodedAccount>[0],
   address: Address<TAddress>,
   config?: FetchAccountConfig
-): Promise<Account<SolvManagerConfirmedDeposits, TAddress>> {
-  const maybeAccount = await fetchMaybeSolvManagerConfirmedDeposits(
+): Promise<Account<SolvManagerRefreshedSRTRedemptionRate, TAddress>> {
+  const maybeAccount = await fetchMaybeSolvManagerRefreshedSRTRedemptionRate(
     rpc,
     address,
     config
@@ -163,38 +163,39 @@ export async function fetchSolvManagerConfirmedDeposits<
   return maybeAccount;
 }
 
-export async function fetchMaybeSolvManagerConfirmedDeposits<
+export async function fetchMaybeSolvManagerRefreshedSRTRedemptionRate<
   TAddress extends string = string,
 >(
   rpc: Parameters<typeof fetchEncodedAccount>[0],
   address: Address<TAddress>,
   config?: FetchAccountConfig
-): Promise<MaybeAccount<SolvManagerConfirmedDeposits, TAddress>> {
+): Promise<MaybeAccount<SolvManagerRefreshedSRTRedemptionRate, TAddress>> {
   const maybeAccount = await fetchEncodedAccount(rpc, address, config);
-  return decodeSolvManagerConfirmedDeposits(maybeAccount);
+  return decodeSolvManagerRefreshedSRTRedemptionRate(maybeAccount);
 }
 
-export async function fetchAllSolvManagerConfirmedDeposits(
+export async function fetchAllSolvManagerRefreshedSRTRedemptionRate(
   rpc: Parameters<typeof fetchEncodedAccounts>[0],
   addresses: Array<Address>,
   config?: FetchAccountsConfig
-): Promise<Account<SolvManagerConfirmedDeposits>[]> {
-  const maybeAccounts = await fetchAllMaybeSolvManagerConfirmedDeposits(
-    rpc,
-    addresses,
-    config
-  );
+): Promise<Account<SolvManagerRefreshedSRTRedemptionRate>[]> {
+  const maybeAccounts =
+    await fetchAllMaybeSolvManagerRefreshedSRTRedemptionRate(
+      rpc,
+      addresses,
+      config
+    );
   assertAccountsExist(maybeAccounts);
   return maybeAccounts;
 }
 
-export async function fetchAllMaybeSolvManagerConfirmedDeposits(
+export async function fetchAllMaybeSolvManagerRefreshedSRTRedemptionRate(
   rpc: Parameters<typeof fetchEncodedAccounts>[0],
   addresses: Array<Address>,
   config?: FetchAccountsConfig
-): Promise<MaybeAccount<SolvManagerConfirmedDeposits>[]> {
+): Promise<MaybeAccount<SolvManagerRefreshedSRTRedemptionRate>[]> {
   const maybeAccounts = await fetchEncodedAccounts(rpc, addresses, config);
   return maybeAccounts.map((maybeAccount) =>
-    decodeSolvManagerConfirmedDeposits(maybeAccount)
+    decodeSolvManagerRefreshedSRTRedemptionRate(maybeAccount)
   );
 }

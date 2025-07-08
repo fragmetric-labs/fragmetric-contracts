@@ -12,5 +12,8 @@ export * from './fundManagerWithdrewFromVault';
 export * from './solvManagerCompletedDeposits';
 export * from './solvManagerCompletedWithdrawalRequests';
 export * from './solvManagerConfirmedDeposits';
+export * from './solvManagerConfirmedDonations';
 export * from './solvManagerConfirmedWithdrawalRequests';
+export * from './solvManagerImpliedSolvProtocolFee';
+export * from './solvManagerRefreshedSRTRedemptionRate';
 export * from './vaultAccount';

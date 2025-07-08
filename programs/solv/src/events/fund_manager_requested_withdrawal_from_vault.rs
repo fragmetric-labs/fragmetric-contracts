@@ -7,5 +7,5 @@ pub struct FundManagerRequestedWithdrawalFromVault {
     pub vault_receipt_token_mint: Pubkey,
 
     pub requested_vrt_amount: u64,
-    pub estimated_vst_withdrawal_amount: u64,
+    pub estimated_vst_amount: u64,
 }

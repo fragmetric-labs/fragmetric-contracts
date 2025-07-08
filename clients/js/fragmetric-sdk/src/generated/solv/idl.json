@@ -5378,6 +5378,19 @@
       ]
     },
     {
+      "name": "SolvManagerConfirmedDonations",
+      "discriminator": [
+        13,
+        137,
+        251,
+        141,
+        137,
+        104,
+        61,
+        180
+      ]
+    },
+    {
       "name": "SolvManagerConfirmedWithdrawalRequests",
       "discriminator": [
         129,
@@ -5388,6 +5401,32 @@
         27,
         7,
         237
+      ]
+    },
+    {
+      "name": "SolvManagerImpliedSolvProtocolFee",
+      "discriminator": [
+        216,
+        236,
+        141,
+        82,
+        214,
+        249,
+        174,
+        104
+      ]
+    },
+    {
+      "name": "SolvManagerRefreshedSRTRedemptionRate",
+      "discriminator": [
+        11,
+        141,
+        194,
+        159,
+        166,
+        173,
+        222,
+        223
       ]
     }
   ],
@@ -5429,8 +5468,8 @@
     },
     {
       "code": 6007,
-      "name": "InvalidSolvProtocolFixedAmountFeeError",
-      "msg": "invalid srt fixed amount fee"
+      "name": "InvalidSolvProtocolExtraFeeAmountError",
+      "msg": "invalid srt extra fee amount"
     },
     {
       "code": 6008,
@@ -5529,7 +5568,7 @@
             "type": "u64"
           },
           {
-            "name": "estimated_vst_withdrawal_amount",
+            "name": "estimated_vst_amount",
             "type": "u64"
           }
         ]
@@ -5553,7 +5592,28 @@
             "type": "pubkey"
           },
           {
+            "name": "burnt_vrt_amount",
+            "type": "u64"
+          },
+          {
             "name": "claimed_vst_amount",
+            "docs": [
+              "Estimated amount minus fee"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "extra_vst_amount",
+            "docs": [
+              "Extra claimed amount if exists"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "deducted_vst_fee_amount",
+            "docs": [
+              "Withdrawal fee"
+            ],
             "type": "u64"
           }
         ]
@@ -5607,6 +5667,14 @@
           {
             "name": "new_one_srt_as_micro_vst",
             "type": "u64"
+          },
+          {
+            "name": "old_one_vrt_as_micro_vst",
+            "type": "u64"
+          },
+          {
+            "name": "new_one_vrt_as_micro_vst",
+            "type": "u64"
           }
         ]
       }
@@ -5629,15 +5697,15 @@
             "type": "pubkey"
           },
           {
-            "name": "vst_mint",
+            "name": "vault_supported_token_mint",
             "type": "pubkey"
           },
           {
-            "name": "vrt_mint",
+            "name": "vault_receipt_token_mint",
             "type": "pubkey"
           },
           {
-            "name": "srt_mint",
+            "name": "solv_receipt_token_mint",
             "type": "pubkey"
           },
           {
@@ -5645,19 +5713,38 @@
             "type": "u64"
           },
           {
+            "name": "received_vst_amount",
+            "docs": [
+              "VST received for burning SRT"
+            ],
+            "type": "u64"
+          },
+          {
             "name": "withdrawn_vst_amount",
+            "docs": [
+              "Estimated amount minus fee"
+            ],
             "type": "u64"
           },
           {
-            "name": "vst_reserved_amount_to_claim",
+            "name": "extra_vst_amount",
+            "docs": [
+              "Extra amount if exists"
+            ],
             "type": "u64"
           },
           {
-            "name": "vst_extra_amount_to_claim",
+            "name": "deducted_vst_fee_amount",
+            "docs": [
+              "Withdrawal fee"
+            ],
             "type": "u64"
           },
           {
-            "name": "vst_deducted_fee_amount",
+            "name": "total_claimable_vst_amount",
+            "docs": [
+              "Total claimable amount"
+            ],
             "type": "u64"
           }
         ]
@@ -5701,11 +5788,51 @@
             "type": "u64"
           },
           {
-            "name": "expected_srt_amount",
+            "name": "estimated_srt_amount",
             "type": "u64"
           },
           {
             "name": "one_srt_as_micro_vst",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SolvManagerConfirmedDonations",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "solv_protocol_wallet",
+            "type": "pubkey"
+          },
+          {
+            "name": "solv_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "vault_supported_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "vault_receipt_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "solv_receipt_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "donated_srt_amount",
+            "type": "u64"
+          },
+          {
+            "name": "donated_vst_amount",
             "type": "u64"
           }
         ]
@@ -5745,11 +5872,103 @@
             "type": "u64"
           },
           {
-            "name": "processing_vrt_amount",
+            "name": "estimated_vst_amount",
             "type": "u64"
           },
           {
-            "name": "estimated_vst_amount",
+            "name": "one_srt_as_micro_vst",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SolvManagerImpliedSolvProtocolFee",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "solv_protocol_wallet",
+            "type": "pubkey"
+          },
+          {
+            "name": "solv_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "vault_supported_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "vault_receipt_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "solv_receipt_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "old_one_srt_as_micro_vst",
+            "type": "u64"
+          },
+          {
+            "name": "new_one_srt_as_micro_vst",
+            "type": "u64"
+          },
+          {
+            "name": "implied_vst_fee_amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SolvManagerRefreshedSRTRedemptionRate",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "solv_protocol_wallet",
+            "type": "pubkey"
+          },
+          {
+            "name": "solv_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "vault_supported_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "vault_receipt_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "solv_receipt_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "old_one_srt_as_micro_vst",
+            "type": "u64"
+          },
+          {
+            "name": "new_one_srt_as_micro_vst",
+            "type": "u64"
+          },
+          {
+            "name": "old_one_vrt_as_micro_vst",
+            "type": "u64"
+          },
+          {
+            "name": "new_one_vrt_as_micro_vst",
             "type": "u64"
           }
         ]

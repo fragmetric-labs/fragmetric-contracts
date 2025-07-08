@@ -417,6 +417,11 @@ impl VaultAccount {
         Ok(())
     }
 
+    /// informative VRT redepmtion rate
+    pub fn get_one_vrt_as_micro_vst(&self) -> u64 {
+        self.one_vrt_as_micro_vst
+    }
+
     /// VRT mint amount = floor(VST * VRT supply / NAV) ?? VST
     /// * VRT price = NAV / VRT supply
     /// * NAV = VST (operation reserved + receivable) + floor(SRT (operation reserved) as VST) + floor(SRT (operation receivable) as VST)
@@ -531,6 +536,10 @@ impl VaultAccount {
         self.srt_operation_reserved_amount + self.srt_withdrawal_locked_amount
     }
 
+    pub(crate) fn get_one_srt_as_micro_vst(&self) -> u64 {
+        self.one_srt_as_micro_vst
+    }
+
     fn get_srt_exchange_rate(&self) -> SRTExchangeRate {
         SRTExchangeRate::new(self.one_srt_as_micro_vst, self.solv_receipt_token_decimals)
     }
@@ -539,7 +548,7 @@ impl VaultAccount {
         &mut self,
         one_srt_as_micro_vst: u64,
         heuristic_validation: bool,
-    ) -> Result<(u64, u64, u64, u64)> {
+    ) -> Result<()> {
         if self.is_deposit_in_progress() {
             err!(VaultError::DepositInProgressError)?;
         }
@@ -556,25 +565,18 @@ impl VaultAccount {
             err!(VaultError::InvalidSRTPriceError)?;
         }
 
-        let old_one_srt_as_micro_vst = self.one_srt_as_micro_vst;
-        let old_one_vrt_as_micro_vst = self.one_vrt_as_micro_vst;
-
         self.one_srt_as_micro_vst = one_srt_as_micro_vst;
         self.update_vrt_exchange_rate()?;
 
-        Ok((
-            old_one_srt_as_micro_vst,
-            self.one_srt_as_micro_vst,
-            old_one_vrt_as_micro_vst,
-            self.one_vrt_as_micro_vst,
-        ))
+        Ok(())
     }
 
+    /// returns ∆vst_operation_receivable_amount
     pub(crate) fn adjust_srt_exchange_rate_with_extra_vst_receivables(
         &mut self,
         one_srt_as_micro_vst: u64,
         heuristic_validation: bool,
-    ) -> Result<(u64, u64, u64, u64)> {
+    ) -> Result<u64> {
         if self.is_deposit_in_progress() {
             err!(VaultError::DepositInProgressError)?;
         }
@@ -598,18 +600,13 @@ impl VaultAccount {
             SRTExchangeRate::new(one_srt_as_micro_vst, self.solv_receipt_token_decimals)
                 .get_srt_amount_as_vst(self.srt_operation_reserved_amount, false)
                 .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
-        let delta =
+        let extra_vst_receivable_amount =
             srt_operation_reserved_amount_as_vst - post_srt_operation_reserved_amount_as_vst;
 
-        self.vst_operation_receivable_amount += delta;
+        self.vst_operation_receivable_amount += extra_vst_receivable_amount;
         self.one_srt_as_micro_vst = one_srt_as_micro_vst;
 
-        Ok((
-            self.one_srt_as_micro_vst,
-            one_srt_as_micro_vst,
-            delta,
-            self.vst_operation_receivable_amount,
-        ))
+        Ok(extra_vst_receivable_amount)
     }
 
     fn is_deposit_in_progress(&self) -> bool {
@@ -620,8 +617,8 @@ impl VaultAccount {
     /// * VST protocol deposit fee = ceil(VST * solv_protocol_deposit_fee_rate)  
     /// * SRT expected = ceil((VST - protocol fee) as SRT)
     ///
-    /// returns (one_srt_as_micro_vst, solv_protocol_deposit_fee_amount, srt_expected_amount)
-    pub(crate) fn deposit_vst(&mut self, vst_amount: u64) -> Result<(u64, u64, u64)> {
+    /// returns (srt_expected_amount, solv_protocol_deposit_fee_amount_as_vst)
+    pub(crate) fn deposit_vst(&mut self, vst_amount: u64) -> Result<(u64, u64)> {
         if self.is_deposit_in_progress() {
             err!(VaultError::DepositInProgressError)?;
         }
@@ -643,11 +640,7 @@ impl VaultAccount {
         self.vst_operation_receivable_amount += solv_protocol_deposit_fee_amount_as_vst;
         self.srt_operation_receivable_amount = srt_expected_amount;
 
-        Ok((
-            self.one_srt_as_micro_vst,
-            solv_protocol_deposit_fee_amount_as_vst,
-            srt_expected_amount,
-        ))
+        Ok((srt_expected_amount, solv_protocol_deposit_fee_amount_as_vst))
     }
 
     /// Offset VST receivables with VST donation.
@@ -691,13 +684,13 @@ impl VaultAccount {
 
     /// VST protocol extra fee = max(floor(SRT receivable as VST (w/ old price)) - floor(SRT as VST (w/ new price)), 0) ≤ HARD LIMIT(20000)
     ///
-    /// returns (old_one_srt_as_micro_vst, solv_protocol_extra_fee_amount, srt_operation_reserved_amount)
+    /// returns (srt_operation_reserved_amount, solv_protocol_extra_fee_amount_as_vst)
     pub(crate) fn offset_srt_receivables(
         &mut self,
         srt_amount: u64,
         new_one_srt_as_micro_vst: u64,
         heuristic_validation: bool,
-    ) -> Result<(u64, u64, u64)> {
+    ) -> Result<(u64, u64)> {
         if !self.is_deposit_in_progress() {
             err!(VaultError::DepositNotInProgressError)?;
         }
@@ -722,16 +715,14 @@ impl VaultAccount {
         self.srt_operation_reserved_amount += srt_amount;
         self.srt_operation_receivable_amount = 0;
 
-        let old_one_srt_as_micro_vst = self.one_srt_as_micro_vst;
         self.refresh_srt_exchange_rate_with_validation(
             new_one_srt_as_micro_vst,
             heuristic_validation,
         )?;
 
         Ok((
-            old_one_srt_as_micro_vst,
-            solv_protocol_extra_fee_amount_as_vst,
             self.srt_operation_reserved_amount,
+            solv_protocol_extra_fee_amount_as_vst,
         ))
     }
 
@@ -739,7 +730,7 @@ impl VaultAccount {
         self.withdrawal_requests[..self.num_withdrawal_requests as usize].iter_mut()
     }
 
-    /// returns (vrt_withdrawal_enqueued_amount, estimated_vst_withdrawal_amount).
+    /// returns (∆vrt_withdrawal_enqueued_amount, ∆vst_withdrawal_estimated_amount).
     /// vrt_withdrawal_enqueued_amount "might" be less than given vrt_amount,
     /// due to srt operation receivable amount.
     pub(crate) fn enqueue_withdrawal_request(&mut self, mut vrt_amount: u64) -> Result<(u64, u64)> {
@@ -930,10 +921,13 @@ impl VaultAccount {
         Ok((vrt_amount, vst_withdrawal_total_estimated_amount))
     }
 
-    /// returns (srt_amount_to_withdraw, vrt_withdrawal_processing_amount, vst_receivable_amount_to_claim)
-    pub(crate) fn confirm_withdrawal_requests(&mut self) -> Result<(u64, u64, u64)> {
+    /// returns (srt_amount_to_withdraw, vst_estimated_amount_to_receive)
+    pub(crate) fn confirm_withdrawal_requests(&mut self) -> Result<(u64, u64)> {
         let srt_amount_to_withdraw = self.srt_withdrawal_locked_amount;
-        let vrt_withdrawal_processing_amount = self.vrt_withdrawal_enqueued_amount;
+        let vst_estimated_amount_to_receive = self
+            .get_srt_exchange_rate()
+            .get_srt_amount_as_vst(srt_amount_to_withdraw, false)
+            .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
 
         // Start
         let mut vst_receivable_amount_to_claim = 0;
@@ -947,21 +941,17 @@ impl VaultAccount {
         }
 
         // Update accountings
-        self.vrt_withdrawal_processing_amount += vrt_withdrawal_processing_amount;
+        self.vrt_withdrawal_processing_amount += self.vrt_withdrawal_enqueued_amount;
         self.vrt_withdrawal_enqueued_amount = 0;
 
         self.vst_receivable_amount_to_claim += vst_receivable_amount_to_claim;
 
         self.srt_withdrawal_locked_amount = 0;
 
-        Ok((
-            srt_amount_to_withdraw,
-            vrt_withdrawal_processing_amount,
-            vst_receivable_amount_to_claim,
-        ))
+        Ok((srt_amount_to_withdraw, vst_estimated_amount_to_receive))
     }
 
-    /// returns (vst_reserved_amount_to_claim, vst_extra_amount_to_claim, vst_deducted_fee_amount)
+    /// returns (∆vst_reserved_amount_to_claim, ∆vst_extra_amount_to_claim, ∆vst_deducted_fee_amount)
     pub(crate) fn complete_withdrawal_requests(
         &mut self,
         srt_amount: u64,
@@ -1091,9 +1081,12 @@ impl VaultAccount {
         ))
     }
 
-    /// returns claimed_vst_amount
-    pub(crate) fn claim_vst(&mut self) -> Result<u64> {
-        let vst_amount = self.get_vst_claimable_amount();
+    /// returns (vrt_burnt_amount, vst_claimed_amount, vst_extra_amount, vst_deducted_fee_amount)
+    pub(crate) fn claim_vst(&mut self) -> Result<(u64, u64, u64, u64)> {
+        let vrt_burnt_amount = self.vrt_withdrawal_completed_amount;
+        let vst_claimed_amount = self.vst_reserved_amount_to_claim;
+        let vst_extra_amount = self.vst_extra_amount_to_claim;
+        let vst_deducted_fee_amount = self.vst_deducted_fee_amount;
 
         // Clear completed withdrawal requests
         let num_completed_requests = self
@@ -1111,10 +1104,15 @@ impl VaultAccount {
         self.vst_extra_amount_to_claim = 0;
         self.vst_deducted_fee_amount = 0;
 
-        Ok(vst_amount)
+        Ok((
+            vrt_burnt_amount,
+            vst_claimed_amount,
+            vst_extra_amount,
+            vst_deducted_fee_amount,
+        ))
     }
 
-    pub fn get_vst_claimable_amount(&self) -> u64 {
+    pub fn get_vst_total_claimable_amount(&self) -> u64 {
         self.vst_reserved_amount_to_claim + self.vst_extra_amount_to_claim
     }
 

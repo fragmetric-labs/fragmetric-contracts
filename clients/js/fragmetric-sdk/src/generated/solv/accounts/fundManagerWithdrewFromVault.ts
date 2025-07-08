@@ -52,7 +52,13 @@ export type FundManagerWithdrewFromVault = {
   vault: Address;
   vaultSupportedTokenMint: Address;
   vaultReceiptTokenMint: Address;
+  burntVrtAmount: bigint;
+  /** Estimated amount minus fee */
   claimedVstAmount: bigint;
+  /** Extra claimed amount if exists */
+  extraVstAmount: bigint;
+  /** Withdrawal fee */
+  deductedVstFeeAmount: bigint;
 };
 
 export type FundManagerWithdrewFromVaultArgs = {
@@ -60,7 +66,13 @@ export type FundManagerWithdrewFromVaultArgs = {
   vault: Address;
   vaultSupportedTokenMint: Address;
   vaultReceiptTokenMint: Address;
+  burntVrtAmount: number | bigint;
+  /** Estimated amount minus fee */
   claimedVstAmount: number | bigint;
+  /** Extra claimed amount if exists */
+  extraVstAmount: number | bigint;
+  /** Withdrawal fee */
+  deductedVstFeeAmount: number | bigint;
 };
 
 export function getFundManagerWithdrewFromVaultEncoder(): Encoder<FundManagerWithdrewFromVaultArgs> {
@@ -70,7 +82,10 @@ export function getFundManagerWithdrewFromVaultEncoder(): Encoder<FundManagerWit
       ['vault', getAddressEncoder()],
       ['vaultSupportedTokenMint', getAddressEncoder()],
       ['vaultReceiptTokenMint', getAddressEncoder()],
+      ['burntVrtAmount', getU64Encoder()],
       ['claimedVstAmount', getU64Encoder()],
+      ['extraVstAmount', getU64Encoder()],
+      ['deductedVstFeeAmount', getU64Encoder()],
     ]),
     (value) => ({
       ...value,
@@ -86,7 +101,10 @@ export function getFundManagerWithdrewFromVaultDecoder(): Decoder<FundManagerWit
     ['vault', getAddressDecoder()],
     ['vaultSupportedTokenMint', getAddressDecoder()],
     ['vaultReceiptTokenMint', getAddressDecoder()],
+    ['burntVrtAmount', getU64Decoder()],
     ['claimedVstAmount', getU64Decoder()],
+    ['extraVstAmount', getU64Decoder()],
+    ['deductedVstFeeAmount', getU64Decoder()],
   ]);
 }
 

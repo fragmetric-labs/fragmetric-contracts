@@ -12,6 +12,6 @@ pub struct SolvManagerConfirmedDeposits {
 
     pub confirmed_vst_amount: u64,
     pub deducted_vst_deposit_fee_amount: u64,
-    pub expected_srt_amount: u64,
+    pub estimated_srt_amount: u64,
     pub one_srt_as_micro_vst: u64,
 }

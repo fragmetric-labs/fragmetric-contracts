@@ -60,6 +60,8 @@ export type SolvManagerCompletedDeposits = {
   deductedVstExtraFeeAmount: bigint;
   oldOneSrtAsMicroVst: bigint;
   newOneSrtAsMicroVst: bigint;
+  oldOneVrtAsMicroVst: bigint;
+  newOneVrtAsMicroVst: bigint;
 };
 
 export type SolvManagerCompletedDepositsArgs = {
@@ -75,6 +77,8 @@ export type SolvManagerCompletedDepositsArgs = {
   deductedVstExtraFeeAmount: number | bigint;
   oldOneSrtAsMicroVst: number | bigint;
   newOneSrtAsMicroVst: number | bigint;
+  oldOneVrtAsMicroVst: number | bigint;
+  newOneVrtAsMicroVst: number | bigint;
 };
 
 export function getSolvManagerCompletedDepositsEncoder(): Encoder<SolvManagerCompletedDepositsArgs> {
@@ -92,6 +96,8 @@ export function getSolvManagerCompletedDepositsEncoder(): Encoder<SolvManagerCom
       ['deductedVstExtraFeeAmount', getU64Encoder()],
       ['oldOneSrtAsMicroVst', getU64Encoder()],
       ['newOneSrtAsMicroVst', getU64Encoder()],
+      ['oldOneVrtAsMicroVst', getU64Encoder()],
+      ['newOneVrtAsMicroVst', getU64Encoder()],
     ]),
     (value) => ({
       ...value,
@@ -115,6 +121,8 @@ export function getSolvManagerCompletedDepositsDecoder(): Decoder<SolvManagerCom
     ['deductedVstExtraFeeAmount', getU64Decoder()],
     ['oldOneSrtAsMicroVst', getU64Decoder()],
     ['newOneSrtAsMicroVst', getU64Decoder()],
+    ['oldOneVrtAsMicroVst', getU64Decoder()],
+    ['newOneVrtAsMicroVst', getU64Decoder()],
   ]);
 }
 

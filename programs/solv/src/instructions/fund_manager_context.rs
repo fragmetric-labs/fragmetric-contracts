@@ -149,7 +149,7 @@ pub fn process_request_withdrawal(
         vault_supported_token_mint: vault_supported_token_mint.key(),
         vault_receipt_token_mint: vault_receipt_token_mint.key(),
         requested_vrt_amount,
-        estimated_vst_withdrawal_amount,
+        estimated_vst_amount: estimated_vst_withdrawal_amount,
     }))
 }
 
@@ -166,31 +166,38 @@ pub fn process_withdraw(
         ..
     } = ctx.accounts;
 
-    let vst_amount = vault_account.load_mut()?.claim_vst()?;
+    let (burnt_vrt_amount, claimed_vst_amount, extra_vst_amount, deducted_vst_fee_amount) =
+        vault_account.load_mut()?.claim_vst()?;
 
-    if vst_amount == 0 {
+    if burnt_vrt_amount == 0 {
         return Ok(None);
     }
 
-    anchor_spl::token::transfer_checked(
-        CpiContext::new_with_signer(
-            token_program.to_account_info(),
-            anchor_spl::token::TransferChecked {
-                from: vault_vault_supported_token_account.to_account_info(),
-                mint: vault_supported_token_mint.to_account_info(),
-                to: payer_vault_supported_token_account.to_account_info(),
-                authority: vault_account.to_account_info(),
-            },
-            &[&vault_account.load()?.get_seeds()],
-        ),
-        vst_amount,
-        vault_supported_token_mint.decimals,
-    )?;
+    let total_claimed_vst_amount = claimed_vst_amount + extra_vst_amount;
+    if total_claimed_vst_amount > 0 {
+        anchor_spl::token::transfer_checked(
+            CpiContext::new_with_signer(
+                token_program.to_account_info(),
+                anchor_spl::token::TransferChecked {
+                    from: vault_vault_supported_token_account.to_account_info(),
+                    mint: vault_supported_token_mint.to_account_info(),
+                    to: payer_vault_supported_token_account.to_account_info(),
+                    authority: vault_account.to_account_info(),
+                },
+                &[&vault_account.load()?.get_seeds()],
+            ),
+            total_claimed_vst_amount,
+            vault_supported_token_mint.decimals,
+        )?;
+    }
 
     Ok(Some(events::FundManagerWithdrewFromVault {
         vault: vault_account.key(),
         vault_supported_token_mint: vault_supported_token_mint.key(),
         vault_receipt_token_mint: vault_receipt_token_mint.key(),
-        claimed_vst_amount: vst_amount,
+        burnt_vrt_amount,
+        claimed_vst_amount,
+        extra_vst_amount,
+        deducted_vst_fee_amount,
     }))
 }

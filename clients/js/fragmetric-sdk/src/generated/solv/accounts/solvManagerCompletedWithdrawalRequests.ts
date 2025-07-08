@@ -51,14 +51,20 @@ export type SolvManagerCompletedWithdrawalRequests = {
   vault: Address;
   solvProtocolWallet: Address;
   solvManager: Address;
-  vstMint: Address;
-  vrtMint: Address;
-  srtMint: Address;
+  vaultSupportedTokenMint: Address;
+  vaultReceiptTokenMint: Address;
+  solvReceiptTokenMint: Address;
   burntSrtAmount: bigint;
+  /** VST received for burning SRT */
+  receivedVstAmount: bigint;
+  /** Estimated amount minus fee */
   withdrawnVstAmount: bigint;
-  vstReservedAmountToClaim: bigint;
-  vstExtraAmountToClaim: bigint;
-  vstDeductedFeeAmount: bigint;
+  /** Extra amount if exists */
+  extraVstAmount: bigint;
+  /** Withdrawal fee */
+  deductedVstFeeAmount: bigint;
+  /** Total claimable amount */
+  totalClaimableVstAmount: bigint;
 };
 
 export type SolvManagerCompletedWithdrawalRequestsArgs = {
@@ -66,14 +72,20 @@ export type SolvManagerCompletedWithdrawalRequestsArgs = {
   vault: Address;
   solvProtocolWallet: Address;
   solvManager: Address;
-  vstMint: Address;
-  vrtMint: Address;
-  srtMint: Address;
+  vaultSupportedTokenMint: Address;
+  vaultReceiptTokenMint: Address;
+  solvReceiptTokenMint: Address;
   burntSrtAmount: number | bigint;
+  /** VST received for burning SRT */
+  receivedVstAmount: number | bigint;
+  /** Estimated amount minus fee */
   withdrawnVstAmount: number | bigint;
-  vstReservedAmountToClaim: number | bigint;
-  vstExtraAmountToClaim: number | bigint;
-  vstDeductedFeeAmount: number | bigint;
+  /** Extra amount if exists */
+  extraVstAmount: number | bigint;
+  /** Withdrawal fee */
+  deductedVstFeeAmount: number | bigint;
+  /** Total claimable amount */
+  totalClaimableVstAmount: number | bigint;
 };
 
 export function getSolvManagerCompletedWithdrawalRequestsEncoder(): Encoder<SolvManagerCompletedWithdrawalRequestsArgs> {
@@ -83,14 +95,15 @@ export function getSolvManagerCompletedWithdrawalRequestsEncoder(): Encoder<Solv
       ['vault', getAddressEncoder()],
       ['solvProtocolWallet', getAddressEncoder()],
       ['solvManager', getAddressEncoder()],
-      ['vstMint', getAddressEncoder()],
-      ['vrtMint', getAddressEncoder()],
-      ['srtMint', getAddressEncoder()],
+      ['vaultSupportedTokenMint', getAddressEncoder()],
+      ['vaultReceiptTokenMint', getAddressEncoder()],
+      ['solvReceiptTokenMint', getAddressEncoder()],
       ['burntSrtAmount', getU64Encoder()],
+      ['receivedVstAmount', getU64Encoder()],
       ['withdrawnVstAmount', getU64Encoder()],
-      ['vstReservedAmountToClaim', getU64Encoder()],
-      ['vstExtraAmountToClaim', getU64Encoder()],
-      ['vstDeductedFeeAmount', getU64Encoder()],
+      ['extraVstAmount', getU64Encoder()],
+      ['deductedVstFeeAmount', getU64Encoder()],
+      ['totalClaimableVstAmount', getU64Encoder()],
     ]),
     (value) => ({
       ...value,
@@ -107,14 +120,15 @@ export function getSolvManagerCompletedWithdrawalRequestsDecoder(): Decoder<Solv
     ['vault', getAddressDecoder()],
     ['solvProtocolWallet', getAddressDecoder()],
     ['solvManager', getAddressDecoder()],
-    ['vstMint', getAddressDecoder()],
-    ['vrtMint', getAddressDecoder()],
-    ['srtMint', getAddressDecoder()],
+    ['vaultSupportedTokenMint', getAddressDecoder()],
+    ['vaultReceiptTokenMint', getAddressDecoder()],
+    ['solvReceiptTokenMint', getAddressDecoder()],
     ['burntSrtAmount', getU64Decoder()],
+    ['receivedVstAmount', getU64Decoder()],
     ['withdrawnVstAmount', getU64Decoder()],
-    ['vstReservedAmountToClaim', getU64Decoder()],
-    ['vstExtraAmountToClaim', getU64Decoder()],
-    ['vstDeductedFeeAmount', getU64Decoder()],
+    ['extraVstAmount', getU64Decoder()],
+    ['deductedVstFeeAmount', getU64Decoder()],
+    ['totalClaimableVstAmount', getU64Decoder()],
   ]);
 }
 

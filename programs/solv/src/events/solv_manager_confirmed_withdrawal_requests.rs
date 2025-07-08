@@ -11,6 +11,6 @@ pub struct SolvManagerConfirmedWithdrawalRequests {
     pub solv_receipt_token_mint: Pubkey,
 
     pub confirmed_srt_amount: u64,
-    pub processing_vrt_amount: u64,
     pub estimated_vst_amount: u64,
+    pub one_srt_as_micro_vst: u64,
 }

@@ -55,8 +55,8 @@ export type SolvManagerConfirmedWithdrawalRequests = {
   vaultReceiptTokenMint: Address;
   solvReceiptTokenMint: Address;
   confirmedSrtAmount: bigint;
-  processingVrtAmount: bigint;
   estimatedVstAmount: bigint;
+  oneSrtAsMicroVst: bigint;
 };
 
 export type SolvManagerConfirmedWithdrawalRequestsArgs = {
@@ -68,8 +68,8 @@ export type SolvManagerConfirmedWithdrawalRequestsArgs = {
   vaultReceiptTokenMint: Address;
   solvReceiptTokenMint: Address;
   confirmedSrtAmount: number | bigint;
-  processingVrtAmount: number | bigint;
   estimatedVstAmount: number | bigint;
+  oneSrtAsMicroVst: number | bigint;
 };
 
 export function getSolvManagerConfirmedWithdrawalRequestsEncoder(): Encoder<SolvManagerConfirmedWithdrawalRequestsArgs> {
@@ -83,8 +83,8 @@ export function getSolvManagerConfirmedWithdrawalRequestsEncoder(): Encoder<Solv
       ['vaultReceiptTokenMint', getAddressEncoder()],
       ['solvReceiptTokenMint', getAddressEncoder()],
       ['confirmedSrtAmount', getU64Encoder()],
-      ['processingVrtAmount', getU64Encoder()],
       ['estimatedVstAmount', getU64Encoder()],
+      ['oneSrtAsMicroVst', getU64Encoder()],
     ]),
     (value) => ({
       ...value,
@@ -105,8 +105,8 @@ export function getSolvManagerConfirmedWithdrawalRequestsDecoder(): Decoder<Solv
     ['vaultReceiptTokenMint', getAddressDecoder()],
     ['solvReceiptTokenMint', getAddressDecoder()],
     ['confirmedSrtAmount', getU64Decoder()],
-    ['processingVrtAmount', getU64Decoder()],
     ['estimatedVstAmount', getU64Decoder()],
+    ['oneSrtAsMicroVst', getU64Decoder()],
   ]);
 }
 

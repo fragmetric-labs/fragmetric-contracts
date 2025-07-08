@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 #[event]
-pub struct SolvManagerRefreshedSrtRedemptionRate {
+pub struct SolvManagerRefreshedSRTRedemptionRate {
     pub vault: Pubkey,
     pub solv_protocol_wallet: Pubkey,
     pub solv_manager: Pubkey,

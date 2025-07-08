@@ -28,8 +28,8 @@ export const SOLV_ERROR__SOLV_PROTOCOL_WALLET_MISMATCH_ERROR = 0x1774; // 6004
 export const SOLV_ERROR__INVALID_SOLV_PROTOCOL_DEPOSIT_FEE_RATE_ERROR = 0x1775; // 6005
 /** InvalidSolvProtocolWithdrawalFeeRateError: invalid srt withdrawal fee rate */
 export const SOLV_ERROR__INVALID_SOLV_PROTOCOL_WITHDRAWAL_FEE_RATE_ERROR = 0x1776; // 6006
-/** InvalidSolvProtocolFixedAmountFeeError: invalid srt fixed amount fee */
-export const SOLV_ERROR__INVALID_SOLV_PROTOCOL_FIXED_AMOUNT_FEE_ERROR = 0x1777; // 6007
+/** InvalidSolvProtocolExtraFeeAmountError: invalid srt extra fee amount */
+export const SOLV_ERROR__INVALID_SOLV_PROTOCOL_EXTRA_FEE_AMOUNT_ERROR = 0x1777; // 6007
 /** VaultSupportedTokenMintMismatchError: vault supported token mint mismatch */
 export const SOLV_ERROR__VAULT_SUPPORTED_TOKEN_MINT_MISMATCH_ERROR = 0x1778; // 6008
 /** SolvReceiptTokenMintMismatchError: solv receipt token mint mismatch */
@@ -57,7 +57,7 @@ export type SolvError =
   | typeof SOLV_ERROR__EXCEEDED_MAX_WITHDRAWAL_REQUESTS_ERROR
   | typeof SOLV_ERROR__INVALID_ACCOUNT_DATA_VERSION_ERROR
   | typeof SOLV_ERROR__INVALID_SOLV_PROTOCOL_DEPOSIT_FEE_RATE_ERROR
-  | typeof SOLV_ERROR__INVALID_SOLV_PROTOCOL_FIXED_AMOUNT_FEE_ERROR
+  | typeof SOLV_ERROR__INVALID_SOLV_PROTOCOL_EXTRA_FEE_AMOUNT_ERROR
   | typeof SOLV_ERROR__INVALID_SOLV_PROTOCOL_WITHDRAWAL_FEE_RATE_ERROR
   | typeof SOLV_ERROR__INVALID_S_R_T_PRICE_ERROR
   | typeof SOLV_ERROR__NON_DELEGABLE_REWARD_TOKEN_MINT_ERROR
@@ -78,7 +78,7 @@ if (process.env.NODE_ENV !== 'production') {
     [SOLV_ERROR__EXCEEDED_MAX_WITHDRAWAL_REQUESTS_ERROR]: `exceeded max withdrawal requests`,
     [SOLV_ERROR__INVALID_ACCOUNT_DATA_VERSION_ERROR]: `invalid account data version`,
     [SOLV_ERROR__INVALID_SOLV_PROTOCOL_DEPOSIT_FEE_RATE_ERROR]: `invalid srt deposit fee rate`,
-    [SOLV_ERROR__INVALID_SOLV_PROTOCOL_FIXED_AMOUNT_FEE_ERROR]: `invalid srt fixed amount fee`,
+    [SOLV_ERROR__INVALID_SOLV_PROTOCOL_EXTRA_FEE_AMOUNT_ERROR]: `invalid srt extra fee amount`,
     [SOLV_ERROR__INVALID_SOLV_PROTOCOL_WITHDRAWAL_FEE_RATE_ERROR]: `invalid srt withdrawal fee rate`,
     [SOLV_ERROR__INVALID_S_R_T_PRICE_ERROR]: `invalid srt price`,
     [SOLV_ERROR__NON_DELEGABLE_REWARD_TOKEN_MINT_ERROR]: `non-delegable reward token mint`,

@@ -2,7 +2,6 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
 use crate::errors::VaultError;
-use crate::events;
 use crate::states::VaultAccount;
 
 #[event_cpi]
@@ -36,9 +35,8 @@ pub struct RewardManagerContext<'info> {
 
 pub fn process_delegate_reward_token_account(
     ctx: &mut Context<RewardManagerContext>,
-) -> Result<Option<events::RewardManagerDelegatedRewardTokenAccount>> {
+) -> Result<()> {
     let RewardManagerContext {
-        reward_manager,
         delegate,
         vault_account,
         reward_token_mint,
@@ -47,13 +45,9 @@ pub fn process_delegate_reward_token_account(
         ..
     } = ctx.accounts;
 
-    let (delegated_reward_token_mint, num_delegated_reward_token_mints) = vault_account
+    vault_account
         .load_mut()?
         .add_delegated_reward_token_mint(reward_token_mint.key())?;
-
-    if delegated_reward_token_mint.eq(&Pubkey::default()) {
-        return Ok(None);
-    }
 
     anchor_spl::token::approve(
         CpiContext::new_with_signer(
@@ -68,11 +62,5 @@ pub fn process_delegate_reward_token_account(
         u64::MAX,
     )?;
 
-    Ok(Some(events::RewardManagerDelegatedRewardTokenAccount {
-        vault: vault_account.key(),
-        reward_manager: reward_manager.key(),
-
-        delegated_reward_token_mint,
-        num_delegated_reward_token_mints,
-    }))
+    Ok(())
 }

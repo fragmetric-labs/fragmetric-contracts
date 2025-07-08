@@ -43,7 +43,10 @@ export enum SolvAccount {
   SolvManagerCompletedDeposits,
   SolvManagerCompletedWithdrawalRequests,
   SolvManagerConfirmedDeposits,
+  SolvManagerConfirmedDonations,
   SolvManagerConfirmedWithdrawalRequests,
+  SolvManagerImpliedSolvProtocolFee,
+  SolvManagerRefreshedSRTRedemptionRate,
 }
 
 export function identifySolvAccount(
@@ -131,12 +134,45 @@ export function identifySolvAccount(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([13, 137, 251, 141, 137, 104, 61, 180])
+      ),
+      0
+    )
+  ) {
+    return SolvAccount.SolvManagerConfirmedDonations;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
         new Uint8Array([129, 98, 133, 96, 161, 27, 7, 237])
       ),
       0
     )
   ) {
     return SolvAccount.SolvManagerConfirmedWithdrawalRequests;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([216, 236, 141, 82, 214, 249, 174, 104])
+      ),
+      0
+    )
+  ) {
+    return SolvAccount.SolvManagerImpliedSolvProtocolFee;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([11, 141, 194, 159, 166, 173, 222, 223])
+      ),
+      0
+    )
+  ) {
+    return SolvAccount.SolvManagerRefreshedSRTRedemptionRate;
   }
   throw new Error(
     'The provided account could not be identified as a solv account.'
