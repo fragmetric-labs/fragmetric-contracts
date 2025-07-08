@@ -147,13 +147,13 @@ impl std::fmt::Debug for HarvestRestakingYieldState {
 pub struct HarvestRestakingYieldCommandResult {
     pub vault: Pubkey,
     pub yield_token_mint: Pubkey,
-    pub yield_token_amount: u64,
+    pub yield_token_total_harvested_amount: i128,
+    pub yield_token_commission_amount: u64,
+    pub fund_supported_token_compounded_amount: u64,
     pub swapped_token_mint: Option<Pubkey>,
-    pub fund_supported_token_compounded_token_amount: u64,
-    pub reward_token_distributed_token_amount: u64,
+    pub reward_token_distributed_amount: u64,
     pub updated_reward_account: Option<Pubkey>,
     pub vault_supported_token_compounded_amount: i128,
-    // TODO: add new field for deducted amount by commission & reorder fields
 }
 
 #[derive(Clone, Copy)]
@@ -970,57 +970,58 @@ impl HarvestRestakingYieldCommand {
                 .receipt_token_pricing_source
                 .try_deserialize()?;
 
-            let (_, compounded_token_amount) = match receipt_token_pricing_source {
-                Some(TokenPricingSource::JitoRestakingVault { .. })
-                | Some(TokenPricingSource::SolvBTCVault { .. }) => self
-                    .apply_commission_and_transfer_reward(
-                        ctx,
-                        &mut accounts,
-                        &common_accounts,
-                        vault,
-                        &fund_account.get_seeds(),
-                        &fund_supported_token_account_address,
-                        available_reward_token_amount_to_harvest,
-                    )?,
-                Some(TokenPricingSource::VirtualVault { .. }) => self
-                    .apply_commission_and_transfer_reward(
-                        ctx,
-                        &mut accounts,
-                        &common_accounts,
-                        vault,
-                        &VirtualVaultService::find_vault_address(
-                            &restaking_vault.receipt_token_mint,
-                            &ctx.fund_account.key(),
-                        )
-                        .get_seeds(),
-                        &fund_supported_token_account_address,
-                        available_reward_token_amount_to_harvest,
-                    )?,
-                // otherwise fails
-                Some(TokenPricingSource::SPLStakePool { .. })
-                | Some(TokenPricingSource::MarinadeStakePool { .. })
-                | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. })
-                | Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { .. })
-                | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
-                | Some(TokenPricingSource::FragmetricRestakingFund { .. })
-                | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
-                | Some(TokenPricingSource::PeggedToken { .. })
-                | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
-                #[cfg(all(test, not(feature = "idl-build")))]
-                Some(TokenPricingSource::Mock { .. }) => {
-                    err!(ErrorCode::FundOperationCommandExecutionFailedException)?
-                }
-            };
+            let (token_commission_amount, token_compounded_amount) =
+                match receipt_token_pricing_source {
+                    Some(TokenPricingSource::JitoRestakingVault { .. })
+                    | Some(TokenPricingSource::SolvBTCVault { .. }) => self
+                        .apply_commission_and_transfer_reward(
+                            ctx,
+                            &mut accounts,
+                            &common_accounts,
+                            vault,
+                            &fund_account.get_seeds(),
+                            &fund_supported_token_account_address,
+                            available_reward_token_amount_to_harvest,
+                        )?,
+                    Some(TokenPricingSource::VirtualVault { .. }) => self
+                        .apply_commission_and_transfer_reward(
+                            ctx,
+                            &mut accounts,
+                            &common_accounts,
+                            vault,
+                            &VirtualVaultService::find_vault_address(
+                                &restaking_vault.receipt_token_mint,
+                                &ctx.fund_account.key(),
+                            )
+                            .get_seeds(),
+                            &fund_supported_token_account_address,
+                            available_reward_token_amount_to_harvest,
+                        )?,
+                    // otherwise fails
+                    Some(TokenPricingSource::SPLStakePool { .. })
+                    | Some(TokenPricingSource::MarinadeStakePool { .. })
+                    | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. })
+                    | Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { .. })
+                    | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+                    | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+                    | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+                    | Some(TokenPricingSource::PeggedToken { .. })
+                    | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
+                    #[cfg(all(test, not(feature = "idl-build")))]
+                    Some(TokenPricingSource::Mock { .. }) => {
+                        err!(ErrorCode::FundOperationCommandExecutionFailedException)?
+                    }
+                };
 
             drop(fund_account);
 
-            if compounded_token_amount > 0 {
+            if token_compounded_amount > 0 {
                 let mut fund_account = ctx.fund_account.load_mut()?;
 
                 fund_account
                     .get_supported_token_mut(&reward_token_mints[0])?
                     .token
-                    .operation_reserved_amount += compounded_token_amount;
+                    .operation_reserved_amount += token_compounded_amount;
                 fund_account
                     .get_restaking_vault_mut(vault)?
                     .get_compounding_reward_token_mut(&reward_token_mints[0])?
@@ -1036,10 +1037,13 @@ impl HarvestRestakingYieldCommand {
                     HarvestRestakingYieldCommandResult {
                         vault: *vault,
                         yield_token_mint: reward_token_mints[0],
-                        yield_token_amount: compounded_token_amount,
+                        yield_token_total_harvested_amount: (token_commission_amount
+                            + token_compounded_amount)
+                            as i128,
+                        yield_token_commission_amount: token_commission_amount,
+                        fund_supported_token_compounded_amount: token_compounded_amount,
                         swapped_token_mint: None,
-                        fund_supported_token_compounded_token_amount: compounded_token_amount,
-                        reward_token_distributed_token_amount: 0,
+                        reward_token_distributed_amount: 0,
                         updated_reward_account: None,
                         vault_supported_token_compounded_amount: 0,
                     }
@@ -1103,7 +1107,7 @@ impl HarvestRestakingYieldCommand {
                 .receipt_token_pricing_source
                 .try_deserialize()?;
 
-            let (_, reward_token_amount, compounded_token_amount) =
+            let (token_commission_amount, reward_token_amount, token_compounded_amount) =
                 match receipt_token_pricing_source {
                     Some(TokenPricingSource::JitoRestakingVault { .. })
                     | Some(TokenPricingSource::SolvBTCVault { .. }) => self
@@ -1150,13 +1154,13 @@ impl HarvestRestakingYieldCommand {
 
             drop(fund_account);
 
-            if compounded_token_amount > 0 {
+            if token_compounded_amount > 0 {
                 let mut fund_account = ctx.fund_account.load_mut()?;
 
                 fund_account
                     .get_supported_token_mut(&supported_token_mint)?
                     .token
-                    .operation_reserved_amount += compounded_token_amount;
+                    .operation_reserved_amount += token_compounded_amount;
                 fund_account
                     .get_restaking_vault_mut(vault)?
                     .get_compounding_reward_token_mut(&reward_token_mints[0])?
@@ -1172,10 +1176,11 @@ impl HarvestRestakingYieldCommand {
                     HarvestRestakingYieldCommandResult {
                         vault: *vault,
                         yield_token_mint: reward_token_mints[0],
-                        yield_token_amount: reward_token_amount,
+                        yield_token_total_harvested_amount: reward_token_amount as i128,
+                        yield_token_commission_amount: token_commission_amount,
                         swapped_token_mint: Some(supported_token_mint),
-                        fund_supported_token_compounded_token_amount: compounded_token_amount,
-                        reward_token_distributed_token_amount: 0,
+                        fund_supported_token_compounded_amount: token_compounded_amount,
+                        reward_token_distributed_amount: 0,
                         updated_reward_account: None,
                         vault_supported_token_compounded_amount: 0,
                     }
@@ -1263,51 +1268,52 @@ impl HarvestRestakingYieldCommand {
                     .receipt_token_pricing_source
                     .try_deserialize()?;
 
-                let (_, distributed_token_amount) = match receipt_token_pricing_source {
-                    Some(TokenPricingSource::JitoRestakingVault { .. })
-                    | Some(TokenPricingSource::SolvBTCVault { .. }) => self
-                        .apply_commission_and_transfer_reward(
-                            ctx,
-                            &mut accounts,
-                            &common_accounts,
-                            vault,
-                            &fund_account.get_seeds(),
-                            &to_reward_token_account_address,
-                            available_reward_token_amount_to_harvest,
-                        )?,
-                    Some(TokenPricingSource::VirtualVault { .. }) => self
-                        .apply_commission_and_transfer_reward(
-                            ctx,
-                            &mut accounts,
-                            &common_accounts,
-                            vault,
-                            &VirtualVaultService::find_vault_address(
-                                &restaking_vault.receipt_token_mint,
-                                &ctx.fund_account.key(),
-                            )
-                            .get_seeds(),
-                            &to_reward_token_account_address,
-                            available_reward_token_amount_to_harvest,
-                        )?,
-                    // otherwise fails
-                    Some(TokenPricingSource::SPLStakePool { .. })
-                    | Some(TokenPricingSource::MarinadeStakePool { .. })
-                    | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. })
-                    | Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { .. })
-                    | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
-                    | Some(TokenPricingSource::FragmetricRestakingFund { .. })
-                    | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
-                    | Some(TokenPricingSource::PeggedToken { .. })
-                    | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
-                    #[cfg(all(test, not(feature = "idl-build")))]
-                    Some(TokenPricingSource::Mock { .. }) => {
-                        err!(ErrorCode::FundOperationCommandExecutionFailedException)?
-                    }
-                };
+                let (token_commission_amount, token_distributed_amount) =
+                    match receipt_token_pricing_source {
+                        Some(TokenPricingSource::JitoRestakingVault { .. })
+                        | Some(TokenPricingSource::SolvBTCVault { .. }) => self
+                            .apply_commission_and_transfer_reward(
+                                ctx,
+                                &mut accounts,
+                                &common_accounts,
+                                vault,
+                                &fund_account.get_seeds(),
+                                &to_reward_token_account_address,
+                                available_reward_token_amount_to_harvest,
+                            )?,
+                        Some(TokenPricingSource::VirtualVault { .. }) => self
+                            .apply_commission_and_transfer_reward(
+                                ctx,
+                                &mut accounts,
+                                &common_accounts,
+                                vault,
+                                &VirtualVaultService::find_vault_address(
+                                    &restaking_vault.receipt_token_mint,
+                                    &ctx.fund_account.key(),
+                                )
+                                .get_seeds(),
+                                &to_reward_token_account_address,
+                                available_reward_token_amount_to_harvest,
+                            )?,
+                        // otherwise fails
+                        Some(TokenPricingSource::SPLStakePool { .. })
+                        | Some(TokenPricingSource::MarinadeStakePool { .. })
+                        | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. })
+                        | Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { .. })
+                        | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+                        | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+                        | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+                        | Some(TokenPricingSource::PeggedToken { .. })
+                        | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
+                        #[cfg(all(test, not(feature = "idl-build")))]
+                        Some(TokenPricingSource::Mock { .. }) => {
+                            err!(ErrorCode::FundOperationCommandExecutionFailedException)?
+                        }
+                    };
 
                 drop(fund_account);
 
-                Ok(if distributed_token_amount > 0 {
+                Ok(if token_distributed_amount > 0 {
                     let [_, _, program_reward_token_revenue_account, ..] = accounts else {
                         return err!(error::ErrorCode::AccountNotEnoughKeys)?;
                     };
@@ -1339,7 +1345,7 @@ impl HarvestRestakingYieldCommand {
                         Some(&reward_token_reserve_account),
                         reward_token_mint.key(),
                         false,
-                        distributed_token_amount,
+                        token_distributed_amount,
                     )?;
 
                     reward_service.claim_remaining_reward(
@@ -1360,10 +1366,13 @@ impl HarvestRestakingYieldCommand {
                         HarvestRestakingYieldCommandResult {
                             vault: *vault,
                             yield_token_mint: reward_token_mint.key(),
-                            yield_token_amount: distributed_token_amount,
+                            yield_token_total_harvested_amount: (token_commission_amount
+                                + token_distributed_amount)
+                                as i128,
+                            yield_token_commission_amount: token_commission_amount,
+                            fund_supported_token_compounded_amount: 0,
                             swapped_token_mint: None,
-                            fund_supported_token_compounded_token_amount: 0,
-                            reward_token_distributed_token_amount: distributed_token_amount,
+                            reward_token_distributed_amount: token_distributed_amount,
                             updated_reward_account: Some(reward_account.key()),
                             vault_supported_token_compounded_amount: 0,
                         }
@@ -1404,36 +1413,32 @@ impl HarvestRestakingYieldCommand {
             .try_deserialize()?;
 
         let supported_token_mint = restaking_vault.supported_token_mint;
-        let (yield_token_amount, vault_supported_token_compounded_amount) =
-            match receipt_token_pricing_source {
-                Some(TokenPricingSource::JitoRestakingVault { .. })
-                | Some(TokenPricingSource::SolvBTCVault { .. }) => {
-                    let yield_token_amount = restaking_vault
-                        .supported_token_to_receipt_token_exchange_ratio
-                        .numerator;
-                    let vault_supported_token_compounded_amount =
-                        restaking_vault.supported_token_compounded_amount;
+        let vault_supported_token_compounded_amount = match receipt_token_pricing_source {
+            Some(TokenPricingSource::JitoRestakingVault { .. })
+            | Some(TokenPricingSource::SolvBTCVault { .. }) => {
+                let vault_supported_token_compounded_amount =
+                    restaking_vault.supported_token_compounded_amount;
 
-                    restaking_vault.supported_token_compounded_amount = 0;
+                restaking_vault.supported_token_compounded_amount = 0;
 
-                    (yield_token_amount, vault_supported_token_compounded_amount)
-                }
-                Some(TokenPricingSource::VirtualVault { .. }) => (0, 0),
-                // otherwise fails
-                Some(TokenPricingSource::SPLStakePool { .. })
-                | Some(TokenPricingSource::MarinadeStakePool { .. })
-                | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. })
-                | Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { .. })
-                | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
-                | Some(TokenPricingSource::FragmetricRestakingFund { .. })
-                | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
-                | Some(TokenPricingSource::PeggedToken { .. })
-                | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
-                #[cfg(all(test, not(feature = "idl-build")))]
-                Some(TokenPricingSource::Mock { .. }) => {
-                    err!(ErrorCode::FundOperationCommandExecutionFailedException)?
-                }
-            };
+                vault_supported_token_compounded_amount
+            }
+            Some(TokenPricingSource::VirtualVault { .. }) => 0,
+            // otherwise fails
+            Some(TokenPricingSource::SPLStakePool { .. })
+            | Some(TokenPricingSource::MarinadeStakePool { .. })
+            | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. })
+            | Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { .. })
+            | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+            | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+            | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+            | Some(TokenPricingSource::PeggedToken { .. })
+            | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
+            #[cfg(all(test, not(feature = "idl-build")))]
+            Some(TokenPricingSource::Mock { .. }) => {
+                err!(ErrorCode::FundOperationCommandExecutionFailedException)?
+            }
+        };
 
         drop(fund_account);
 
@@ -1442,10 +1447,11 @@ impl HarvestRestakingYieldCommand {
                 HarvestRestakingYieldCommandResult {
                     vault: *vault,
                     yield_token_mint: supported_token_mint,
-                    yield_token_amount, // TODO: change this value to be equal to compounded amount
+                    yield_token_total_harvested_amount: vault_supported_token_compounded_amount,
+                    yield_token_commission_amount: 0,
+                    fund_supported_token_compounded_amount: 0,
                     swapped_token_mint: None,
-                    fund_supported_token_compounded_token_amount: 0,
-                    reward_token_distributed_token_amount: 0,
+                    reward_token_distributed_amount: 0,
                     updated_reward_account: None,
                     vault_supported_token_compounded_amount,
                 }
