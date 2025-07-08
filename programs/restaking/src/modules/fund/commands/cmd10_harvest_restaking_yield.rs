@@ -1176,7 +1176,9 @@ impl HarvestRestakingYieldCommand {
                     HarvestRestakingYieldCommandResult {
                         vault: *vault,
                         yield_token_mint: reward_token_mints[0],
-                        yield_token_total_harvested_amount: reward_token_amount as i128,
+                        yield_token_total_harvested_amount: (token_commission_amount
+                            + reward_token_amount)
+                            as i128,
                         yield_token_commission_amount: token_commission_amount,
                         swapped_token_mint: Some(supported_token_mint),
                         fund_supported_token_compounded_amount: token_compounded_amount,
