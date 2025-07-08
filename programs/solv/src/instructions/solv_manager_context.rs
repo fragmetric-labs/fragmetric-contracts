@@ -103,7 +103,7 @@ pub fn process_confirm_deposits(
 
     drop(vault);
 
-    let (expected_srt_amount, deducted_vst_deposit_fee_amount) =
+    let (estimated_srt_amount, deducted_vst_deposit_fee_amount) =
         vault_account.load_mut()?.deposit_vst(vst_amount)?;
 
     Ok(Some(events::SolvManagerConfirmedDeposits {
@@ -117,7 +117,7 @@ pub fn process_confirm_deposits(
 
         confirmed_vst_amount: vst_amount,
         deducted_vst_deposit_fee_amount,
-        estimated_srt_amount: expected_srt_amount,
+        estimated_srt_amount,
         one_srt_as_micro_vst,
     }))
 }
