@@ -550,7 +550,7 @@ impl<'a, 'info> FundService<'a, 'info> {
         Ok((num_withdrawal_batches, accounts))
     }
 
-    /// returns [processed_receipt_token_amount, required_asset_amount, reserved_asset_user_amount, deducted_asset_fee_amount, offsetted_asset_receivables]
+    /// returns [processed_receipt_token_amount, processed_batch_accounts, required_asset_amount, reserved_asset_user_amount, deducted_asset_fee_amount, offsetted_asset_receivables]
     pub(super) fn process_withdrawal_batches(
         &mut self,
         operator: &Signer<'info>,
@@ -574,7 +574,7 @@ impl<'a, 'info> FundService<'a, 'info> {
         _receipt_token_amount_to_return: u64,
 
         pricing_service: &PricingService,
-    ) -> Result<(u64, u64, u64, u64, Vec<(Option<Pubkey>, u64)>)> {
+    ) -> Result<(u64, Vec<Pubkey>, u64, u64, u64, Vec<(Option<Pubkey>, u64)>)> {
         let (
             supported_token_mint,
             supported_token_mint_key,
@@ -762,6 +762,7 @@ impl<'a, 'info> FundService<'a, 'info> {
         let asset_fee_amount_deducted = asset_fee_amount_processing;
         let mut offsetted_asset_receivables = Vec::<(Option<Pubkey>, u64)>::new();
 
+        let mut processed_batch_accounts = vec![];
         if processing_batch_count > 0 {
             let mut fund_account = self.fund_account.load_mut()?;
             fund_account.reload_receipt_token_supply(self.receipt_token_mint)?;
@@ -771,6 +772,8 @@ impl<'a, 'info> FundService<'a, 'info> {
                 .get_asset_state_mut(supported_token_mint_key)?
                 .dequeue_withdrawal_batches(processing_batch_count, self.current_timestamp)?;
             drop(fund_account);
+
+            processed_batch_accounts = Vec::with_capacity(processing_batch_count);
 
             require_gte!(
                 uninitialized_withdrawal_batch_accounts.len(),
@@ -864,6 +867,8 @@ impl<'a, 'info> FundService<'a, 'info> {
                     self.current_timestamp,
                 );
                 batch_account.exit(&crate::ID)?;
+
+                processed_batch_accounts.push(batch_account_address);
             }
 
             // during evaluation, up to [processing_batch_count] amounts can be deducted.
@@ -916,6 +921,7 @@ impl<'a, 'info> FundService<'a, 'info> {
 
         Ok((
             receipt_token_amount_processed,
+            processed_batch_accounts,
             asset_amount_required,
             asset_user_amount_reserved,
             asset_fee_amount_deducted,

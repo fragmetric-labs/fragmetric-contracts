@@ -14521,6 +14521,12 @@
             "type": "u64"
           },
           {
+            "name": "processed_batch_accounts",
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
             "name": "asset_token_mint",
             "type": {
               "option": "pubkey"
