@@ -31,7 +31,7 @@ pub struct VaultAdminRoleUpdateContext<'info> {
 }
 
 pub fn process_update_vault_admin_role(
-    ctx: Context<VaultAdminRoleUpdateContext>,
+    ctx: &mut Context<VaultAdminRoleUpdateContext>,
     role: VaultAdminRole,
 ) -> Result<()> {
     let VaultAdminRoleUpdateContext {

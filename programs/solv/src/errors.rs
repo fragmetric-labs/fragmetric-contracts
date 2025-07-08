@@ -18,8 +18,16 @@ pub enum VaultError {
     SolvProtocolWalletMismatchError,
 
     // TODO/phase3: deprecate
+    #[msg("invalid srt deposit fee rate")]
+    InvalidSolvProtocolDepositFeeRateError,
+
+    // TODO/phase3: deprecate
     #[msg("invalid srt withdrawal fee rate")]
     InvalidSolvProtocolWithdrawalFeeRateError,
+
+    // TODO/phase3: deprecate
+    #[msg("invalid srt extra fee amount")]
+    InvalidSolvProtocolExtraFeeAmountError,
 
     #[msg("vault supported token mint mismatch")]
     VaultSupportedTokenMintMismatchError,
@@ -39,14 +47,12 @@ pub enum VaultError {
     #[msg("non-delegable reward token mint")]
     NonDelegableRewardTokenMintError,
 
-    // TODO/phase3: deprecate
     #[msg("deposit in progress")]
     DepositInProgressError,
 
-    // TODO/phase3: deprecate
     #[msg("deposit not in progress")]
     DepositNotInProgressError,
 
-    #[msg("withdrawal request queue is not set")]
-    WithdrawalRequestQueueNotSetError,
+    #[msg("withdrawal request not found")]
+    WithdrawalRequestNotFoundError,
 }

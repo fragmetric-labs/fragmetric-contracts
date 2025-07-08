@@ -27,17 +27,24 @@ import {
 export type WithdrawalRequest = {
   requestId: bigint;
   vrtWithdrawalRequestedAmount: bigint;
-  /** SRT locked amount for withdrawal - will be sent to the Solv protocol when withdrawal starts (but field remains unchanged) */
+  /** Locked SRT amount for withdrawal - will be sent to the Solv protocol when withdrawal starts (but field remains unchanged) */
   srtWithdrawalLockedAmount: bigint;
-  /** VST locked amount for withdrawal - will be locked until withdrawal is completed (but field remains unchanged) */
+  /** Locked VST amount for withdrawal - will be locked until withdrawal is completed (but field remains unchanged) */
   vstWithdrawalLockedAmount: bigint;
   /**
    * Total estimated amount of VST to be withdrawn by this request.
-   * Obviously this includes `vst_withdrawal_locked_amount`.
-   * First recorded as receivable amount when withdrawal starts,
-   * then recorded as reserved amount after completion, with fee amount deducted.
+   * First recorded as `vst_receivable_amount_to_claim` when withdrawal starts,
+   * then after withdrawal completes, the actual VST withdrawn amount is recorded as
+   * `vst_reserved_amount_to_claim` + `vst_extra_amount_to_claim` + `vst_deducted_fee_amount`.
+   * Deducted solv protocol withdrawal fee is added to `vst_deducted_fee_amount`.
+   *
+   * ```txt
+   * `vst_withdrawal_total_estimated_amount` = `srt_withdrawal_locked_amount` as VST + `vst_withdrawal_locked_amount` + `vst_deducted_fee_amount`
+   * ```
    */
   vstWithdrawalTotalEstimatedAmount: bigint;
+  /** SRT price when requeest is enqueued - will be used for price validation */
+  oneSrtAsMicroVst: bigint;
   /**
    * 0: enqueued
    * 1: processing
@@ -50,17 +57,24 @@ export type WithdrawalRequest = {
 export type WithdrawalRequestArgs = {
   requestId: number | bigint;
   vrtWithdrawalRequestedAmount: number | bigint;
-  /** SRT locked amount for withdrawal - will be sent to the Solv protocol when withdrawal starts (but field remains unchanged) */
+  /** Locked SRT amount for withdrawal - will be sent to the Solv protocol when withdrawal starts (but field remains unchanged) */
   srtWithdrawalLockedAmount: number | bigint;
-  /** VST locked amount for withdrawal - will be locked until withdrawal is completed (but field remains unchanged) */
+  /** Locked VST amount for withdrawal - will be locked until withdrawal is completed (but field remains unchanged) */
   vstWithdrawalLockedAmount: number | bigint;
   /**
    * Total estimated amount of VST to be withdrawn by this request.
-   * Obviously this includes `vst_withdrawal_locked_amount`.
-   * First recorded as receivable amount when withdrawal starts,
-   * then recorded as reserved amount after completion, with fee amount deducted.
+   * First recorded as `vst_receivable_amount_to_claim` when withdrawal starts,
+   * then after withdrawal completes, the actual VST withdrawn amount is recorded as
+   * `vst_reserved_amount_to_claim` + `vst_extra_amount_to_claim` + `vst_deducted_fee_amount`.
+   * Deducted solv protocol withdrawal fee is added to `vst_deducted_fee_amount`.
+   *
+   * ```txt
+   * `vst_withdrawal_total_estimated_amount` = `srt_withdrawal_locked_amount` as VST + `vst_withdrawal_locked_amount` + `vst_deducted_fee_amount`
+   * ```
    */
   vstWithdrawalTotalEstimatedAmount: number | bigint;
+  /** SRT price when requeest is enqueued - will be used for price validation */
+  oneSrtAsMicroVst: number | bigint;
   /**
    * 0: enqueued
    * 1: processing
@@ -77,8 +91,9 @@ export function getWithdrawalRequestEncoder(): Encoder<WithdrawalRequestArgs> {
     ['srtWithdrawalLockedAmount', getU64Encoder()],
     ['vstWithdrawalLockedAmount', getU64Encoder()],
     ['vstWithdrawalTotalEstimatedAmount', getU64Encoder()],
+    ['oneSrtAsMicroVst', getU64Encoder()],
     ['state', getU8Encoder()],
-    ['reserved', fixEncoderSize(getBytesEncoder(), 7)],
+    ['reserved', fixEncoderSize(getBytesEncoder(), 15)],
   ]);
 }
 
@@ -89,8 +104,9 @@ export function getWithdrawalRequestDecoder(): Decoder<WithdrawalRequest> {
     ['srtWithdrawalLockedAmount', getU64Decoder()],
     ['vstWithdrawalLockedAmount', getU64Decoder()],
     ['vstWithdrawalTotalEstimatedAmount', getU64Decoder()],
+    ['oneSrtAsMicroVst', getU64Decoder()],
     ['state', getU8Decoder()],
-    ['reserved', fixDecoderSize(getBytesDecoder(), 7)],
+    ['reserved', fixDecoderSize(getBytesDecoder(), 15)],
   ]);
 }
 

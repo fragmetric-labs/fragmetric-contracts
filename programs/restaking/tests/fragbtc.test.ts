@@ -2740,8 +2740,8 @@ describe('restaking.fragBTC test', async () => {
     // process withdrawal from solv vault
     await expect(
       solv.zBTC.completeWithdrawalRequests.execute({
-        burntSolvReceiptTokenAmount: 88147709n,
-        redeemedSupportedTokenAmount: (88147709n * 110n) / 100n,
+        burntSolvReceiptTokenAmount: 88147707n,
+        redeemedSupportedTokenAmount: (88147707n * 110n) / 100n,
         oldOneSolvReceiptTokenAsMicroSupportedTokenAmount: 1_1000_0000_000000n,
       })
     ).resolves.not.toThrow();
@@ -2763,7 +2763,7 @@ describe('restaking.fragBTC test', async () => {
             "mint": "ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq",
           },
         ],
-        "oneReceiptTokenAsMicroSupportedTokenAmount": 109574877179602n,
+        "oneReceiptTokenAsMicroSupportedTokenAmount": 109574877225154n,
         "oneReceiptTokenAsSupportedTokenAmount": 109574877n,
         "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 110000000000000n,
         "oneSolvReceiptTokenAsSupportedTokenAmount": 110000000n,
@@ -2771,16 +2771,18 @@ describe('restaking.fragBTC test', async () => {
         "receiptTokenMint": "DNLsKFnrBjTBKp1eSwt8z1iNu2T2PL3MnxZFsGEEpQCf",
         "receiptTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
         "receiptTokenSupply": 2186147332n,
+        "solvProtocolDepositFeeRate": 0,
         "solvProtocolWallet": "GiDkDCZjVC8Nk1Fd457qGSV2g3MQX62n7cV5CvgFyGfF",
         "solvProtocolWithdrawalFeeRate": 0,
-        "solvReceiptTokenAmount": 2911852291n,
+        "solvReceiptTokenAmount": 2911852293n,
         "solvReceiptTokenDecimals": 8,
         "solvReceiptTokenMint": "SoLvzL3ZVjofmNB5LYFrf94QtNhMUSea4DawFhnAau8",
         "solvReceiptTokenOperationReceivableAmount": 0n,
-        "solvReceiptTokenOperationReservedAmount": 2177698412n,
+        "solvReceiptTokenOperationReservedAmount": 2177698414n,
         "supportedTokenAmount": 1000000000n,
         "supportedTokenDecimals": 8,
         "supportedTokenMint": "zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg",
+        "supportedTokenOperationReceivableAmount": 0n,
         "supportedTokenOperationReservedAmount": 0n,
         "supportedTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
         "withdrawal": {
@@ -2789,15 +2791,17 @@ describe('restaking.fragBTC test', async () => {
             "requests": [
               {
                 "id": 1n,
+                "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 110000000000000n,
+                "oneSolvReceiptTokenAsSupportedTokenAmount": 110000000n,
                 "receiptTokenEnqueuedAmount": 88489699n,
-                "solvReceiptTokenLockedAmount": 88147709n,
+                "solvReceiptTokenLockedAmount": 88147707n,
                 "supportedTokenLockedAmount": 0n,
-                "supportedTokenTotalEstimatedAmount": 96962479n,
+                "supportedTokenTotalEstimatedAmount": 96962478n,
               },
             ],
-            "supportedTokenDeductedFeeAmount": 0n,
+            "supportedTokenDeductedFeeAmount": 1n,
             "supportedTokenExtraClaimableAmount": 0n,
-            "supportedTokenTotalClaimableAmount": 96962479n,
+            "supportedTokenTotalClaimableAmount": 96962477n,
           },
           "enqueued": {
             "receiptTokenEnqueuedAmount": 0n,
@@ -2840,14 +2844,14 @@ describe('restaking.fragBTC test', async () => {
         "depositResidualMicroReceiptTokenAmount": 964414n,
         "metadata": null,
         "normalizedToken": null,
-        "oneReceiptTokenAsSOL": 672352352135n,
+        "oneReceiptTokenAsSOL": 672352352271n,
         "receiptTokenDecimals": 8,
         "receiptTokenMint": "ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz",
         "receiptTokenSupply": 5720987629n,
         "restakingVaultReceiptTokens": [
           {
             "mint": "DNLsKFnrBjTBKp1eSwt8z1iNu2T2PL3MnxZFsGEEpQCf",
-            "oneReceiptTokenAsSol": 709711095335n,
+            "oneReceiptTokenAsSol": 709711095987n,
             "operationReceivableAmount": 0n,
             "operationReservedAmount": 2186147332n,
             "operationTotalAmount": 2186147332n,
@@ -2880,9 +2884,9 @@ describe('restaking.fragBTC test', async () => {
             "mint": "zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg",
             "oneTokenAsReceiptToken": 96332686n,
             "oneTokenAsSol": 647695086539n,
-            "operationReceivableAmount": 96962479n,
+            "operationReceivableAmount": 96962478n,
             "operationReservedAmount": 6844444n,
-            "operationTotalAmount": 103806923n,
+            "operationTotalAmount": 103806922n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
             "unstakingAmountAsSOL": 0n,
             "withdrawable": true,
@@ -2956,14 +2960,14 @@ describe('restaking.fragBTC test', async () => {
         "depositResidualMicroReceiptTokenAmount": 964414n,
         "metadata": null,
         "normalizedToken": null,
-        "oneReceiptTokenAsSOL": 672352352471n,
+        "oneReceiptTokenAsSOL": 672352352724n,
         "receiptTokenDecimals": 8,
         "receiptTokenMint": "ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz",
         "receiptTokenSupply": 5620987629n,
         "restakingVaultReceiptTokens": [
           {
             "mint": "DNLsKFnrBjTBKp1eSwt8z1iNu2T2PL3MnxZFsGEEpQCf",
-            "oneReceiptTokenAsSol": 709711095335n,
+            "oneReceiptTokenAsSol": 709711095987n,
             "operationReceivableAmount": 0n,
             "operationReservedAmount": 2186147332n,
             "operationTotalAmount": 2186147332n,
@@ -3002,9 +3006,9 @@ describe('restaking.fragBTC test', async () => {
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
             "unstakingAmountAsSOL": 0n,
             "withdrawable": true,
-            "withdrawableValueAsReceiptTokenAmount": 2307618932n,
+            "withdrawableValueAsReceiptTokenAmount": 2307618933n,
             "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
-            "withdrawalResidualMicroAssetAmount": 910935n,
+            "withdrawalResidualMicroAssetAmount": 931910n,
             "withdrawalUserReservedAmount": 103599311n,
           },
           {
@@ -3019,7 +3023,7 @@ describe('restaking.fragBTC test', async () => {
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
             "unstakingAmountAsSOL": 0n,
             "withdrawable": true,
-            "withdrawableValueAsReceiptTokenAmount": 1433097379n,
+            "withdrawableValueAsReceiptTokenAmount": 1433097378n,
             "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
             "withdrawalResidualMicroAssetAmount": 16418n,
             "withdrawalUserReservedAmount": 0n,
@@ -3064,7 +3068,7 @@ describe('restaking.fragBTC test', async () => {
             "mint": "ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq",
           },
         ],
-        "oneReceiptTokenAsMicroSupportedTokenAmount": 109574877179602n,
+        "oneReceiptTokenAsMicroSupportedTokenAmount": 109574877225154n,
         "oneReceiptTokenAsSupportedTokenAmount": 109574877n,
         "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 110000000000000n,
         "oneSolvReceiptTokenAsSupportedTokenAmount": 110000000n,
@@ -3072,16 +3076,18 @@ describe('restaking.fragBTC test', async () => {
         "receiptTokenMint": "DNLsKFnrBjTBKp1eSwt8z1iNu2T2PL3MnxZFsGEEpQCf",
         "receiptTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
         "receiptTokenSupply": 2186147332n,
+        "solvProtocolDepositFeeRate": 0,
         "solvProtocolWallet": "GiDkDCZjVC8Nk1Fd457qGSV2g3MQX62n7cV5CvgFyGfF",
         "solvProtocolWithdrawalFeeRate": 0,
-        "solvReceiptTokenAmount": 2911852291n,
+        "solvReceiptTokenAmount": 2911852293n,
         "solvReceiptTokenDecimals": 8,
         "solvReceiptTokenMint": "SoLvzL3ZVjofmNB5LYFrf94QtNhMUSea4DawFhnAau8",
         "solvReceiptTokenOperationReceivableAmount": 0n,
-        "solvReceiptTokenOperationReservedAmount": 2177698412n,
-        "supportedTokenAmount": 903037521n,
+        "solvReceiptTokenOperationReservedAmount": 2177698414n,
+        "supportedTokenAmount": 903037523n,
         "supportedTokenDecimals": 8,
         "supportedTokenMint": "zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg",
+        "supportedTokenOperationReceivableAmount": 0n,
         "supportedTokenOperationReservedAmount": 0n,
         "supportedTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
         "withdrawal": {
@@ -3263,6 +3269,7 @@ describe('restaking.fragBTC test', async () => {
         "receiptTokenMint": "4hNFn9hWmL4xxH7PxnZntFcDyEhXx5vHu4uM5rNj4fcL",
         "receiptTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
         "receiptTokenSupply": 1945996280n,
+        "solvProtocolDepositFeeRate": 0,
         "solvProtocolWallet": "11111111111111111111111111111111",
         "solvProtocolWithdrawalFeeRate": 0,
         "solvReceiptTokenAmount": 0n,
@@ -3273,6 +3280,7 @@ describe('restaking.fragBTC test', async () => {
         "supportedTokenAmount": 1945996280n,
         "supportedTokenDecimals": 8,
         "supportedTokenMint": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
+        "supportedTokenOperationReceivableAmount": 0n,
         "supportedTokenOperationReservedAmount": 1945996280n,
         "supportedTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
         "withdrawal": {
@@ -3366,6 +3374,7 @@ describe('restaking.fragBTC test', async () => {
         "receiptTokenMint": "4hNFn9hWmL4xxH7PxnZntFcDyEhXx5vHu4uM5rNj4fcL",
         "receiptTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
         "receiptTokenSupply": 3939996280n,
+        "solvProtocolDepositFeeRate": 0,
         "solvProtocolWallet": "11111111111111111111111111111111",
         "solvProtocolWithdrawalFeeRate": 0,
         "solvReceiptTokenAmount": 0n,
@@ -3376,6 +3385,7 @@ describe('restaking.fragBTC test', async () => {
         "supportedTokenAmount": 3939996280n,
         "supportedTokenDecimals": 8,
         "supportedTokenMint": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
+        "supportedTokenOperationReceivableAmount": 0n,
         "supportedTokenOperationReservedAmount": 3939996280n,
         "supportedTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
         "withdrawal": {
@@ -3460,6 +3470,7 @@ describe('restaking.fragBTC test', async () => {
         "receiptTokenMint": "4hNFn9hWmL4xxH7PxnZntFcDyEhXx5vHu4uM5rNj4fcL",
         "receiptTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
         "receiptTokenSupply": 2913782586n,
+        "solvProtocolDepositFeeRate": 0,
         "solvProtocolWallet": "11111111111111111111111111111111",
         "solvProtocolWithdrawalFeeRate": 0,
         "solvReceiptTokenAmount": 0n,
@@ -3470,6 +3481,7 @@ describe('restaking.fragBTC test', async () => {
         "supportedTokenAmount": 3939996280n,
         "supportedTokenDecimals": 8,
         "supportedTokenMint": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
+        "supportedTokenOperationReceivableAmount": 0n,
         "supportedTokenOperationReservedAmount": 2913782586n,
         "supportedTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
         "withdrawal": {
@@ -3485,6 +3497,8 @@ describe('restaking.fragBTC test', async () => {
             "requests": [
               {
                 "id": 1n,
+                "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+                "oneSolvReceiptTokenAsSupportedTokenAmount": 100000000n,
                 "receiptTokenEnqueuedAmount": 1026213694n,
                 "solvReceiptTokenLockedAmount": 0n,
                 "supportedTokenLockedAmount": 1026213694n,
@@ -3560,6 +3574,7 @@ describe('restaking.fragBTC test', async () => {
         "receiptTokenMint": "4hNFn9hWmL4xxH7PxnZntFcDyEhXx5vHu4uM5rNj4fcL",
         "receiptTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
         "receiptTokenSupply": 2913782586n,
+        "solvProtocolDepositFeeRate": 0,
         "solvProtocolWallet": "GiDkDCZjVC8Nk1Fd457qGSV2g3MQX62n7cV5CvgFyGfF",
         "solvProtocolWithdrawalFeeRate": 0,
         "solvReceiptTokenAmount": 10000000000n,
@@ -3570,6 +3585,7 @@ describe('restaking.fragBTC test', async () => {
         "supportedTokenAmount": 3939996280n,
         "supportedTokenDecimals": 8,
         "supportedTokenMint": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
+        "supportedTokenOperationReceivableAmount": 0n,
         "supportedTokenOperationReservedAmount": 2913782586n,
         "supportedTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
         "withdrawal": {
@@ -3585,6 +3601,8 @@ describe('restaking.fragBTC test', async () => {
             "requests": [
               {
                 "id": 1n,
+                "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+                "oneSolvReceiptTokenAsSupportedTokenAmount": 100000000n,
                 "receiptTokenEnqueuedAmount": 1026213694n,
                 "solvReceiptTokenLockedAmount": 0n,
                 "supportedTokenLockedAmount": 1026213694n,
@@ -3635,6 +3653,7 @@ describe('restaking.fragBTC test', async () => {
         "receiptTokenMint": "4hNFn9hWmL4xxH7PxnZntFcDyEhXx5vHu4uM5rNj4fcL",
         "receiptTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
         "receiptTokenSupply": 2913782586n,
+        "solvProtocolDepositFeeRate": 0,
         "solvProtocolWallet": "GiDkDCZjVC8Nk1Fd457qGSV2g3MQX62n7cV5CvgFyGfF",
         "solvProtocolWithdrawalFeeRate": 0,
         "solvReceiptTokenAmount": 10000000000n,
@@ -3645,6 +3664,7 @@ describe('restaking.fragBTC test', async () => {
         "supportedTokenAmount": 3939996280n,
         "supportedTokenDecimals": 8,
         "supportedTokenMint": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
+        "supportedTokenOperationReceivableAmount": 0n,
         "supportedTokenOperationReservedAmount": 2913782586n,
         "supportedTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
         "withdrawal": {
@@ -3660,6 +3680,8 @@ describe('restaking.fragBTC test', async () => {
             "requests": [
               {
                 "id": 1n,
+                "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+                "oneSolvReceiptTokenAsSupportedTokenAmount": 100000000n,
                 "receiptTokenEnqueuedAmount": 1026213694n,
                 "solvReceiptTokenLockedAmount": 0n,
                 "supportedTokenLockedAmount": 1026213694n,
@@ -3698,6 +3720,7 @@ describe('restaking.fragBTC test', async () => {
         "receiptTokenMint": "4hNFn9hWmL4xxH7PxnZntFcDyEhXx5vHu4uM5rNj4fcL",
         "receiptTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
         "receiptTokenSupply": 2913782586n,
+        "solvProtocolDepositFeeRate": 0,
         "solvProtocolWallet": "GiDkDCZjVC8Nk1Fd457qGSV2g3MQX62n7cV5CvgFyGfF",
         "solvProtocolWithdrawalFeeRate": 0,
         "solvReceiptTokenAmount": 10000000000n,
@@ -3708,6 +3731,7 @@ describe('restaking.fragBTC test', async () => {
         "supportedTokenAmount": 1026213694n,
         "supportedTokenDecimals": 8,
         "supportedTokenMint": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
+        "supportedTokenOperationReceivableAmount": 0n,
         "supportedTokenOperationReservedAmount": 0n,
         "supportedTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
         "withdrawal": {
@@ -3723,6 +3747,8 @@ describe('restaking.fragBTC test', async () => {
             "requests": [
               {
                 "id": 1n,
+                "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+                "oneSolvReceiptTokenAsSupportedTokenAmount": 100000000n,
                 "receiptTokenEnqueuedAmount": 1026213694n,
                 "solvReceiptTokenLockedAmount": 0n,
                 "supportedTokenLockedAmount": 1026213694n,
@@ -3819,6 +3845,7 @@ describe('restaking.fragBTC test', async () => {
         "receiptTokenMint": "BDYcrsJ6Y4kPdkReieh4RV58ziMNsYnMPpnDZgyAsdmh",
         "receiptTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
         "receiptTokenSupply": 1483191359n,
+        "solvProtocolDepositFeeRate": 0,
         "solvProtocolWallet": "11111111111111111111111111111111",
         "solvProtocolWithdrawalFeeRate": 0,
         "solvReceiptTokenAmount": 1000000000n,
@@ -3829,6 +3856,7 @@ describe('restaking.fragBTC test', async () => {
         "supportedTokenAmount": 2483191359n,
         "supportedTokenDecimals": 8,
         "supportedTokenMint": "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
+        "supportedTokenOperationReceivableAmount": 0n,
         "supportedTokenOperationReservedAmount": 1483191359n,
         "supportedTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
         "withdrawal": {
@@ -3906,6 +3934,7 @@ describe('restaking.fragBTC test', async () => {
         "receiptTokenMint": "BDYcrsJ6Y4kPdkReieh4RV58ziMNsYnMPpnDZgyAsdmh",
         "receiptTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
         "receiptTokenSupply": 1483191359n,
+        "solvProtocolDepositFeeRate": 0,
         "solvProtocolWallet": "11111111111111111111111111111111",
         "solvProtocolWithdrawalFeeRate": 0,
         "solvReceiptTokenAmount": 1000000000n,
@@ -3916,6 +3945,7 @@ describe('restaking.fragBTC test', async () => {
         "supportedTokenAmount": 2483191359n,
         "supportedTokenDecimals": 8,
         "supportedTokenMint": "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
+        "supportedTokenOperationReceivableAmount": 0n,
         "supportedTokenOperationReservedAmount": 1483191359n,
         "supportedTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
         "withdrawal": {
@@ -3975,6 +4005,7 @@ describe('restaking.fragBTC test', async () => {
         "receiptTokenMint": "BDYcrsJ6Y4kPdkReieh4RV58ziMNsYnMPpnDZgyAsdmh",
         "receiptTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
         "receiptTokenSupply": 1767230386n,
+        "solvProtocolDepositFeeRate": 0,
         "solvProtocolWallet": "11111111111111111111111111111111",
         "solvProtocolWithdrawalFeeRate": 0,
         "solvReceiptTokenAmount": 1000000000n,
@@ -3985,6 +4016,7 @@ describe('restaking.fragBTC test', async () => {
         "supportedTokenAmount": 2767230386n,
         "supportedTokenDecimals": 8,
         "supportedTokenMint": "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
+        "supportedTokenOperationReceivableAmount": 0n,
         "supportedTokenOperationReservedAmount": 1767230386n,
         "supportedTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
         "withdrawal": {
@@ -4057,6 +4089,7 @@ describe('restaking.fragBTC test', async () => {
         "receiptTokenMint": "BDYcrsJ6Y4kPdkReieh4RV58ziMNsYnMPpnDZgyAsdmh",
         "receiptTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
         "receiptTokenSupply": 1665962861n,
+        "solvProtocolDepositFeeRate": 0,
         "solvProtocolWallet": "11111111111111111111111111111111",
         "solvProtocolWithdrawalFeeRate": 0,
         "solvReceiptTokenAmount": 1000000000n,
@@ -4067,6 +4100,7 @@ describe('restaking.fragBTC test', async () => {
         "supportedTokenAmount": 2767230386n,
         "supportedTokenDecimals": 8,
         "supportedTokenMint": "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
+        "supportedTokenOperationReceivableAmount": 0n,
         "supportedTokenOperationReservedAmount": 1665962861n,
         "supportedTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
         "withdrawal": {
@@ -4082,6 +4116,8 @@ describe('restaking.fragBTC test', async () => {
             "requests": [
               {
                 "id": 1n,
+                "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+                "oneSolvReceiptTokenAsSupportedTokenAmount": 100000000n,
                 "receiptTokenEnqueuedAmount": 101267525n,
                 "solvReceiptTokenLockedAmount": 0n,
                 "supportedTokenLockedAmount": 101267525n,
@@ -4135,6 +4171,7 @@ describe('restaking.fragBTC test', async () => {
         "receiptTokenMint": "BDYcrsJ6Y4kPdkReieh4RV58ziMNsYnMPpnDZgyAsdmh",
         "receiptTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
         "receiptTokenSupply": 1665962861n,
+        "solvProtocolDepositFeeRate": 0,
         "solvProtocolWallet": "11111111111111111111111111111111",
         "solvProtocolWithdrawalFeeRate": 0,
         "solvReceiptTokenAmount": 1000000000n,
@@ -4145,6 +4182,7 @@ describe('restaking.fragBTC test', async () => {
         "supportedTokenAmount": 2767230386n,
         "supportedTokenDecimals": 8,
         "supportedTokenMint": "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
+        "supportedTokenOperationReceivableAmount": 0n,
         "supportedTokenOperationReservedAmount": 1665962861n,
         "supportedTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
         "withdrawal": {
@@ -4160,6 +4198,8 @@ describe('restaking.fragBTC test', async () => {
             "requests": [
               {
                 "id": 1n,
+                "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+                "oneSolvReceiptTokenAsSupportedTokenAmount": 100000000n,
                 "receiptTokenEnqueuedAmount": 101267525n,
                 "solvReceiptTokenLockedAmount": 0n,
                 "supportedTokenLockedAmount": 101267525n,
@@ -4202,6 +4242,7 @@ describe('restaking.fragBTC test', async () => {
         "receiptTokenMint": "BDYcrsJ6Y4kPdkReieh4RV58ziMNsYnMPpnDZgyAsdmh",
         "receiptTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
         "receiptTokenSupply": 1665962861n,
+        "solvProtocolDepositFeeRate": 0,
         "solvProtocolWallet": "11111111111111111111111111111111",
         "solvProtocolWithdrawalFeeRate": 0,
         "solvReceiptTokenAmount": 1000000000n,
@@ -4212,6 +4253,7 @@ describe('restaking.fragBTC test', async () => {
         "supportedTokenAmount": 2767230386n,
         "supportedTokenDecimals": 8,
         "supportedTokenMint": "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
+        "supportedTokenOperationReceivableAmount": 0n,
         "supportedTokenOperationReservedAmount": 1665962861n,
         "supportedTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
         "withdrawal": {
@@ -4227,6 +4269,8 @@ describe('restaking.fragBTC test', async () => {
             "requests": [
               {
                 "id": 1n,
+                "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+                "oneSolvReceiptTokenAsSupportedTokenAmount": 100000000n,
                 "receiptTokenEnqueuedAmount": 101267525n,
                 "solvReceiptTokenLockedAmount": 0n,
                 "supportedTokenLockedAmount": 101267525n,
@@ -4288,6 +4332,7 @@ describe('restaking.fragBTC test', async () => {
         "receiptTokenMint": "BDYcrsJ6Y4kPdkReieh4RV58ziMNsYnMPpnDZgyAsdmh",
         "receiptTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
         "receiptTokenSupply": 1558732374n,
+        "solvProtocolDepositFeeRate": 0,
         "solvProtocolWallet": "11111111111111111111111111111111",
         "solvProtocolWithdrawalFeeRate": 0,
         "solvReceiptTokenAmount": 1000000000n,
@@ -4298,6 +4343,7 @@ describe('restaking.fragBTC test', async () => {
         "supportedTokenAmount": 2767230386n,
         "supportedTokenDecimals": 8,
         "supportedTokenMint": "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
+        "supportedTokenOperationReceivableAmount": 0n,
         "supportedTokenOperationReservedAmount": 1558732374n,
         "supportedTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
         "withdrawal": {
@@ -4313,6 +4359,8 @@ describe('restaking.fragBTC test', async () => {
             "requests": [
               {
                 "id": 1n,
+                "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+                "oneSolvReceiptTokenAsSupportedTokenAmount": 100000000n,
                 "receiptTokenEnqueuedAmount": 101267525n,
                 "solvReceiptTokenLockedAmount": 0n,
                 "supportedTokenLockedAmount": 101267525n,
@@ -4320,6 +4368,8 @@ describe('restaking.fragBTC test', async () => {
               },
               {
                 "id": 2n,
+                "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+                "oneSolvReceiptTokenAsSupportedTokenAmount": 100000000n,
                 "receiptTokenEnqueuedAmount": 107230487n,
                 "solvReceiptTokenLockedAmount": 0n,
                 "supportedTokenLockedAmount": 107230487n,
@@ -4371,6 +4421,7 @@ describe('restaking.fragBTC test', async () => {
         "receiptTokenMint": "BDYcrsJ6Y4kPdkReieh4RV58ziMNsYnMPpnDZgyAsdmh",
         "receiptTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
         "receiptTokenSupply": 1558732374n,
+        "solvProtocolDepositFeeRate": 0,
         "solvProtocolWallet": "GiDkDCZjVC8Nk1Fd457qGSV2g3MQX62n7cV5CvgFyGfF",
         "solvProtocolWithdrawalFeeRate": 0,
         "solvReceiptTokenAmount": 1000000000n,
@@ -4381,6 +4432,7 @@ describe('restaking.fragBTC test', async () => {
         "supportedTokenAmount": 2767230386n,
         "supportedTokenDecimals": 8,
         "supportedTokenMint": "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
+        "supportedTokenOperationReceivableAmount": 0n,
         "supportedTokenOperationReservedAmount": 1558732374n,
         "supportedTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
         "withdrawal": {
@@ -4402,6 +4454,8 @@ describe('restaking.fragBTC test', async () => {
             "requests": [
               {
                 "id": 1n,
+                "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+                "oneSolvReceiptTokenAsSupportedTokenAmount": 100000000n,
                 "receiptTokenEnqueuedAmount": 101267525n,
                 "solvReceiptTokenLockedAmount": 0n,
                 "supportedTokenLockedAmount": 101267525n,
@@ -4409,6 +4463,8 @@ describe('restaking.fragBTC test', async () => {
               },
               {
                 "id": 2n,
+                "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+                "oneSolvReceiptTokenAsSupportedTokenAmount": 100000000n,
                 "receiptTokenEnqueuedAmount": 107230487n,
                 "solvReceiptTokenLockedAmount": 0n,
                 "supportedTokenLockedAmount": 107230487n,
@@ -4450,6 +4506,7 @@ describe('restaking.fragBTC test', async () => {
         "receiptTokenMint": "BDYcrsJ6Y4kPdkReieh4RV58ziMNsYnMPpnDZgyAsdmh",
         "receiptTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
         "receiptTokenSupply": 1558732374n,
+        "solvProtocolDepositFeeRate": 0,
         "solvProtocolWallet": "GiDkDCZjVC8Nk1Fd457qGSV2g3MQX62n7cV5CvgFyGfF",
         "solvProtocolWithdrawalFeeRate": 0,
         "solvReceiptTokenAmount": 1000000000n,
@@ -4460,6 +4517,7 @@ describe('restaking.fragBTC test', async () => {
         "supportedTokenAmount": 2558732374n,
         "supportedTokenDecimals": 8,
         "supportedTokenMint": "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
+        "supportedTokenOperationReceivableAmount": 0n,
         "supportedTokenOperationReservedAmount": 1558732374n,
         "supportedTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
         "withdrawal": {

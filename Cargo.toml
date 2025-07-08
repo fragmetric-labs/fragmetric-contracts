@@ -53,6 +53,8 @@ borsh1 = { package = "borsh", version = "1.5.5" } # This version is used in spl-
 proptest = "1.6.0"
 primitive-types = "0.13.1"
 once_cell = "1.21.3"
+rust_decimal = "1.37.1"
+rust_decimal_macros = "1.37.1"
 
 #borsh = "0.10.3"
 #thiserror = "1"
