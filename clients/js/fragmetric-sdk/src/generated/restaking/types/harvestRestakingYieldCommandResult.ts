@@ -29,10 +29,11 @@ import {
 export type HarvestRestakingYieldCommandResult = {
   vault: Address;
   yieldTokenMint: Address;
-  yieldTokenAmount: bigint;
+  yieldTokenTotalHarvestedAmount: bigint;
+  yieldTokenCommissionAmount: bigint;
+  fundSupportedTokenCompoundedAmount: bigint;
   swappedTokenMint: Option<Address>;
-  fundSupportedTokenCompoundedTokenAmount: bigint;
-  rewardTokenDistributedTokenAmount: bigint;
+  rewardTokenDistributedAmount: bigint;
   updatedRewardAccount: Option<Address>;
   vaultSupportedTokenCompoundedAmount: bigint;
 };
@@ -40,10 +41,11 @@ export type HarvestRestakingYieldCommandResult = {
 export type HarvestRestakingYieldCommandResultArgs = {
   vault: Address;
   yieldTokenMint: Address;
-  yieldTokenAmount: number | bigint;
+  yieldTokenTotalHarvestedAmount: number | bigint;
+  yieldTokenCommissionAmount: number | bigint;
+  fundSupportedTokenCompoundedAmount: number | bigint;
   swappedTokenMint: OptionOrNullable<Address>;
-  fundSupportedTokenCompoundedTokenAmount: number | bigint;
-  rewardTokenDistributedTokenAmount: number | bigint;
+  rewardTokenDistributedAmount: number | bigint;
   updatedRewardAccount: OptionOrNullable<Address>;
   vaultSupportedTokenCompoundedAmount: number | bigint;
 };
@@ -52,10 +54,11 @@ export function getHarvestRestakingYieldCommandResultEncoder(): Encoder<HarvestR
   return getStructEncoder([
     ['vault', getAddressEncoder()],
     ['yieldTokenMint', getAddressEncoder()],
-    ['yieldTokenAmount', getU64Encoder()],
+    ['yieldTokenTotalHarvestedAmount', getI128Encoder()],
+    ['yieldTokenCommissionAmount', getU64Encoder()],
+    ['fundSupportedTokenCompoundedAmount', getU64Encoder()],
     ['swappedTokenMint', getOptionEncoder(getAddressEncoder())],
-    ['fundSupportedTokenCompoundedTokenAmount', getU64Encoder()],
-    ['rewardTokenDistributedTokenAmount', getU64Encoder()],
+    ['rewardTokenDistributedAmount', getU64Encoder()],
     ['updatedRewardAccount', getOptionEncoder(getAddressEncoder())],
     ['vaultSupportedTokenCompoundedAmount', getI128Encoder()],
   ]);
@@ -65,10 +68,11 @@ export function getHarvestRestakingYieldCommandResultDecoder(): Decoder<HarvestR
   return getStructDecoder([
     ['vault', getAddressDecoder()],
     ['yieldTokenMint', getAddressDecoder()],
-    ['yieldTokenAmount', getU64Decoder()],
+    ['yieldTokenTotalHarvestedAmount', getI128Decoder()],
+    ['yieldTokenCommissionAmount', getU64Decoder()],
+    ['fundSupportedTokenCompoundedAmount', getU64Decoder()],
     ['swappedTokenMint', getOptionDecoder(getAddressDecoder())],
-    ['fundSupportedTokenCompoundedTokenAmount', getU64Decoder()],
-    ['rewardTokenDistributedTokenAmount', getU64Decoder()],
+    ['rewardTokenDistributedAmount', getU64Decoder()],
     ['updatedRewardAccount', getOptionDecoder(getAddressDecoder())],
     ['vaultSupportedTokenCompoundedAmount', getI128Decoder()],
   ]);
