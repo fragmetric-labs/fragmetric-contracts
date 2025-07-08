@@ -2,7 +2,7 @@
   "address": "9beGuWXNoKPKCApT6xJUm5435Fz8EMGzoTTXgkcf3zAz",
   "metadata": {
     "name": "solv",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "spec": "0.1.0",
     "description": "Fragmetric SOLV BTC Vault Program",
     "repository": "https://github.com/fragmetric-labs/contracts"
