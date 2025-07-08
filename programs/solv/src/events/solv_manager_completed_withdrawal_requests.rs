@@ -14,11 +14,11 @@ pub struct SolvManagerCompletedWithdrawalRequests {
     /// VST received for burning SRT
     pub received_vst_amount: u64,
     /// Estimated amount minus fee
-    pub withdrawn_vst_amount: u64,
+    pub claimable_vst_amount: u64,
+    /// Total claimable amount
+    pub total_claimable_vst_amount: u64,
     /// Extra amount if exists
     pub extra_vst_amount: u64,
     /// Withdrawal fee
     pub deducted_vst_fee_amount: u64,
-    /// Total claimable amount
-    pub total_claimable_vst_amount: u64,
 }

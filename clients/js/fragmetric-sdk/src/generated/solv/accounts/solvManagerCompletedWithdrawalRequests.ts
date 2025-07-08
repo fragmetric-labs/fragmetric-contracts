@@ -58,13 +58,13 @@ export type SolvManagerCompletedWithdrawalRequests = {
   /** VST received for burning SRT */
   receivedVstAmount: bigint;
   /** Estimated amount minus fee */
-  withdrawnVstAmount: bigint;
+  claimableVstAmount: bigint;
+  /** Total claimable amount */
+  totalClaimableVstAmount: bigint;
   /** Extra amount if exists */
   extraVstAmount: bigint;
   /** Withdrawal fee */
   deductedVstFeeAmount: bigint;
-  /** Total claimable amount */
-  totalClaimableVstAmount: bigint;
 };
 
 export type SolvManagerCompletedWithdrawalRequestsArgs = {
@@ -79,13 +79,13 @@ export type SolvManagerCompletedWithdrawalRequestsArgs = {
   /** VST received for burning SRT */
   receivedVstAmount: number | bigint;
   /** Estimated amount minus fee */
-  withdrawnVstAmount: number | bigint;
+  claimableVstAmount: number | bigint;
+  /** Total claimable amount */
+  totalClaimableVstAmount: number | bigint;
   /** Extra amount if exists */
   extraVstAmount: number | bigint;
   /** Withdrawal fee */
   deductedVstFeeAmount: number | bigint;
-  /** Total claimable amount */
-  totalClaimableVstAmount: number | bigint;
 };
 
 export function getSolvManagerCompletedWithdrawalRequestsEncoder(): Encoder<SolvManagerCompletedWithdrawalRequestsArgs> {
@@ -100,10 +100,10 @@ export function getSolvManagerCompletedWithdrawalRequestsEncoder(): Encoder<Solv
       ['solvReceiptTokenMint', getAddressEncoder()],
       ['burntSrtAmount', getU64Encoder()],
       ['receivedVstAmount', getU64Encoder()],
-      ['withdrawnVstAmount', getU64Encoder()],
+      ['claimableVstAmount', getU64Encoder()],
+      ['totalClaimableVstAmount', getU64Encoder()],
       ['extraVstAmount', getU64Encoder()],
       ['deductedVstFeeAmount', getU64Encoder()],
-      ['totalClaimableVstAmount', getU64Encoder()],
     ]),
     (value) => ({
       ...value,
@@ -125,10 +125,10 @@ export function getSolvManagerCompletedWithdrawalRequestsDecoder(): Decoder<Solv
     ['solvReceiptTokenMint', getAddressDecoder()],
     ['burntSrtAmount', getU64Decoder()],
     ['receivedVstAmount', getU64Decoder()],
-    ['withdrawnVstAmount', getU64Decoder()],
+    ['claimableVstAmount', getU64Decoder()],
+    ['totalClaimableVstAmount', getU64Decoder()],
     ['extraVstAmount', getU64Decoder()],
     ['deductedVstFeeAmount', getU64Decoder()],
-    ['totalClaimableVstAmount', getU64Decoder()],
   ]);
 }
 

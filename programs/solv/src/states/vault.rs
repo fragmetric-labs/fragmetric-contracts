@@ -636,9 +636,9 @@ impl VaultAccount {
 
     /// Protocol extra fee is not accounted here - we don't know exact amount now
     /// * VST protocol deposit fee = ceil(VST * solv_protocol_deposit_fee_rate)  
-    /// * SRT expected = ceil((VST - protocol fee) as SRT)
+    /// * SRT estimated = ceil((VST - protocol fee) as SRT)
     ///
-    /// returns (srt_expected_amount, solv_protocol_deposit_fee_amount_as_vst)
+    /// returns (srt_estimated_amount, solv_protocol_deposit_fee_amount_as_vst)
     pub(crate) fn deposit_vst(&mut self, vst_amount: u64) -> Result<(u64, u64)> {
         if self.is_deposit_in_progress() {
             err!(VaultError::DepositInProgressError)?;
@@ -784,7 +784,7 @@ impl VaultAccount {
     }
 
     /// returns (∆vrt_withdrawal_enqueued_amount, ∆vst_withdrawal_estimated_amount).
-    /// vrt_withdrawal_enqueued_amount "might" be less than given vrt_amount,
+    /// ∆vrt_withdrawal_enqueued_amount "might" be less than given vrt_amount,
     /// due to srt operation receivable amount.
     pub(crate) fn enqueue_withdrawal_request(&mut self, mut vrt_amount: u64) -> Result<(u64, u64)> {
         let srt_exchange_rate = self.get_srt_exchange_rate();
@@ -986,7 +986,7 @@ impl VaultAccount {
     /// returns (srt_amount_to_withdraw, vst_estimated_amount_to_receive)
     pub(crate) fn confirm_withdrawal_requests(&mut self) -> Result<(u64, u64)> {
         let srt_amount_to_withdraw = self.srt_withdrawal_locked_amount;
-        // NOTE: this estimation is quite inprecise, so only used for event emission & logging.
+        // NOTE: this estimation is quite imprecise, so only used for event emission & logging.
         let vst_estimated_amount_to_receive = self
             .get_srt_exchange_rate()
             .get_srt_amount_as_vst(srt_amount_to_withdraw, false)

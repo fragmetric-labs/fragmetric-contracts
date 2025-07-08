@@ -249,7 +249,7 @@ pub fn process_complete_withdrawal_requests(
 
     let mut vault = vault_account.load_mut()?;
 
-    let (withdrawn_vst_amount, extra_vst_amount, deducted_vst_fee_amount) = vault
+    let (claimable_vst_amount, extra_vst_amount, deducted_vst_fee_amount) = vault
         .complete_withdrawal_requests(srt_amount, vst_amount, old_one_srt_as_micro_vst, true)?;
     let total_claimable_vst_amount = vault.get_vst_total_claimable_amount();
 
@@ -269,10 +269,10 @@ pub fn process_complete_withdrawal_requests(
 
         burnt_srt_amount: srt_amount,
         received_vst_amount: vst_amount,
-        withdrawn_vst_amount,
+        claimable_vst_amount,
+        total_claimable_vst_amount,
         extra_vst_amount,
         deducted_vst_fee_amount,
-        total_claimable_vst_amount,
     })
 }
 

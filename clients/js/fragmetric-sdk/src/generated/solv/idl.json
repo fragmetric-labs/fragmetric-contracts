@@ -5720,9 +5720,16 @@
             "type": "u64"
           },
           {
-            "name": "withdrawn_vst_amount",
+            "name": "claimable_vst_amount",
             "docs": [
               "Estimated amount minus fee"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "total_claimable_vst_amount",
+            "docs": [
+              "Total claimable amount"
             ],
             "type": "u64"
           },
@@ -5737,13 +5744,6 @@
             "name": "deducted_vst_fee_amount",
             "docs": [
               "Withdrawal fee"
-            ],
-            "type": "u64"
-          },
-          {
-            "name": "total_claimable_vst_amount",
-            "docs": [
-              "Total claimable amount"
             ],
             "type": "u64"
           }
