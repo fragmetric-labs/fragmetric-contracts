@@ -35,15 +35,15 @@ pub enum ProcessWithdrawalBatchCommandState {
     },
 }
 
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+#[derive(Clone, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct ProcessWithdrawalBatchCommandResult {
     pub requested_receipt_token_amount: u64,
     pub processed_receipt_token_amount: u64,
+    pub processed_batch_accounts: Vec<Pubkey>,
     pub asset_token_mint: Option<Pubkey>,
     pub required_asset_amount: u64,
     pub reserved_asset_user_amount: u64,
     pub deducted_asset_fee_amount: u64,
-    #[max_len(FUND_ACCOUNT_MAX_SUPPORTED_TOKENS)]
     pub offsetted_asset_receivables: Vec<ProcessWithdrawalBatchCommandResultAssetReceivable>,
     pub transferred_asset_revenue_amount: u64,
     pub withdrawal_fee_rate_bps: u16,
@@ -412,6 +412,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                 // do process withdrawal
                 let (
                     processed_receipt_token_amount,
+                    processed_batch_accounts,
                     required_asset_amount,
                     reserved_asset_user_amount,
                     deducted_asset_fee_amount,
@@ -426,6 +427,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
 
                     let (
                         processed_receipt_token_amount,
+                        processed_batch_accounts,
                         required_asset_amount,
                         reserved_asset_user_amount,
                         deducted_asset_fee_amount,
@@ -468,6 +470,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                     fund_service.update_asset_values(&mut pricing_service, true)?;
                     (
                         processed_receipt_token_amount,
+                        processed_batch_accounts,
                         required_asset_amount,
                         reserved_asset_user_amount,
                         deducted_asset_fee_amount,
@@ -481,6 +484,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         asset_token_mint,
                         requested_receipt_token_amount,
                         processed_receipt_token_amount,
+                        processed_batch_accounts,
                         required_asset_amount,
                         reserved_asset_user_amount,
                         deducted_asset_fee_amount,

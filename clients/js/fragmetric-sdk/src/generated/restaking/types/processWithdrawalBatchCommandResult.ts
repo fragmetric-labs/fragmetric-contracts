@@ -37,6 +37,7 @@ import {
 export type ProcessWithdrawalBatchCommandResult = {
   requestedReceiptTokenAmount: bigint;
   processedReceiptTokenAmount: bigint;
+  processedBatchAccounts: Array<Address>;
   assetTokenMint: Option<Address>;
   requiredAssetAmount: bigint;
   reservedAssetUserAmount: bigint;
@@ -49,6 +50,7 @@ export type ProcessWithdrawalBatchCommandResult = {
 export type ProcessWithdrawalBatchCommandResultArgs = {
   requestedReceiptTokenAmount: number | bigint;
   processedReceiptTokenAmount: number | bigint;
+  processedBatchAccounts: Array<Address>;
   assetTokenMint: OptionOrNullable<Address>;
   requiredAssetAmount: number | bigint;
   reservedAssetUserAmount: number | bigint;
@@ -62,6 +64,7 @@ export function getProcessWithdrawalBatchCommandResultEncoder(): Encoder<Process
   return getStructEncoder([
     ['requestedReceiptTokenAmount', getU64Encoder()],
     ['processedReceiptTokenAmount', getU64Encoder()],
+    ['processedBatchAccounts', getArrayEncoder(getAddressEncoder())],
     ['assetTokenMint', getOptionEncoder(getAddressEncoder())],
     ['requiredAssetAmount', getU64Encoder()],
     ['reservedAssetUserAmount', getU64Encoder()],
@@ -81,6 +84,7 @@ export function getProcessWithdrawalBatchCommandResultDecoder(): Decoder<Process
   return getStructDecoder([
     ['requestedReceiptTokenAmount', getU64Decoder()],
     ['processedReceiptTokenAmount', getU64Decoder()],
+    ['processedBatchAccounts', getArrayDecoder(getAddressDecoder())],
     ['assetTokenMint', getOptionDecoder(getAddressDecoder())],
     ['requiredAssetAmount', getU64Decoder()],
     ['reservedAssetUserAmount', getU64Decoder()],

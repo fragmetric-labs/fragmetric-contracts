@@ -888,8 +888,8 @@ impl UnstakeLSTCommand {
                 total_unstaking_sol_amount + total_unstaked_sol_amount,
             )?);
         require_gte!(
-            expected_pool_token_fee_amount,
-            total_deducted_pool_token_fee_amount
+            1,
+            expected_pool_token_fee_amount.abs_diff(total_deducted_pool_token_fee_amount)
         );
 
         // calculate deducted fee as SOL (will be added to SOL receivable)

@@ -1981,19 +1981,25 @@ describe('restaking.fragJTO test', async () => {
         })
       );
 
-    for (let rewardCommissionRateBps = 10; rewardCommissionRateBps <= 1000; rewardCommissionRateBps += 90) {
+    for (
+      let rewardCommissionRateBps = 10;
+      rewardCommissionRateBps <= 1000;
+      rewardCommissionRateBps += 90
+    ) {
       await ctx.fund.updateRestakingVaultStrategy.execute({
         vault: 'BmJvUzoiiNBRx3v2Gqsix9WvVtw8FaztrfBHQyqpMbTd',
         rewardCommissionRateBps,
       });
 
       const programRevenueCompoundRewardTokenAmountBefore =
-        await programRevenueTokenAccount.resolveAccount(true).then((account) => account!.data.amount);
+        await programRevenueTokenAccount
+          .resolveAccount(true)
+          .then((account) => account!.data.amount);
 
       await validator.airdropToken(
         'BmJvUzoiiNBRx3v2Gqsix9WvVtw8FaztrfBHQyqpMbTd',
         'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
-        1_123_456_789n,
+        1_123_456_789n
       );
 
       // harvest compounding reward
@@ -2003,10 +2009,14 @@ describe('restaking.fragJTO test', async () => {
       });
 
       const programRevenueCompoundRewardTokenAmountAfter =
-        await programRevenueTokenAccount.resolveAccount(true).then((account) => account!.data.amount);
+        await programRevenueTokenAccount
+          .resolveAccount(true)
+          .then((account) => account!.data.amount);
 
-      expect(programRevenueCompoundRewardTokenAmountAfter - programRevenueCompoundRewardTokenAmountBefore)
-        .toEqual(1_123_456_789n * BigInt(rewardCommissionRateBps) / 10000n);
+      expect(
+        programRevenueCompoundRewardTokenAmountAfter -
+          programRevenueCompoundRewardTokenAmountBefore
+      ).toEqual((1_123_456_789n * BigInt(rewardCommissionRateBps)) / 10000n);
     }
 
     // reset commision rate to 0
@@ -2022,7 +2032,11 @@ describe('restaking.fragJTO test', async () => {
   test('run operation cycles through multiple epoches to test cash-in/out flows including (un)stake/(un)restake', async () => {
     const tokenAmount = 1_000_000_000_000n;
 
-    await validator.airdropToken(user1.address!, 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL', tokenAmount);
+    await validator.airdropToken(
+      user1.address!,
+      'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
+      tokenAmount
+    );
 
     await expect(
       user1.deposit.execute(

@@ -998,6 +998,9 @@ describe('restaking.fragSOL unit test', async () => {
                         },
                       },
                     ],
+                    "processedBatchAccounts": [
+                      "BSAf3XCVkGJthdmprrf9faibAhcDW8m67DJuHk15tkM7",
+                    ],
                     "processedReceiptTokenAmount": 83048479175n,
                     "requestedReceiptTokenAmount": 83048479175n,
                     "requiredAssetAmount": 0n,
