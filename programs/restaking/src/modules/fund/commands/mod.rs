@@ -35,6 +35,9 @@ use crate::errors::ErrorCode;
 
 use super::*;
 
+// maximum fee difference between expected and calculated value
+const MAX_FEE_TOLERANCE: u64 = 10;
+
 // propagate common accounts and values to all commands
 pub(super) struct OperationCommandContext<'info, 'a> {
     pub operator: &'a Signer<'info>,

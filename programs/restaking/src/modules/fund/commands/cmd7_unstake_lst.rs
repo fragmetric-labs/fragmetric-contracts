@@ -888,7 +888,7 @@ impl UnstakeLSTCommand {
                 total_unstaking_sol_amount + total_unstaked_sol_amount,
             )?);
         require_gte!(
-            1,
+            MAX_FEE_TOLERANCE,
             expected_pool_token_fee_amount.abs_diff(total_deducted_pool_token_fee_amount)
         );
 
@@ -988,7 +988,11 @@ impl UnstakeLSTCommand {
         let expected_sol_fee_amount = pricing_service
             .get_token_amount_as_sol(pool_token_mint.key, item.allocated_token_amount)?
             .saturating_sub(unstaking_sol_amount);
-        require_gte!(expected_sol_fee_amount, deducted_sol_fee_amount);
+
+        require_gte!(
+            MAX_FEE_TOLERANCE,
+            expected_sol_fee_amount.abs_diff(deducted_sol_fee_amount)
+        );
 
         Ok(Some(UnstakeResult {
             to_sol_account_amount: fund_reserve_account.lamports(),

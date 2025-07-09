@@ -432,9 +432,10 @@ impl StakeSOLCommand {
         let expected_pool_token_fee_amount = pricing_service
             .get_sol_amount_as_token(pool_token_mint.key, item.allocated_sol_amount)?
             .saturating_sub(minted_pool_token_amount);
+
         require_gte!(
-            expected_pool_token_fee_amount,
-            deducted_pool_token_fee_amount
+            MAX_FEE_TOLERANCE,
+            expected_pool_token_fee_amount.abs_diff(deducted_pool_token_fee_amount),
         );
 
         // calculate deducted fee as SOL (will be added to SOL receivable)
