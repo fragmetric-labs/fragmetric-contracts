@@ -151,7 +151,6 @@ impl UnrestakeVRTCommand {
                             false,
                             &pricing_service,
                         )?
-                        .saturating_add(supported_token.pending_unstaking_amount_as_sol as i128)
                         .max(0),
                 )?,
             )?;
