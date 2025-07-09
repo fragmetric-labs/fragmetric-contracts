@@ -325,8 +325,7 @@ impl UnrestakeVRTCommand {
             );
 
             unrestaking_strategy.cut_greedy(
-                (extra_unrestaking_obligated_amount_as_sol + unrestaking_obligated_amounts_as_sol)
-                    .saturating_sub(fund_account.sol.operation_receivable_amount),
+                extra_unrestaking_obligated_amount_as_sol + unrestaking_obligated_amounts_as_sol,
             )?;
 
             for (p_index, p) in unrestaking_strategy.get_participants_iter().enumerate() {
