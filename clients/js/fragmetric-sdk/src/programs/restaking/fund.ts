@@ -11,6 +11,7 @@ import {
   getAddressEncoder,
   getBytesEncoder,
   getProgramDerivedAddress,
+  getU8Encoder,
   IAccountMeta,
   ReadonlyUint8Array,
 } from '@solana/kit';
@@ -193,6 +194,38 @@ export class RestakingFundAccountContext extends AccountContext<
       return new RestakingFundWithdrawalBatchAccountContext(parent, address);
     }
   );
+
+  async __getUnstakingAuthorityAddress(
+    poolAddress: string,
+    index: number
+  ): Promise<Address> {
+    const [address, _] = await getProgramDerivedAddress({
+      programAddress: this.parent.program.address,
+      seeds: [
+        getBytesEncoder().encode(Buffer.from('unstaking_ticket')),
+        getAddressEncoder().encode((await this.resolveAddress())!), // fund
+        getAddressEncoder().encode(poolAddress as Address), // stake pool
+        getU8Encoder().encode(index),
+      ],
+    });
+    return address as Address;
+  }
+
+  async __getUnrestakingAuthorityAddress(
+    vaultAddress: string,
+    index: number
+  ): Promise<Address> {
+    const [address, _] = await getProgramDerivedAddress({
+      programAddress: this.parent.program.address,
+      seeds: [
+        getBytesEncoder().encode(Buffer.from('unrestaking_ticket')),
+        getAddressEncoder().encode((await this.resolveAddress())!), // fund
+        getAddressEncoder().encode(vaultAddress as Address), // vault
+        getU8Encoder().encode(index),
+      ],
+    });
+    return address as Address;
+  }
 
   readonly restakingVaults = new IterativeAccountContext<
     any,
