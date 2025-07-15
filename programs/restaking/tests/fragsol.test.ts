@@ -2103,13 +2103,13 @@ describe('restaking.fragSOL test', async () => {
     await validator.airdropToken(
       user1.address!,
       'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
-      2_000_000_000n
+      200_000_000_000_000n
     );
 
     await user1.deposit.execute(
       {
         assetMint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
-        assetAmount: 2_000_000_000n,
+        assetAmount: 200_000_000_000_000n,
       },
       { signers: [signer1] }
     );
