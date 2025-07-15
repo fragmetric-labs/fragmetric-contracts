@@ -494,7 +494,8 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
         .min(pool_token_amount);
 
         // Withdraw amount too small
-        if pool_token_amount == 0 {
+        // Due to withdrawal fee, withdrawing 1 token will fail.
+        if pool_token_amount < 2 {
             return Ok((0, 0, 0));
         }
 
@@ -633,7 +634,8 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
         .min(pool_token_amount);
 
         // withdraw amount too small
-        if pool_token_amount == 0 {
+        // Due to withdrawal fee, withdrawing 1 token will fail.
+        if pool_token_amount < 2 {
             return Ok((0, 0, 0));
         }
 
