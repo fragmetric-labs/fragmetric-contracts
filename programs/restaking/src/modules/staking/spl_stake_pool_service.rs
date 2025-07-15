@@ -72,11 +72,10 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
     }
 
     pub(super) fn deserialize_pool_account(pool_account: &AccountInfo) -> Result<StakePool> {
-        use borsh1::BorshDeserialize;
-
-        let pool_account_data =
-            StakePool::deserialize(&mut pool_account.try_borrow_data()?.as_ref())
-                .map_err(|_| error!(error::ErrorCode::AccountDidNotDeserialize))?;
+        let pool_account_data = solana_program::borsh1::try_from_slice_unchecked::<StakePool>(
+            &pool_account.try_borrow_data()?,
+        )
+        .map_err(|_| error!(error::ErrorCode::AccountDidNotDeserialize))?;
 
         require_keys_eq!(*pool_account.owner, T::id());
         require_eq!(pool_account_data.is_valid(), true);

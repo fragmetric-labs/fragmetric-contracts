@@ -1906,7 +1906,6 @@ version = "0.6.6"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
- "borsh 1.5.5",
  "bytemuck",
  "jito-bytemuck",
  "jito-vault-core",
