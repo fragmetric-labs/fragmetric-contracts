@@ -240,7 +240,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
 
         sol_amount: u64,
     ) -> Result<(u64, u64, u64)> {
-        let pool_account_data = &self.get_pool_account_data()?;
+        let pool_account_data = &mut self.get_pool_account_data()?;
 
         // first update stake pool balance
         self.update_stake_pool_balance_if_needed(
@@ -409,7 +409,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
 
     fn update_stake_pool_balance_if_needed(
         &self,
-        pool_account_data: &StakePool,
+        pool_account_data: &mut StakePool,
         // fixed
         withdraw_authority: &AccountInfo<'info>,
         reserve_stake_account: &AccountInfo<'info>,
@@ -444,6 +444,8 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
             ],
         )?;
 
+        *pool_account_data = Self::deserialize_pool_account(self.pool_account)?;
+
         Ok(())
     }
 
@@ -471,7 +473,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
 
         pool_token_amount: u64,
     ) -> Result<(u64, u64, u64)> {
-        let pool_account_data = &self.get_pool_account_data()?;
+        let pool_account_data = &mut self.get_pool_account_data()?;
 
         // first update stake pool balance
         self.update_stake_pool_balance_if_needed(
@@ -610,7 +612,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
 
         pool_token_amount: u64,
     ) -> Result<(u64, u64, u64)> {
-        let pool_account_data = &self.get_pool_account_data()?;
+        let pool_account_data = &mut self.get_pool_account_data()?;
 
         // first update stake pool balance
         self.update_stake_pool_balance_if_needed(
