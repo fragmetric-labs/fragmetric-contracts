@@ -637,8 +637,6 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
             return Ok((0, 0, 0));
         }
 
-        let payer_lamports_before = to_stake_account_rent_payer.lamports();
-
         // initialize `to_stake_account` first - will be used for split stake
         system_program.initialize_account(
             to_stake_account,
@@ -649,7 +647,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
             &solana_program::stake::program::ID,
         )?;
 
-        let rent_payed = payer_lamports_before - to_stake_account_rent_payer.lamports();
+        let rent = to_stake_account.lamports();
 
         let withdraw_stake_ix = spl_stake_pool::instruction::withdraw_stake(
             self.spl_stake_pool_program.key,
@@ -687,7 +685,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
             from_pool_token_account_signer_seeds,
         )?;
 
-        let unstaking_sol_amount = to_stake_account.lamports().saturating_sub(rent_payed);
+        let unstaking_sol_amount = to_stake_account.lamports().saturating_sub(rent);
 
         // deactivate `to_stake_account` - since it's state is active now as
         // it has been splitted from active stake account
