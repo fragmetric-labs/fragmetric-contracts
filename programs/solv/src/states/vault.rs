@@ -433,6 +433,7 @@ impl VaultAccount {
 
         self.update_vrt_exchange_rate()?;
 
+        #[cfg(not(test))]
         msg!(
             "Mint VRT: vst_amount={}, vrt_amount={}",
             vst_amount,
@@ -571,10 +572,12 @@ impl VaultAccount {
             err!(VaultError::InvalidSRTPriceError)?;
         }
 
+        #[cfg(not(test))]
         let old_one_srt_as_micro_vst = self.one_srt_as_micro_vst;
         self.one_srt_as_micro_vst = new_one_srt_as_micro_vst;
         self.update_vrt_exchange_rate()?;
 
+        #[cfg(not(test))]
         msg!(
             "Refresh SRT exchange rate: old={}, new = {}",
             old_one_srt_as_micro_vst,
@@ -617,9 +620,11 @@ impl VaultAccount {
             srt_operation_reserved_amount_as_vst - post_srt_operation_reserved_amount_as_vst;
 
         self.vst_operation_receivable_amount += extra_vst_receivable_amount;
+        #[cfg(not(test))]
         let old_one_srt_as_micro_vst = self.one_srt_as_micro_vst;
         self.one_srt_as_micro_vst = new_one_srt_as_micro_vst;
 
+        #[cfg(not(test))]
         msg!(
             "Adjust SRT exchange rate: old={}, new={}, extra_vst_receivable_amount={}",
             old_one_srt_as_micro_vst,
@@ -661,6 +666,7 @@ impl VaultAccount {
         self.vst_operation_receivable_amount += solv_protocol_deposit_fee_amount_as_vst;
         self.srt_operation_receivable_amount = srt_estimated_amount;
 
+        #[cfg(not(test))]
         msg!(
             "Deposit VST: vst_amount={}, deposit_fee_amount_as_vst={}, srt_estimated_amount={}",
             vst_amount,
@@ -682,6 +688,7 @@ impl VaultAccount {
         self.vst_operation_reserved_amount += vst_amount;
         self.vst_operation_receivable_amount -= vst_amount;
 
+        #[cfg(not(test))]
         msg!("Donate VST: vst_amount={}", vst_amount);
 
         Ok(vst_amount)
@@ -715,6 +722,7 @@ impl VaultAccount {
         self.vst_operation_receivable_amount -= offsetting_vst_operation_receivable_amount;
         self.srt_operation_reserved_amount += srt_amount;
 
+        #[cfg(not(test))]
         msg!(
             "Donate SRT: srt_amount={}, offsetted_vst_operation_receivable_amount={}",
             srt_amount,
@@ -753,17 +761,20 @@ impl VaultAccount {
             err!(VaultError::InvalidSolvProtocolExtraFeeAmountError)?;
         }
 
+        #[cfg(not(test))]
         let offsetted_srt_operation_receivable_amount = self.srt_operation_receivable_amount;
         self.vst_operation_receivable_amount += solv_protocol_extra_fee_amount_as_vst;
         self.srt_operation_reserved_amount += srt_amount;
         self.srt_operation_receivable_amount = 0;
 
+        #[cfg(not(test))]
         let old_one_srt_as_micro_vst = self.one_srt_as_micro_vst;
         self.refresh_srt_exchange_rate_with_validation(
             new_one_srt_as_micro_vst,
             heuristic_validation,
         )?;
 
+        #[cfg(not(test))]
         msg!(
             "Offset SRT receivables: received_srt_amount={}, new_one_srt_as_micro_vst={}, offsetted_srt_operation_receivable_amount={}, old_one_srt_as_micro_vst={}, deducted_extra_fee_amount_as_vst={}",
             srt_amount,
@@ -971,6 +982,7 @@ impl VaultAccount {
 
         self.update_vrt_exchange_rate()?;
 
+        #[cfg(not(test))]
         msg!(
             "Enqueue withdrawal request: burnt_vrt_amount={}, vrt_withdrawal_enqueued_amount={}, vst_withdrawal_locked_amount={}, vst_withdrawal_fee_amount={}, srt_withdrawal_locked_amount={}",
             vrt_amount,
@@ -1011,6 +1023,7 @@ impl VaultAccount {
 
         self.srt_withdrawal_locked_amount = 0;
 
+        #[cfg(not(test))]
         msg!(
             "Confirm withdrawal requests: srt_amount_to_withdraw={}, vst_estimated_amount_to_receive={}, vst_receivable_amount_to_claim={}, total_vst_receivable_amount_to_claim={}, vrt_withdrawal_processing_amount={}",
             srt_amount_to_withdraw,
@@ -1146,6 +1159,7 @@ impl VaultAccount {
             err!(VaultError::InvalidSRTPriceError)?;
         }
 
+        #[cfg(not(test))]
         msg!(
             "Complete withdrawal requests: burnt_srt_amount={}, received_vst_amount={}, vst_withdrawal_unlocked_amount={}, vst_deducted_fee_amount={}, vst_extra_claimable_amount={}, total_vst_reserved_amount_to_claim={}, total_vst_extra_amount_to_claim={}, total_vst_deducted_fee_amount={}, vrt_withdrawal_completed_amount={}",
             srt_amount,
@@ -1189,6 +1203,7 @@ impl VaultAccount {
         self.vst_extra_amount_to_claim = 0;
         self.vst_deducted_fee_amount = 0;
 
+        #[cfg(not(test))]
         msg!(
             "Claim VST: vrt_burnt_amount={}, vst_claimed_amount={}, vst_extra_amount={}, vst_deducted_fee_amount={}",
             vrt_burnt_amount,
