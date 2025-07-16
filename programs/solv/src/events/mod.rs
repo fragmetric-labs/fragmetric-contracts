@@ -8,6 +8,7 @@ mod solv_manager_confirmed_donations;
 mod solv_manager_confirmed_withdrawal_requests;
 mod solv_manager_implied_solv_protocol_fee;
 mod solv_manager_refreshed_srt_redemption_rate;
+mod user_deposited_srt;
 
 pub use fund_manager_deposited_to_vault::*;
 pub use fund_manager_requested_withdrawal_from_vault::*;
@@ -19,3 +20,4 @@ pub use solv_manager_confirmed_donations::*;
 pub use solv_manager_confirmed_withdrawal_requests::*;
 pub use solv_manager_implied_solv_protocol_fee::*;
 pub use solv_manager_refreshed_srt_redemption_rate::*;
+pub use user_deposited_srt::*;
