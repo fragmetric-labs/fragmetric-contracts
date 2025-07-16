@@ -28,6 +28,7 @@ import {
   type ParsedSolvManagerSetSolvProtocolFeeRateInstruction,
   type ParsedSolvManagerSetSolvProtocolWalletInstruction,
   type ParsedUpdateVaultAdminRoleInstruction,
+  type ParsedUserDepositSolvReceiptTokenInstruction,
   type ParsedVaultManagerInitializeVaultAccountInstruction,
   type ParsedVaultManagerUpdateVaultAccountIfNeededInstruction,
 } from '../instructions';
@@ -47,6 +48,7 @@ export enum SolvAccount {
   SolvManagerConfirmedWithdrawalRequests,
   SolvManagerImpliedSolvProtocolFee,
   SolvManagerRefreshedSRTRedemptionRate,
+  UserDepositedSRT,
 }
 
 export function identifySolvAccount(
@@ -174,6 +176,17 @@ export function identifySolvAccount(
   ) {
     return SolvAccount.SolvManagerRefreshedSRTRedemptionRate;
   }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([17, 158, 47, 16, 150, 67, 1, 54])
+      ),
+      0
+    )
+  ) {
+    return SolvAccount.UserDepositedSRT;
+  }
   throw new Error(
     'The provided account could not be identified as a solv account.'
   );
@@ -194,6 +207,7 @@ export enum SolvInstruction {
   SolvManagerSetSolvProtocolFeeRate,
   SolvManagerSetSolvProtocolWallet,
   UpdateVaultAdminRole,
+  UserDepositSolvReceiptToken,
   VaultManagerInitializeVaultAccount,
   VaultManagerUpdateVaultAccountIfNeeded,
 }
@@ -360,6 +374,17 @@ export function identifySolvInstruction(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([146, 147, 108, 143, 98, 30, 48, 151])
+      ),
+      0
+    )
+  ) {
+    return SolvInstruction.UserDepositSolvReceiptToken;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
         new Uint8Array([60, 93, 141, 114, 198, 61, 27, 137])
       ),
       0
@@ -428,6 +453,9 @@ export type ParsedSolvInstruction<
   | ({
       instructionType: SolvInstruction.UpdateVaultAdminRole;
     } & ParsedUpdateVaultAdminRoleInstruction<TProgram>)
+  | ({
+      instructionType: SolvInstruction.UserDepositSolvReceiptToken;
+    } & ParsedUserDepositSolvReceiptTokenInstruction<TProgram>)
   | ({
       instructionType: SolvInstruction.VaultManagerInitializeVaultAccount;
     } & ParsedVaultManagerInitializeVaultAccountInstruction<TProgram>)

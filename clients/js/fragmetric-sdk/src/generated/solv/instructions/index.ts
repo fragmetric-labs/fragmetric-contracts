@@ -20,5 +20,6 @@ export * from './solvManagerRefreshSolvReceiptTokenRedemptionRate';
 export * from './solvManagerSetSolvProtocolFeeRate';
 export * from './solvManagerSetSolvProtocolWallet';
 export * from './updateVaultAdminRole';
+export * from './userDepositSolvReceiptToken';
 export * from './vaultManagerInitializeVaultAccount';
 export * from './vaultManagerUpdateVaultAccountIfNeeded';
