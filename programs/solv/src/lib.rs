@@ -195,4 +195,17 @@ pub mod solv {
     ) -> Result<()> {
         process_delegate_reward_token_account(&mut ctx)
     }
+
+    ////////////////////////////////////////////
+    // UserContext
+    ////////////////////////////////////////////
+
+    pub fn user_deposit_solv_receipt_token(
+        mut ctx: Context<UserContext>,
+        srt_amount: u64,
+    ) -> Result<()> {
+        emit_cpi!(process_deposit_solv_receipt_token(&mut ctx, srt_amount)?);
+
+        Ok(())
+    }
 }
