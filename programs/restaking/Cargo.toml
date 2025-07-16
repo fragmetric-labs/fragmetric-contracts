@@ -35,7 +35,6 @@ mainnet = ["solv/mainnet"]
 [dependencies]
 anchor-lang = { workspace = true }
 anchor-spl = { workspace = true }
-borsh1 = { workspace = true }
 bytemuck = { workspace = true }
 jito-vault-sdk = { workspace = true }
 jito-vault-core = { workspace = true }

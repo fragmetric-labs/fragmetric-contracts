@@ -72,11 +72,10 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
     }
 
     pub(super) fn deserialize_pool_account(pool_account: &AccountInfo) -> Result<StakePool> {
-        use borsh1::BorshDeserialize;
-
-        let pool_account_data =
-            StakePool::deserialize(&mut pool_account.try_borrow_data()?.as_ref())
-                .map_err(|_| error!(error::ErrorCode::AccountDidNotDeserialize))?;
+        let pool_account_data = solana_program::borsh1::try_from_slice_unchecked::<StakePool>(
+            &pool_account.try_borrow_data()?,
+        )
+        .map_err(|_| error!(error::ErrorCode::AccountDidNotDeserialize))?;
 
         require_keys_eq!(*pool_account.owner, T::id());
         require_eq!(pool_account_data.is_valid(), true);
@@ -240,7 +239,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
 
         sol_amount: u64,
     ) -> Result<(u64, u64, u64)> {
-        let pool_account_data = &self.get_pool_account_data()?;
+        let pool_account_data = &mut self.get_pool_account_data()?;
 
         // first update stake pool balance
         self.update_stake_pool_balance_if_needed(
@@ -409,7 +408,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
 
     fn update_stake_pool_balance_if_needed(
         &self,
-        pool_account_data: &StakePool,
+        pool_account_data: &mut StakePool,
         // fixed
         withdraw_authority: &AccountInfo<'info>,
         reserve_stake_account: &AccountInfo<'info>,
@@ -444,6 +443,8 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
             ],
         )?;
 
+        *pool_account_data = Self::deserialize_pool_account(self.pool_account)?;
+
         Ok(())
     }
 
@@ -471,7 +472,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
 
         pool_token_amount: u64,
     ) -> Result<(u64, u64, u64)> {
-        let pool_account_data = &self.get_pool_account_data()?;
+        let pool_account_data = &mut self.get_pool_account_data()?;
 
         // first update stake pool balance
         self.update_stake_pool_balance_if_needed(
@@ -493,7 +494,8 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
         .min(pool_token_amount);
 
         // Withdraw amount too small
-        if pool_token_amount == 0 {
+        // Due to withdrawal fee, withdrawing 1 token will fail.
+        if pool_token_amount < 2 {
             return Ok((0, 0, 0));
         }
 
@@ -610,7 +612,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
 
         pool_token_amount: u64,
     ) -> Result<(u64, u64, u64)> {
-        let pool_account_data = &self.get_pool_account_data()?;
+        let pool_account_data = &mut self.get_pool_account_data()?;
 
         // first update stake pool balance
         self.update_stake_pool_balance_if_needed(
@@ -632,11 +634,10 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
         .min(pool_token_amount);
 
         // withdraw amount too small
-        if pool_token_amount == 0 {
+        // Due to withdrawal fee, withdrawing 1 token will fail.
+        if pool_token_amount < 2 {
             return Ok((0, 0, 0));
         }
-
-        let payer_lamports_before = to_stake_account_rent_payer.lamports();
 
         // initialize `to_stake_account` first - will be used for split stake
         system_program.initialize_account(
@@ -648,7 +649,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
             &solana_program::stake::program::ID,
         )?;
 
-        let rent_payed = payer_lamports_before - to_stake_account_rent_payer.lamports();
+        let rent = to_stake_account.lamports();
 
         let withdraw_stake_ix = spl_stake_pool::instruction::withdraw_stake(
             self.spl_stake_pool_program.key,
@@ -686,7 +687,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
             from_pool_token_account_signer_seeds,
         )?;
 
-        let unstaking_sol_amount = to_stake_account.lamports().saturating_sub(rent_payed);
+        let unstaking_sol_amount = to_stake_account.lamports().saturating_sub(rent);
 
         // deactivate `to_stake_account` - since it's state is active now as
         // it has been splitted from active stake account

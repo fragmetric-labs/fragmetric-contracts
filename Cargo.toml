@@ -49,7 +49,6 @@ spl-tlv-account-resolution = "0.9.0"
 spl-transfer-hook-interface = "0.9.0"
 spl-discriminator = "0.4.1"
 spl-stake-pool = { version = "2.0.1", features = ["no-entrypoint"] }
-borsh1 = { package = "borsh", version = "1.5.5" } # This version is used in spl-stake-pool
 proptest = "1.6.0"
 primitive-types = "0.13.1"
 once_cell = "1.21.3"

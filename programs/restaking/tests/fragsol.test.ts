@@ -2070,4 +2070,70 @@ describe('restaking.fragSOL test', async () => {
       ]
     `);
   });
+
+  test(`there could be remaining lamports in uninitialized fund withdrawal stake accounts, due to jito tip`, async () => {
+    // Airdrop 1 SOL to each jitoSOL withdrawal stake accounts
+    await Promise.all([
+      validator.airdrop(
+        'AW3FiXBG6DzDFS9sg8LFYUyUXVWh4SBgXo3vaAgD2uDb',
+        1_000_000_000n
+      ),
+      validator.airdrop(
+        'AkV1gsoGeGdFuWrReeE21kcVgMJMUEe33jvuxQtQBQyQ',
+        1_000_000_000n
+      ),
+      validator.airdrop(
+        'BM2DCJ34zhLx5AYwzBE3W6VfEBWiTuyXzhrEPHdTKzdU',
+        1_000_000_000n
+      ),
+      validator.airdrop(
+        'G3X7uH2fhzyomtVqanJ1ZuhHi5wwdG8qxzqjt9RzLbXH',
+        1_000_000_000n
+      ),
+      validator.airdrop(
+        'DpP5TGf5fGbN2cCnJzaXrFKHzhSuef2vgb2FPTNCdmU4',
+        1_000_000_000n
+      ),
+    ]);
+
+    const userReceiptTokenBalanceBefore = await user1
+      .resolve(true)
+      .then((res) => res!.receiptTokenAmount);
+
+    await validator.airdropToken(
+      user1.address!,
+      'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+      200_000_000_000_000n
+    );
+
+    await user1.deposit.execute(
+      {
+        assetMint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+        assetAmount: 200_000_000_000_000n,
+      },
+      { signers: [signer1] }
+    );
+
+    const mintedReceiptTokenAmount = await user1
+      .resolve(true)
+      .then((res) => res!.receiptTokenAmount - userReceiptTokenBalanceBefore);
+
+    await user1.requestWithdrawal.execute(
+      {
+        assetMint: null,
+        receiptTokenAmount: mintedReceiptTokenAmount,
+      },
+      { signers: [signer1] }
+    );
+
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'EnqueueWithdrawalBatch',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'UnstakeLST',
+      operator: restaking.knownAddresses.fundManager,
+    });
+  });
 });
