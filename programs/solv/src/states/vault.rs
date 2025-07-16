@@ -421,6 +421,41 @@ impl VaultAccount {
         self.one_vrt_as_micro_vst
     }
 
+    /// SRT amount as VST amount = floor(SRT amount after as VST) - floor(SRT amount before as VST)
+    /// VRT mint amount = floor(SRT amount as VST amount) * VRT supply / NAV ?? SRT amount as VST amount
+    /// * VRT price = NAV / VRT supply
+    /// * NAV = VST (operation reserved + receivable) + floor(SRT (operation reserved) as VST) + floor(SRT (operation receivable) as VST)
+    pub(crate) fn mint_vrt_with_srt(&mut self, srt_amount: u64) -> Result<u64> {
+        // convert srt amount as vst amount
+        let srt_exchange_rate = self.get_srt_exchange_rate();
+
+        let srt_reserved_amount_before_as_vst = srt_exchange_rate
+            .get_srt_amount_as_vst(self.srt_operation_reserved_amount, false)
+            .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
+
+        let srt_reserved_amount_after_as_vst = srt_exchange_rate
+            .get_srt_amount_as_vst(self.srt_operation_reserved_amount + srt_amount, false)
+            .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
+
+        let vrt_amount = self.get_vrt_amount_to_mint(
+            srt_reserved_amount_after_as_vst - srt_reserved_amount_before_as_vst,
+        )?;
+
+        self.vrt_supply += vrt_amount;
+        self.srt_operation_reserved_amount += srt_amount;
+
+        self.update_vrt_exchange_rate()?;
+
+        #[cfg(not(test))]
+        msg!(
+            "Mint VRT: srt_amount={}, vrt_amount={}",
+            srt_amount,
+            vrt_amount
+        );
+
+        Ok(vrt_amount)
+    }
+
     /// VRT mint amount = floor(VST * VRT supply / NAV) ?? VST
     /// * VRT price = NAV / VRT supply
     /// * NAV = VST (operation reserved + receivable) + floor(SRT (operation reserved) as VST) + floor(SRT (operation receivable) as VST)
@@ -445,7 +480,7 @@ impl VaultAccount {
     /// VRT mint amount = floor(VST * VRT supply / NAV) ?? VST
     /// * VRT price = NAV / VRT supply
     /// * NAV = VST (operation reserved + receivable) + floor(SRT (operation reserved) as VST) + floor(SRT (operation receivable) as VST)
-    pub fn get_vrt_amount_to_mint(&self, vst_amount: u64) -> Result<u64> {
+    fn get_vrt_amount_to_mint(&self, vst_amount: u64) -> Result<u64> {
         let net_asset_value_as_vst = self
             .get_net_asset_value_as_vst()
             .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
