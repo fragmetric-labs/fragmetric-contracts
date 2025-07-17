@@ -132,7 +132,6 @@ pub struct VaultAccount {
 }
 
 const BPS: u16 = 10_000;
-const MICRO: u64 = 1_000_000;
 
 #[repr(C)]
 #[zero_copy]
@@ -482,30 +481,6 @@ impl VaultAccount {
                 + srt_operation_reserved_amount_as_vst
                 + srt_operation_receivable_amount_as_vst,
         )
-    }
-
-    /// NAV = VST (operation reserved + receivable) + floor(SRT (operation reserved) as VST) + floor(SRT (operation receivable) as VST)
-    pub fn get_net_asset_value_as_micro_vst(&self) -> Option<u64> {
-        let srt_exchange_rate = self.get_srt_exchange_rate();
-        let srt_operation_reserved_amount_as_micro_vst = srt_exchange_rate.get_srt_amount_as_vst(
-            self.srt_operation_reserved_amount.checked_mul(MICRO)?,
-            false,
-        )?;
-        let srt_operation_receivable_amount_as_micro_vst = srt_exchange_rate
-            .get_srt_amount_as_vst(
-                self.srt_operation_receivable_amount.checked_mul(MICRO)?,
-                false,
-            )?;
-
-        let vst_operation_reserved_amount_as_micro =
-            self.vst_operation_reserved_amount.checked_mul(MICRO)?;
-        let vst_operation_receivable_amount_as_micro =
-            self.vst_operation_receivable_amount.checked_mul(MICRO)?;
-
-        vst_operation_reserved_amount_as_micro
-            .checked_add(vst_operation_receivable_amount_as_micro)?
-            .checked_add(srt_operation_reserved_amount_as_micro_vst)?
-            .checked_add(srt_operation_receivable_amount_as_micro_vst)
     }
 
     /// Minimum amount of VST required in vault token account
