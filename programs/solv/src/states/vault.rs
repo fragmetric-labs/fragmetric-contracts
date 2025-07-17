@@ -666,6 +666,8 @@ impl VaultAccount {
         self.vst_operation_receivable_amount += solv_protocol_deposit_fee_amount_as_vst;
         self.srt_operation_receivable_amount = srt_estimated_amount;
 
+        self.update_vrt_exchange_rate()?;
+
         #[cfg(not(test))]
         msg!(
             "Deposit VST: vst_amount={}, deposit_fee_amount_as_vst={}, srt_estimated_amount={}",
