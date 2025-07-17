@@ -299,6 +299,7 @@ describe('restaking.fragSOL unit test', async () => {
             "operationReservedAmount": 0n,
             "operationTotalAmount": 0n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "HR1ANmDHjaEhknvsTaK48M5xZtbBiwNdXM5NTiWhAb4S",
           },
         ],
