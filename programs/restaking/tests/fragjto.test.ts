@@ -117,6 +117,7 @@ describe('restaking.fragJTO test', async () => {
             "operationReservedAmount": 0n,
             "operationTotalAmount": 0n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "BmJvUzoiiNBRx3v2Gqsix9WvVtw8FaztrfBHQyqpMbTd",
           },
         ],

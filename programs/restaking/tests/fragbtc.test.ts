@@ -140,6 +140,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 0n,
             "operationTotalAmount": 0n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "H6pGcL98Rkz2aV8pq5jDEMdtrnogAmhUM5w8RAsddeB6",
           },
           {
@@ -149,6 +150,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 0n,
             "operationTotalAmount": 0n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "5zXiPsDznkiEA4nKvWEWuJEYBupPEBAdA1Qnb7j25PdJ",
           },
           {
@@ -158,6 +160,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 0n,
             "operationTotalAmount": 0n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
           },
         ],
@@ -587,6 +590,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 0n,
             "operationTotalAmount": 0n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "H6pGcL98Rkz2aV8pq5jDEMdtrnogAmhUM5w8RAsddeB6",
           },
           {
@@ -596,6 +600,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 0n,
             "operationTotalAmount": 0n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "5zXiPsDznkiEA4nKvWEWuJEYBupPEBAdA1Qnb7j25PdJ",
           },
           {
@@ -605,6 +610,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 0n,
             "operationTotalAmount": 0n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
           },
         ],
@@ -1074,6 +1080,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 0n,
             "operationTotalAmount": 0n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "H6pGcL98Rkz2aV8pq5jDEMdtrnogAmhUM5w8RAsddeB6",
           },
           {
@@ -1083,6 +1090,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 0n,
             "operationTotalAmount": 0n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "5zXiPsDznkiEA4nKvWEWuJEYBupPEBAdA1Qnb7j25PdJ",
           },
           {
@@ -1092,6 +1100,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 0n,
             "operationTotalAmount": 0n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
           },
         ],
@@ -2040,6 +2049,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 0n,
             "operationTotalAmount": 0n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "H6pGcL98Rkz2aV8pq5jDEMdtrnogAmhUM5w8RAsddeB6",
           },
           {
@@ -2049,6 +2059,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 0n,
             "operationTotalAmount": 0n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "5zXiPsDznkiEA4nKvWEWuJEYBupPEBAdA1Qnb7j25PdJ",
           },
           {
@@ -2058,6 +2069,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 0n,
             "operationTotalAmount": 0n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
           },
         ],
@@ -2154,6 +2166,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 2174937031n,
             "operationTotalAmount": 2174937031n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "H6pGcL98Rkz2aV8pq5jDEMdtrnogAmhUM5w8RAsddeB6",
           },
           {
@@ -2163,6 +2176,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 1483191359n,
             "operationTotalAmount": 1483191359n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "5zXiPsDznkiEA4nKvWEWuJEYBupPEBAdA1Qnb7j25PdJ",
           },
           {
@@ -2172,6 +2186,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 1945996280n,
             "operationTotalAmount": 1945996280n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
           },
         ],
@@ -2281,6 +2296,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 2174937031n,
             "operationTotalAmount": 2174937031n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "H6pGcL98Rkz2aV8pq5jDEMdtrnogAmhUM5w8RAsddeB6",
           },
           {
@@ -2290,6 +2306,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 1483191359n,
             "operationTotalAmount": 1483191359n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "5zXiPsDznkiEA4nKvWEWuJEYBupPEBAdA1Qnb7j25PdJ",
           },
           {
@@ -2299,6 +2316,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 1945996280n,
             "operationTotalAmount": 1945996280n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
           },
         ],
@@ -2406,6 +2424,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 2174937031n,
             "operationTotalAmount": 2174937031n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "H6pGcL98Rkz2aV8pq5jDEMdtrnogAmhUM5w8RAsddeB6",
           },
           {
@@ -2415,6 +2434,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 1483191359n,
             "operationTotalAmount": 1483191359n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "5zXiPsDznkiEA4nKvWEWuJEYBupPEBAdA1Qnb7j25PdJ",
           },
           {
@@ -2424,6 +2444,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 1945996280n,
             "operationTotalAmount": 1945996280n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
           },
         ],
@@ -2532,18 +2553,19 @@ describe('restaking.fragBTC test', async () => {
         "depositResidualMicroReceiptTokenAmount": 964414n,
         "metadata": null,
         "normalizedToken": null,
-        "oneReceiptTokenAsSOL": 672352352237n,
+        "oneReceiptTokenAsSOL": 672352352226n,
         "receiptTokenDecimals": 8,
         "receiptTokenMint": "ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz",
         "receiptTokenSupply": 5720987629n,
         "restakingVaultReceiptTokens": [
           {
             "mint": "DNLsKFnrBjTBKp1eSwt8z1iNu2T2PL3MnxZFsGEEpQCf",
-            "oneReceiptTokenAsSol": 709711095602n,
+            "oneReceiptTokenAsSol": 709711095573n,
             "operationReceivableAmount": 0n,
             "operationReservedAmount": 2274637031n,
             "operationTotalAmount": 2274637031n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "H6pGcL98Rkz2aV8pq5jDEMdtrnogAmhUM5w8RAsddeB6",
           },
           {
@@ -2553,6 +2575,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 1483191359n,
             "operationTotalAmount": 1483191359n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "5zXiPsDznkiEA4nKvWEWuJEYBupPEBAdA1Qnb7j25PdJ",
           },
           {
@@ -2562,6 +2585,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 1945996280n,
             "operationTotalAmount": 1945996280n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
           },
         ],
@@ -2844,18 +2868,19 @@ describe('restaking.fragBTC test', async () => {
         "depositResidualMicroReceiptTokenAmount": 964414n,
         "metadata": null,
         "normalizedToken": null,
-        "oneReceiptTokenAsSOL": 672352352271n,
+        "oneReceiptTokenAsSOL": 672352352226n,
         "receiptTokenDecimals": 8,
         "receiptTokenMint": "ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz",
         "receiptTokenSupply": 5720987629n,
         "restakingVaultReceiptTokens": [
           {
             "mint": "DNLsKFnrBjTBKp1eSwt8z1iNu2T2PL3MnxZFsGEEpQCf",
-            "oneReceiptTokenAsSol": 709711095987n,
+            "oneReceiptTokenAsSol": 709711095868n,
             "operationReceivableAmount": 0n,
             "operationReservedAmount": 2186147332n,
             "operationTotalAmount": 2186147332n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 96962478n,
             "vault": "H6pGcL98Rkz2aV8pq5jDEMdtrnogAmhUM5w8RAsddeB6",
           },
           {
@@ -2865,6 +2890,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 1483191359n,
             "operationTotalAmount": 1483191359n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "5zXiPsDznkiEA4nKvWEWuJEYBupPEBAdA1Qnb7j25PdJ",
           },
           {
@@ -2874,6 +2900,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 1945996280n,
             "operationTotalAmount": 1945996280n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
           },
         ],
@@ -2960,18 +2987,19 @@ describe('restaking.fragBTC test', async () => {
         "depositResidualMicroReceiptTokenAmount": 964414n,
         "metadata": null,
         "normalizedToken": null,
-        "oneReceiptTokenAsSOL": 672352352724n,
+        "oneReceiptTokenAsSOL": 672352352678n,
         "receiptTokenDecimals": 8,
         "receiptTokenMint": "ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz",
         "receiptTokenSupply": 5620987629n,
         "restakingVaultReceiptTokens": [
           {
             "mint": "DNLsKFnrBjTBKp1eSwt8z1iNu2T2PL3MnxZFsGEEpQCf",
-            "oneReceiptTokenAsSol": 709711095987n,
+            "oneReceiptTokenAsSol": 709711095868n,
             "operationReceivableAmount": 0n,
             "operationReservedAmount": 2186147332n,
             "operationTotalAmount": 2186147332n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "H6pGcL98Rkz2aV8pq5jDEMdtrnogAmhUM5w8RAsddeB6",
           },
           {
@@ -2981,6 +3009,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 1483191359n,
             "operationTotalAmount": 1483191359n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "5zXiPsDznkiEA4nKvWEWuJEYBupPEBAdA1Qnb7j25PdJ",
           },
           {
@@ -2990,6 +3019,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 1945996280n,
             "operationTotalAmount": 1945996280n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
           },
         ],
@@ -3006,9 +3036,9 @@ describe('restaking.fragBTC test', async () => {
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
             "unstakingAmountAsSOL": 0n,
             "withdrawable": true,
-            "withdrawableValueAsReceiptTokenAmount": 2307618933n,
+            "withdrawableValueAsReceiptTokenAmount": 2307618934n,
             "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
-            "withdrawalResidualMicroAssetAmount": 931910n,
+            "withdrawalResidualMicroAssetAmount": 924919n,
             "withdrawalUserReservedAmount": 103599311n,
           },
           {
