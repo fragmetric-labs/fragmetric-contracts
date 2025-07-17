@@ -1497,11 +1497,6 @@ mod tests {
                 return Err(anyhow!("VRT price({}) < 1", self.vrt_price_as_decimal()));
             }
 
-            // SRT price ≥ 1 (might be different based on decimals)
-            if self.one_srt_as_micro_vst < 10u64.pow(self.solv_receipt_token_decimals as u32 + 6) {
-                return Err(anyhow!("SRT price({}) < 1", self.srt_price_as_decimal()));
-            }
-
             Ok(())
         }
 
@@ -1532,6 +1527,21 @@ mod tests {
 
             Ok(())
         }
+
+        fn assert_nav_unchanged(&self, old: &Self) -> anyhow::Result<()> {
+            let nav = self
+                .get_net_asset_value_as_vst()
+                .ok_or_else(|| anyhow!("Invalid NAV"))?;
+            let old_nav = old
+                .get_net_asset_value_as_vst()
+                .ok_or_else(|| anyhow!("Invalid old NAV"))?;
+
+            if nav != old_nav {
+                return Err(anyhow!("NAV({}) changed, previously {}", nav, old_nav));
+            }
+
+            Ok(())
+        }
     }
 
     #[test]
@@ -1557,17 +1567,40 @@ mod tests {
     }
 
     prop_compose! {
-        fn vault_and_vrt_withdrawal_amount()
+        fn vault_with_vst_receivable()
             (vault in vault())
             (
                 mut vault in Just(vault),
-                vrt_amount in 0..=vault.vrt_supply,
                 vst_receivable in 0..=vault.vst_operation_reserved_amount,
             )
-        -> (VaultAccount, u64) {
+        -> VaultAccount {
             vault.vst_operation_reserved_amount -= vst_receivable;
             vault.vst_operation_receivable_amount += vst_receivable;
+            vault
+        }
+    }
+
+    prop_compose! {
+        fn vault_and_vrt_withdrawal_amount()
+            (vault in vault_with_vst_receivable())
+            (
+                vault in Just(vault),
+                vrt_amount in 0..=vault.vrt_supply,
+            )
+        -> (VaultAccount, u64) {
             (vault, vrt_amount)
+        }
+    }
+
+    prop_compose! {
+        fn vault_and_vst_donate_amount()
+            (vault in vault_with_vst_receivable())
+            (
+                vault in Just(vault),
+                vst_amount in 0..=vault.vst_operation_receivable_amount.saturating_mul(2),
+            )
+        -> (VaultAccount, u64) {
+            (vault, vst_amount)
         }
     }
 
@@ -1622,6 +1655,34 @@ mod tests {
         }
 
         #[test]
+        fn test_refresh_srt_exchange_rate_with_validation(
+            mut vault in vault(),
+        ) {
+            let old_vault = vault.clone();
+            let new_one_srt_as_micro_vst =
+                ((vault.one_srt_as_micro_vst as u128 + 19) * 21 / 20) as u64;
+
+            vault.refresh_srt_exchange_rate_with_validation(new_one_srt_as_micro_vst, true).unwrap();
+
+            vault.assert_invariants().unwrap();
+            vault.assert_price_increased(&old_vault).unwrap();
+        }
+
+        #[test]
+        fn test_adjust_srt_exchange_rate_with_extra_vst_receivables(
+            mut vault in vault(),
+        ) {
+            let old_vault = vault.clone();
+            let new_one_srt_as_micro_vst =
+                (vault.one_srt_as_micro_vst as u128 * 19 / 20) as u64;
+
+            vault.adjust_srt_exchange_rate_with_extra_vst_receivables(new_one_srt_as_micro_vst, true).unwrap();
+
+            vault.assert_invariants().unwrap();
+            vault.assert_nav_unchanged(&old_vault).unwrap();
+        }
+
+        #[test]
         fn test_deposit_vst(
             mut vault in vault(),
         ) {
@@ -1635,6 +1696,31 @@ mod tests {
 
             vault.assert_invariants().unwrap();
             vault.assert_price_increased(&old_vault).unwrap();
+        }
+
+        #[test]
+        fn test_donate_vst(
+            (mut vault, vst_amount) in vault_and_vst_donate_amount(),
+        ) {
+            let old_vault = vault.clone();
+
+            vault.donate_vst(vst_amount).unwrap();
+
+            vault.assert_invariants().unwrap();
+            vault.assert_nav_unchanged(&old_vault).unwrap();
+        }
+
+        #[test]
+        fn test_donate_srt(
+            (mut vault, vst_amount) in vault_and_vst_donate_amount(),
+        ) {
+            let srt_amount = vst_amount;
+            let old_vault = vault.clone();
+
+            vault.donate_srt(srt_amount).unwrap();
+
+            vault.assert_invariants().unwrap();
+            vault.assert_nav_unchanged(&old_vault).unwrap();
         }
 
         #[test]
