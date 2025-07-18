@@ -37,17 +37,16 @@ import {
   type ReadonlyUint8Array,
 } from '@solana/kit';
 
-export const FUND_MANAGER_DEPOSITED_TO_VAULT_DISCRIMINATOR = new Uint8Array([
-  98, 202, 168, 50, 17, 11, 21, 216,
-]);
+export const FUND_MANAGER_DEPOSITED_SUPPORTED_TOKEN_TO_VAULT_DISCRIMINATOR =
+  new Uint8Array([167, 207, 54, 10, 236, 116, 166, 82]);
 
-export function getFundManagerDepositedToVaultDiscriminatorBytes() {
+export function getFundManagerDepositedSupportedTokenToVaultDiscriminatorBytes() {
   return fixEncoderSize(getBytesEncoder(), 8).encode(
-    FUND_MANAGER_DEPOSITED_TO_VAULT_DISCRIMINATOR
+    FUND_MANAGER_DEPOSITED_SUPPORTED_TOKEN_TO_VAULT_DISCRIMINATOR
   );
 }
 
-export type FundManagerDepositedToVault = {
+export type FundManagerDepositedSupportedTokenToVault = {
   discriminator: ReadonlyUint8Array;
   vault: Address;
   vaultSupportedTokenMint: Address;
@@ -56,7 +55,7 @@ export type FundManagerDepositedToVault = {
   mintedVrtAmount: bigint;
 };
 
-export type FundManagerDepositedToVaultArgs = {
+export type FundManagerDepositedSupportedTokenToVaultArgs = {
   discriminator?: ReadonlyUint8Array;
   vault: Address;
   vaultSupportedTokenMint: Address;
@@ -65,7 +64,7 @@ export type FundManagerDepositedToVaultArgs = {
   mintedVrtAmount: number | bigint;
 };
 
-export function getFundManagerDepositedToVaultEncoder(): Encoder<FundManagerDepositedToVaultArgs> {
+export function getFundManagerDepositedSupportedTokenToVaultEncoder(): Encoder<FundManagerDepositedSupportedTokenToVaultArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
@@ -78,12 +77,13 @@ export function getFundManagerDepositedToVaultEncoder(): Encoder<FundManagerDepo
     (value) => ({
       ...value,
       discriminator:
-        value.discriminator ?? FUND_MANAGER_DEPOSITED_TO_VAULT_DISCRIMINATOR,
+        value.discriminator ??
+        FUND_MANAGER_DEPOSITED_SUPPORTED_TOKEN_TO_VAULT_DISCRIMINATOR,
     })
   );
 }
 
-export function getFundManagerDepositedToVaultDecoder(): Decoder<FundManagerDepositedToVault> {
+export function getFundManagerDepositedSupportedTokenToVaultDecoder(): Decoder<FundManagerDepositedSupportedTokenToVault> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
     ['vault', getAddressDecoder()],
@@ -94,87 +94,89 @@ export function getFundManagerDepositedToVaultDecoder(): Decoder<FundManagerDepo
   ]);
 }
 
-export function getFundManagerDepositedToVaultCodec(): Codec<
-  FundManagerDepositedToVaultArgs,
-  FundManagerDepositedToVault
+export function getFundManagerDepositedSupportedTokenToVaultCodec(): Codec<
+  FundManagerDepositedSupportedTokenToVaultArgs,
+  FundManagerDepositedSupportedTokenToVault
 > {
   return combineCodec(
-    getFundManagerDepositedToVaultEncoder(),
-    getFundManagerDepositedToVaultDecoder()
+    getFundManagerDepositedSupportedTokenToVaultEncoder(),
+    getFundManagerDepositedSupportedTokenToVaultDecoder()
   );
 }
 
-export function decodeFundManagerDepositedToVault<
+export function decodeFundManagerDepositedSupportedTokenToVault<
   TAddress extends string = string,
 >(
   encodedAccount: EncodedAccount<TAddress>
-): Account<FundManagerDepositedToVault, TAddress>;
-export function decodeFundManagerDepositedToVault<
+): Account<FundManagerDepositedSupportedTokenToVault, TAddress>;
+export function decodeFundManagerDepositedSupportedTokenToVault<
   TAddress extends string = string,
 >(
   encodedAccount: MaybeEncodedAccount<TAddress>
-): MaybeAccount<FundManagerDepositedToVault, TAddress>;
-export function decodeFundManagerDepositedToVault<
+): MaybeAccount<FundManagerDepositedSupportedTokenToVault, TAddress>;
+export function decodeFundManagerDepositedSupportedTokenToVault<
   TAddress extends string = string,
 >(
   encodedAccount: EncodedAccount<TAddress> | MaybeEncodedAccount<TAddress>
 ):
-  | Account<FundManagerDepositedToVault, TAddress>
-  | MaybeAccount<FundManagerDepositedToVault, TAddress> {
+  | Account<FundManagerDepositedSupportedTokenToVault, TAddress>
+  | MaybeAccount<FundManagerDepositedSupportedTokenToVault, TAddress> {
   return decodeAccount(
     encodedAccount as MaybeEncodedAccount<TAddress>,
-    getFundManagerDepositedToVaultDecoder()
+    getFundManagerDepositedSupportedTokenToVaultDecoder()
   );
 }
 
-export async function fetchFundManagerDepositedToVault<
+export async function fetchFundManagerDepositedSupportedTokenToVault<
   TAddress extends string = string,
 >(
   rpc: Parameters<typeof fetchEncodedAccount>[0],
   address: Address<TAddress>,
   config?: FetchAccountConfig
-): Promise<Account<FundManagerDepositedToVault, TAddress>> {
-  const maybeAccount = await fetchMaybeFundManagerDepositedToVault(
-    rpc,
-    address,
-    config
-  );
+): Promise<Account<FundManagerDepositedSupportedTokenToVault, TAddress>> {
+  const maybeAccount =
+    await fetchMaybeFundManagerDepositedSupportedTokenToVault(
+      rpc,
+      address,
+      config
+    );
   assertAccountExists(maybeAccount);
   return maybeAccount;
 }
 
-export async function fetchMaybeFundManagerDepositedToVault<
+export async function fetchMaybeFundManagerDepositedSupportedTokenToVault<
   TAddress extends string = string,
 >(
   rpc: Parameters<typeof fetchEncodedAccount>[0],
   address: Address<TAddress>,
   config?: FetchAccountConfig
-): Promise<MaybeAccount<FundManagerDepositedToVault, TAddress>> {
+): Promise<MaybeAccount<FundManagerDepositedSupportedTokenToVault, TAddress>> {
   const maybeAccount = await fetchEncodedAccount(rpc, address, config);
-  return decodeFundManagerDepositedToVault(maybeAccount);
+  return decodeFundManagerDepositedSupportedTokenToVault(maybeAccount);
 }
 
-export async function fetchAllFundManagerDepositedToVault(
+export async function fetchAllFundManagerDepositedSupportedTokenToVault(
   rpc: Parameters<typeof fetchEncodedAccounts>[0],
   addresses: Array<Address>,
   config?: FetchAccountsConfig
-): Promise<Account<FundManagerDepositedToVault>[]> {
-  const maybeAccounts = await fetchAllMaybeFundManagerDepositedToVault(
-    rpc,
-    addresses,
-    config
-  );
+): Promise<Account<FundManagerDepositedSupportedTokenToVault>[]> {
+  const maybeAccounts =
+    await fetchAllMaybeFundManagerDepositedSupportedTokenToVault(
+      rpc,
+      addresses,
+      config
+    );
   assertAccountsExist(maybeAccounts);
   return maybeAccounts;
 }
 
-export async function fetchAllMaybeFundManagerDepositedToVault(
+export async function fetchAllMaybeFundManagerDepositedSupportedTokenToVault(
   rpc: Parameters<typeof fetchEncodedAccounts>[0],
   addresses: Array<Address>,
   config?: FetchAccountsConfig
-): Promise<MaybeAccount<FundManagerDepositedToVault>[]> {
+): Promise<MaybeAccount<FundManagerDepositedSupportedTokenToVault>[]> {
   const maybeAccounts = await fetchEncodedAccounts(rpc, addresses, config);
   return maybeAccounts.map((maybeAccount) =>
-    decodeFundManagerDepositedToVault(maybeAccount)
+    decodeFundManagerDepositedSupportedTokenToVault(maybeAccount)
   );
 }

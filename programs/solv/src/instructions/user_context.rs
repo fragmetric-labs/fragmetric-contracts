@@ -6,7 +6,6 @@ use crate::{errors::VaultError, events, states::VaultAccount};
 #[event_cpi]
 #[derive(Accounts)]
 pub struct UserContext<'info> {
-    #[account(mut)]
     pub user: Signer<'info>,
 
     #[account(
@@ -14,6 +13,7 @@ pub struct UserContext<'info> {
         seeds = [VaultAccount::SEED, vault_receipt_token_mint.key().as_ref()],
         bump = vault_account.load()?.get_bump(),
         has_one = solv_receipt_token_mint @ VaultError::SolvReceiptTokenMintMismatchError,
+        has_one = vault_receipt_token_mint @ VaultError::VaultReceiptTokenMintMismatchError,
         constraint = vault_account.load()?.is_latest_version() @ VaultError::InvalidAccountDataVersionError,
     )]
     pub vault_account: AccountLoader<'info, VaultAccount>,
@@ -48,7 +48,7 @@ pub struct UserContext<'info> {
 pub fn process_deposit_solv_receipt_token(
     ctx: &mut Context<UserContext>,
     srt_amount: u64,
-) -> Result<events::UserDepositedSRT> {
+) -> Result<events::UserDepositedSolvReceiptTokenToVault> {
     let UserContext {
         user,
         vault_account,
@@ -95,11 +95,19 @@ pub fn process_deposit_solv_receipt_token(
         )?;
     }
 
-    Ok(events::UserDepositedSRT {
+    let vault = vault_account.load()?;
+
+    Ok(events::UserDepositedSolvReceiptTokenToVault {
         vault: vault_account.key(),
+        solv_receipt_token_mint: solv_receipt_token_mint.key(),
         vault_receipt_token_mint: vault_receipt_token_mint.key(),
+
+        operation_reserved_srt_amount: vault.get_srt_operation_reserved_amount(),
+        one_srt_as_micro_vst: vault.get_one_srt_as_micro_vst(),
+        vrt_supply: vault.get_vrt_supply(),
+        one_vrt_as_micro_vst: vault.get_one_vrt_as_micro_vst(),
+
         user: user.key(),
-        user_vrt_account: user_vault_receipt_token_account.key(),
         deposited_srt_amount: srt_amount,
         minted_vrt_amount: vrt_amount,
     })

@@ -631,7 +631,7 @@ export class SolvVaultAccountContext extends AccountContext<
               mint: vault.data.vaultReceiptTokenMint,
               owner: args.payer as Address,
             }),
-            solv.getFundManagerDepositInstructionAsync(
+            solv.getFundManagerDepositSupportedTokenInstructionAsync(
               {
                 fundManager: createNoopSigner(vault.data.fundManager),
                 payer: createNoopSigner(args.payer as Address),

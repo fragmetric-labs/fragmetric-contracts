@@ -1185,8 +1185,6 @@ describe('solv.zBTC test', async () => {
     ]);
     const user1 = ctx.user(signer1);
 
-    console.error(await user1.resolve(true));
-
     // compare expected VRT amount with actually minted amount with random amount of SRT
     for (let i = 1n; i <= 10n; i++) {
       const previousUser1ReceiptTokenAmount = user1.vaultReceiptTokenAccount
@@ -1240,8 +1238,6 @@ describe('solv.zBTC test', async () => {
 
       expect(tokenAmountDiff).toEqual(expectedVRTAmount);
     }
-
-    console.error(await user1.resolve(true));
 
     await expectMasked(ctx.resolve(true)).resolves.toMatchInlineSnapshot(`
       {

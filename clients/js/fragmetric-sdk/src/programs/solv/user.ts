@@ -33,8 +33,8 @@ export class SolvUserAccountContext extends BaseAccountContext<SolvVaultAccountC
 
         return {
           user: this.address!,
-          solvReceiptTokenAccount: userSolvReceiptTokenAccount?.data.amount,
-          vaultReceiptTokenAccount: userVaultReceiptTokenAccount?.data.amount,
+          solvReceiptTokenAmount: userSolvReceiptTokenAccount?.data.amount,
+          vaultReceiptTokenAmount: userVaultReceiptTokenAccount?.data.amount,
         };
       }
     );

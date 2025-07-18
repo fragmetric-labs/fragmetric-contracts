@@ -6,7 +6,7 @@
  * @see https://github.com/codama-idl/codama
  */
 
-export * from './fundManagerDeposit';
+export * from './fundManagerDepositSupportedToken';
 export * from './fundManagerRequestWithdrawal';
 export * from './fundManagerWithdraw';
 export * from './rewardManagerDelegateRewardTokenAccount';

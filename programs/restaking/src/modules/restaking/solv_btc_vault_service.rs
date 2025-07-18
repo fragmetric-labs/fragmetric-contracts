@@ -173,7 +173,7 @@ impl<'info> SolvBTCVaultService<'info> {
         let payer_vault_receipt_token_account_amount_before =
             payer_vault_receipt_token_account.amount;
 
-        solv::cpi::fund_manager_deposit(
+        solv::cpi::fund_manager_deposit_supported_token(
             CpiContext::new_with_signer(
                 self.vault_program.to_account_info(),
                 solv::cpi::accounts::FundManagerContext {

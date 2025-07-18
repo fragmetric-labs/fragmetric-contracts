@@ -29,10 +29,10 @@ import {
   type IInstructionWithAccounts,
   type IInstructionWithData,
   type ReadonlyAccount,
+  type ReadonlySignerAccount,
   type ReadonlyUint8Array,
   type TransactionSigner,
   type WritableAccount,
-  type WritableSignerAccount,
 } from '@solana/kit';
 import { SOLV_PROGRAM_ADDRESS } from '../programs';
 import {
@@ -77,7 +77,7 @@ export type UserDepositSolvReceiptTokenInstruction<
   IInstructionWithAccounts<
     [
       TAccountUser extends string
-        ? WritableSignerAccount<TAccountUser> & IAccountSignerMeta<TAccountUser>
+        ? ReadonlySignerAccount<TAccountUser> & IAccountSignerMeta<TAccountUser>
         : TAccountUser,
       TAccountVaultAccount extends string
         ? WritableAccount<TAccountVaultAccount>
@@ -220,7 +220,7 @@ export async function getUserDepositSolvReceiptTokenInstructionAsync<
 
   // Original accounts.
   const originalAccounts = {
-    user: { value: input.user ?? null, isWritable: true },
+    user: { value: input.user ?? null, isWritable: false },
     vaultAccount: { value: input.vaultAccount ?? null, isWritable: true },
     solvReceiptTokenMint: {
       value: input.solvReceiptTokenMint ?? null,
@@ -451,7 +451,7 @@ export function getUserDepositSolvReceiptTokenInstruction<
 
   // Original accounts.
   const originalAccounts = {
-    user: { value: input.user ?? null, isWritable: true },
+    user: { value: input.user ?? null, isWritable: false },
     vaultAccount: { value: input.vaultAccount ?? null, isWritable: true },
     solvReceiptTokenMint: {
       value: input.solvReceiptTokenMint ?? null,

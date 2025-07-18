@@ -48,6 +48,8 @@ export const SOLV_ERROR__DEPOSIT_IN_PROGRESS_ERROR = 0x177e; // 6014
 export const SOLV_ERROR__DEPOSIT_NOT_IN_PROGRESS_ERROR = 0x177f; // 6015
 /** WithdrawalRequestNotFoundError: withdrawal request not found */
 export const SOLV_ERROR__WITHDRAWAL_REQUEST_NOT_FOUND_ERROR = 0x1780; // 6016
+/** VaultReceiptTokenMintMismatchError: vault receipt token mint mismatch */
+export const SOLV_ERROR__VAULT_RECEIPT_TOKEN_MINT_MISMATCH_ERROR = 0x1781; // 6017
 
 export type SolvError =
   | typeof SOLV_ERROR__CALCULATION_ARITHMETIC_EXCEPTION
@@ -65,6 +67,7 @@ export type SolvError =
   | typeof SOLV_ERROR__SOLV_PROTOCOL_WALLET_MISMATCH_ERROR
   | typeof SOLV_ERROR__SOLV_RECEIPT_TOKEN_MINT_MISMATCH_ERROR
   | typeof SOLV_ERROR__VAULT_ADMIN_MISMATCH_ERROR
+  | typeof SOLV_ERROR__VAULT_RECEIPT_TOKEN_MINT_MISMATCH_ERROR
   | typeof SOLV_ERROR__VAULT_SUPPORTED_TOKEN_MINT_MISMATCH_ERROR
   | typeof SOLV_ERROR__WITHDRAWAL_REQUEST_NOT_FOUND_ERROR;
 
@@ -86,6 +89,7 @@ if (process.env.NODE_ENV !== 'production') {
     [SOLV_ERROR__SOLV_PROTOCOL_WALLET_MISMATCH_ERROR]: `solv protocol wallet mismatch`,
     [SOLV_ERROR__SOLV_RECEIPT_TOKEN_MINT_MISMATCH_ERROR]: `solv receipt token mint mismatch`,
     [SOLV_ERROR__VAULT_ADMIN_MISMATCH_ERROR]: `vault admin mismatch`,
+    [SOLV_ERROR__VAULT_RECEIPT_TOKEN_MINT_MISMATCH_ERROR]: `vault receipt token mint mismatch`,
     [SOLV_ERROR__VAULT_SUPPORTED_TOKEN_MINT_MISMATCH_ERROR]: `vault supported token mint mismatch`,
     [SOLV_ERROR__WITHDRAWAL_REQUEST_NOT_FOUND_ERROR]: `withdrawal request not found`,
   };

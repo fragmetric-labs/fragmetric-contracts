@@ -9,16 +9,16 @@
   },
   "instructions": [
     {
-      "name": "fund_manager_deposit",
+      "name": "fund_manager_deposit_supported_token",
       "discriminator": [
-        247,
-        63,
-        63,
-        225,
-        113,
-        82,
-        62,
-        70
+        243,
+        69,
+        64,
+        27,
+        80,
+        152,
+        119,
+        105
       ],
       "accounts": [
         {
@@ -4847,7 +4847,6 @@
       "accounts": [
         {
           "name": "user",
-          "writable": true,
           "signer": true
         },
         {
@@ -4880,7 +4879,10 @@
         },
         {
           "name": "vault_receipt_token_mint",
-          "writable": true
+          "writable": true,
+          "relations": [
+            "vault_account"
+          ]
         },
         {
           "name": "vault_solv_receipt_token_account",
@@ -5664,16 +5666,16 @@
   ],
   "events": [
     {
-      "name": "FundManagerDepositedToVault",
+      "name": "FundManagerDepositedSupportedTokenToVault",
       "discriminator": [
-        98,
-        202,
-        168,
-        50,
-        17,
-        11,
-        21,
-        216
+        167,
+        207,
+        54,
+        10,
+        236,
+        116,
+        166,
+        82
       ]
     },
     {
@@ -5794,16 +5796,16 @@
       ]
     },
     {
-      "name": "UserDepositedSRT",
+      "name": "UserDepositedSolvReceiptTokenToVault",
       "discriminator": [
-        17,
-        158,
-        47,
-        16,
-        150,
-        67,
-        1,
-        54
+        235,
+        223,
+        81,
+        120,
+        42,
+        155,
+        94,
+        44
       ]
     }
   ],
@@ -5892,11 +5894,16 @@
       "code": 6016,
       "name": "WithdrawalRequestNotFoundError",
       "msg": "withdrawal request not found"
+    },
+    {
+      "code": 6017,
+      "name": "VaultReceiptTokenMintMismatchError",
+      "msg": "vault receipt token mint mismatch"
     }
   ],
   "types": [
     {
-      "name": "FundManagerDepositedToVault",
+      "name": "FundManagerDepositedSupportedTokenToVault",
       "type": {
         "kind": "struct",
         "fields": [
@@ -6352,7 +6359,7 @@
       }
     },
     {
-      "name": "UserDepositedSRT",
+      "name": "UserDepositedSolvReceiptTokenToVault",
       "type": {
         "kind": "struct",
         "fields": [
@@ -6361,15 +6368,31 @@
             "type": "pubkey"
           },
           {
+            "name": "solv_receipt_token_mint",
+            "type": "pubkey"
+          },
+          {
             "name": "vault_receipt_token_mint",
             "type": "pubkey"
           },
           {
-            "name": "user",
-            "type": "pubkey"
+            "name": "operation_reserved_srt_amount",
+            "type": "u64"
           },
           {
-            "name": "user_vrt_account",
+            "name": "one_srt_as_micro_vst",
+            "type": "u64"
+          },
+          {
+            "name": "vrt_supply",
+            "type": "u64"
+          },
+          {
+            "name": "one_vrt_as_micro_vst",
+            "type": "u64"
+          },
+          {
+            "name": "user",
             "type": "pubkey"
           },
           {

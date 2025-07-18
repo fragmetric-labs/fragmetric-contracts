@@ -48,11 +48,11 @@ pub mod solv {
     // FundManagerContext
     ////////////////////////////////////////////
 
-    pub fn fund_manager_deposit(
+    pub fn fund_manager_deposit_supported_token(
         mut ctx: Context<FundManagerContext>,
         vst_amount: u64,
     ) -> Result<()> {
-        emit_cpi!(process_deposit(&mut ctx, vst_amount)?);
+        emit_cpi!(process_deposit_supported_token(&mut ctx, vst_amount)?);
 
         Ok(())
     }

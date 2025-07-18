@@ -41,17 +41,16 @@ import {
   type ResolvedAccount,
 } from '../shared';
 
-export const FUND_MANAGER_DEPOSIT_DISCRIMINATOR = new Uint8Array([
-  247, 63, 63, 225, 113, 82, 62, 70,
-]);
+export const FUND_MANAGER_DEPOSIT_SUPPORTED_TOKEN_DISCRIMINATOR =
+  new Uint8Array([243, 69, 64, 27, 80, 152, 119, 105]);
 
-export function getFundManagerDepositDiscriminatorBytes() {
+export function getFundManagerDepositSupportedTokenDiscriminatorBytes() {
   return fixEncoderSize(getBytesEncoder(), 8).encode(
-    FUND_MANAGER_DEPOSIT_DISCRIMINATOR
+    FUND_MANAGER_DEPOSIT_SUPPORTED_TOKEN_DISCRIMINATOR
   );
 }
 
-export type FundManagerDepositInstruction<
+export type FundManagerDepositSupportedTokenInstruction<
   TProgram extends string = typeof SOLV_PROGRAM_ADDRESS,
   TAccountPayer extends string | IAccountMeta<string> = string,
   TAccountFundManager extends string | IAccountMeta<string> = string,
@@ -118,43 +117,46 @@ export type FundManagerDepositInstruction<
     ]
   >;
 
-export type FundManagerDepositInstructionData = {
+export type FundManagerDepositSupportedTokenInstructionData = {
   discriminator: ReadonlyUint8Array;
   vstAmount: bigint;
 };
 
-export type FundManagerDepositInstructionDataArgs = {
+export type FundManagerDepositSupportedTokenInstructionDataArgs = {
   vstAmount: number | bigint;
 };
 
-export function getFundManagerDepositInstructionDataEncoder(): Encoder<FundManagerDepositInstructionDataArgs> {
+export function getFundManagerDepositSupportedTokenInstructionDataEncoder(): Encoder<FundManagerDepositSupportedTokenInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
       ['vstAmount', getU64Encoder()],
     ]),
-    (value) => ({ ...value, discriminator: FUND_MANAGER_DEPOSIT_DISCRIMINATOR })
+    (value) => ({
+      ...value,
+      discriminator: FUND_MANAGER_DEPOSIT_SUPPORTED_TOKEN_DISCRIMINATOR,
+    })
   );
 }
 
-export function getFundManagerDepositInstructionDataDecoder(): Decoder<FundManagerDepositInstructionData> {
+export function getFundManagerDepositSupportedTokenInstructionDataDecoder(): Decoder<FundManagerDepositSupportedTokenInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
     ['vstAmount', getU64Decoder()],
   ]);
 }
 
-export function getFundManagerDepositInstructionDataCodec(): Codec<
-  FundManagerDepositInstructionDataArgs,
-  FundManagerDepositInstructionData
+export function getFundManagerDepositSupportedTokenInstructionDataCodec(): Codec<
+  FundManagerDepositSupportedTokenInstructionDataArgs,
+  FundManagerDepositSupportedTokenInstructionData
 > {
   return combineCodec(
-    getFundManagerDepositInstructionDataEncoder(),
-    getFundManagerDepositInstructionDataDecoder()
+    getFundManagerDepositSupportedTokenInstructionDataEncoder(),
+    getFundManagerDepositSupportedTokenInstructionDataDecoder()
   );
 }
 
-export type FundManagerDepositAsyncInput<
+export type FundManagerDepositSupportedTokenAsyncInput<
   TAccountPayer extends string = string,
   TAccountFundManager extends string = string,
   TAccountVaultAccount extends string = string,
@@ -178,10 +180,10 @@ export type FundManagerDepositAsyncInput<
   tokenProgram?: Address<TAccountTokenProgram>;
   eventAuthority?: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
-  vstAmount: FundManagerDepositInstructionDataArgs['vstAmount'];
+  vstAmount: FundManagerDepositSupportedTokenInstructionDataArgs['vstAmount'];
 };
 
-export async function getFundManagerDepositInstructionAsync<
+export async function getFundManagerDepositSupportedTokenInstructionAsync<
   TAccountPayer extends string,
   TAccountFundManager extends string,
   TAccountVaultAccount extends string,
@@ -195,7 +197,7 @@ export async function getFundManagerDepositInstructionAsync<
   TAccountProgram extends string,
   TProgramAddress extends Address = typeof SOLV_PROGRAM_ADDRESS,
 >(
-  input: FundManagerDepositAsyncInput<
+  input: FundManagerDepositSupportedTokenAsyncInput<
     TAccountPayer,
     TAccountFundManager,
     TAccountVaultAccount,
@@ -210,7 +212,7 @@ export async function getFundManagerDepositInstructionAsync<
   >,
   config?: { programAddress?: TProgramAddress }
 ): Promise<
-  FundManagerDepositInstruction<
+  FundManagerDepositSupportedTokenInstruction<
     TProgramAddress,
     TAccountPayer,
     TAccountFundManager,
@@ -373,10 +375,10 @@ export async function getFundManagerDepositInstructionAsync<
       getAccountMeta(accounts.program),
     ],
     programAddress,
-    data: getFundManagerDepositInstructionDataEncoder().encode(
-      args as FundManagerDepositInstructionDataArgs
+    data: getFundManagerDepositSupportedTokenInstructionDataEncoder().encode(
+      args as FundManagerDepositSupportedTokenInstructionDataArgs
     ),
-  } as FundManagerDepositInstruction<
+  } as FundManagerDepositSupportedTokenInstruction<
     TProgramAddress,
     TAccountPayer,
     TAccountFundManager,
@@ -394,7 +396,7 @@ export async function getFundManagerDepositInstructionAsync<
   return instruction;
 }
 
-export type FundManagerDepositInput<
+export type FundManagerDepositSupportedTokenInput<
   TAccountPayer extends string = string,
   TAccountFundManager extends string = string,
   TAccountVaultAccount extends string = string,
@@ -418,10 +420,10 @@ export type FundManagerDepositInput<
   tokenProgram?: Address<TAccountTokenProgram>;
   eventAuthority: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
-  vstAmount: FundManagerDepositInstructionDataArgs['vstAmount'];
+  vstAmount: FundManagerDepositSupportedTokenInstructionDataArgs['vstAmount'];
 };
 
-export function getFundManagerDepositInstruction<
+export function getFundManagerDepositSupportedTokenInstruction<
   TAccountPayer extends string,
   TAccountFundManager extends string,
   TAccountVaultAccount extends string,
@@ -435,7 +437,7 @@ export function getFundManagerDepositInstruction<
   TAccountProgram extends string,
   TProgramAddress extends Address = typeof SOLV_PROGRAM_ADDRESS,
 >(
-  input: FundManagerDepositInput<
+  input: FundManagerDepositSupportedTokenInput<
     TAccountPayer,
     TAccountFundManager,
     TAccountVaultAccount,
@@ -449,7 +451,7 @@ export function getFundManagerDepositInstruction<
     TAccountProgram
   >,
   config?: { programAddress?: TProgramAddress }
-): FundManagerDepositInstruction<
+): FundManagerDepositSupportedTokenInstruction<
   TProgramAddress,
   TAccountPayer,
   TAccountFundManager,
@@ -525,10 +527,10 @@ export function getFundManagerDepositInstruction<
       getAccountMeta(accounts.program),
     ],
     programAddress,
-    data: getFundManagerDepositInstructionDataEncoder().encode(
-      args as FundManagerDepositInstructionDataArgs
+    data: getFundManagerDepositSupportedTokenInstructionDataEncoder().encode(
+      args as FundManagerDepositSupportedTokenInstructionDataArgs
     ),
-  } as FundManagerDepositInstruction<
+  } as FundManagerDepositSupportedTokenInstruction<
     TProgramAddress,
     TAccountPayer,
     TAccountFundManager,
@@ -546,7 +548,7 @@ export function getFundManagerDepositInstruction<
   return instruction;
 }
 
-export type ParsedFundManagerDepositInstruction<
+export type ParsedFundManagerDepositSupportedTokenInstruction<
   TProgram extends string = typeof SOLV_PROGRAM_ADDRESS,
   TAccountMetas extends readonly IAccountMeta[] = readonly IAccountMeta[],
 > = {
@@ -564,17 +566,17 @@ export type ParsedFundManagerDepositInstruction<
     eventAuthority: TAccountMetas[9];
     program: TAccountMetas[10];
   };
-  data: FundManagerDepositInstructionData;
+  data: FundManagerDepositSupportedTokenInstructionData;
 };
 
-export function parseFundManagerDepositInstruction<
+export function parseFundManagerDepositSupportedTokenInstruction<
   TProgram extends string,
   TAccountMetas extends readonly IAccountMeta[],
 >(
   instruction: IInstruction<TProgram> &
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
-): ParsedFundManagerDepositInstruction<TProgram, TAccountMetas> {
+): ParsedFundManagerDepositSupportedTokenInstruction<TProgram, TAccountMetas> {
   if (instruction.accounts.length < 11) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
@@ -600,7 +602,7 @@ export function parseFundManagerDepositInstruction<
       eventAuthority: getNextAccount(),
       program: getNextAccount(),
     },
-    data: getFundManagerDepositInstructionDataDecoder().decode(
+    data: getFundManagerDepositSupportedTokenInstructionDataDecoder().decode(
       instruction.data
     ),
   };
