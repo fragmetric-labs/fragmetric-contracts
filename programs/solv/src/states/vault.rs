@@ -1669,6 +1669,52 @@ mod tests {
         }
 
         #[test]
+        fn test_initial_mint_vrt_with_srt(srt_amount in 0..u64::MAX) {
+            let mut vault = VaultAccount::dummy();
+            let old_vault = vault.clone();
+
+            // Price = 1
+            let vrt_amount = vault.mint_vrt_with_srt(srt_amount).unwrap();
+            assert_eq!(vrt_amount, srt_amount);
+
+            assert_eq!(
+                vault.vrt_supply,
+                old_vault.vrt_supply + vrt_amount,
+            );
+            assert_eq!(
+                vault.srt_operation_reserved_amount,
+                old_vault.srt_operation_reserved_amount + srt_amount,
+            );
+
+            vault.assert_invariants().unwrap();
+            vault.assert_price_increased(&old_vault).unwrap();
+        }
+
+        #[test]
+        fn test_mint_vrt_with_srt(
+            mut vault in vault(),
+            mut srt_amount in 0..u64::MAX,
+        ) {
+            srt_amount = srt_amount.min(u64::MAX - vault.srt_operation_reserved_amount);
+
+            let old_vault = vault.clone();
+
+            let vrt_amount = vault.mint_vrt_with_srt(srt_amount).unwrap();
+
+            assert_eq!(
+                vault.vrt_supply,
+                old_vault.vrt_supply + vrt_amount,
+            );
+            assert_eq!(
+                vault.srt_operation_reserved_amount,
+                old_vault.srt_operation_reserved_amount + srt_amount,
+            );
+
+            vault.assert_invariants().unwrap();
+            vault.assert_price_increased(&old_vault).unwrap();
+        }
+
+        #[test]
         fn test_refresh_srt_exchange_rate_with_validation(
             mut vault in vault(),
         ) {
