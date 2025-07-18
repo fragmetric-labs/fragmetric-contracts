@@ -1354,6 +1354,8 @@ mod tests {
 
     use super::*;
 
+    const BTC_MAX_SUPPLY: u64 = 2_100_000_000_000_000;
+
     impl VaultAccount {
         fn dummy() -> Self {
             let mut vault = Self::zeroed();
@@ -1693,9 +1695,9 @@ mod tests {
         #[test]
         fn test_mint_vrt_with_srt(
             mut vault in vault(),
-            mut srt_amount in 0..u64::MAX,
+            mut srt_amount in 0..BTC_MAX_SUPPLY,
         ) {
-            srt_amount = srt_amount.min(u64::MAX - vault.srt_operation_reserved_amount);
+            srt_amount = srt_amount.min(BTC_MAX_SUPPLY - vault.srt_operation_reserved_amount);
 
             let old_vault = vault.clone();
 
