@@ -19,6 +19,7 @@ pub struct SolvManagerContext<'info> {
         bump = vault_account.load()?.get_bump(),
         has_one = solv_manager @ VaultError::VaultAdminMismatchError,
         has_one = solv_protocol_wallet @ VaultError::SolvProtocolWalletMismatchError,
+        has_one = vault_receipt_token_mint @ VaultError::VaultReceiptTokenMintMismatchError,
         has_one = vault_supported_token_mint @ VaultError::VaultSupportedTokenMintMismatchError,
         has_one = solv_receipt_token_mint @ VaultError::SolvReceiptTokenMintMismatchError,
         constraint = vault_account.load()?.is_latest_version() @ VaultError::InvalidAccountDataVersionError,
@@ -408,6 +409,7 @@ pub struct SolvManagerConfigurationContext<'info> {
         seeds = [VaultAccount::SEED, vault_receipt_token_mint.key().as_ref()],
         bump = vault_account.load()?.get_bump(),
         has_one = solv_manager @ VaultError::VaultAdminMismatchError,
+        has_one = vault_receipt_token_mint @ VaultError::VaultReceiptTokenMintMismatchError,
         constraint = vault_account.load()?.is_latest_version() @ VaultError::InvalidAccountDataVersionError,
     )]
     pub vault_account: AccountLoader<'info, VaultAccount>,

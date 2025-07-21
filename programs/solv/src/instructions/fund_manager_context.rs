@@ -16,6 +16,7 @@ pub struct FundManagerContext<'info> {
         seeds = [VaultAccount::SEED, vault_receipt_token_mint.key().as_ref()],
         bump = vault_account.load()?.get_bump(),
         has_one = fund_manager @ VaultError::VaultAdminMismatchError,
+        has_one = vault_receipt_token_mint @ VaultError::VaultReceiptTokenMintMismatchError,
         has_one = vault_supported_token_mint @ VaultError::VaultSupportedTokenMintMismatchError,
         constraint = vault_account.load()?.is_latest_version() @ VaultError::InvalidAccountDataVersionError,
     )]
