@@ -6,7 +6,6 @@ use crate::errors::ErrorCode;
 use crate::modules::pricing::{TokenPricingSource, TokenValue};
 use crate::utils::PDASeeds;
 
-#[constant]
 /// ## Version History
 /// * v1: Initial Version
 /// * v2: Add `normalized_token_decimals`, .., `one_normalized_token_as_sol` fields

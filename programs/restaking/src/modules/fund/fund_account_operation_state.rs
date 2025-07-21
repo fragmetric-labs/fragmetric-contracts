@@ -2,7 +2,6 @@ use anchor_lang::prelude::*;
 
 use super::commands::*;
 
-#[constant]
 const FUND_ACCOUNT_OPERATION_COMMAND_EXPIRATION_SECONDS: i64 = 600;
 
 #[zero_copy]

@@ -13,7 +13,6 @@ use crate::utils::*;
 
 use super::*;
 
-#[constant]
 /// ## Version History
 /// * v15: migrate to new layout including new fields using bytemuck. (150640 ~= 148KB)
 /// * v16: add wrap_account and wrapped token field. (151336 ~= 148KB)

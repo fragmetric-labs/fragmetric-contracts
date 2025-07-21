@@ -5,7 +5,6 @@ use crate::utils::{PDASeeds, ZeroCopyHeader};
 
 use super::*;
 
-#[constant]
 /// ## Version History
 /// * v34: Initial Version (Data Size = 342072 ~= 335KB)
 /// * v35: remove holder (Data Size = 342072 ~= 335KB)
