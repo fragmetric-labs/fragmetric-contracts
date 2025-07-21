@@ -6422,24 +6422,14 @@
   ],
   "constants": [
     {
-      "name": "CBBTC_MINT_ADDRESS",
-      "type": "pubkey",
-      "value": "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij"
-    },
-    {
-      "name": "TARGET",
-      "type": "string",
-      "value": "\"local\""
-    },
-    {
-      "name": "WBTC_MINT_ADDRESS",
-      "type": "pubkey",
-      "value": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh"
-    },
-    {
-      "name": "ZBTC_MINT_ADDRESS",
-      "type": "pubkey",
-      "value": "zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg"
+      "name": "VAULT_ACCOUNT_CURRENT_VERSION",
+      "docs": [
+        "## Version History",
+        "* v1: deprecated",
+        "* v2: initial version (0x2800 = 10240 = 10KiB)"
+      ],
+      "type": "u16",
+      "value": "2"
     }
   ]
 }

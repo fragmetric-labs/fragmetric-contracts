@@ -17402,5 +17402,66 @@
         ]
       }
     }
+  ],
+  "constants": [
+    {
+      "name": "FUND_ACCOUNT_CURRENT_VERSION",
+      "docs": [
+        "## Version History",
+        "* v15: migrate to new layout including new fields using bytemuck. (150640 ~= 148KB)",
+        "* v16: add wrap_account and wrapped token field. (151336 ~= 148KB)",
+        "* v18: add reserved space for 60 pubkeys in wrapped token and swap strategies. (163840 = 160KB)",
+        "* v19: add wrapped token holder concept in wrapped token. (163840 = 160KB)"
+      ],
+      "type": "u16",
+      "value": "19"
+    },
+    {
+      "name": "NORMALIZED_TOKEN_POOL_ACCOUNT_CURRENT_VERSION",
+      "docs": [
+        "## Version History",
+        "* v1: Initial Version",
+        "* v2: Add `normalized_token_decimals`, .., `one_normalized_token_as_sol` fields"
+      ],
+      "type": "u16",
+      "value": "2"
+    },
+    {
+      "name": "NORMALIZED_TOKEN_WITHDRAWAL_ACCOUNT_CURRENT_VERSION",
+      "docs": [
+        "## Version History",
+        "* v1: Initial Version"
+      ],
+      "type": "u16",
+      "value": "1"
+    },
+    {
+      "name": "REWARD_ACCOUNT_CURRENT_VERSION",
+      "docs": [
+        "## Version History",
+        "* v34: Initial Version (Data Size = 342072 ~= 335KB)",
+        "* v35: remove holder (Data Size = 342072 ~= 335KB)"
+      ],
+      "type": "u16",
+      "value": "35"
+    },
+    {
+      "name": "USER_FUND_ACCOUNT_CURRENT_VERSION",
+      "docs": [
+        "## Version History",
+        "* v1: Initial Version (567 ~= 0.55KB)"
+      ],
+      "type": "u16",
+      "value": "1"
+    },
+    {
+      "name": "USER_REWARD_ACCOUNT_CURRENT_VERSION",
+      "docs": [
+        "## Version History",
+        "* v1: Initial Version (4248 ~= 4.14KB)"
+      ],
+      "type": "u16",
+      "value": "1"
+    }
   ]
 }
