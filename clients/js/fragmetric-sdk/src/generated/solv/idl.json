@@ -56,7 +56,10 @@
         },
         {
           "name": "vault_receipt_token_mint",
-          "writable": true
+          "writable": true,
+          "relations": [
+            "vault_account"
+          ]
         },
         {
           "name": "vault_supported_token_mint",
@@ -426,7 +429,10 @@
         },
         {
           "name": "vault_receipt_token_mint",
-          "writable": true
+          "writable": true,
+          "relations": [
+            "vault_account"
+          ]
         },
         {
           "name": "vault_supported_token_mint",
@@ -796,7 +802,10 @@
         },
         {
           "name": "vault_receipt_token_mint",
-          "writable": true
+          "writable": true,
+          "relations": [
+            "vault_account"
+          ]
         },
         {
           "name": "vault_supported_token_mint",
@@ -1159,7 +1168,10 @@
           }
         },
         {
-          "name": "vault_receipt_token_mint"
+          "name": "vault_receipt_token_mint",
+          "relations": [
+            "vault_account"
+          ]
         },
         {
           "name": "reward_token_mint"
@@ -1342,7 +1354,10 @@
           }
         },
         {
-          "name": "vault_receipt_token_mint"
+          "name": "vault_receipt_token_mint",
+          "relations": [
+            "vault_account"
+          ]
         },
         {
           "name": "vault_supported_token_mint",
@@ -1813,7 +1828,10 @@
           }
         },
         {
-          "name": "vault_receipt_token_mint"
+          "name": "vault_receipt_token_mint",
+          "relations": [
+            "vault_account"
+          ]
         },
         {
           "name": "vault_supported_token_mint",
@@ -2288,7 +2306,10 @@
           }
         },
         {
-          "name": "vault_receipt_token_mint"
+          "name": "vault_receipt_token_mint",
+          "relations": [
+            "vault_account"
+          ]
         },
         {
           "name": "vault_supported_token_mint",
@@ -2750,7 +2771,10 @@
           }
         },
         {
-          "name": "vault_receipt_token_mint"
+          "name": "vault_receipt_token_mint",
+          "relations": [
+            "vault_account"
+          ]
         },
         {
           "name": "vault_supported_token_mint",
@@ -3221,7 +3245,10 @@
           }
         },
         {
-          "name": "vault_receipt_token_mint"
+          "name": "vault_receipt_token_mint",
+          "relations": [
+            "vault_account"
+          ]
         },
         {
           "name": "vault_supported_token_mint",
@@ -3683,7 +3710,10 @@
           }
         },
         {
-          "name": "vault_receipt_token_mint"
+          "name": "vault_receipt_token_mint",
+          "relations": [
+            "vault_account"
+          ]
         },
         {
           "name": "vault_supported_token_mint",
@@ -4150,7 +4180,10 @@
           }
         },
         {
-          "name": "vault_receipt_token_mint"
+          "name": "vault_receipt_token_mint",
+          "relations": [
+            "vault_account"
+          ]
         },
         {
           "name": "vault_supported_token_mint",
@@ -4614,7 +4647,10 @@
           }
         },
         {
-          "name": "vault_receipt_token_mint"
+          "name": "vault_receipt_token_mint",
+          "relations": [
+            "vault_account"
+          ]
         },
         {
           "name": "event_authority",
@@ -4706,7 +4742,10 @@
           }
         },
         {
-          "name": "vault_receipt_token_mint"
+          "name": "vault_receipt_token_mint",
+          "relations": [
+            "vault_account"
+          ]
         },
         {
           "name": "event_authority",
@@ -4786,7 +4825,10 @@
           }
         },
         {
-          "name": "vault_receipt_token_mint"
+          "name": "vault_receipt_token_mint",
+          "relations": [
+            "vault_account"
+          ]
         },
         {
           "name": "event_authority",
