@@ -4,10 +4,11 @@ use anchor_spl::token_interface::{Mint, TokenAccount};
 use crate::errors::ErrorCode;
 use crate::utils::PDASeeds;
 
+#[constant]
 /// ## Version History
 /// * v1: Initial Version (567 ~= 0.55KB)
 pub const USER_FUND_ACCOUNT_CURRENT_VERSION: u16 = 1;
-
+#[constant]
 pub const USER_FUND_ACCOUNT_CURRENT_SIZE: u64 = 8 + UserFundAccount::INIT_SPACE as u64;
 
 pub const USER_FUND_ACCOUNT_MAX_WITHDRAWAL_REQUESTS_SIZE: usize = 4;

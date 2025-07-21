@@ -5,6 +5,7 @@ use crate::utils::PDASeeds;
 
 use super::NormalizedTokenPoolAccount;
 
+#[constant]
 /// ## Version History
 /// * v1: Initial Version
 pub const NORMALIZED_TOKEN_WITHDRAWAL_ACCOUNT_CURRENT_VERSION: u16 = 1;

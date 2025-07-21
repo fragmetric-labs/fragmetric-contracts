@@ -4,6 +4,7 @@ use anchor_spl::token::Mint;
 use crate::constants;
 use crate::errors::VaultError;
 
+#[constant]
 /// ## Version History
 /// * v1: deprecated
 /// * v2: initial version (0x2800 = 10240 = 10KiB)
