@@ -3,9 +3,6 @@ use anchor_lang::prelude::*;
 declare_id!("FSoLvf9dv17a4DzMGYKxqFnDGj9EiXRW5wKrwQ39UDH");
 
 #[constant]
-pub const TARGET: &str = "mainnet";
-
-#[constant]
 pub const ZBTC_MINT_ADDRESS: Pubkey = pubkey!("zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg");
 
 #[constant]
