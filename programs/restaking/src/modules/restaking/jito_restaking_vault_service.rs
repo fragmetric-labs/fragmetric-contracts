@@ -7,11 +7,14 @@ use jito_vault_core::{
     vault_update_state_tracker::VaultUpdateStateTracker,
 };
 
-use crate::constants::{JITO_VAULT_CONFIG_ADDRESS, JITO_VAULT_PROGRAM_ID};
 use crate::errors::ErrorCode;
 use crate::utils::AccountInfoExt;
 
 use super::ValidateVault;
+
+pub(super) const JITO_VAULT_PROGRAM_ID: Pubkey =
+    pubkey!("Vau1t6sLNxnzB7ZDsef8TLbPLfyZMYXH8WTNqUdm9g8");
+const JITO_VAULT_CONFIG_ADDRESS: Pubkey = pubkey!("UwuSgAq4zByffCGCrWH87DsjfsewYjuqHfJEpzw1Jq3");
 
 pub(in crate::modules) struct JitoRestakingVaultService<'info> {
     vault_program: &'info AccountInfo<'info>,

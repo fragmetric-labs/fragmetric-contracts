@@ -13,7 +13,6 @@ pub use virtual_vault_service::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
 
-use crate::constants::JITO_VAULT_PROGRAM_ID;
 use crate::errors::ErrorCode;
 use crate::modules::pricing::TokenPricingSource;
 

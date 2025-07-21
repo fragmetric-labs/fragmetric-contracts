@@ -6,7 +6,7 @@ mod events;
 mod instructions;
 pub mod states;
 
-use constants::*;
+pub use constants::ID;
 use instructions::*;
 
 #[program]
