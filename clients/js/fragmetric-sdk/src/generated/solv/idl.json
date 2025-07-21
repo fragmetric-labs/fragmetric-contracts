@@ -6427,29 +6427,9 @@
       "value": "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij"
     },
     {
-      "name": "DEVNET_PROGRAM_ID",
-      "type": "pubkey",
-      "value": "FsoLVPaSSXfsfZHYaxtQSZs6npFFUeRCyXB6dcC8ckn"
-    },
-    {
-      "name": "MAINNET_PROGRAM_ID",
-      "type": "pubkey",
-      "value": "FSoLvf9dv17a4DzMGYKxqFnDGj9EiXRW5wKrwQ39UDH"
-    },
-    {
       "name": "TARGET",
       "type": "string",
       "value": "\"local\""
-    },
-    {
-      "name": "VAULT_ACCOUNT_CURRENT_VERSION",
-      "docs": [
-        "## Version History",
-        "* v1: deprecated",
-        "* v2: initial version (0x2800 = 10240 = 10KiB)"
-      ],
-      "type": "u16",
-      "value": "2"
     },
     {
       "name": "WBTC_MINT_ADDRESS",
