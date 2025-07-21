@@ -1,5 +1,3 @@
-#![allow(dead_code, unused_imports)]
-
 #[cfg(not(any(feature = "devnet", feature = "mainnet")))]
 mod local;
 #[cfg(not(any(feature = "devnet", feature = "mainnet")))]
