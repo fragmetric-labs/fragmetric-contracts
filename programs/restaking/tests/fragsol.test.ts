@@ -855,7 +855,7 @@ describe('restaking.fragSOL test', async () => {
   test('user can deposit SOL', async () => {
     await expectMasked(
       user1.deposit.execute(
-        { assetMint: null, assetAmount: 5_000_000_000n },
+        { assetType: null, assetMint: null, assetAmount: 5_000_000_000n },
         { signers: [signer1] }
       )
     ).resolves.toMatchInlineSnapshot(`
@@ -864,6 +864,7 @@ describe('restaking.fragSOL test', async () => {
           "applyPresetComputeUnitLimit": true,
           "assetAmount": 5000000000n,
           "assetMint": null,
+          "assetType": null,
           "metadata": null,
         },
         "events": {
@@ -1073,6 +1074,7 @@ describe('restaking.fragSOL test', async () => {
     await expectMasked(
       user1.deposit.execute(
         {
+          assetType: 'supportedToken',
           assetMint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
           assetAmount: 5_000_000_000n,
         },
@@ -1084,6 +1086,7 @@ describe('restaking.fragSOL test', async () => {
           "applyPresetComputeUnitLimit": true,
           "assetAmount": 5000000000n,
           "assetMint": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
+          "assetType": "supportedToken",
           "metadata": null,
         },
         "events": {
@@ -1746,7 +1749,7 @@ describe('restaking.fragSOL test', async () => {
     const fundWrapReward = ctx.fund.wrap.reward;
 
     await user3.deposit.execute(
-      { assetMint: null, assetAmount: 20_000_000_000n },
+      { assetType: null, assetMint: null, assetAmount: 20_000_000_000n },
       { signers: [signer3] }
     );
     await user3.wrap.execute(
@@ -1883,7 +1886,7 @@ describe('restaking.fragSOL test', async () => {
     ).resolves.toEqual(10_000_000_000n);
 
     await user2.deposit.execute(
-      { assetMint: null, assetAmount: 5_000_000_000n },
+      { assetType: null, assetMint: null, assetAmount: 5_000_000_000n },
       { signers: [signer2] }
     );
     await user2.wrap.execute(
@@ -1954,6 +1957,7 @@ describe('restaking.fragSOL test', async () => {
       await expect(
         user1.deposit.execute(
           {
+            assetType: mint ? 'supportedToken' : null,
             assetAmount: 100_000_000_000n,
             assetMint: mint,
           },
@@ -2110,6 +2114,7 @@ describe('restaking.fragSOL test', async () => {
 
     await user1.deposit.execute(
       {
+        assetType: 'supportedToken',
         assetMint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
         assetAmount: 200_000_000_000_000n,
       },
@@ -2137,5 +2142,84 @@ describe('restaking.fragSOL test', async () => {
       forceResetCommand: 'UnstakeLST',
       operator: restaking.knownAddresses.fundManager,
     });
+  });
+
+  test('user can deposit vrt and receive rt', async () => {
+    // airdrop vrt to user first
+    await validator.airdropToken(
+      signer1.address,
+      restaking.fragSOL.fund.restakingVaults[0].receiptTokenMint.address,
+      100_000_000_000n // 100 vrt
+    );
+
+    // deposit vrt to fund
+    const assetMint =
+      restaking.fragSOL.fund.restakingVaults[0].receiptTokenMint.address;
+    const assetAmount = 100_000_000_000n;
+
+    const fund_1 = await ctx.fund.resolveAccount(true);
+    const user1_1 = await user1.resolve(true);
+
+    const res_1 = await user1.deposit.execute(
+      {
+        assetType: 'vaultReceiptToken',
+        assetMint,
+        assetAmount,
+      },
+      { signers: [signer1] }
+    );
+    await expectMasked(res_1).resolves.toMatchInlineSnapshot(`
+      {
+        "args": {
+          "applyPresetComputeUnitLimit": true,
+          "assetAmount": 100000000000n,
+          "assetMint": "CkXLPfDG3cDawtUvnztq99HdGoQWhJceBZxqKYL2TUrg",
+          "assetType": "vaultReceiptToken",
+          "metadata": null,
+        },
+        "events": {
+          "unknown": [],
+          "userDepositedToFund": {
+            "contributionAccrualRate": {
+              "__option": "None",
+            },
+            "depositedAmount": 100000000000n,
+            "fundAccount": "7xraTDZ4QWgvgJ5SCZp4hyJN2XEfyGRySQjdG49iZfU8",
+            "mintedReceiptTokenAmount": 99999999997n,
+            "receiptTokenMint": "Cs29UiPhAkM2v8fZW7qCJ1UjhF1UAhgrsKj61yGGYizD",
+            "supportedTokenMint": {
+              "__option": "Some",
+              "value": "CkXLPfDG3cDawtUvnztq99HdGoQWhJceBZxqKYL2TUrg",
+            },
+            "updatedUserRewardAccounts": [
+              "9XZgibwtji6havXCPHKRoqpnR7MJUYgavQKCvDWALXGR",
+            ],
+            "user": "EhxcijcPKVdQ9zTSXGeLrgSEFJjbiNiC34j9prg3St29",
+            "userFundAccount": "47srXvirv37rsKhrVxtz7JWGq4CE2Ao4vjFUvTNdvg92",
+            "userReceiptTokenAccount": "BWfL432qksE6DpBEpRsuqaq4U6GdgPz1PGXKXNQkfr8M",
+            "userSupportedTokenAccount": {
+              "__option": "Some",
+              "value": "SdKJLWgey12UdHAjsEn6e5RzQfUZcwbfNehf5U19we7",
+            },
+            "walletProvider": {
+              "__option": "None",
+            },
+          },
+        },
+        "signature": "MASKED(signature)",
+        "slot": "MASKED(/[.*S|s]lots?$/)",
+        "succeeded": true,
+      }
+    `);
+
+    const fund_2 = await ctx.fund.resolveAccount(true);
+    const user1_2 = await user1.resolve(true);
+    expect(
+      fund_2?.data.restakingVaults[0].receiptTokenOperationReservedAmount! -
+        fund_1?.data.restakingVaults[0].receiptTokenOperationReservedAmount!
+    ).toEqual(assetAmount);
+    expect(user1_2?.receiptTokenAmount! - user1_1?.receiptTokenAmount!).toEqual(
+      res_1.events?.userDepositedToFund?.mintedReceiptTokenAmount
+    );
   });
 });

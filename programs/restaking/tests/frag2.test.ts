@@ -250,6 +250,7 @@ describe('restaking.frag2 test', async () => {
     await expectMasked(
       user1.deposit.execute(
         {
+          assetType: 'supportedToken',
           assetMint: 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5',
           assetAmount: 5_000_000_000n,
         },
@@ -261,6 +262,7 @@ describe('restaking.frag2 test', async () => {
           "applyPresetComputeUnitLimit": true,
           "assetAmount": 5000000000n,
           "assetMint": "FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5",
+          "assetType": "supportedToken",
           "metadata": null,
         },
         "events": {
@@ -688,6 +690,7 @@ describe('restaking.frag2 test', async () => {
     // ensure a new user deposits same amount with old user
     const res = await user2.deposit.execute(
       {
+        assetType: 'supportedToken',
         assetMint: 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5',
         assetAmount: 10_000_000_000n,
       },

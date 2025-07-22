@@ -449,6 +449,7 @@ describe('restaking.fragBTC test', async () => {
     await expectMasked(
       user1.deposit.execute(
         {
+          assetType: 'supportedToken',
           assetMint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
           assetAmount: 100_000_000n,
         },
@@ -460,6 +461,7 @@ describe('restaking.fragBTC test', async () => {
           "applyPresetComputeUnitLimit": true,
           "assetAmount": 100000000n,
           "assetMint": "zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg",
+          "assetType": "supportedToken",
           "metadata": null,
         },
         "events": {
@@ -745,6 +747,7 @@ describe('restaking.fragBTC test', async () => {
     await expectMasked(
       user1.deposit.execute(
         {
+          assetType: 'supportedToken',
           assetMint: 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
           assetAmount: 100_000_000n,
         },
@@ -756,6 +759,7 @@ describe('restaking.fragBTC test', async () => {
           "applyPresetComputeUnitLimit": true,
           "assetAmount": 100000000n,
           "assetMint": "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
+          "assetType": "supportedToken",
           "metadata": null,
         },
         "events": {
@@ -909,6 +913,7 @@ describe('restaking.fragBTC test', async () => {
     await expectMasked(
       user2.deposit.execute(
         {
+          assetType: 'supportedToken',
           assetMint: '3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh',
           assetAmount: 100_000_000n,
         },
@@ -920,6 +925,7 @@ describe('restaking.fragBTC test', async () => {
           "applyPresetComputeUnitLimit": true,
           "assetAmount": 100000000n,
           "assetMint": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
+          "assetType": "supportedToken",
           "metadata": null,
         },
         "events": {
@@ -1854,6 +1860,7 @@ describe('restaking.fragBTC test', async () => {
       await expect(
         user1.deposit.execute(
           {
+            assetType: 'supportedToken',
             assetMint,
             assetAmount,
           },
@@ -1989,6 +1996,7 @@ describe('restaking.fragBTC test', async () => {
 
       const res = await user1.deposit.execute(
         {
+          assetType: 'supportedToken',
           assetMint,
           assetAmount,
         },
@@ -2508,6 +2516,7 @@ describe('restaking.fragBTC test', async () => {
     // now mock increased solvBTC.jup price
     await user1.deposit.execute(
       {
+        assetType: 'supportedToken',
         assetMint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
         assetAmount: 1_0000_0000n,
       },
@@ -3375,6 +3384,7 @@ describe('restaking.fragBTC test', async () => {
 
     await user1.deposit.execute(
       {
+        assetType: 'supportedToken',
         assetMint: '3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh',
         assetAmount: 20_0000_0000n,
       },
@@ -3654,6 +3664,7 @@ describe('restaking.fragBTC test', async () => {
     // user deposits wBTC to trigger VRT price change
     await user1.deposit.execute(
       {
+        assetType: 'supportedToken',
         assetMint: '3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh',
         assetAmount: 10_0000_0000n,
       },
@@ -3922,6 +3933,7 @@ describe('restaking.fragBTC test', async () => {
     // withdraw request shouldn't be enqueued to solv wrapper.
     await user1.deposit.execute(
       {
+        assetType: 'supportedToken',
         assetMint: 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
         assetAmount: 5_0000_0000n,
       },
