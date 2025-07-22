@@ -278,6 +278,11 @@ impl<'a, 'info> UserFundService<'a, 'info> {
         metadata: Option<DepositMetadata>,
         metadata_signer_key: &Pubkey,
     ) -> Result<events::UserDepositedToFund> {
+        // validate vault receipt token mint
+        self.fund_account
+            .load()?
+            .get_restaking_vault_by_receipt_token_mint(&vault_receipt_token_mint.key())?;
+
         // validate user asset balance
         require_gte!(
             user_vault_receipt_token_account.amount,
@@ -349,7 +354,7 @@ impl<'a, 'info> UserFundService<'a, 'info> {
             fund_account.deposit_residual_micro_receipt_token_amount =
                 deposit_residual_micro_receipt_token_amount;
             fund_account.deposit_vault_receipt_token(
-                vault_receipt_token_mint.key(),
+                &vault_receipt_token_mint.key(),
                 vault_receipt_token_amount,
             )?
         };

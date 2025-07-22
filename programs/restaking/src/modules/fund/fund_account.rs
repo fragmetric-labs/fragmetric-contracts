@@ -649,6 +649,24 @@ impl FundAccount {
             .ok_or_else(|| error!(ErrorCode::FundRestakingVaultNotFoundError))
     }
 
+    pub(super) fn get_restaking_vault_by_receipt_token_mint(
+        &self,
+        receipt_token_mint: &Pubkey,
+    ) -> Result<&RestakingVault> {
+        self.get_restaking_vaults_iter()
+            .find(|restaking_vault| restaking_vault.receipt_token_mint == *receipt_token_mint)
+            .ok_or_else(|| error!(ErrorCode::FundRestakingVaultNotFoundError))
+    }
+
+    pub(super) fn get_restaking_vault_mut_by_receipt_token_mint(
+        &mut self,
+        receipt_token_mint: &Pubkey,
+    ) -> Result<&mut RestakingVault> {
+        self.get_restaking_vaults_iter_mut()
+            .find(|restaking_vault| restaking_vault.receipt_token_mint == *receipt_token_mint)
+            .ok_or_else(|| error!(ErrorCode::FundRestakingVaultNotFoundError))
+    }
+
     pub(super) fn get_restaking_vault_mut(
         &mut self,
         vault: &Pubkey,
@@ -854,16 +872,14 @@ impl FundAccount {
     /// returns [deposited_vault_receipt_token_amount]
     pub(super) fn deposit_vault_receipt_token(
         &mut self,
-        vault_receipt_token_mint: Pubkey,
+        vault_receipt_token_mint: &Pubkey,
         vault_receipt_token_amount: u64,
     ) -> Result<u64> {
         if self.deposit_enabled == 0 {
             err!(ErrorCode::FundDepositDisabledError)?
         }
 
-        self.get_restaking_vaults_iter_mut()
-            .find(|restaking_vault| restaking_vault.receipt_token_mint == vault_receipt_token_mint)
-            .ok_or_else(|| error!(ErrorCode::FundRestakingVaultNotFoundError))?
+        self.get_restaking_vault_mut_by_receipt_token_mint(vault_receipt_token_mint)?
             .deposit_vault_receipt_token(vault_receipt_token_amount)?;
 
         Ok(vault_receipt_token_amount)
