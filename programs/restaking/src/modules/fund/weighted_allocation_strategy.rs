@@ -92,11 +92,8 @@ impl<const N: usize> WeightedAllocationStrategy<N> {
             return Ok(amount);
         }
 
-        (amount as u128)
-            .checked_mul(numerator as u128)
-            .and_then(|v| v.checked_div(denominator as u128))
-            .map(|v| v as u64)
-            .ok_or_else(|| error!(errors::ErrorCode::CalculationArithmeticException))
+        u64::try_from(amount as u128 * numerator as u128 / denominator as u128)
+            .map_err(|_| error!(errors::ErrorCode::CalculationArithmeticException))
     }
 
     /// returns remaining_amount after the allocation made

@@ -80,11 +80,8 @@ pub fn get_proportional_amount(amount: u64, numerator: u64, denominator: u64) ->
         return Ok(numerator);
     }
 
-    (amount as u128)
-        .checked_mul(numerator as u128)
-        .and_then(|v| v.checked_div(denominator as u128))
-        .and_then(|v| u64::try_from(v).ok())
-        .ok_or_else(|| error!(errors::ErrorCode::CalculationArithmeticException))
+    u64::try_from(amount as u128 * numerator as u128 / denominator as u128)
+        .map_err(|_| error!(errors::ErrorCode::CalculationArithmeticException))
 }
 
 #[allow(dead_code)]

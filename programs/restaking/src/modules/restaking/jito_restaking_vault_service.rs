@@ -65,12 +65,8 @@ impl<'info> JitoRestakingVaultService<'info> {
         let current_slot = Clock::get()?.slot;
         let last_update_slot = vault.last_full_state_update_slot();
         let epoch_length = vault_config.epoch_length();
-        let current_epoch = current_slot
-            .checked_div(epoch_length)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-        let last_update_epoch = last_update_slot
-            .checked_div(epoch_length)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+        let current_epoch = current_slot / epoch_length;
+        let last_update_epoch = last_update_slot / epoch_length;
 
         Ok(Self {
             vault_program,

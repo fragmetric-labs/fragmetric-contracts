@@ -289,9 +289,7 @@ impl<'info> PricingService<'info> {
 
                         if let Some(to_token_residual_micro_amount) = to_asset_residual_micro_amount
                         {
-                            to_micro_token = to_micro_token
-                                .checked_add((*to_token_residual_micro_amount) as u128)
-                                .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+                            to_micro_token += *to_token_residual_micro_amount as u128;
 
                             let new_to_token_residual_micro_amount =
                                 u64::try_from(to_micro_token % 1_000_000)?;
@@ -319,9 +317,7 @@ impl<'info> PricingService<'info> {
                         if let Some(to_lamports_residual_micro_amount) =
                             to_asset_residual_micro_amount
                         {
-                            to_micro_lamports = to_micro_lamports
-                                .checked_add((*to_lamports_residual_micro_amount) as u128)
-                                .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+                            to_micro_lamports += *to_lamports_residual_micro_amount as u128;
 
                             let new_to_lamports_residual_micro_amount =
                                 u64::try_from(to_micro_lamports % 1_000_000)?;
@@ -364,9 +360,7 @@ impl<'info> PricingService<'info> {
 
                         if let Some(to_token_residual_micro_amount) = to_asset_residual_micro_amount
                         {
-                            to_micro_token = to_micro_token
-                                .checked_add((*to_token_residual_micro_amount) as u128)
-                                .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+                            to_micro_token += *to_token_residual_micro_amount as u128;
 
                             let new_to_token_residual_micro_amount =
                                 u64::try_from(to_micro_token % 1_000_000)?;
@@ -453,9 +447,7 @@ impl<'info> PricingService<'info> {
             None
         } else {
             Some({
-                let token_amount = 10u64
-                    .checked_pow(from_token_decimals as u32)
-                    .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+                let token_amount = 10u64.pow(from_token_decimals as u32);
 
                 self.get_asset_amount_as_asset(Some(from_token_mint), token_amount, None, None)?
             })
@@ -478,9 +470,7 @@ impl<'info> PricingService<'info> {
                 None
             } else {
                 Some({
-                    let token_amount = 10u64
-                        .checked_pow(from_token_decimals as u32)
-                        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+                    let token_amount = 10u64.pow(from_token_decimals as u32);
 
                     self.get_asset_amount_as_asset(
                         Some(from_token_mint),
@@ -720,11 +710,8 @@ impl<'info> PricingService<'info> {
             return Ok(numerator);
         }
 
-        (amount as u128)
-            .checked_mul(numerator as u128)
-            .and_then(|numerator| numerator.checked_div(denominator as u128))
-            .and_then(|v| u64::try_from(v).ok())
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
+        u64::try_from(amount as u128 * numerator as u128 / denominator as u128)
+            .map_err(|_| error!(ErrorCode::CalculationArithmeticException))
     }
 }
 
