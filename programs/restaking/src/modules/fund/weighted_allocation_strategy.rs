@@ -531,6 +531,7 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
     fn test_edge_scenario3() {
         let mut strategy = WeightedAllocationStrategy::<5>::new([
             WeightedAllocationParticipant {
