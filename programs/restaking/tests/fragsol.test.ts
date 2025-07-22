@@ -2145,18 +2145,18 @@ describe('restaking.fragSOL test', async () => {
   });
 
   test('user can deposit vrt and receive rt', async () => {
+    const assetMint =
+      restaking.fragSOL.fund.restakingVaults[0].receiptTokenMint.address;
+    const assetAmount = 100_000_000_000n; // 100 vrt
+
     // airdrop vrt to user first
     await validator.airdropToken(
       signer1.address,
       restaking.fragSOL.fund.restakingVaults[0].receiptTokenMint.address,
-      100_000_000_000n // 100 vrt
+      assetAmount,
     );
 
     // deposit vrt to fund
-    const assetMint =
-      restaking.fragSOL.fund.restakingVaults[0].receiptTokenMint.address;
-    const assetAmount = 100_000_000_000n;
-
     const fund_1 = await ctx.fund.resolveAccount(true);
     const user1_1 = await user1.resolve(true);
 
@@ -2164,7 +2164,6 @@ describe('restaking.fragSOL test', async () => {
       {
         assetType: 'vaultReceiptToken',
         assetMint,
-        assetAmount,
       },
       { signers: [signer1] }
     );
@@ -2172,7 +2171,7 @@ describe('restaking.fragSOL test', async () => {
       {
         "args": {
           "applyPresetComputeUnitLimit": true,
-          "assetAmount": 100000000000n,
+          "assetAmount": null,
           "assetMint": "CkXLPfDG3cDawtUvnztq99HdGoQWhJceBZxqKYL2TUrg",
           "assetType": "vaultReceiptToken",
           "metadata": null,

@@ -18,8 +18,6 @@ import {
   getProgramDerivedAddress,
   getStructDecoder,
   getStructEncoder,
-  getU64Decoder,
-  getU64Encoder,
   transformEncoder,
   type Address,
   type Codec,
@@ -150,12 +148,10 @@ export type UserDepositVaultReceiptTokenInstruction<
 
 export type UserDepositVaultReceiptTokenInstructionData = {
   discriminator: ReadonlyUint8Array;
-  amount: bigint;
   metadata: Option<DepositMetadata>;
 };
 
 export type UserDepositVaultReceiptTokenInstructionDataArgs = {
-  amount: number | bigint;
   metadata: OptionOrNullable<DepositMetadataArgs>;
 };
 
@@ -163,7 +159,6 @@ export function getUserDepositVaultReceiptTokenInstructionDataEncoder(): Encoder
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
-      ['amount', getU64Encoder()],
       ['metadata', getOptionEncoder(getDepositMetadataEncoder())],
     ]),
     (value) => ({
@@ -176,7 +171,6 @@ export function getUserDepositVaultReceiptTokenInstructionDataEncoder(): Encoder
 export function getUserDepositVaultReceiptTokenInstructionDataDecoder(): Decoder<UserDepositVaultReceiptTokenInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
-    ['amount', getU64Decoder()],
     ['metadata', getOptionDecoder(getDepositMetadataDecoder())],
   ]);
 }
@@ -225,7 +219,6 @@ export type UserDepositVaultReceiptTokenAsyncInput<
   instructionsSysvar?: Address<TAccountInstructionsSysvar>;
   eventAuthority?: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
-  amount: UserDepositVaultReceiptTokenInstructionDataArgs['amount'];
   metadata: UserDepositVaultReceiptTokenInstructionDataArgs['metadata'];
 };
 
@@ -578,7 +571,6 @@ export type UserDepositVaultReceiptTokenInput<
   instructionsSysvar?: Address<TAccountInstructionsSysvar>;
   eventAuthority: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
-  amount: UserDepositVaultReceiptTokenInstructionDataArgs['amount'];
   metadata: UserDepositVaultReceiptTokenInstructionDataArgs['metadata'];
 };
 

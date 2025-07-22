@@ -274,7 +274,6 @@ impl<'a, 'info> UserFundService<'a, 'info> {
         user_vault_receipt_token_account: &InterfaceAccount<'info, TokenAccount>,
         instructions_sysvar: &AccountInfo,
         pricing_sources: &'info [AccountInfo<'info>],
-        vault_receipt_token_amount: u64,
         metadata: Option<DepositMetadata>,
         metadata_signer_key: &Pubkey,
     ) -> Result<events::UserDepositedToFund> {
@@ -282,12 +281,6 @@ impl<'a, 'info> UserFundService<'a, 'info> {
         self.fund_account
             .load()?
             .get_restaking_vault_by_receipt_token_mint(&vault_receipt_token_mint.key())?;
-
-        // validate user asset balance
-        require_gte!(
-            user_vault_receipt_token_account.amount,
-            vault_receipt_token_amount
-        );
 
         // validate deposit metadata
         let (wallet_provider, contribution_accrual_rate) = metadata
@@ -311,11 +304,11 @@ impl<'a, 'info> UserFundService<'a, 'info> {
             .load()?
             .deposit_residual_micro_receipt_token_amount;
         let receipt_token_mint_amount = if self.receipt_token_mint.supply == 0 {
-            vault_receipt_token_amount
+            user_vault_receipt_token_account.amount
         } else {
             pricing_service.convert_asset_amount(
                 Some(&vault_receipt_token_mint.key()),
-                vault_receipt_token_amount,
+                user_vault_receipt_token_account.amount,
                 Some(&self.receipt_token_mint.key()),
                 &mut deposit_residual_micro_receipt_token_amount,
             )?
@@ -355,10 +348,10 @@ impl<'a, 'info> UserFundService<'a, 'info> {
                 deposit_residual_micro_receipt_token_amount;
             fund_account.deposit_vault_receipt_token(
                 &vault_receipt_token_mint.key(),
-                vault_receipt_token_amount,
+                user_vault_receipt_token_account.amount,
             )?
         };
-        assert_eq!(vault_receipt_token_amount, deposited_amount);
+        assert_eq!(user_vault_receipt_token_account.amount, deposited_amount);
 
         // transfer user asset to the fund
         token_interface::transfer_checked(

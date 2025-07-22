@@ -8989,10 +8989,6 @@
       ],
       "args": [
         {
-          "name": "amount",
-          "type": "u64"
-        },
-        {
           "name": "metadata",
           "type": {
             "option": {

@@ -1197,7 +1197,6 @@ pub mod restaking {
 
     pub fn user_deposit_vault_receipt_token<'info>(
         ctx: Context<'_, '_, 'info, 'info, UserFundVaultReceiptTokenContext<'info>>,
-        amount: u64,
         metadata: Option<modules::fund::DepositMetadata>,
     ) -> Result<()> {
         emit_cpi!(modules::fund::UserFundService::new(
@@ -1217,7 +1216,6 @@ pub mod restaking {
             &ctx.accounts.user_vault_receipt_token_account,
             &ctx.accounts.instructions_sysvar,
             ctx.remaining_accounts,
-            amount,
             metadata,
             &ADMIN_PUBKEY,
         )?);

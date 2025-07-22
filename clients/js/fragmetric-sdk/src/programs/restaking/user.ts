@@ -265,7 +265,10 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
           'supported token mint or vault receipt token mint to deposit, null to deposit SOL'
         )
       ),
-      assetAmount: v.pipe(v.bigint(), v.description('amount to deposit')),
+      assetAmount: v.pipe(
+        v.nullish(v.bigint(), null),
+        v.description('amount to deposit, null for vault receipt token deposit')
+      ),
       metadata: v.pipe(
         v.nullish(
           v.pipe(
@@ -392,7 +395,7 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
                           }
                         ),
                       supportedTokenMint: args.assetMint as Address,
-                      amount: args.assetAmount,
+                      amount: args.assetAmount!,
                       metadata: args.metadata,
                     },
                     {
@@ -415,7 +418,6 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
                           }
                         ),
                       vaultReceiptTokenMint: args.assetMint as Address,
-                      amount: args.assetAmount,
                       metadata: args.metadata,
                     },
                     {
@@ -428,7 +430,7 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
                       user: createNoopSigner(user),
                       receiptTokenMint: data.receiptTokenMint,
                       program: self.program.address,
-                      amount: args.assetAmount,
+                      amount: args.assetAmount!,
                       metadata: args.metadata,
                     },
                     {
