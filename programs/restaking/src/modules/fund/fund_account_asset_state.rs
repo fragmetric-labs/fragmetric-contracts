@@ -308,7 +308,7 @@ impl AssetState {
         &self,
         receipt_token_value: &TokenValuePod,
     ) -> Result<u64> {
-        Ok(crate::utils::get_proportional_amount(
+        Ok(crate::utils::get_proportional_amount_u64(
             self.get_total_amount(receipt_token_value),
             self.normal_reserve_rate_bps as u64,
             10_000,

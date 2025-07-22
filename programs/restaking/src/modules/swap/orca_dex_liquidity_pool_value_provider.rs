@@ -238,7 +238,7 @@ mod tests {
                     let price_f64 = sqrt_price_f64 * sqrt_price_f64;
 
                     let denominator = token_value.denominator;
-                    let resolved_token_amount_a_as_b = crate::utils::get_proportional_amount(
+                    let resolved_token_amount_a_as_b = crate::utils::get_proportional_amount_u64(
                         token_amount_a,
                         numerator,
                         denominator,

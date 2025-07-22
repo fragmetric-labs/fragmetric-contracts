@@ -564,7 +564,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
         let minimum_reserved_sol_amount = spl_stake_pool::minimum_reserve_lamports(meta);
         let available_sol_amount = reserved_sol_amount.saturating_sub(minimum_reserved_sol_amount);
 
-        let available_pool_token_amount_to_burn = crate::utils::get_proportional_amount(
+        let available_pool_token_amount_to_burn = crate::utils::get_proportional_amount_u64(
             available_sol_amount,
             pool_account_data.pool_token_supply,
             pool_account_data.total_lamports,
@@ -573,7 +573,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
         // pool_token_amount = pool_token_burnt * (1 / 1 - f) = pool_token_burnt * (d / (d - n))
         let numerator = pool_account_data.sol_withdrawal_fee.numerator;
         let denominator = pool_account_data.sol_withdrawal_fee.denominator;
-        crate::utils::get_proportional_amount(
+        crate::utils::get_proportional_amount_u64(
             available_pool_token_amount_to_burn,
             denominator,
             denominator.saturating_sub(numerator),
@@ -758,7 +758,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
             return Ok(0);
         }
 
-        let available_pool_token_amount_to_burn = crate::utils::get_proportional_amount(
+        let available_pool_token_amount_to_burn = crate::utils::get_proportional_amount_u64(
             available_sol_amount,
             pool_account_data.pool_token_supply,
             pool_account_data.total_lamports,
@@ -767,7 +767,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
         // pool_token_amount = pool_token_burnt * (1 / 1 - f) = pool_token_burnt * (d / (d - n))
         let numerator = pool_account_data.stake_withdrawal_fee.numerator;
         let denominator = pool_account_data.stake_withdrawal_fee.denominator;
-        crate::utils::get_proportional_amount(
+        crate::utils::get_proportional_amount_u64(
             available_pool_token_amount_to_burn,
             denominator,
             denominator.saturating_sub(numerator),

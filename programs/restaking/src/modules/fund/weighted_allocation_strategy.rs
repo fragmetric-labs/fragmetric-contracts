@@ -87,15 +87,6 @@ impl<const N: usize> WeightedAllocationStrategy<N> {
         self.get_participant_by_index(index)?.get_last_cut_amount()
     }
 
-    fn get_proportional_amount(amount: u64, numerator: u64, denominator: u64) -> Result<u64> {
-        if numerator == denominator || denominator == 0 && amount == 0 {
-            return Ok(amount);
-        }
-
-        u64::try_from(amount as u128 * numerator as u128 / denominator as u128)
-            .map_err(|_| error!(errors::ErrorCode::CalculationArithmeticException))
-    }
-
     /// returns remaining_amount after the allocation made
     pub fn put(&mut self, amount: u64) -> Result<u64> {
         let mut remaining_amount = amount;
@@ -133,7 +124,7 @@ impl<const N: usize> WeightedAllocationStrategy<N> {
             let mut shortage_amounts: [u64; N] = [0; N];
             for i in &target_participants_index[..target_participants_count] {
                 let p = &self.participants[*i];
-                let target_amount = Self::get_proportional_amount(
+                let target_amount = crate::utils::get_proportional_amount_u64(
                     basis_participant.allocated_amount,
                     p.weight,
                     basis_participant.weight,
@@ -152,7 +143,7 @@ impl<const N: usize> WeightedAllocationStrategy<N> {
                     }
                     let p = &mut self.participants[i];
                     let allocatable_amount = p.capacity_amount - p.allocated_amount;
-                    let allocating_amount = Self::get_proportional_amount(
+                    let allocating_amount = crate::utils::get_proportional_amount_u64(
                         total_allocatable_amount,
                         *shortage,
                         total_shortage_amount,
@@ -179,9 +170,12 @@ impl<const N: usize> WeightedAllocationStrategy<N> {
             for i in &target_participants_index[..target_participants_count] {
                 let p = &mut self.participants[*i];
                 let allocatable_amount = p.capacity_amount.saturating_sub(p.allocated_amount);
-                let allocating_amount =
-                    Self::get_proportional_amount(remaining_amount, p.weight, total_weight)?
-                        .min(allocatable_amount);
+                let allocating_amount = crate::utils::get_proportional_amount_u64(
+                    remaining_amount,
+                    p.weight,
+                    total_weight,
+                )?
+                .min(allocatable_amount);
                 p.allocated_amount += allocating_amount;
                 allocated_amount += allocating_amount;
             }
@@ -270,7 +264,7 @@ impl<const N: usize> WeightedAllocationStrategy<N> {
             let mut deallocated_amount = 0;
             for i in &target_participants_index[..target_participants_count] {
                 let p = &mut self.participants[*i];
-                let deallocating_amount = Self::get_proportional_amount(
+                let deallocating_amount = crate::utils::get_proportional_amount_u64(
                     required_amount,
                     p.allocated_amount,
                     total_allocated_amount,

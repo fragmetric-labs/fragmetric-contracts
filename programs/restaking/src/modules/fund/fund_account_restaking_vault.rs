@@ -156,7 +156,7 @@ impl RestakingVault {
     }
 
     pub fn get_reward_commission_amount(&self, reward_token_amount: u64) -> Result<u64> {
-        crate::utils::get_proportional_amount(
+        crate::utils::get_proportional_amount_u64(
             reward_token_amount,
             self.reward_commission_rate_bps as u64,
             10_000,
@@ -381,7 +381,7 @@ impl RestakingVault {
             + self.receipt_token_operation_receivable_amount;
 
         // calculate supported token amount based on previous vault receipt token price
-        let supported_token_amount_before = crate::utils::get_proportional_amount(
+        let supported_token_amount_before = crate::utils::get_proportional_amount_u64(
             receipt_token_amount,
             self.supported_token_to_receipt_token_exchange_ratio
                 .numerator,
@@ -390,7 +390,7 @@ impl RestakingVault {
         )?;
 
         // calculate supported token amount based on current vault receipt token price
-        let supported_token_amount = crate::utils::get_proportional_amount(
+        let supported_token_amount = crate::utils::get_proportional_amount_u64(
             receipt_token_amount,
             supported_token_amount_numerator,
             receipt_token_amount_denominator,

@@ -242,7 +242,7 @@ impl<'info> PricingService<'info> {
                         Asset::Token(nested_token_mint, _, nested_token_amount) => {
                             let (numerator_as_micro_lamports, denominator_as_micro_token) =
                                 self.get_token_value_as_mirco_lamports(nested_token_mint)?;
-                            micro_lamports += Self::get_proportional_amount_u128(
+                            micro_lamports += crate::utils::get_proportional_amount_u128(
                                 (*nested_token_amount as u128) * 1_000_000,
                                 numerator_as_micro_lamports,
                                 denominator_as_micro_token,
@@ -281,7 +281,7 @@ impl<'info> PricingService<'info> {
                         let from_micro_lamports = (from_asset_amount as u128) * 1_000_000;
                         let (to_numerator_as_micro_lamports, to_denominator_as_micro_token) =
                             self.get_token_value_as_mirco_lamports(to_token_mint)?;
-                        let mut to_micro_token = Self::get_proportional_amount_u128(
+                        let mut to_micro_token = crate::utils::get_proportional_amount_u128(
                             from_micro_lamports,
                             to_denominator_as_micro_token,
                             to_numerator_as_micro_lamports,
@@ -308,7 +308,7 @@ impl<'info> PricingService<'info> {
                 match to_asset_mint {
                     None => {
                         let from_micro_token = (from_asset_amount as u128) * 1_000_000;
-                        let mut to_micro_lamports = Self::get_proportional_amount_u128(
+                        let mut to_micro_lamports = crate::utils::get_proportional_amount_u128(
                             from_micro_token,
                             from_numerator_as_micro_lamports,
                             from_denominator_as_micro_token,
@@ -597,7 +597,7 @@ impl<'info> PricingService<'info> {
         for nested_asset in &token_value.numerator {
             match nested_asset {
                 Asset::SOL(nested_sol_amount) => {
-                    let nested_sol_amount = Self::get_proportional_amount_u64(
+                    let nested_sol_amount = crate::utils::get_proportional_amount_u64(
                         *nested_sol_amount,
                         token_amount,
                         token_value.denominator,
@@ -609,7 +609,7 @@ impl<'info> PricingService<'info> {
                     nested_token_pricing_source,
                     nested_token_amount,
                 ) => {
-                    let nested_token_amount = Self::get_proportional_amount_u64(
+                    let nested_token_amount = crate::utils::get_proportional_amount_u64(
                         *nested_token_amount,
                         token_amount,
                         token_value.denominator,
@@ -651,7 +651,7 @@ impl<'info> PricingService<'info> {
         for nested_asset in &token_value.numerator {
             match nested_asset {
                 Asset::SOL(nested_sol_amount) => {
-                    let nested_sol_amount = Self::get_proportional_amount_u64(
+                    let nested_sol_amount = crate::utils::get_proportional_amount_u64(
                         *nested_sol_amount,
                         token_amount,
                         token_value.denominator,
@@ -663,7 +663,7 @@ impl<'info> PricingService<'info> {
                     nested_token_pricing_source,
                     nested_token_amount,
                 ) => {
-                    let nested_token_amount = Self::get_proportional_amount_u64(
+                    let nested_token_amount = crate::utils::get_proportional_amount_u64(
                         *nested_token_amount,
                         token_amount,
                         token_value.denominator,
@@ -679,39 +679,6 @@ impl<'info> PricingService<'info> {
         }
 
         Ok(())
-    }
-
-    /// This is for precise calculation.
-    fn get_proportional_amount_u128(
-        amount: u128,
-        numerator: u128,
-        denominator: u128,
-    ) -> Result<u128> {
-        if numerator == denominator || denominator == 0 && amount == 0 {
-            return Ok(amount);
-        }
-        if amount == denominator {
-            return Ok(numerator);
-        }
-
-        U256::from(amount)
-            .checked_mul(U256::from(numerator))
-            .and_then(|numerator| numerator.checked_div(U256::from(denominator)))
-            .and_then(|amount| u128::try_from(amount).ok())
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))
-    }
-
-    /// This is for display or informational purposes only.
-    fn get_proportional_amount_u64(amount: u64, numerator: u64, denominator: u64) -> Result<u64> {
-        if numerator == denominator || denominator == 0 && amount == 0 {
-            return Ok(amount);
-        }
-        if amount == denominator {
-            return Ok(numerator);
-        }
-
-        u64::try_from(amount as u128 * numerator as u128 / denominator as u128)
-            .map_err(|_| error!(ErrorCode::CalculationArithmeticException))
     }
 }
 

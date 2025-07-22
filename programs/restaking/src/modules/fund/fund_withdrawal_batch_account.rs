@@ -196,13 +196,13 @@ impl FundWithdrawalBatchAccount {
             ErrorCode::FundWithdrawalRequestIncorrectBatchError,
         );
 
-        let asset_total_amount = crate::utils::get_proportional_amount(
+        let asset_total_amount = crate::utils::get_proportional_amount_u64(
             request.receipt_token_amount,
             self.asset_user_amount + self.asset_fee_amount,
             self.receipt_token_amount,
         )?;
 
-        let asset_user_amount = crate::utils::get_proportional_amount(
+        let asset_user_amount = crate::utils::get_proportional_amount_u64(
             request.receipt_token_amount,
             self.asset_user_amount,
             self.receipt_token_amount,

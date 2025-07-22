@@ -517,13 +517,13 @@ impl<'info> JitoRestakingVaultService<'info> {
         let supported_token_amount =
             supported_token_amount.min(vault_deposit_capacity - vault_tokens_deposited);
 
-        let deducted_supported_token_fee_amount = crate::utils::get_proportional_amount(
+        let deducted_supported_token_fee_amount = crate::utils::get_proportional_amount_u64(
             supported_token_amount,
             vault_deposit_fee_bps,
             10_000,
         )?;
 
-        let expected_minted_vault_receipt_token_amount = crate::utils::get_proportional_amount(
+        let expected_minted_vault_receipt_token_amount = crate::utils::get_proportional_amount_u64(
             supported_token_amount - deducted_supported_token_fee_amount,
             vault_receipt_token_supply,
             vault_tokens_deposited,
