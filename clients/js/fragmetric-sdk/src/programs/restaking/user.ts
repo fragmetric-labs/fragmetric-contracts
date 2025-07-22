@@ -253,9 +253,17 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
   readonly deposit = new TransactionTemplateContext(
     this,
     v.object({
+      assetType: v.pipe(
+        v.nullish(v.string(), null),
+        v.description(
+          'supportedToken for supported token, vaultReceiptToken for vault receipt token, null for SOL'
+        )
+      ),
       assetMint: v.pipe(
         v.nullish(v.string(), null),
-        v.description('supported token mint to deposit, null to deposit SOL')
+        v.description(
+          'supported token mint or vault receipt token mint to deposit, null to deposit SOL'
+        )
       ),
       assetAmount: v.pipe(v.bigint(), v.description('amount to deposit')),
       metadata: v.pipe(
@@ -367,18 +375,19 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
             })(),
 
             (async () => {
-              const ix = await (args.assetMint
-                ? restaking.getUserDepositSupportedTokenInstructionAsync(
+              const ix = await (async function (self) {
+                if (args.assetType === 'supportedToken') {
+                  return restaking.getUserDepositSupportedTokenInstructionAsync(
                     {
                       user: createNoopSigner(user),
                       receiptTokenMint: data.receiptTokenMint,
                       supportedTokenProgram: token.TOKEN_PROGRAM_ADDRESS,
-                      program: this.program.address,
+                      program: self.program.address,
                       userSupportedTokenAccount:
                         await TokenAccountContext.findAssociatedTokenAccountAddress(
                           {
                             owner: user,
-                            mint: args.assetMint,
+                            mint: args.assetMint!,
                             tokenProgram: token.TOKEN_PROGRAM_ADDRESS,
                           }
                         ),
@@ -387,21 +396,47 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
                       metadata: args.metadata,
                     },
                     {
-                      programAddress: this.program.address,
+                      programAddress: self.program.address,
                     }
-                  )
-                : restaking.getUserDepositSolInstructionAsync(
+                  );
+                } else if (args.assetType === 'vaultReceiptToken') {
+                  return restaking.getUserDepositVaultReceiptTokenInstructionAsync(
                     {
                       user: createNoopSigner(user),
                       receiptTokenMint: data.receiptTokenMint,
-                      program: this.program.address,
+                      vaultReceiptTokenProgram: token.TOKEN_PROGRAM_ADDRESS,
+                      program: self.program.address,
+                      userVaultReceiptTokenAccount:
+                        await TokenAccountContext.findAssociatedTokenAccountAddress(
+                          {
+                            owner: user,
+                            mint: args.assetMint!,
+                            tokenProgram: token.TOKEN_PROGRAM_ADDRESS,
+                          }
+                        ),
+                      vaultReceiptTokenMint: args.assetMint as Address,
                       amount: args.assetAmount,
                       metadata: args.metadata,
                     },
                     {
-                      programAddress: this.program.address,
+                      programAddress: self.program.address,
                     }
-                  ));
+                  );
+                } else {
+                  return restaking.getUserDepositSolInstructionAsync(
+                    {
+                      user: createNoopSigner(user),
+                      receiptTokenMint: data.receiptTokenMint,
+                      program: self.program.address,
+                      amount: args.assetAmount,
+                      metadata: args.metadata,
+                    },
+                    {
+                      programAddress: self.program.address,
+                    }
+                  );
+                }
+              })(this);
 
               for (const accountMeta of data.__pricingSources) {
                 ix.accounts.push(accountMeta);
