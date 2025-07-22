@@ -353,7 +353,7 @@ impl<'a, 'info> NormalizedTokenPoolService<'a, 'info> {
                         supported_token.locked_amount,
                     )?;
                 let supported_token_claimable_amount_as_sol =
-                    crate::utils::get_proportional_amount(
+                    crate::utils::get_proportional_amount_u64(
                         supported_token_locked_amount_as_sol,
                         normalized_token_amount,
                         normalized_token_supply_amount,

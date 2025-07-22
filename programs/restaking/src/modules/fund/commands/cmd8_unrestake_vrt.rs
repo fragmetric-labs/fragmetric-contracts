@@ -200,7 +200,7 @@ impl UnrestakeVRTCommand {
                         let pool = normalized_token_pool_account.unwrap();
                         pricing_service.get_token_amount_as_sol(
                             &supported_token.mint,
-                            crate::utils::get_proportional_amount(
+                            crate::utils::get_proportional_amount_u64(
                                 pool.get_supported_token(&supported_token.mint)
                                     .map(|t| t.locked_amount)
                                     .unwrap(),
@@ -292,7 +292,7 @@ impl UnrestakeVRTCommand {
                                     let pool = normalized_token_pool_account.unwrap();
                                     pricing_service.get_token_amount_as_sol(
                                         &supported_token.mint,
-                                        crate::utils::get_proportional_amount(
+                                        crate::utils::get_proportional_amount_u64(
                                             pool.get_supported_token(&supported_token.mint)
                                                 .map(|t| t.locked_amount)
                                                 .unwrap(),
