@@ -163,6 +163,12 @@ impl RestakingVault {
         )
     }
 
+    pub fn deposit_vault_receipt_token(&mut self, vault_receipt_token_amount: u64) -> Result<()> {
+        self.receipt_token_operation_reserved_amount += vault_receipt_token_amount;
+
+        Ok(())
+    }
+
     pub fn add_compounding_reward_token(
         &mut self,
         compounding_reward_token_mint: Pubkey,

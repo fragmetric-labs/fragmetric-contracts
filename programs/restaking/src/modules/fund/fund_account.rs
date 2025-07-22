@@ -851,6 +851,24 @@ impl FundAccount {
             .deposit(asset_amount)
     }
 
+    /// returns [deposited_vault_receipt_token_amount]
+    pub(super) fn deposit_vault_receipt_token(
+        &mut self,
+        vault_receipt_token_mint: Pubkey,
+        vault_receipt_token_amount: u64,
+    ) -> Result<u64> {
+        if self.deposit_enabled == 0 {
+            err!(ErrorCode::FundDepositDisabledError)?
+        }
+
+        self.get_restaking_vaults_iter_mut()
+            .find(|restaking_vault| restaking_vault.receipt_token_mint == vault_receipt_token_mint)
+            .ok_or_else(|| error!(ErrorCode::FundRestakingVaultNotFoundError))?
+            .deposit_vault_receipt_token(vault_receipt_token_amount)?;
+
+        Ok(vault_receipt_token_amount)
+    }
+
     /// returns [deposited_amount, offsetted_receivable_amount]
     pub(super) fn donate(
         &mut self,

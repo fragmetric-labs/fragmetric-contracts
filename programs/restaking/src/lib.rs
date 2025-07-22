@@ -1192,6 +1192,40 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
+    // UserFundVaultReceiptTokenContext
+    ////////////////////////////////////////////
+
+    pub fn user_deposit_vault_receipt_token<'info>(
+        ctx: Context<'_, '_, 'info, 'info, UserFundVaultReceiptTokenContext<'info>>,
+        amount: u64,
+        metadata: Option<modules::fund::DepositMetadata>,
+    ) -> Result<()> {
+        emit_cpi!(modules::fund::UserFundService::new(
+            &mut ctx.accounts.receipt_token_mint,
+            &ctx.accounts.receipt_token_program,
+            &mut ctx.accounts.fund_account,
+            &mut ctx.accounts.reward_account,
+            &ctx.accounts.user,
+            &mut ctx.accounts.user_receipt_token_account,
+            &mut ctx.accounts.user_fund_account,
+            &mut ctx.accounts.user_reward_account,
+        )?
+        .process_deposit_vault_receipt_token(
+            &ctx.accounts.vault_receipt_token_program,
+            &ctx.accounts.vault_receipt_token_mint,
+            &ctx.accounts.fund_vault_receipt_token_reserve_account,
+            &ctx.accounts.user_vault_receipt_token_account,
+            &ctx.accounts.instructions_sysvar,
+            ctx.remaining_accounts,
+            amount,
+            metadata,
+            &ADMIN_PUBKEY,
+        )?);
+
+        Ok(())
+    }
+
+    ////////////////////////////////////////////
     // UserFundWrappedTokenContext
     ////////////////////////////////////////////
 

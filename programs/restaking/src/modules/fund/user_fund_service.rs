@@ -266,6 +266,130 @@ impl<'a, 'info> UserFundService<'a, 'info> {
         )
     }
 
+    pub fn process_deposit_vault_receipt_token(
+        &mut self,
+        vault_receipt_token_program: &Interface<'info, TokenInterface>,
+        vault_receipt_token_mint: &InterfaceAccount<'info, Mint>,
+        fund_vault_receipt_token_reserve_account: &InterfaceAccount<'info, TokenAccount>,
+        user_vault_receipt_token_account: &InterfaceAccount<'info, TokenAccount>,
+        instructions_sysvar: &AccountInfo,
+        pricing_sources: &'info [AccountInfo<'info>],
+        vault_receipt_token_amount: u64,
+        metadata: Option<DepositMetadata>,
+        metadata_signer_key: &Pubkey,
+    ) -> Result<events::UserDepositedToFund> {
+        // validate user asset balance
+        require_gte!(
+            user_vault_receipt_token_account.amount,
+            vault_receipt_token_amount
+        );
+
+        // validate deposit metadata
+        let (wallet_provider, contribution_accrual_rate) = metadata
+            .map(|metadata| {
+                metadata.verify(
+                    instructions_sysvar,
+                    metadata_signer_key,
+                    self.user.key,
+                    self.current_timestamp,
+                )
+            })
+            .transpose()?
+            .unzip();
+
+        // mint receipt token
+        let mut pricing_service = FundService::new(self.receipt_token_mint, self.fund_account)?
+            .new_pricing_service(pricing_sources, false)?;
+
+        let mut deposit_residual_micro_receipt_token_amount = self
+            .fund_account
+            .load()?
+            .deposit_residual_micro_receipt_token_amount;
+        let receipt_token_mint_amount = if self.receipt_token_mint.supply == 0 {
+            vault_receipt_token_amount
+        } else {
+            pricing_service.convert_asset_amount(
+                Some(&vault_receipt_token_mint.key()),
+                vault_receipt_token_amount,
+                Some(&self.receipt_token_mint.key()),
+                &mut deposit_residual_micro_receipt_token_amount,
+            )?
+        };
+
+        token_2022::mint_to(
+            CpiContext::new_with_signer(
+                self.receipt_token_program.to_account_info(),
+                token_2022::MintTo {
+                    mint: self.receipt_token_mint.to_account_info(),
+                    to: self.user_receipt_token_account.to_account_info(),
+                    authority: self.fund_account.to_account_info(),
+                },
+                &[self.fund_account.load()?.get_seeds().as_ref()],
+            ),
+            receipt_token_mint_amount,
+        )?;
+
+        self.user_fund_account
+            .reload_receipt_token_amount(self.user_receipt_token_account)?;
+
+        // increase user's reward accrual rate
+        let updated_user_reward_accounts =
+            RewardService::new(self.receipt_token_mint, self.reward_account)?
+                .update_reward_pools_token_allocation(
+                    None,
+                    Some(self.user_reward_account),
+                    receipt_token_mint_amount,
+                    contribution_accrual_rate,
+                )?;
+
+        // update fund state
+        let deposited_amount = {
+            let mut fund_account = self.fund_account.load_mut()?;
+            fund_account.reload_receipt_token_supply(self.receipt_token_mint)?;
+            fund_account.deposit_residual_micro_receipt_token_amount =
+                deposit_residual_micro_receipt_token_amount;
+            fund_account.deposit_vault_receipt_token(
+                vault_receipt_token_mint.key(),
+                vault_receipt_token_amount,
+            )?
+        };
+        assert_eq!(vault_receipt_token_amount, deposited_amount);
+
+        // transfer user asset to the fund
+        token_interface::transfer_checked(
+            CpiContext::new(
+                vault_receipt_token_program.to_account_info(),
+                token_interface::TransferChecked {
+                    from: user_vault_receipt_token_account.to_account_info(),
+                    to: fund_vault_receipt_token_reserve_account.to_account_info(),
+                    mint: vault_receipt_token_mint.to_account_info(),
+                    authority: self.user.to_account_info(),
+                },
+            ),
+            deposited_amount,
+            vault_receipt_token_mint.decimals,
+        )?;
+
+        // update asset value again
+        FundService::new(self.receipt_token_mint, self.fund_account)?
+            .update_asset_values(&mut pricing_service, true)?;
+
+        Ok(events::UserDepositedToFund {
+            receipt_token_mint: self.receipt_token_mint.key(),
+            fund_account: self.fund_account.key(),
+            supported_token_mint: Some(vault_receipt_token_mint.key()),
+            updated_user_reward_accounts,
+            user: self.user.key(),
+            user_receipt_token_account: self.user_receipt_token_account.key(),
+            user_fund_account: self.user_fund_account.key(),
+            user_supported_token_account: Some(user_vault_receipt_token_account.key()),
+            wallet_provider,
+            contribution_accrual_rate,
+            deposited_amount,
+            minted_receipt_token_amount: receipt_token_mint_amount,
+        })
+    }
+
     pub fn process_request_withdrawal(
         &mut self,
         receipt_token_lock_account: &mut InterfaceAccount<'info, TokenAccount>,
