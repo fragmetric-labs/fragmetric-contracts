@@ -223,15 +223,26 @@ impl RewardSettlementBlock {
             return Ok(0);
         }
 
-        let amount = u64::try_from(
-            U256::from(contribution)
-                .checked_mul(U256::from(self.amount))
-                .and_then(|x| x.checked_div(U256::from(self.get_block_contribution())))
-                .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?,
-        )
-        .map_err(|_| error!(ErrorCode::CalculationArithmeticException))?;
+        let block_contribution = self.get_block_contribution();
+        let settled_amount = match contribution
+            .checked_mul(self.amount as u128)
+            .and_then(|x| x.checked_div(block_contribution))
+        {
+            Some(result) => u64::try_from(result)
+                .map_err(|_| error!(ErrorCode::CalculationArithmeticException))?,
+            None => {
+                // fallback to U256 if overflow happens
+                u64::try_from(
+                    U256::from(contribution)
+                        .checked_mul(U256::from(self.amount))
+                        .and_then(|x| x.checked_div(U256::from(block_contribution)))
+                        .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?,
+                )
+                .map_err(|_| error!(ErrorCode::CalculationArithmeticException))?
+            }
+        };
 
-        self.user_settled_amount += amount;
+        self.user_settled_amount += settled_amount;
         self.user_settled_contribution += contribution;
 
         require_gte!(
@@ -245,7 +256,7 @@ impl RewardSettlementBlock {
             ErrorCode::RewardInvalidTotalUserSettledContributionException
         );
 
-        Ok(amount)
+        Ok(settled_amount)
     }
 }
 
