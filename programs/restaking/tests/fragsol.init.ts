@@ -603,6 +603,7 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
         vault: 'HR1ANmDHjaEhknvsTaK48M5xZtbBiwNdXM5NTiWhAb4S',
         solAllocationWeight: 100n,
         solAllocationCapacityAmount: MAX_U64,
+        vaultReceiptTokenDepositable: true,
       }),
 
     // configure reward settings
@@ -755,6 +756,7 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
         ],
         solAllocationCapacityAmount: MAX_U64,
         solAllocationWeight: 1n,
+        vaultReceiptTokenDepositable: true,
       }),
 
     // initialize address lookup table (3)

@@ -255,6 +255,7 @@ describe('restaking.fragJTO test', async () => {
             "solAllocationCapacityAmount": 18446744073709551615n,
             "solAllocationWeight": 1n,
             "vault": "BmJvUzoiiNBRx3v2Gqsix9WvVtw8FaztrfBHQyqpMbTd",
+            "vaultReceiptTokenDepositable": 0,
           },
         ],
         "tokenSwapStrategies": [

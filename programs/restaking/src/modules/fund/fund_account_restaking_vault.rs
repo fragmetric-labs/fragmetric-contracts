@@ -60,7 +60,9 @@ pub(super) struct RestakingVault {
     /// It does NOT include unrestaking amount as vrt.
     pub pending_supported_token_unrestaking_amount: u64,
 
-    _reserved: [u8; 776],
+    pub receipt_token_depositable: u8,
+
+    _reserved: [u8; 775],
 }
 
 #[zero_copy]
@@ -155,6 +157,11 @@ impl RestakingVault {
         Ok(self)
     }
 
+    pub(super) fn set_receipt_token_depositable(&mut self, depositable: bool) -> &mut Self {
+        self.receipt_token_depositable = depositable as u8;
+        self
+    }
+
     pub fn get_reward_commission_amount(&self, reward_token_amount: u64) -> Result<u64> {
         crate::utils::get_proportional_amount(
             reward_token_amount,
@@ -164,6 +171,10 @@ impl RestakingVault {
     }
 
     pub fn deposit_vault_receipt_token(&mut self, vault_receipt_token_amount: u64) -> Result<()> {
+        if self.receipt_token_depositable == 0 {
+            err!(ErrorCode::FundDepositNotSupportedAsset)?;
+        }
+
         self.receipt_token_operation_reserved_amount += vault_receipt_token_amount;
 
         Ok(())

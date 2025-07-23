@@ -4751,6 +4751,10 @@
         {
           "name": "reward_commission_rate_bps",
           "type": "u16"
+        },
+        {
+          "name": "vault_receipt_token_depositable",
+          "type": "bool"
         }
       ]
     },
@@ -15427,11 +15431,15 @@
             "type": "u64"
           },
           {
+            "name": "receipt_token_depositable",
+            "type": "u8"
+          },
+          {
             "name": "_reserved",
             "type": {
               "array": [
                 "u8",
-                776
+                775
               ]
             }
           }

@@ -543,12 +543,14 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         sol_allocation_weight: u64,
         sol_allocation_capacity_amount: u64,
         reward_commission_rate_bps: u16,
+        vault_receipt_token_depositable: bool,
     ) -> Result<events::FundManagerUpdatedFund> {
         self.fund_account
             .load_mut()?
             .get_restaking_vault_mut(vault)?
             .set_sol_allocation_strategy(sol_allocation_weight, sol_allocation_capacity_amount)?
-            .set_reward_commission_rate_bps(reward_commission_rate_bps)?;
+            .set_reward_commission_rate_bps(reward_commission_rate_bps)?
+            .set_receipt_token_depositable(vault_receipt_token_depositable);
 
         self.create_fund_manager_updated_fund_event()
     }

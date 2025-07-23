@@ -1281,6 +1281,7 @@ export class RestakingFundAccountContext extends AccountContext<
           solAllocationWeight: item.solAllocationWeight,
           solAllocationCapacityAmount: item.solAllocationCapacityAmount,
           rewardCommissionRateBps: item.rewardCommissionRateBps,
+          vaultReceiptTokenDepositable: item.receiptTokenDepositable as unknown as boolean,
           delegations: item.delegations
             .slice(0, item.numDelegations)
             .map((delegationItem) => {
@@ -1693,6 +1694,7 @@ export class RestakingFundAccountContext extends AccountContext<
           solAllocationWeight: v.bigint(),
           solAllocationCapacityAmount: v.bigint(),
           rewardCommissionRateBps: v.number(),
+          vaultReceiptTokenDepositable: v.boolean(),
           delegations: v.array(
             v.intersect([
               v.object({

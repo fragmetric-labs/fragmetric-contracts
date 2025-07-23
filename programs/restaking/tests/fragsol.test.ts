@@ -731,6 +731,7 @@ describe('restaking.fragSOL test', async () => {
             "solAllocationCapacityAmount": 18446744073709551615n,
             "solAllocationWeight": 1n,
             "vault": "HR1ANmDHjaEhknvsTaK48M5xZtbBiwNdXM5NTiWhAb4S",
+            "vaultReceiptTokenDepositable": 1,
           },
         ],
         "tokenSwapStrategies": [],

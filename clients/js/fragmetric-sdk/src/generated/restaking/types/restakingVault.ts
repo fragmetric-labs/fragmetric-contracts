@@ -92,6 +92,7 @@ export type RestakingVault = {
    * It does NOT include unrestaking amount as vrt.
    */
   pendingSupportedTokenUnrestakingAmount: bigint;
+  receiptTokenDepositable: number;
   reserved: ReadonlyUint8Array;
 };
 
@@ -134,6 +135,7 @@ export type RestakingVaultArgs = {
    * It does NOT include unrestaking amount as vrt.
    */
   pendingSupportedTokenUnrestakingAmount: number | bigint;
+  receiptTokenDepositable: number;
   reserved: ReadonlyUint8Array;
 };
 
@@ -182,7 +184,8 @@ export function getRestakingVaultEncoder(): Encoder<RestakingVaultArgs> {
     ],
     ['padding5', fixEncoderSize(getBytesEncoder(), 32)],
     ['pendingSupportedTokenUnrestakingAmount', getU64Encoder()],
-    ['reserved', fixEncoderSize(getBytesEncoder(), 776)],
+    ['receiptTokenDepositable', getU8Encoder()],
+    ['reserved', fixEncoderSize(getBytesEncoder(), 775)],
   ]);
 }
 
@@ -231,7 +234,8 @@ export function getRestakingVaultDecoder(): Decoder<RestakingVault> {
     ],
     ['padding5', fixDecoderSize(getBytesDecoder(), 32)],
     ['pendingSupportedTokenUnrestakingAmount', getU64Decoder()],
-    ['reserved', fixDecoderSize(getBytesDecoder(), 776)],
+    ['receiptTokenDepositable', getU8Decoder()],
+    ['reserved', fixDecoderSize(getBytesDecoder(), 775)],
   ]);
 }
 

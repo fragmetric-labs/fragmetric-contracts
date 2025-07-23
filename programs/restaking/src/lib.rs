@@ -291,6 +291,7 @@ pub mod restaking {
         sol_allocation_weight: u64,
         sol_allocation_capacity_amount: u64,
         reward_commission_rate_bps: u16,
+        vault_receipt_token_depositable: bool,
     ) -> Result<()> {
         emit_cpi!(modules::fund::FundConfigurationService::new(
             &mut ctx.accounts.receipt_token_mint,
@@ -301,6 +302,7 @@ pub mod restaking {
             sol_allocation_weight,
             sol_allocation_capacity_amount,
             reward_commission_rate_bps,
+            vault_receipt_token_depositable,
         )?);
 
         Ok(())
