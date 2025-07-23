@@ -2154,7 +2154,7 @@ describe('restaking.fragSOL test', async () => {
     await validator.airdropToken(
       signer1.address,
       restaking.fragSOL.fund.restakingVaults[0].receiptTokenMint.address,
-      assetAmount,
+      assetAmount
     );
 
     // deposit vrt to fund
@@ -2179,7 +2179,7 @@ describe('restaking.fragSOL test', async () => {
         },
         "events": {
           "unknown": [],
-          "userDepositedToFund": {
+          "userDepositedToVault": {
             "contributionAccrualRate": {
               "__option": "None",
             },
@@ -2187,20 +2187,15 @@ describe('restaking.fragSOL test', async () => {
             "fundAccount": "7xraTDZ4QWgvgJ5SCZp4hyJN2XEfyGRySQjdG49iZfU8",
             "mintedReceiptTokenAmount": 99999999997n,
             "receiptTokenMint": "Cs29UiPhAkM2v8fZW7qCJ1UjhF1UAhgrsKj61yGGYizD",
-            "supportedTokenMint": {
-              "__option": "Some",
-              "value": "CkXLPfDG3cDawtUvnztq99HdGoQWhJceBZxqKYL2TUrg",
-            },
             "updatedUserRewardAccounts": [
               "9XZgibwtji6havXCPHKRoqpnR7MJUYgavQKCvDWALXGR",
             ],
             "user": "EhxcijcPKVdQ9zTSXGeLrgSEFJjbiNiC34j9prg3St29",
             "userFundAccount": "47srXvirv37rsKhrVxtz7JWGq4CE2Ao4vjFUvTNdvg92",
             "userReceiptTokenAccount": "BWfL432qksE6DpBEpRsuqaq4U6GdgPz1PGXKXNQkfr8M",
-            "userSupportedTokenAccount": {
-              "__option": "Some",
-              "value": "SdKJLWgey12UdHAjsEn6e5RzQfUZcwbfNehf5U19we7",
-            },
+            "userVaultReceiptTokenAccount": "SdKJLWgey12UdHAjsEn6e5RzQfUZcwbfNehf5U19we7",
+            "vaultAccount": "HR1ANmDHjaEhknvsTaK48M5xZtbBiwNdXM5NTiWhAb4S",
+            "vaultReceiptTokenMint": "CkXLPfDG3cDawtUvnztq99HdGoQWhJceBZxqKYL2TUrg",
             "walletProvider": {
               "__option": "None",
             },
@@ -2219,7 +2214,7 @@ describe('restaking.fragSOL test', async () => {
         fund_1?.data.restakingVaults[0].receiptTokenOperationReservedAmount!
     ).toEqual(assetAmount);
     expect(user1_2?.receiptTokenAmount! - user1_1?.receiptTokenAmount!).toEqual(
-      res_1.events?.userDepositedToFund?.mintedReceiptTokenAmount
+      res_1.events?.userDepositedToVault?.mintedReceiptTokenAmount
     );
   });
 });

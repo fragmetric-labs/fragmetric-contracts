@@ -11758,6 +11758,19 @@
       ]
     },
     {
+      "name": "UserDepositedToVault",
+      "discriminator": [
+        246,
+        243,
+        21,
+        7,
+        151,
+        242,
+        117,
+        202
+      ]
+    },
+    {
       "name": "UserRequestedWithdrawalFromFund",
       "discriminator": [
         23,
@@ -17133,6 +17146,72 @@
             "type": {
               "option": "pubkey"
             }
+          },
+          {
+            "name": "wallet_provider",
+            "type": {
+              "option": "string"
+            }
+          },
+          {
+            "name": "contribution_accrual_rate",
+            "type": {
+              "option": "u16"
+            }
+          },
+          {
+            "name": "deposited_amount",
+            "type": "u64"
+          },
+          {
+            "name": "minted_receipt_token_amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "UserDepositedToVault",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "receipt_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "fund_account",
+            "type": "pubkey"
+          },
+          {
+            "name": "vault_account",
+            "type": "pubkey"
+          },
+          {
+            "name": "vault_receipt_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "updated_user_reward_accounts",
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "user_receipt_token_account",
+            "type": "pubkey"
+          },
+          {
+            "name": "user_fund_account",
+            "type": "pubkey"
+          },
+          {
+            "name": "user_vault_receipt_token_account",
+            "type": "pubkey"
           },
           {
             "name": "wallet_provider",

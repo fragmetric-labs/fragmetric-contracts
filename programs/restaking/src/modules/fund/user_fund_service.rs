@@ -276,7 +276,7 @@ impl<'a, 'info> UserFundService<'a, 'info> {
         pricing_sources: &'info [AccountInfo<'info>],
         metadata: Option<DepositMetadata>,
         metadata_signer_key: &Pubkey,
-    ) -> Result<events::UserDepositedToFund> {
+    ) -> Result<events::UserDepositedToVault> {
         // validate vault receipt token mint
         self.fund_account
             .load()?
@@ -372,15 +372,20 @@ impl<'a, 'info> UserFundService<'a, 'info> {
         FundService::new(self.receipt_token_mint, self.fund_account)?
             .update_asset_values(&mut pricing_service, true)?;
 
-        Ok(events::UserDepositedToFund {
+        Ok(events::UserDepositedToVault {
             receipt_token_mint: self.receipt_token_mint.key(),
             fund_account: self.fund_account.key(),
-            supported_token_mint: Some(vault_receipt_token_mint.key()),
+            vault_account: self
+                .fund_account
+                .load()?
+                .get_restaking_vault_by_receipt_token_mint(&vault_receipt_token_mint.key())?
+                .vault,
+            vault_receipt_token_mint: vault_receipt_token_mint.key(),
             updated_user_reward_accounts,
             user: self.user.key(),
             user_receipt_token_account: self.user_receipt_token_account.key(),
             user_fund_account: self.user_fund_account.key(),
-            user_supported_token_account: Some(user_vault_receipt_token_account.key()),
+            user_vault_receipt_token_account: user_vault_receipt_token_account.key(),
             wallet_provider,
             contribution_accrual_rate,
             deposited_amount,

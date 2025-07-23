@@ -312,7 +312,8 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
       anchorEventDecoders: getRestakingAnchorEventDecoders(
         'userDepositedToFund',
         'userCreatedOrUpdatedFundAccount',
-        'userCreatedOrUpdatedRewardAccount'
+        'userCreatedOrUpdatedRewardAccount',
+        'userDepositedToVault'
       ),
       addressLookupTables: [this.__resolveAddressLookupTable],
       instructions: [

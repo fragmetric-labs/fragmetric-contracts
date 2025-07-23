@@ -103,6 +103,7 @@ export enum RestakingAccount {
   UserCreatedOrUpdatedRewardAccount,
   UserDelegatedRewardAccount,
   UserDepositedToFund,
+  UserDepositedToVault,
   UserRequestedWithdrawalFromFund,
   UserTransferredReceiptToken,
   UserUnwrappedReceiptToken,
@@ -334,6 +335,17 @@ export function identifyRestakingAccount(
     )
   ) {
     return RestakingAccount.UserDepositedToFund;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([246, 243, 21, 7, 151, 242, 117, 202])
+      ),
+      0
+    )
+  ) {
+    return RestakingAccount.UserDepositedToVault;
   }
   if (
     containsBytes(
