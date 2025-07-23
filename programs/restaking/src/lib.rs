@@ -1,4 +1,3 @@
-#![allow(unexpected_cfgs)]
 use anchor_lang::prelude::*;
 use spl_discriminator::SplDiscriminate;
 use spl_transfer_hook_interface::instruction::{
@@ -264,7 +263,6 @@ pub mod restaking {
         token_withdrawable: bool,
         token_withdrawal_normal_reserve_rate_bps: u16,
         token_withdrawal_normal_reserve_max_amount: u64,
-        token_rebalancing_amount: Option<u64>,
         sol_allocation_weight: u64,
         sol_allocation_capacity_amount: u64,
     ) -> Result<()> {
@@ -280,7 +278,6 @@ pub mod restaking {
             token_withdrawable,
             token_withdrawal_normal_reserve_rate_bps,
             token_withdrawal_normal_reserve_max_amount,
-            token_rebalancing_amount,
             sol_allocation_weight,
             sol_allocation_capacity_amount,
         )?);
@@ -293,6 +290,7 @@ pub mod restaking {
         vault: Pubkey,
         sol_allocation_weight: u64,
         sol_allocation_capacity_amount: u64,
+        reward_commission_rate_bps: u16,
     ) -> Result<()> {
         emit_cpi!(modules::fund::FundConfigurationService::new(
             &mut ctx.accounts.receipt_token_mint,
@@ -302,6 +300,7 @@ pub mod restaking {
             &vault,
             sol_allocation_weight,
             sol_allocation_capacity_amount,
+            reward_commission_rate_bps,
         )?);
 
         Ok(())
@@ -313,7 +312,6 @@ pub mod restaking {
         operator: Pubkey,
         token_allocation_weight: u64,
         token_allocation_capacity_amount: u64,
-        token_redelegating_amount: Option<u64>,
     ) -> Result<()> {
         emit_cpi!(modules::fund::FundConfigurationService::new(
             &mut ctx.accounts.receipt_token_mint,
@@ -324,7 +322,6 @@ pub mod restaking {
             &operator,
             token_allocation_weight,
             token_allocation_capacity_amount,
-            token_redelegating_amount,
         )?);
 
         Ok(())
@@ -437,7 +434,7 @@ pub mod restaking {
             &ctx.accounts.from_token_mint,
             &ctx.accounts.to_token_mint,
             swap_source,
-            &ctx.accounts.swap_source_account.as_account_info()
+            ctx.accounts.swap_source_account.as_account_info()
         )?);
 
         Ok(())
@@ -573,9 +570,9 @@ pub mod restaking {
     // FundManagerFundRestakingVaultInitialContext
     ////////////////////////////////////////////
 
-    // TODO: add pricing_source to argument
     pub fn fund_manager_initialize_fund_restaking_vault<'info>(
         ctx: Context<'_, '_, 'info, 'info, FundManagerFundRestakingVaultInitialContext<'info>>,
+        pricing_source: modules::pricing::TokenPricingSource,
     ) -> Result<()> {
         emit_cpi!(modules::fund::FundConfigurationService::new(
             &mut ctx.accounts.receipt_token_mint,
@@ -586,6 +583,7 @@ pub mod restaking {
             &ctx.accounts.vault_account,
             &ctx.accounts.vault_supported_token_mint,
             &ctx.accounts.vault_receipt_token_mint,
+            pricing_source,
             ctx.remaining_accounts,
         )?);
 
@@ -960,8 +958,8 @@ pub mod restaking {
                 .accounts
                 .slasher_normalized_token_withdrawal_ticket_account,
             ctx.bumps.slasher_normalized_token_withdrawal_ticket_account,
-            &mut ctx.accounts.slasher_normalized_token_account,
-            &mut ctx.accounts.slasher,
+            &ctx.accounts.slasher_normalized_token_account,
+            &ctx.accounts.slasher,
             ctx.remaining_accounts,
         )?;
 
@@ -984,14 +982,13 @@ pub mod restaking {
         .process_withdraw(
             &ctx.accounts.supported_token_mint,
             &ctx.accounts.supported_token_program,
-            &mut ctx
-                .accounts
+            &ctx.accounts
                 .normalized_token_pool_supported_token_reserve_account,
             &mut ctx
                 .accounts
                 .slasher_normalized_token_withdrawal_ticket_account,
             &ctx.accounts.slasher,
-            &mut ctx.accounts.destination_supported_token_account,
+            &ctx.accounts.destination_supported_token_account,
             &ctx.accounts.destination_rent_lamports_account,
         )?;
 

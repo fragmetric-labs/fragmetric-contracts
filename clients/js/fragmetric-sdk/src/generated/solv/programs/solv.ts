@@ -14,7 +14,6 @@ import {
   type ReadonlyUint8Array,
 } from '@solana/kit';
 import {
-  type ParsedCloseVaultAccountVersionOneInstruction,
   type ParsedFundManagerDepositInstruction,
   type ParsedFundManagerRequestWithdrawalInstruction,
   type ParsedFundManagerWithdrawInstruction,
@@ -22,9 +21,12 @@ import {
   type ParsedSolvManagerCompleteDepositsInstruction,
   type ParsedSolvManagerCompleteWithdrawalRequestsInstruction,
   type ParsedSolvManagerConfirmDepositsInstruction,
+  type ParsedSolvManagerConfirmDonationsInstruction,
   type ParsedSolvManagerConfirmWithdrawalRequestsInstruction,
+  type ParsedSolvManagerImplySolvProtocolFeeInstruction,
+  type ParsedSolvManagerRefreshSolvReceiptTokenRedemptionRateInstruction,
+  type ParsedSolvManagerSetSolvProtocolFeeRateInstruction,
   type ParsedSolvManagerSetSolvProtocolWalletInstruction,
-  type ParsedSolvManagerSetSolvProtocolWithdrawalFeeRateInstruction,
   type ParsedUpdateVaultAdminRoleInstruction,
   type ParsedVaultManagerInitializeVaultAccountInstruction,
   type ParsedVaultManagerUpdateVaultAccountIfNeededInstruction,
@@ -35,6 +37,16 @@ export const SOLV_PROGRAM_ADDRESS =
 
 export enum SolvAccount {
   VaultAccount,
+  FundManagerDepositedToVault,
+  FundManagerRequestedWithdrawalFromVault,
+  FundManagerWithdrewFromVault,
+  SolvManagerCompletedDeposits,
+  SolvManagerCompletedWithdrawalRequests,
+  SolvManagerConfirmedDeposits,
+  SolvManagerConfirmedDonations,
+  SolvManagerConfirmedWithdrawalRequests,
+  SolvManagerImpliedSolvProtocolFee,
+  SolvManagerRefreshedSRTRedemptionRate,
 }
 
 export function identifySolvAccount(
@@ -52,13 +64,122 @@ export function identifySolvAccount(
   ) {
     return SolvAccount.VaultAccount;
   }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([98, 202, 168, 50, 17, 11, 21, 216])
+      ),
+      0
+    )
+  ) {
+    return SolvAccount.FundManagerDepositedToVault;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([253, 191, 181, 163, 128, 139, 221, 69])
+      ),
+      0
+    )
+  ) {
+    return SolvAccount.FundManagerRequestedWithdrawalFromVault;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([47, 207, 171, 199, 11, 246, 73, 105])
+      ),
+      0
+    )
+  ) {
+    return SolvAccount.FundManagerWithdrewFromVault;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([175, 72, 252, 102, 189, 250, 149, 23])
+      ),
+      0
+    )
+  ) {
+    return SolvAccount.SolvManagerCompletedDeposits;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([70, 228, 95, 28, 180, 19, 243, 95])
+      ),
+      0
+    )
+  ) {
+    return SolvAccount.SolvManagerCompletedWithdrawalRequests;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([93, 34, 243, 171, 210, 71, 136, 126])
+      ),
+      0
+    )
+  ) {
+    return SolvAccount.SolvManagerConfirmedDeposits;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([13, 137, 251, 141, 137, 104, 61, 180])
+      ),
+      0
+    )
+  ) {
+    return SolvAccount.SolvManagerConfirmedDonations;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([129, 98, 133, 96, 161, 27, 7, 237])
+      ),
+      0
+    )
+  ) {
+    return SolvAccount.SolvManagerConfirmedWithdrawalRequests;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([216, 236, 141, 82, 214, 249, 174, 104])
+      ),
+      0
+    )
+  ) {
+    return SolvAccount.SolvManagerImpliedSolvProtocolFee;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([11, 141, 194, 159, 166, 173, 222, 223])
+      ),
+      0
+    )
+  ) {
+    return SolvAccount.SolvManagerRefreshedSRTRedemptionRate;
+  }
   throw new Error(
     'The provided account could not be identified as a solv account.'
   );
 }
 
 export enum SolvInstruction {
-  CloseVaultAccountVersionOne,
   FundManagerDeposit,
   FundManagerRequestWithdrawal,
   FundManagerWithdraw,
@@ -66,9 +187,12 @@ export enum SolvInstruction {
   SolvManagerCompleteDeposits,
   SolvManagerCompleteWithdrawalRequests,
   SolvManagerConfirmDeposits,
+  SolvManagerConfirmDonations,
   SolvManagerConfirmWithdrawalRequests,
+  SolvManagerImplySolvProtocolFee,
+  SolvManagerRefreshSolvReceiptTokenRedemptionRate,
+  SolvManagerSetSolvProtocolFeeRate,
   SolvManagerSetSolvProtocolWallet,
-  SolvManagerSetSolvProtocolWithdrawalFeeRate,
   UpdateVaultAdminRole,
   VaultManagerInitializeVaultAccount,
   VaultManagerUpdateVaultAccountIfNeeded,
@@ -78,17 +202,6 @@ export function identifySolvInstruction(
   instruction: { data: ReadonlyUint8Array } | ReadonlyUint8Array
 ): SolvInstruction {
   const data = 'data' in instruction ? instruction.data : instruction;
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([71, 53, 32, 110, 173, 58, 243, 130])
-      ),
-      0
-    )
-  ) {
-    return SolvInstruction.CloseVaultAccountVersionOne;
-  }
   if (
     containsBytes(
       data,
@@ -170,6 +283,17 @@ export function identifySolvInstruction(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([10, 181, 68, 255, 82, 15, 238, 243])
+      ),
+      0
+    )
+  ) {
+    return SolvInstruction.SolvManagerConfirmDonations;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
         new Uint8Array([127, 214, 165, 25, 146, 58, 240, 236])
       ),
       0
@@ -181,23 +305,45 @@ export function identifySolvInstruction(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([177, 178, 239, 204, 11, 158, 25, 64])
+      ),
+      0
+    )
+  ) {
+    return SolvInstruction.SolvManagerImplySolvProtocolFee;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([119, 3, 154, 59, 16, 59, 175, 79])
+      ),
+      0
+    )
+  ) {
+    return SolvInstruction.SolvManagerRefreshSolvReceiptTokenRedemptionRate;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([76, 63, 232, 98, 67, 66, 251, 177])
+      ),
+      0
+    )
+  ) {
+    return SolvInstruction.SolvManagerSetSolvProtocolFeeRate;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
         new Uint8Array([59, 28, 215, 147, 82, 154, 62, 141])
       ),
       0
     )
   ) {
     return SolvInstruction.SolvManagerSetSolvProtocolWallet;
-  }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([250, 221, 42, 4, 46, 132, 97, 96])
-      ),
-      0
-    )
-  ) {
-    return SolvInstruction.SolvManagerSetSolvProtocolWithdrawalFeeRate;
   }
   if (
     containsBytes(
@@ -241,9 +387,6 @@ export type ParsedSolvInstruction<
   TProgram extends string = '9beGuWXNoKPKCApT6xJUm5435Fz8EMGzoTTXgkcf3zAz',
 > =
   | ({
-      instructionType: SolvInstruction.CloseVaultAccountVersionOne;
-    } & ParsedCloseVaultAccountVersionOneInstruction<TProgram>)
-  | ({
       instructionType: SolvInstruction.FundManagerDeposit;
     } & ParsedFundManagerDepositInstruction<TProgram>)
   | ({
@@ -265,14 +408,23 @@ export type ParsedSolvInstruction<
       instructionType: SolvInstruction.SolvManagerConfirmDeposits;
     } & ParsedSolvManagerConfirmDepositsInstruction<TProgram>)
   | ({
+      instructionType: SolvInstruction.SolvManagerConfirmDonations;
+    } & ParsedSolvManagerConfirmDonationsInstruction<TProgram>)
+  | ({
       instructionType: SolvInstruction.SolvManagerConfirmWithdrawalRequests;
     } & ParsedSolvManagerConfirmWithdrawalRequestsInstruction<TProgram>)
   | ({
+      instructionType: SolvInstruction.SolvManagerImplySolvProtocolFee;
+    } & ParsedSolvManagerImplySolvProtocolFeeInstruction<TProgram>)
+  | ({
+      instructionType: SolvInstruction.SolvManagerRefreshSolvReceiptTokenRedemptionRate;
+    } & ParsedSolvManagerRefreshSolvReceiptTokenRedemptionRateInstruction<TProgram>)
+  | ({
+      instructionType: SolvInstruction.SolvManagerSetSolvProtocolFeeRate;
+    } & ParsedSolvManagerSetSolvProtocolFeeRateInstruction<TProgram>)
+  | ({
       instructionType: SolvInstruction.SolvManagerSetSolvProtocolWallet;
     } & ParsedSolvManagerSetSolvProtocolWalletInstruction<TProgram>)
-  | ({
-      instructionType: SolvInstruction.SolvManagerSetSolvProtocolWithdrawalFeeRate;
-    } & ParsedSolvManagerSetSolvProtocolWithdrawalFeeRateInstruction<TProgram>)
   | ({
       instructionType: SolvInstruction.UpdateVaultAdminRole;
     } & ParsedUpdateVaultAdminRoleInstruction<TProgram>)

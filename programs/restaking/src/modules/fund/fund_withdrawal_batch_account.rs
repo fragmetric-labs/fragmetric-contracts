@@ -45,8 +45,8 @@ impl FundWithdrawalBatchAccount {
         [
             Self::SEED.to_vec(),
             receipt_token_mint.as_ref().to_vec(),
-            if supported_token_mint.is_some() {
-                supported_token_mint.unwrap().as_ref().to_vec()
+            if let Some(supported_token_mint) = supported_token_mint {
+                supported_token_mint.as_ref().to_vec()
             } else {
                 Pubkey::default().as_ref().to_vec()
             },
@@ -196,13 +196,13 @@ impl FundWithdrawalBatchAccount {
             ErrorCode::FundWithdrawalRequestIncorrectBatchError,
         );
 
-        let asset_total_amount = crate::utils::get_proportional_amount(
+        let asset_total_amount = crate::utils::get_proportional_amount_u64(
             request.receipt_token_amount,
             self.asset_user_amount + self.asset_fee_amount,
             self.receipt_token_amount,
         )?;
 
-        let asset_user_amount = crate::utils::get_proportional_amount(
+        let asset_user_amount = crate::utils::get_proportional_amount_u64(
             request.receipt_token_amount,
             self.asset_user_amount,
             self.receipt_token_amount,

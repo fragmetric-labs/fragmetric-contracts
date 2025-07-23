@@ -1,35 +1,24 @@
 use anchor_lang::prelude::*;
-use anchor_spl::{
-    token::{Mint, Token},
-    token_interface::TokenAccount,
-};
+use anchor_spl::token::Token;
+use anchor_spl::token_interface::{Mint, TokenAccount};
 use solv::states::VaultAccount;
+use solv::ID as SOLV_PROGRAM_ID;
 
-use crate::constants::SOLV_PROGRAM_ID;
+use crate::errors::ErrorCode;
+
+use super::ValidateVault;
 
 pub(in crate::modules) struct SolvBTCVaultService<'info> {
     vault_program: &'info AccountInfo<'info>,
     vault_account: AccountLoader<'info, VaultAccount>,
 }
 
-impl<'info> SolvBTCVaultService<'info> {
-    pub fn new(
-        vault_program: &'info AccountInfo<'info>,
+impl ValidateVault for SolvBTCVaultService<'_> {
+    #[inline(never)]
+    fn validate_vault<'info>(
         vault_account: &'info AccountInfo<'info>,
-    ) -> Result<Self> {
-        require_keys_eq!(SOLV_PROGRAM_ID, vault_program.key());
-        require_keys_eq!(*vault_account.owner, vault_program.key());
-
-        Ok(Self {
-            vault_program,
-            vault_account: AccountLoader::try_from(vault_account)?,
-        })
-    }
-
-    pub fn validate_vault(
-        vault_account: &'info AccountInfo<'info>,
-        vault_supported_token_mint: &AccountInfo,
-        vault_receipt_token_mint: &AccountInfo,
+        vault_supported_token_mint: &InterfaceAccount<Mint>,
+        vault_receipt_token_mint: &InterfaceAccount<Mint>,
         fund_account: &AccountInfo,
     ) -> Result<()> {
         let vault_account = AccountLoader::<VaultAccount>::try_from(vault_account)?;
@@ -40,6 +29,22 @@ impl<'info> SolvBTCVaultService<'info> {
         require_keys_eq!(vault.get_vrt_mint(), vault_receipt_token_mint.key());
 
         Ok(())
+    }
+}
+
+impl<'info> SolvBTCVaultService<'info> {
+    pub fn new(
+        vault_program: &'info AccountInfo<'info>,
+        vault_account: &'info AccountInfo<'info>,
+    ) -> Result<Self> {
+        let vault_account = AccountLoader::try_from(vault_account)?;
+
+        require_keys_eq!(SOLV_PROGRAM_ID, vault_program.key());
+
+        Ok(Self {
+            vault_program,
+            vault_account,
+        })
     }
 
     fn find_solv_event_authority_address() -> Pubkey {
@@ -64,7 +69,6 @@ impl<'info> SolvBTCVaultService<'info> {
     fn find_accounts_to_cpi(&self) -> Result<impl Iterator<Item = (Pubkey, bool)>> {
         let vault = self.vault_account.load()?;
 
-        // todo! return required arrays
         let vault_address = self.vault_account.key();
         let vst_mint = vault.get_vst_mint();
         let accounts = Self::find_accounts_to_new(vault_address)?.chain([
@@ -82,11 +86,6 @@ impl<'info> SolvBTCVaultService<'info> {
         ]);
 
         Ok(accounts)
-    }
-
-    pub fn get_supported_token_mint(&self) -> Result<Pubkey> {
-        let vault = self.vault_account.load()?;
-        Ok(vault.get_vst_mint())
     }
 
     /// * (0) vault_program
@@ -322,7 +321,7 @@ impl<'info> SolvBTCVaultService<'info> {
         ))
     }
 
-    /// returns [payer_vault_supported_token_amount, unrestaked_receipt_token_amount, claimed_supported_token_amount, deducted_supported_token_fee_amount, total_unrestaking_vault_receipt_token_amount]
+    /// returns [payer_vault_supported_token_amount, unrestaked_receipt_token_amount, expected_supported_token_amount, claimed_supported_token_amount, deducted_supported_token_fee_amount, total_unrestaking_vault_receipt_token_amount]
     #[inline(never)]
     pub fn withdraw(
         &self,
@@ -340,7 +339,7 @@ impl<'info> SolvBTCVaultService<'info> {
         payer_vault_supported_token_account: &'info AccountInfo<'info>,
         payer: &AccountInfo<'info>,
         payer_seeds: &[&[&[u8]]],
-    ) -> Result<(u64, u64, u64, u64, u64)> {
+    ) -> Result<(u64, u64, u64, u64, u64, u64)> {
         let mut signer_seeds = Vec::with_capacity(2);
         if let Some(seeds) = fund_manager_seeds.first() {
             signer_seeds.push(*seeds);
@@ -360,14 +359,17 @@ impl<'info> SolvBTCVaultService<'info> {
         let vault = self.vault_account.load()?;
 
         let unrestaked_receipt_token_amount = vault.get_vrt_withdrawal_completed_amount();
+        let expected_supported_token_amount =
+            vault.get_vst_total_estimated_amount_from_completed_withdrawal_requests();
         let total_unrestaking_vault_receipt_token_amount =
             vault.get_vrt_withdrawal_incompleted_amount();
         let deducted_supported_token_fee_amount = vault.get_vst_deducted_fee_amount();
-        let claimed_supported_token_amount = vault.get_vst_claimable_amount();
+        let claimed_supported_token_amount = vault.get_vst_total_claimable_amount();
 
         if claimed_supported_token_amount == 0 {
             return Ok((
                 payer_vault_supported_token_amount_before,
+                0,
                 0,
                 0,
                 0,
@@ -411,10 +413,11 @@ impl<'info> SolvBTCVaultService<'info> {
             claimed_supported_token_amount
         );
 
-        msg!("CLAIM_UNRESTAKED#solv: receipt_token_mint={}, payer_vault_supported_token_account_amount={}, unrestaked_receipt_token_amount={}, claimed_supported_token_amount={}, deducted_supported_token_fee_amount={}",
+        msg!("CLAIM_UNRESTAKED#solv: receipt_token_mint={}, payer_vault_supported_token_account_amount={}, unrestaked_receipt_token_amount={}, expected_supported_token_amount={}, claimed_supported_token_amount={}, deducted_supported_token_fee_amount={}",
             vault_receipt_token_mint.key,
             payer_vault_supported_token_account_amount,
             unrestaked_receipt_token_amount,
+            expected_supported_token_amount,
             claimed_supported_token_amount,
             deducted_supported_token_fee_amount
         );
@@ -422,9 +425,22 @@ impl<'info> SolvBTCVaultService<'info> {
         Ok((
             payer_vault_supported_token_account_amount,
             unrestaked_receipt_token_amount,
+            expected_supported_token_amount,
             claimed_supported_token_amount,
             deducted_supported_token_fee_amount,
             total_unrestaking_vault_receipt_token_amount,
+        ))
+    }
+
+    pub fn get_supported_token_to_receipt_token_exchange_ratio(&self) -> Result<(u64, u64)> {
+        let vault = self.vault_account.load()?;
+        let vrt_supply = vault.get_vrt_supply();
+
+        Ok((
+            vault
+                .get_net_asset_value_as_vst()
+                .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?,
+            vrt_supply,
         ))
     }
 }

@@ -1,7 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
-use crate::constants::PROGRAM_REVENUE_ADDRESS;
 use crate::errors::ErrorCode;
 use crate::events;
 
@@ -244,7 +243,7 @@ impl<'a, 'info> RewardService<'a, 'info> {
         Ok(())
     }
 
-    pub(in crate::modules) fn validate_reward_token_reserve_account(
+    pub(super) fn validate_reward_token_reserve_account(
         &self,
         reward_token_mint: Option<&InterfaceAccount<Mint>>,
         reward_token_program: Option<&Interface<TokenInterface>>,

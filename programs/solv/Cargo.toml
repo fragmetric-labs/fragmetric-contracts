@@ -1,6 +1,6 @@
 [package]
 name = "solv"
-version = "0.2.0"
+version = "0.3.0"
 description = "Fragmetric SOLV BTC Vault Program"
 authors = { workspace = true }
 repository = { workspace = true }
@@ -8,6 +8,9 @@ homepage = { workspace = true }
 license = { workspace = true }
 readme = { workspace = true }
 edition = { workspace = true }
+
+[lints]
+workspace = true
 
 [lib]
 crate-type = ["cdylib", "lib"]
@@ -37,3 +40,5 @@ bytemuck = { workspace = true }
 [dev-dependencies]
 anyhow = { workspace = true }
 proptest = { workspace = true }
+rust_decimal = { workspace = true }
+rust_decimal_macros = { workspace = true }

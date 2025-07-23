@@ -5,12 +5,7 @@ use crate::modules::pricing::TokenPricingSource;
 use crate::modules::restaking::JitoRestakingVaultService;
 use crate::utils::PDASeeds;
 
-use super::{
-    FundService, HarvestRewardCommand, OperationCommandContext, OperationCommandEntry,
-    OperationCommandResult, SelfExecutable, WeightedAllocationParticipant,
-    WeightedAllocationStrategy, FUND_ACCOUNT_MAX_RESTAKING_VAULTS,
-    FUND_ACCOUNT_MAX_RESTAKING_VAULT_DELEGATIONS,
-};
+use super::*;
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
 pub struct UndelegateVSTCommand {
@@ -59,9 +54,9 @@ pub struct UndelegateVSTCommandResultUndelegated {
 }
 
 impl SelfExecutable for UndelegateVSTCommand {
-    fn execute<'a, 'info>(
+    fn execute<'info>(
         &self,
-        ctx: &mut OperationCommandContext<'info, 'a>,
+        ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
     ) -> Result<(
         Option<OperationCommandResult>,
@@ -75,17 +70,18 @@ impl SelfExecutable for UndelegateVSTCommand {
 
         Ok((
             result,
-            entry.or_else(|| Some(HarvestRewardCommand::default().without_required_accounts())),
+            entry.or_else(|| {
+                Some(HarvestRestakingYieldCommand::default().without_required_accounts())
+            }),
         ))
     }
 }
 
-#[deny(clippy::wildcard_enum_match_arm)]
 impl UndelegateVSTCommand {
     #[inline(never)]
-    fn execute_new<'info>(
+    fn execute_new(
         &self,
-        ctx: &OperationCommandContext<'info, '_>,
+        ctx: &OperationCommandContext,
     ) -> Result<(
         Option<OperationCommandResult>,
         Option<OperationCommandEntry>,
@@ -99,9 +95,9 @@ impl UndelegateVSTCommand {
         Ok((None, self.create_prepare_command(ctx, vaults)?))
     }
 
-    fn create_prepare_command<'info>(
+    fn create_prepare_command(
         &self,
-        ctx: &OperationCommandContext<'info, '_>,
+        ctx: &OperationCommandContext,
         vaults: Vec<Pubkey>,
     ) -> Result<Option<OperationCommandEntry>> {
         if vaults.is_empty() {

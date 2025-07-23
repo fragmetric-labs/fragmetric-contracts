@@ -204,14 +204,16 @@ export const RESTAKING_ERROR__FUND_RESTAKING_VAULT_DISTRIBUTING_REWARD_TOKEN_NOT
 export const RESTAKING_ERROR__FUND_SUPPORTED_TOKEN_IN_USE_ERROR = 0x17cd; // 6093
 /** FundExceededMaxPricingSourcesError: fund: exceeded max pricing sources */
 export const RESTAKING_ERROR__FUND_EXCEEDED_MAX_PRICING_SOURCES_ERROR = 0x17ce; // 6094
-/** FundRestakingVaultAuthorityNotMatchedError: fund: restaking vault authority not matched */
-export const RESTAKING_ERROR__FUND_RESTAKING_VAULT_AUTHORITY_NOT_MATCHED_ERROR = 0x17cf; // 6095
+/** RestakingVaultAuthorityNotMatchedError: restaking: vault authority not matched */
+export const RESTAKING_ERROR__RESTAKING_VAULT_AUTHORITY_NOT_MATCHED_ERROR = 0x17cf; // 6095
 /** FundRestakingVaultRewardTokenNotRegisteredError: fund: restaking vault reward token not registered */
 export const RESTAKING_ERROR__FUND_RESTAKING_VAULT_REWARD_TOKEN_NOT_REGISTERED_ERROR = 0x17d0; // 6096
 /** FundOperationDisabledError: fund: operation is disabled */
 export const RESTAKING_ERROR__FUND_OPERATION_DISABLED_ERROR = 0x17d1; // 6097
 /** FundTokenSwapStrategyValidationError: fund: token swap strategy validation failed */
 export const RESTAKING_ERROR__FUND_TOKEN_SWAP_STRATEGY_VALIDATION_ERROR = 0x17d2; // 6098
+/** UnexpectedPricingSourceError: unexpected pricing source */
+export const RESTAKING_ERROR__UNEXPECTED_PRICING_SOURCE_ERROR = 0x17d3; // 6099
 
 export type RestakingError =
   | typeof RESTAKING_ERROR__CALCULATION_ARITHMETIC_EXCEPTION
@@ -241,7 +243,6 @@ export type RestakingError =
   | typeof RESTAKING_ERROR__FUND_OPERATION_UNAUTHORIZED_COMMAND_ERROR
   | typeof RESTAKING_ERROR__FUND_RESTAKING_NOT_SUPPORTED_VAULT_ERROR
   | typeof RESTAKING_ERROR__FUND_RESTAKING_VAULT_ALREADY_REGISTERED_ERROR
-  | typeof RESTAKING_ERROR__FUND_RESTAKING_VAULT_AUTHORITY_NOT_MATCHED_ERROR
   | typeof RESTAKING_ERROR__FUND_RESTAKING_VAULT_COMPOUNDING_REWARD_TOKEN_ALREADY_REGISTERED_ERROR
   | typeof RESTAKING_ERROR__FUND_RESTAKING_VAULT_COMPOUNDING_REWARD_TOKEN_NOT_REGISTERED_ERROR
   | typeof RESTAKING_ERROR__FUND_RESTAKING_VAULT_DISTRIBUTING_REWARD_TOKEN_ALREADY_REGISTERED_ERROR
@@ -273,6 +274,7 @@ export type RestakingError =
   | typeof RESTAKING_ERROR__NORMALIZED_TOKEN_POOL_NON_CLAIMABLE_TOKEN_ERROR
   | typeof RESTAKING_ERROR__NORMALIZED_TOKEN_POOL_NOT_ENOUGH_SUPPORTED_TOKEN_EXCEPTION
   | typeof RESTAKING_ERROR__NORMALIZED_TOKEN_POOL_NOT_SUPPORTED_TOKEN_ERROR
+  | typeof RESTAKING_ERROR__RESTAKING_VAULT_AUTHORITY_NOT_MATCHED_ERROR
   | typeof RESTAKING_ERROR__RESTAKING_VAULT_WITHDRAWAL_TICKET_ALREADY_INITIALIZED_ERROR
   | typeof RESTAKING_ERROR__RESTAKING_VAULT_WITHDRAWAL_TICKET_NOT_WITHDRAWABLE_ERROR
   | typeof RESTAKING_ERROR__RESTAKING_VAULT_WITHDRAWAL_TICKETS_EXHAUSTED_ERROR
@@ -312,6 +314,7 @@ export type RestakingError =
   | typeof RESTAKING_ERROR__TOKEN_NOT_TRANSFERABLE_ERROR
   | typeof RESTAKING_ERROR__TOKEN_NOT_TRANSFERRING_EXCEPTION
   | typeof RESTAKING_ERROR__TOKEN_PRICING_SOURCE_ACCOUNT_NOT_FOUND_ERROR
+  | typeof RESTAKING_ERROR__UNEXPECTED_PRICING_SOURCE_ERROR
   | typeof RESTAKING_ERROR__U_T_F8_DECODING_EXCEPTION;
 
 let restakingErrorMessages: Record<RestakingError, string> | undefined;
@@ -344,7 +347,6 @@ if (process.env.NODE_ENV !== 'production') {
     [RESTAKING_ERROR__FUND_OPERATION_UNAUTHORIZED_COMMAND_ERROR]: `fund: unauhorized operation command`,
     [RESTAKING_ERROR__FUND_RESTAKING_NOT_SUPPORTED_VAULT_ERROR]: `fund: not supported restaking vault`,
     [RESTAKING_ERROR__FUND_RESTAKING_VAULT_ALREADY_REGISTERED_ERROR]: `fund: restaking vault already registered`,
-    [RESTAKING_ERROR__FUND_RESTAKING_VAULT_AUTHORITY_NOT_MATCHED_ERROR]: `fund: restaking vault authority not matched`,
     [RESTAKING_ERROR__FUND_RESTAKING_VAULT_COMPOUNDING_REWARD_TOKEN_ALREADY_REGISTERED_ERROR]: `fund: restaking vault compounding reward token already registered`,
     [RESTAKING_ERROR__FUND_RESTAKING_VAULT_COMPOUNDING_REWARD_TOKEN_NOT_REGISTERED_ERROR]: `fund: restaking vault compounding reward token not registered`,
     [RESTAKING_ERROR__FUND_RESTAKING_VAULT_DISTRIBUTING_REWARD_TOKEN_ALREADY_REGISTERED_ERROR]: `fund: restaking vault distributing reward token already registered`,
@@ -376,6 +378,7 @@ if (process.env.NODE_ENV !== 'production') {
     [RESTAKING_ERROR__NORMALIZED_TOKEN_POOL_NON_CLAIMABLE_TOKEN_ERROR]: `normalization: the token is non-claimable for the given withdrawal account`,
     [RESTAKING_ERROR__NORMALIZED_TOKEN_POOL_NOT_ENOUGH_SUPPORTED_TOKEN_EXCEPTION]: `normalization: not enough supported token in the pool`,
     [RESTAKING_ERROR__NORMALIZED_TOKEN_POOL_NOT_SUPPORTED_TOKEN_ERROR]: `normalization: not supported token`,
+    [RESTAKING_ERROR__RESTAKING_VAULT_AUTHORITY_NOT_MATCHED_ERROR]: `restaking: vault authority not matched`,
     [RESTAKING_ERROR__RESTAKING_VAULT_WITHDRAWAL_TICKET_ALREADY_INITIALIZED_ERROR]: `restaking: withdrawal ticket is already initialized`,
     [RESTAKING_ERROR__RESTAKING_VAULT_WITHDRAWAL_TICKET_NOT_WITHDRAWABLE_ERROR]: `restaking: withdrawal ticket is not withdrawable`,
     [RESTAKING_ERROR__RESTAKING_VAULT_WITHDRAWAL_TICKETS_EXHAUSTED_ERROR]: `restaking: all withdrawal tickets are already in use`,
@@ -415,6 +418,7 @@ if (process.env.NODE_ENV !== 'production') {
     [RESTAKING_ERROR__TOKEN_NOT_TRANSFERABLE_ERROR]: `token is not transferable currently`,
     [RESTAKING_ERROR__TOKEN_NOT_TRANSFERRING_EXCEPTION]: `token is not transferring currently`,
     [RESTAKING_ERROR__TOKEN_PRICING_SOURCE_ACCOUNT_NOT_FOUND_ERROR]: `pricing: token pricing source is not found`,
+    [RESTAKING_ERROR__UNEXPECTED_PRICING_SOURCE_ERROR]: `unexpected pricing source`,
     [RESTAKING_ERROR__U_T_F8_DECODING_EXCEPTION]: `utf-8 decoding exception`,
   };
 }

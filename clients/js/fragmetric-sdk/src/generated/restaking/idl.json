@@ -2,7 +2,7 @@
   "address": "4qEHCzsLFUnw8jmhmRSmAK5VhZVoSD1iVqukAf92yHi5",
   "metadata": {
     "name": "restaking",
-    "version": "0.6.4",
+    "version": "0.6.6",
     "spec": "0.1.0",
     "description": "Fragmetric Liquid Restaking Program",
     "repository": "https://github.com/fragmetric-labs/contracts"
@@ -2850,7 +2850,16 @@
           "name": "program"
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "pricing_source",
+          "type": {
+            "defined": {
+              "name": "TokenPricingSource"
+            }
+          }
+        }
+      ]
     },
     {
       "name": "fund_manager_initialize_fund_restaking_vault_delegation",
@@ -4544,12 +4553,6 @@
         {
           "name": "token_allocation_capacity_amount",
           "type": "u64"
-        },
-        {
-          "name": "token_redelegating_amount",
-          "type": {
-            "option": "u64"
-          }
         }
       ]
     },
@@ -4744,6 +4747,10 @@
         {
           "name": "sol_allocation_capacity_amount",
           "type": "u64"
+        },
+        {
+          "name": "reward_commission_rate_bps",
+          "type": "u16"
         }
       ]
     },
@@ -5113,12 +5120,6 @@
         {
           "name": "token_withdrawal_normal_reserve_max_amount",
           "type": "u64"
-        },
-        {
-          "name": "token_rebalancing_amount",
-          "type": {
-            "option": "u64"
-          }
         },
         {
           "name": "sol_allocation_weight",
@@ -11814,8 +11815,8 @@
     },
     {
       "code": 6095,
-      "name": "FundRestakingVaultAuthorityNotMatchedError",
-      "msg": "fund: restaking vault authority not matched"
+      "name": "RestakingVaultAuthorityNotMatchedError",
+      "msg": "restaking: vault authority not matched"
     },
     {
       "code": 6096,
@@ -11831,6 +11832,11 @@
       "code": 6098,
       "name": "FundTokenSwapStrategyValidationError",
       "msg": "fund: token swap strategy validation failed"
+    },
+    {
+      "code": 6099,
+      "name": "UnexpectedPricingSourceError",
+      "msg": "unexpected pricing source"
     }
   ],
   "types": [
@@ -12046,9 +12052,8 @@
             "name": "operation_receivable_amount",
             "docs": [
               "asset: receivable amount that the fund may charge the users requesting withdrawals.",
-              "It is accrued during either the preparation of the withdrawal obligation or rebalancing of LST like fees from (un)staking or (un)restaking.",
-              "And it shall be settled by the withdrawal fee normally. And it also can be written off by a donation operation.",
-              "Then it costs the rebalancing expense to the capital of the fund itself as an operation cost instead of charging the users requesting withdrawals."
+              "It is accrued during the preparation of the withdrawal obligation.",
+              "And it shall be settled by the withdrawal fee normally. And it also can be written off by a donation operation."
             ],
             "type": "u64"
           },
@@ -13064,7 +13069,7 @@
       }
     },
     {
-      "name": "HarvestRewardCommand",
+      "name": "HarvestRestakingYieldCommand",
       "type": {
         "kind": "struct",
         "fields": [
@@ -13072,7 +13077,7 @@
             "name": "state",
             "type": {
               "defined": {
-                "name": "HarvestRewardCommandState"
+                "name": "HarvestRestakingYieldState"
               }
             }
           }
@@ -13080,7 +13085,7 @@
       }
     },
     {
-      "name": "HarvestRewardCommandResult",
+      "name": "HarvestRestakingYieldCommandResult",
       "type": {
         "kind": "struct",
         "fields": [
@@ -13089,11 +13094,19 @@
             "type": "pubkey"
           },
           {
-            "name": "reward_token_mint",
+            "name": "yield_token_mint",
             "type": "pubkey"
           },
           {
-            "name": "reward_token_amount",
+            "name": "yield_token_total_harvested_amount",
+            "type": "i128"
+          },
+          {
+            "name": "yield_token_commission_amount",
+            "type": "u64"
+          },
+          {
+            "name": "fund_supported_token_compounded_amount",
             "type": "u64"
           },
           {
@@ -13103,11 +13116,7 @@
             }
           },
           {
-            "name": "compounded_token_amount",
-            "type": "u64"
-          },
-          {
-            "name": "distributed_token_amount",
+            "name": "reward_token_distributed_amount",
             "type": "u64"
           },
           {
@@ -13115,12 +13124,16 @@
             "type": {
               "option": "pubkey"
             }
+          },
+          {
+            "name": "vault_supported_token_compounded_amount",
+            "type": "i128"
           }
         ]
       }
     },
     {
-      "name": "HarvestRewardCommandState",
+      "name": "HarvestRestakingYieldState",
       "type": {
         "kind": "enum",
         "variants": [
@@ -13128,10 +13141,10 @@
             "name": "New"
           },
           {
-            "name": "NewCompound"
+            "name": "NewCompoundReward"
           },
           {
-            "name": "PrepareCompound",
+            "name": "PrepareCompoundReward",
             "fields": [
               {
                 "name": "vault",
@@ -13161,7 +13174,7 @@
             ]
           },
           {
-            "name": "ExecuteCompound",
+            "name": "ExecuteCompoundReward",
             "fields": [
               {
                 "name": "vault",
@@ -13191,10 +13204,10 @@
             ]
           },
           {
-            "name": "NewDistribute"
+            "name": "NewDistributeReward"
           },
           {
-            "name": "PrepareDistribute",
+            "name": "PrepareDistributeReward",
             "fields": [
               {
                 "name": "vault",
@@ -13209,7 +13222,7 @@
             ]
           },
           {
-            "name": "ExecuteDistribute",
+            "name": "ExecuteDistributeReward",
             "fields": [
               {
                 "name": "vault",
@@ -13220,6 +13233,27 @@
                 "type": {
                   "vec": "pubkey"
                 }
+              }
+            ]
+          },
+          {
+            "name": "NewCompoundVaultSupportedToken"
+          },
+          {
+            "name": "PrepareCompoundVaultSupportedToken",
+            "fields": [
+              {
+                "name": "vault",
+                "type": "pubkey"
+              }
+            ]
+          },
+          {
+            "name": "ExecuteCompoundVaultSupportedToken",
+            "fields": [
+              {
+                "name": "vault",
+                "type": "pubkey"
               }
             ]
           }
@@ -13912,11 +13946,11 @@
             ]
           },
           {
-            "name": "HarvestReward",
+            "name": "HarvestRestakingYield",
             "fields": [
               {
                 "defined": {
-                  "name": "HarvestRewardCommand"
+                  "name": "HarvestRestakingYieldCommand"
                 }
               }
             ]
@@ -14211,11 +14245,11 @@
             ]
           },
           {
-            "name": "HarvestReward",
+            "name": "HarvestRestakingYield",
             "fields": [
               {
                 "defined": {
-                  "name": "HarvestRewardCommandResult"
+                  "name": "HarvestRestakingYieldCommandResult"
                 }
               }
             ]
@@ -14487,6 +14521,12 @@
             "type": "u64"
           },
           {
+            "name": "processed_batch_accounts",
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
             "name": "asset_token_mint",
             "type": {
               "option": "pubkey"
@@ -14693,7 +14733,8 @@
       "name": "RestakingVault",
       "serialization": "bytemuck",
       "repr": {
-        "kind": "c"
+        "kind": "c",
+        "packed": true
       },
       "type": {
         "kind": "struct",
@@ -14857,11 +14898,45 @@
             }
           },
           {
+            "name": "supported_token_compounded_amount",
+            "type": "i128"
+          },
+          {
+            "name": "supported_token_to_receipt_token_exchange_ratio",
+            "type": {
+              "defined": {
+                "name": "TokenExchangeRatio"
+              }
+            }
+          },
+          {
+            "name": "supported_token_to_receipt_token_exchange_ratio_updated_timestamp",
+            "type": "i64"
+          },
+          {
+            "name": "_padding5",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "pending_supported_token_unrestaking_amount",
+            "docs": [
+              "Expected amount of vst by unrestaking vrt.",
+              "This field is updated when the vault uses vst as expected receivable amount after unrestaking process is completed.",
+              "It does NOT include unrestaking amount as vrt."
+            ],
+            "type": "u64"
+          },
+          {
             "name": "_reserved",
             "type": {
               "array": [
                 "u8",
-                856
+                776
               ]
             }
           }
@@ -14904,18 +14979,11 @@
             "type": "u64"
           },
           {
-            "name": "supported_token_redelegating_amount",
-            "docs": [
-              "configuration: the amount requested to be undelegated as soon as possible regardless of current state, this value should be decreased by each undelegation requested amount."
-            ],
-            "type": "u64"
-          },
-          {
             "name": "_reserved",
             "type": {
               "array": [
                 "u8",
-                24
+                32
               ]
             }
           }
@@ -15526,11 +15594,13 @@
             }
           },
           {
-            "name": "rebalancing_amount",
-            "docs": [
-              "configuration: the amount requested to be unstaked as soon as possible regardless of current state, this value should be decreased by each unstaking requested amount."
-            ],
-            "type": "u64"
+            "name": "_padding2",
+            "type": {
+              "array": [
+                "u8",
+                8
+              ]
+            }
           },
           {
             "name": "sol_allocation_weight",
@@ -15637,6 +15707,26 @@
                 6
               ]
             }
+          }
+        ]
+      }
+    },
+    {
+      "name": "TokenExchangeRatio",
+      "serialization": "bytemuck",
+      "repr": {
+        "kind": "c"
+      },
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "numerator",
+            "type": "u64"
+          },
+          {
+            "name": "denominator",
+            "type": "u64"
           }
         ]
       }
@@ -16082,6 +16172,30 @@
       }
     },
     {
+      "name": "UnrestakeVRTCommandItem",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "receipt_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "supported_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "allocated_receipt_token_amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
       "name": "UnrestakeVRTCommandResult",
       "type": {
         "kind": "struct",
@@ -16125,7 +16239,7 @@
                 "type": {
                   "vec": {
                     "defined": {
-                      "name": "UnrestakeVSTCommandItem"
+                      "name": "UnrestakeVRTCommandItem"
                     }
                   }
                 }
@@ -16140,36 +16254,12 @@
                 "type": {
                   "vec": {
                     "defined": {
-                      "name": "UnrestakeVSTCommandItem"
+                      "name": "UnrestakeVRTCommandItem"
                     }
                   }
                 }
               }
             ]
-          }
-        ]
-      }
-    },
-    {
-      "name": "UnrestakeVSTCommandItem",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "vault",
-            "type": "pubkey"
-          },
-          {
-            "name": "receipt_token_mint",
-            "type": "pubkey"
-          },
-          {
-            "name": "supported_token_mint",
-            "type": "pubkey"
-          },
-          {
-            "name": "allocated_receipt_token_amount",
-            "type": "u64"
           }
         ]
       }
@@ -17315,136 +17405,6 @@
   ],
   "constants": [
     {
-      "name": "ADMIN_PUBKEY",
-      "type": "pubkey",
-      "value": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL"
-    },
-    {
-      "name": "DEVNET_BSOL_MINT_ADDRESS",
-      "type": "pubkey",
-      "value": "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1"
-    },
-    {
-      "name": "DEVNET_BSOL_STAKE_POOL_ADDRESS",
-      "type": "pubkey",
-      "value": "azFVdHtAJN8BX3sbGAYkXvtdjdrT5U6rj9rovvUFos9"
-    },
-    {
-      "name": "DEVNET_FRAGJTO_ADDRESS_LOOKUP_TABLE_ADDRESS",
-      "type": "pubkey",
-      "value": "6VHmiiuZAW2PVoY5N16oqs8wYVkXnfmZBcM7Vkbb76jH"
-    },
-    {
-      "name": "DEVNET_FRAGSOL_ADDRESS_LOOKUP_TABLE_ADDRESS",
-      "type": "pubkey",
-      "value": "5i5ExdTT7j36gKyiyjhaEcqFWUESvi6maASJyxKVZLyU"
-    },
-    {
-      "name": "DEVNET_JITOSOL_MINT_ADDRESS",
-      "type": "pubkey",
-      "value": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"
-    },
-    {
-      "name": "DEVNET_JITOSOL_STAKE_POOL_ADDRESS",
-      "type": "pubkey",
-      "value": "Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb"
-    },
-    {
-      "name": "DEVNET_JTO_LIQUIDITY_POOL_ADDRESS",
-      "type": "pubkey",
-      "value": "BQQVo6sz9pTjD1P88C7WgCo4ABLxr8PM6Ycu4fzDZmBQ"
-    },
-    {
-      "name": "DEVNET_JTO_MINT_ADDRESS",
-      "type": "pubkey",
-      "value": "FAkEjwHSbxkojmdiMurSXR11dU5jbfoqVhtjFCXbM1hh"
-    },
-    {
-      "name": "DEVNET_MSOL_MINT_ADDRESS",
-      "type": "pubkey",
-      "value": "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So"
-    },
-    {
-      "name": "DEVNET_MSOL_STAKE_POOL_ADDRESS",
-      "type": "pubkey",
-      "value": "8szGkuLTAux9XMgZ2vtY39jVSowEcpBfFfD8hXSEqdGC"
-    },
-    {
-      "name": "DEVNET_NSOL_MINT_ADDRESS",
-      "type": "pubkey",
-      "value": "nSoLnkrvh2aY792pgCNT6hzx84vYtkviRzxvhf3ws8e"
-    },
-    {
-      "name": "DEVNET_PROGRAM_ID",
-      "type": "pubkey",
-      "value": "frag9zfFME5u1SNhUYGa4cXLzMKgZXF3xwZ2Y1KCYTQ"
-    },
-    {
-      "name": "FRAGJTO_ADDRESS_LOOKUP_TABLE_ADDRESS",
-      "type": "pubkey",
-      "value": "FQ3yeuugxQ6ZhdcoTrFdm8h42uEMpjCnor1kEuvVEsdw"
-    },
-    {
-      "name": "FRAGJTO_JITO_JTO_VAULT_ACCOUNT_ADDRESS",
-      "type": "pubkey",
-      "value": "3MakQASjFk7H7ucyEcA5FUSg6sP2pMxXjVajBEcofn36"
-    },
-    {
-      "name": "FRAGJTO_JITO_JTO_VAULT_RECEIPT_TOKEN_MINT_ADDRESS",
-      "type": "pubkey",
-      "value": "8VHeGZjPRswfDKqNuZfkrBEXH2uhYnuG4ejeKumeMWBu"
-    },
-    {
-      "name": "FRAGJTO_MINT_ADDRESS",
-      "type": "pubkey",
-      "value": "bxn2sjQkkoe1MevsZHWQdVeaY18uTNr9KYUjJsYmC7v"
-    },
-    {
-      "name": "FRAGJTO_WRAPPED_TOKEN_MINT_ADDRESS",
-      "type": "pubkey",
-      "value": "EAvS1wFjAccNpDYbAkW2dwUDEiC7BMvWzwUj2tjRUkHA"
-    },
-    {
-      "name": "FRAGSOL_ADDRESS_LOOKUP_TABLE_ADDRESS",
-      "type": "pubkey",
-      "value": "G45gQa12Uwvnrp2Yb9oWTSwZSEHZWL71QDWvyLz23bNc"
-    },
-    {
-      "name": "FRAGSOL_JITO_JITOSOL_VAULT_ACCOUNT_ADDRESS",
-      "type": "pubkey",
-      "value": "6m2a6ybV4rZ3T5s3oBVDsU2rUuv6ByyCs3KMtv316F4b"
-    },
-    {
-      "name": "FRAGSOL_JITO_JITOSOL_VAULT_RECEIPT_TOKEN_MINT_ADDRESS",
-      "type": "pubkey",
-      "value": "7FViuSBAkJktHkN4jFxFRSmKat9hNenf3MDcbhVRSu24"
-    },
-    {
-      "name": "FRAGSOL_JITO_NSOL_VAULT_ACCOUNT_ADDRESS",
-      "type": "pubkey",
-      "value": "9rNA5PpjRPGxexDSoffQ8yRhMBMvRQrffwSnDBcXJjwY"
-    },
-    {
-      "name": "FRAGSOL_JITO_NSOL_VAULT_RECEIPT_TOKEN_MINT_ADDRESS",
-      "type": "pubkey",
-      "value": "J6AS6PFJip13cStdiuvRrLz2hDZiZvxdLhmsopN7YTDM"
-    },
-    {
-      "name": "FRAGSOL_MINT_ADDRESS",
-      "type": "pubkey",
-      "value": "Cs29UiPhAkM2v8fZW7qCJ1UjhF1UAhgrsKj61yGGYizD"
-    },
-    {
-      "name": "FRAGSOL_NORMALIZED_TOKEN_MINT_ADDRESS",
-      "type": "pubkey",
-      "value": "4noNmx2RpxK4zdr68Fq1CYM5VhN4yjgGZEFyuB7t2pBX"
-    },
-    {
-      "name": "FRAGSOL_WRAPPED_TOKEN_MINT_ADDRESS",
-      "type": "pubkey",
-      "value": "h7veGmqGWmFPe2vbsrKVNARvucfZ2WKCXUvJBmbJ86Q"
-    },
-    {
       "name": "FUND_ACCOUNT_CURRENT_VERSION",
       "docs": [
         "## Version History",
@@ -17455,114 +17415,6 @@
       ],
       "type": "u16",
       "value": "19"
-    },
-    {
-      "name": "FUND_ACCOUNT_OPERATION_COMMAND_EXPIRATION_SECONDS",
-      "type": "i64",
-      "value": "600"
-    },
-    {
-      "name": "FUND_MANAGER_PUBKEY",
-      "type": "pubkey",
-      "value": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
-    },
-    {
-      "name": "JITO_VAULT_CONFIG_ADDRESS",
-      "type": "pubkey",
-      "value": "UwuSgAq4zByffCGCrWH87DsjfsewYjuqHfJEpzw1Jq3"
-    },
-    {
-      "name": "JITO_VAULT_PROGRAM_FEE_WALLET",
-      "type": "pubkey",
-      "value": "5eosrve6LktMZgVNszYzebgmmC7BjLK8NoWyRQtcmGTF"
-    },
-    {
-      "name": "JITO_VAULT_PROGRAM_ID",
-      "type": "pubkey",
-      "value": "Vau1t6sLNxnzB7ZDsef8TLbPLfyZMYXH8WTNqUdm9g8"
-    },
-    {
-      "name": "MAINNET_BBSOL_MINT_ADDRESS",
-      "type": "pubkey",
-      "value": "Bybit2vBJGhPF52GBdNaQfUJ6ZpThSgHBobjWZpLPb4B"
-    },
-    {
-      "name": "MAINNET_BBSOL_STAKE_POOL_ADDRESS",
-      "type": "pubkey",
-      "value": "2aMLkB5p5gVvCwKkdSo5eZAL1WwhZbxezQr1wxiynRhq"
-    },
-    {
-      "name": "MAINNET_BNSOL_MINT_ADDRESS",
-      "type": "pubkey",
-      "value": "BNso1VUJnh4zcfpZa6986Ea66P6TCp59hvtNJ8b1X85"
-    },
-    {
-      "name": "MAINNET_BNSOL_STAKE_POOL_ADDRESS",
-      "type": "pubkey",
-      "value": "Hr9pzexrBge3vgmBNRR8u42CNQgBXdHm4UkUN2DH4a7r"
-    },
-    {
-      "name": "MAINNET_BSOL_MINT_ADDRESS",
-      "type": "pubkey",
-      "value": "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1"
-    },
-    {
-      "name": "MAINNET_BSOL_STAKE_POOL_ADDRESS",
-      "type": "pubkey",
-      "value": "stk9ApL5HeVAwPLr3TLhDXdZS8ptVu7zp6ov8HFDuMi"
-    },
-    {
-      "name": "MAINNET_FRAGJTO_ADDRESS_LOOKUP_TABLE_ADDRESS",
-      "type": "pubkey",
-      "value": "AQtDes99nLUnSK6BQJgj9KJ6b3eDv8bUUxGCmnEJUkY5"
-    },
-    {
-      "name": "MAINNET_FRAGSOL_ADDRESS_LOOKUP_TABLE_ADDRESS",
-      "docs": [
-        "Below address are needed to be passed to transactions which includes pricing of tokens (token deposit, withdrawal request)\nA complete list will be provided to client via address lookup table later.\n*"
-      ],
-      "type": "pubkey",
-      "value": "HjNXH2HMfso5YU6U7McfhsbfoecGR5QTBAxTCSbFoYqy"
-    },
-    {
-      "name": "MAINNET_JITOSOL_MINT_ADDRESS",
-      "type": "pubkey",
-      "value": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"
-    },
-    {
-      "name": "MAINNET_JITOSOL_STAKE_POOL_ADDRESS",
-      "type": "pubkey",
-      "value": "Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb"
-    },
-    {
-      "name": "MAINNET_JTO_LIQUIDITY_POOL_ADDRESS",
-      "type": "pubkey",
-      "value": "2UhFnySoJi6c89aydGAGS7ZRemo2dbkFRhvSJqDX4gHJ"
-    },
-    {
-      "name": "MAINNET_JTO_MINT_ADDRESS",
-      "type": "pubkey",
-      "value": "jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL"
-    },
-    {
-      "name": "MAINNET_MSOL_MINT_ADDRESS",
-      "type": "pubkey",
-      "value": "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So"
-    },
-    {
-      "name": "MAINNET_MSOL_STAKE_POOL_ADDRESS",
-      "type": "pubkey",
-      "value": "8szGkuLTAux9XMgZ2vtY39jVSowEcpBfFfD8hXSEqdGC"
-    },
-    {
-      "name": "MAINNET_NSOL_MINT_ADDRESS",
-      "type": "pubkey",
-      "value": "nSoLnkrvh2aY792pgCNT6hzx84vYtkviRzxvhf3ws8e"
-    },
-    {
-      "name": "MAINNET_PROGRAM_ID",
-      "type": "pubkey",
-      "value": "fragnAis7Bp6FTsMoa6YcH8UffhEw43Ph79qAiK3iF3"
     },
     {
       "name": "NORMALIZED_TOKEN_POOL_ACCOUNT_CURRENT_VERSION",
@@ -17584,11 +17436,6 @@
       "value": "1"
     },
     {
-      "name": "PROGRAM_REVENUE_ADDRESS",
-      "type": "pubkey",
-      "value": "GuSruSKKCmAGuWMeMsiw3mbNhjeiRtNhnh9Eatgz33NA"
-    },
-    {
       "name": "REWARD_ACCOUNT_CURRENT_VERSION",
       "docs": [
         "## Version History",
@@ -17599,21 +17446,6 @@
       "value": "35"
     },
     {
-      "name": "SOLV_PROGRAM_ID",
-      "type": "pubkey",
-      "value": "9beGuWXNoKPKCApT6xJUm5435Fz8EMGzoTTXgkcf3zAz"
-    },
-    {
-      "name": "TARGET",
-      "type": "string",
-      "value": "\"local\""
-    },
-    {
-      "name": "USER_FUND_ACCOUNT_CURRENT_SIZE",
-      "type": "u64",
-      "value": "567"
-    },
-    {
       "name": "USER_FUND_ACCOUNT_CURRENT_VERSION",
       "docs": [
         "## Version History",
@@ -17621,11 +17453,6 @@
       ],
       "type": "u16",
       "value": "1"
-    },
-    {
-      "name": "USER_REWARD_ACCOUNT_CURRENT_SIZE",
-      "type": "u64",
-      "value": "4248"
     },
     {
       "name": "USER_REWARD_ACCOUNT_CURRENT_VERSION",

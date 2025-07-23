@@ -76,7 +76,7 @@ describe('RestakingUserContext on devnet', async () => {
           },
           depositedAmount: 10n,
           fundAccount: '4YHmpuyY54Bsj61qNxYGgtQy8xhacfnhdZ6W92rqB64w',
-          mintedReceiptTokenAmount: 9n,
+          mintedReceiptTokenAmount: 10n,
           receiptTokenMint: 'FRAGSEthVFL7fdqM8hxfxkfCZzUvmg21cqPJVvC1qdbo',
           supportedTokenMint: {
             __option: 'None',

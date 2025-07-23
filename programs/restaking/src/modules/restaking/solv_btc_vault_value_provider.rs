@@ -25,25 +25,15 @@ impl TokenValueProvider for SolvBTCVaultValueProvider {
 
         let vst_mint = vault.get_vst_mint();
         let vrt_supply = vault.get_vrt_supply();
-        if let Some((net_asset_value_as_micro_vst, vrt_supply_as_micro)) = {
+
+        result.numerator.extend([Asset::Token(
+            vst_mint,
+            None,
             vault
-                .get_net_asset_value_as_micro_vst()
-                .zip(vrt_supply.checked_mul(1_000_000))
-        } {
-            result
-                .numerator
-                .extend([Asset::Token(vst_mint, None, net_asset_value_as_micro_vst)]);
-            result.denominator = vrt_supply_as_micro;
-        } else {
-            result.numerator.extend([Asset::Token(
-                vst_mint,
-                None,
-                vault
-                    .get_net_asset_value_as_vst()
-                    .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?,
-            )]);
-            result.denominator = vrt_supply;
-        }
+                .get_net_asset_value_as_vst()
+                .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?,
+        )]);
+        result.denominator = vrt_supply;
 
         Ok(())
     }

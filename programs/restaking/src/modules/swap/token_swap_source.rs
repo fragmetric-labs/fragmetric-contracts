@@ -27,10 +27,6 @@ pub struct TokenSwapSourcePod {
 }
 
 impl TokenSwapSourcePod {
-    pub fn address(&self) -> Pubkey {
-        self.address
-    }
-
     pub fn try_deserialize(&self) -> Result<TokenSwapSource> {
         Ok(match self.discriminant {
             1 => TokenSwapSource::OrcaDEXLiquidityPool {

@@ -9,7 +9,7 @@ describe('restaking.fragJTO test', async () => {
   beforeAll(() => testCtx.initializationTasks);
   afterAll(() => testCtx.validator.quit());
 
-  const { validator, feePayer, restaking, initializationTasks } = testCtx;
+  const { validator, feePayer, restaking, initializationTasks, sdk } = testCtx;
   const ctx = restaking.fragJTO;
   const AMOUNT_PER_FRAGJTO = 1_000_000_000n;
   const AMOUNT_PER_WFRAGJTO = 1_000_000_000n;
@@ -117,6 +117,7 @@ describe('restaking.fragJTO test', async () => {
             "operationReservedAmount": 0n,
             "operationTotalAmount": 0n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "BmJvUzoiiNBRx3v2Gqsix9WvVtw8FaztrfBHQyqpMbTd",
           },
         ],
@@ -163,7 +164,6 @@ describe('restaking.fragJTO test', async () => {
             "tokenAccumulatedDepositCapacityAmount": 18446744073709551615n,
             "tokenDepositable": true,
             "tokenMint": "jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL",
-            "tokenRebalancingAmount": 0n,
             "tokenWithdrawable": true,
             "tokenWithdrawalNormalReserveMaxAmount": 18446744073709551615n,
             "tokenWithdrawalNormalReserveRateBps": 0,
@@ -194,82 +194,64 @@ describe('restaking.fragJTO test', async () => {
                 "operator": "FzZ9EXmHv7ANCXijpALUBzCza6wYNprnsfaEHuoNx9sE",
                 "tokenAllocationCapacityAmount": 18446744073709551615n,
                 "tokenAllocationWeight": 90n,
-                "tokenRedelegatingAmount": 0n,
               },
               {
                 "operator": "LKFpfXtBkH5b7D9mo8dPcjCLZCZpmLQC9ELkbkyVdah",
                 "tokenAllocationCapacityAmount": 18446744073709551615n,
                 "tokenAllocationWeight": 90n,
-                "tokenRedelegatingAmount": 0n,
               },
               {
                 "operator": "GZxp4e2Tm3Pw9GyAaxuF6odT3XkRM96jpZkp3nxhoK4Y",
                 "tokenAllocationCapacityAmount": 18446744073709551615n,
                 "tokenAllocationWeight": 90n,
-                "tokenRedelegatingAmount": 0n,
               },
               {
                 "operator": "CA8PaNSoFWzvbCJ2oK3QxBEutgyHSTT5omEptpj8YHPY",
                 "tokenAllocationCapacityAmount": 18446744073709551615n,
                 "tokenAllocationWeight": 92n,
-                "tokenRedelegatingAmount": 0n,
               },
               {
                 "operator": "7yofWXChEHkPTSnyFdKx2Smq5iWVbGB4P1dkdC6zHWYR",
                 "tokenAllocationCapacityAmount": 18446744073709551615n,
                 "tokenAllocationWeight": 90n,
-                "tokenRedelegatingAmount": 0n,
               },
               {
                 "operator": "29rxXT5zbTR1ctiooHtb1Sa1TD4odzhQHsrLz3D78G5w",
                 "tokenAllocationCapacityAmount": 18446744073709551615n,
                 "tokenAllocationWeight": 90n,
-                "tokenRedelegatingAmount": 0n,
               },
               {
                 "operator": "BFEsrxFPsBcY2hR5kgyfKnpwgEc8wYQdngvRukLQXwG2",
                 "tokenAllocationCapacityAmount": 18446744073709551615n,
                 "tokenAllocationWeight": 90n,
-                "tokenRedelegatingAmount": 0n,
               },
               {
                 "operator": "2sHNuid4rus4sK2EmndLeZcPNKkgzuEoc8Vro3PH2qop",
                 "tokenAllocationCapacityAmount": 18446744073709551615n,
                 "tokenAllocationWeight": 0n,
-                "tokenRedelegatingAmount": 0n,
               },
               {
                 "operator": "5TGRFaLy3eF93pSNiPamCgvZUN3gzdYcs7jA3iCAsd1L",
                 "tokenAllocationCapacityAmount": 18446744073709551615n,
                 "tokenAllocationWeight": 90n,
-                "tokenRedelegatingAmount": 0n,
               },
               {
                 "operator": "6AxtdRGAaiAyqcwxVBHsH3xtqCbQuffaiE4epT4koTxk",
                 "tokenAllocationCapacityAmount": 18446744073709551615n,
                 "tokenAllocationWeight": 80n,
-                "tokenRedelegatingAmount": 0n,
               },
               {
                 "operator": "C6AF8qGCo2dL815ziRCmfdbFeL5xbRLuSTSZzTGBH68y",
                 "tokenAllocationCapacityAmount": 18446744073709551615n,
                 "tokenAllocationWeight": 100n,
-                "tokenRedelegatingAmount": 0n,
               },
             ],
-            "distributingRewardTokens": [
-              {
-                "harvestThresholdIntervalSeconds": 0n,
-                "harvestThresholdMaxAmount": 18446744073709551615n,
-                "harvestThresholdMinAmount": 0n,
-                "lastHarvestedAt": 0n,
-                "mint": "REALSWTCH7J8JdafNBLZpfSCLiFwpMCqod2RpkU4RNn",
-              },
-            ],
+            "distributingRewardTokens": [],
             "pricingSource": {
               "__kind": "JitoRestakingVault",
               "address": "BmJvUzoiiNBRx3v2Gqsix9WvVtw8FaztrfBHQyqpMbTd",
             },
+            "rewardCommissionRateBps": 0,
             "solAllocationCapacityAmount": 18446744073709551615n,
             "solAllocationWeight": 1n,
             "vault": "BmJvUzoiiNBRx3v2Gqsix9WvVtw8FaztrfBHQyqpMbTd",
@@ -715,7 +697,6 @@ describe('restaking.fragJTO test', async () => {
     );
   });
 
-  /** 3. custom accrual rate test */
   test(`rewards can be settled with custom contribution accrual rate enabled`, async () => {
     // starts with user1: 400 fragJTO, user2: 200 fragJTO
     await expectMasked(
@@ -960,7 +941,6 @@ describe('restaking.fragJTO test', async () => {
     );
   });
 
-  /** 4. contribution test with token transfer (user3 has user_reward_account, user4 doesn't have user_reward_account) **/
   test(`contribution is accumulated with users who have user_reward_account`, async () => {
     await expectMasked(
       user3.deposit.execute(
@@ -1187,7 +1167,6 @@ describe('restaking.fragJTO test', async () => {
     );
   });
 
-  /** 5. contribution test with token wrap & unwrap (user3 wraps & unwraps FRAGJTO) **/
   test(`wrapping FRAGXXX affects token allocated amount of user, but global reward account maintains same amount`, async () => {
     // user3 wraps 100 FRAGJTO
     await expectMasked(
@@ -1334,7 +1313,6 @@ describe('restaking.fragJTO test', async () => {
     );
   });
 
-  /** 6. token is subtracted from user account in ascending order (contribution accural rate low to high) **/
   test(`record with low contribution rate is deleted first`, async () => {
     // user4 deposits 200 JTO with 150 accrual rate enabled
     await expectMasked(
@@ -1658,53 +1636,527 @@ describe('restaking.fragJTO test', async () => {
     `);
   });
 
-  test('remove token swap strategy', async () => {
-    const fund_1 = await ctx.fund.resolve(true);
-    expect(fund_1.tokenSwapStrategies).toHaveLength(1);
+  /** 3. deposit */
+  test('user can deposit JTO', async () => {
+    const amountBefore = await user1.receiptToken
+      .resolve(true)
+      .then((res) => res!.amount);
+
+    await expectMasked(
+      user1.deposit.execute(
+        {
+          assetMint: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
+          assetAmount: 1_000_000_000n,
+        },
+        { signers: [signer1] }
+      )
+    ).resolves.toMatchInlineSnapshot(`
+      {
+        "args": {
+          "applyPresetComputeUnitLimit": true,
+          "assetAmount": 1000000000n,
+          "assetMint": "jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL",
+          "metadata": null,
+        },
+        "events": {
+          "unknown": [],
+          "userDepositedToFund": {
+            "contributionAccrualRate": {
+              "__option": "None",
+            },
+            "depositedAmount": 1000000000n,
+            "fundAccount": "Ee1W9enx3w2zv3pkgyNSqWteCaNJwxXBLydDMdTdPUzC",
+            "mintedReceiptTokenAmount": 1000000000n,
+            "receiptTokenMint": "bxn2sjQkkoe1MevsZHWQdVeaY18uTNr9KYUjJsYmC7v",
+            "supportedTokenMint": {
+              "__option": "Some",
+              "value": "jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL",
+            },
+            "updatedUserRewardAccounts": [
+              "5tg3SiYZovwsMBurdBPPiWiexD2h4Yc65wwtV4PEzTTH",
+            ],
+            "user": "FwbWe1Dm9yVJrBsWA8J5e364rJ3MZNKrv3yVyWqAge7B",
+            "userFundAccount": "3JxD7S8V5ZueN7D6ds3CRM4WCsSWtFu1H6A5vu5L8ywb",
+            "userReceiptTokenAccount": "9AKepsFr9maA8gJ72hrYPHZHpeTYH3ZLgp9y9Qbn34iG",
+            "userSupportedTokenAccount": {
+              "__option": "Some",
+              "value": "FCT3V2ZFVrnNaNoXz1yzKyCm2c9w9GrEbp7gdNhN9rVt",
+            },
+            "walletProvider": {
+              "__option": "None",
+            },
+          },
+        },
+        "signature": "MASKED(signature)",
+        "slot": "MASKED(/[.*S|s]lots?$/)",
+        "succeeded": true,
+      }
+    `);
 
     await expect(
-      ctx.fund.removeTokenSwapStrategy.execute({
-        fromTokenMint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
-        toTokenMint: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
-        swapSource: {
-          __kind: 'OrcaDEXLiquidityPool',
-          address: 'G2FiE1yn9N9ZJx5e1E2LxxMnHvb1H3hCuHLPfKJ98smA',
+      user1.receiptToken.resolve(true).then((res) => res?.amount)
+    ).resolves.toEqual(amountBefore + 1_000_000_000n);
+
+    await expect(user1.resolve(true)).resolves.toMatchInlineSnapshot(`
+      {
+        "lamports": 99962596960n,
+        "maxWithdrawalRequests": 4,
+        "receiptTokenAmount": 401000000000n,
+        "receiptTokenMint": "bxn2sjQkkoe1MevsZHWQdVeaY18uTNr9KYUjJsYmC7v",
+        "supportedAssets": [
+          {
+            "amount": 599000000000n,
+            "decimals": 9,
+            "depositable": true,
+            "mint": "jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL",
+            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "withdrawable": true,
+          },
+        ],
+        "user": "FwbWe1Dm9yVJrBsWA8J5e364rJ3MZNKrv3yVyWqAge7B",
+        "withdrawalRequests": [],
+        "wrappedTokenAmount": 0n,
+        "wrappedTokenMint": "EAvS1wFjAccNpDYbAkW2dwUDEiC7BMvWzwUj2tjRUkHA",
+      }
+    `);
+  });
+
+  /** 4. withdraw */
+  test('user can withdraw receipt token as JTO', async () => {
+    const user1Amount = await user1.receiptToken
+      .resolve(true)
+      .then((res) => res!.amount);
+    await expect(
+      user1.requestWithdrawal.execute(
+        {
+          assetMint: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
+          receiptTokenAmount: user1Amount,
         },
+        { signers: [signer1] }
+      )
+    ).resolves.toMatchObject({
+      events: {
+        userRequestedWithdrawalFromFund: {
+          supportedTokenMint: {
+            __option: 'Some',
+            value: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
+          },
+          requestedReceiptTokenAmount: user1Amount,
+          requestId: 1n,
+        },
+      },
+    });
+
+    const user2Amount = await user2.receiptToken
+      .resolve(true)
+      .then((res) => res!.amount);
+    await expect(
+      user2.requestWithdrawal.execute(
+        {
+          assetMint: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
+          receiptTokenAmount: user2Amount,
+        },
+        { signers: [signer2] }
+      )
+    ).resolves.toMatchObject({
+      events: {
+        userRequestedWithdrawalFromFund: {
+          supportedTokenMint: {
+            __option: 'Some',
+            value: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
+          },
+          requestedReceiptTokenAmount: user2Amount,
+          requestId: 2n,
+        },
+      },
+    });
+
+    const user3Amount = await user3.receiptToken
+      .resolve(true)
+      .then((res) => res!.amount);
+    await expect(
+      user3.requestWithdrawal.execute(
+        {
+          assetMint: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
+          receiptTokenAmount: user3Amount,
+        },
+        { signers: [signer3] }
+      )
+    ).resolves.toMatchObject({
+      events: {
+        userRequestedWithdrawalFromFund: {
+          supportedTokenMint: {
+            __option: 'Some',
+            value: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
+          },
+          requestedReceiptTokenAmount: user3Amount,
+          requestId: 3n,
+        },
+      },
+    });
+
+    const user4Amount = await user4.receiptToken
+      .resolve(true)
+      .then((res) => res!.amount);
+    await expect(
+      user4.requestWithdrawal.execute(
+        {
+          assetMint: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
+          receiptTokenAmount: user4Amount,
+        },
+        { signers: [signer4] }
+      )
+    ).resolves.toMatchObject({
+      events: {
+        userRequestedWithdrawalFromFund: {
+          supportedTokenMint: {
+            __option: 'Some',
+            value: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
+          },
+          requestedReceiptTokenAmount: user4Amount,
+          requestId: 4n,
+        },
+      },
+    });
+
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'EnqueueWithdrawalBatch',
+    });
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'ProcessWithdrawalBatch',
+    });
+    await expect(
+      ctx.fund
+        .resolveAccount(true)
+        .then(
+          (account) =>
+            account?.data.supportedTokens.find(
+              (token) =>
+                token.mint == 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL'
+            )?.token.withdrawalLastProcessedBatchId
+        )
+    ).resolves.toEqual(1n);
+
+    const res1 = await user1.withdraw.execute(
+      {
+        assetMint: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
+        requestId: 1n,
+      },
+      { signers: [signer1] }
+    );
+    const evt1 = res1.events!.userWithdrewFromFund!;
+    expect(
+      evt1.burntReceiptTokenAmount,
+      'burntReceiptTokenAmount = withdrawnAmount + deductedFeeAmount + [optional remainder]'
+    ).toBeOneOf([
+      evt1.withdrawnAmount + evt1.deductedFeeAmount,
+      evt1.withdrawnAmount + evt1.deductedFeeAmount + 1n,
+    ]);
+
+    const res2 = await user2.withdraw.execute(
+      {
+        assetMint: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
+        requestId: 2n,
+      },
+      { signers: [signer2] }
+    );
+    const evt2 = res2.events!.userWithdrewFromFund!;
+    expect(
+      evt2.burntReceiptTokenAmount,
+      'burntReceiptTokenAmount = withdrawnAmount + deductedFeeAmount + [optional remainder]'
+    ).toBeOneOf([
+      evt2.withdrawnAmount + evt2.deductedFeeAmount,
+      evt2.withdrawnAmount + evt2.deductedFeeAmount + 1n,
+    ]);
+
+    const res3 = await user3.withdraw.execute(
+      {
+        assetMint: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
+        requestId: 3n,
+      },
+      { signers: [signer3] }
+    );
+    const evt3 = res3.events!.userWithdrewFromFund!;
+    expect(
+      evt3.burntReceiptTokenAmount,
+      'burntReceiptTokenAmount = withdrawnAmount + deductedFeeAmount + [optional remainder]'
+    ).toBeOneOf([
+      evt3.withdrawnAmount + evt3.deductedFeeAmount,
+      evt3.withdrawnAmount + evt3.deductedFeeAmount + 1n,
+    ]);
+
+    const res4 = await user4.withdraw.execute(
+      {
+        assetMint: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
+        requestId: 4n,
+      },
+      { signers: [signer4] }
+    );
+    const evt4 = res4.events!.userWithdrewFromFund!;
+    expect(
+      evt4.burntReceiptTokenAmount,
+      'burntReceiptTokenAmount = withdrawnAmount + deductedFeeAmount + [optional remainder]'
+    ).toBeOneOf([
+      evt4.withdrawnAmount + evt4.deductedFeeAmount,
+      evt4.withdrawnAmount + evt4.deductedFeeAmount + 1n,
+    ]);
+
+    await expect(
+      ctx.resolve(true),
+      'price is reset to 0 if supply = 0'
+    ).resolves.toMatchObject({
+      receiptTokenSupply: 0n,
+      oneReceiptTokenAsSOL: 0n,
+    });
+  });
+
+  /** 5. reward */
+  test('jitoSOL reward is swapped to JTO then compounded', async () => {
+    // jitoSOL reward
+    await validator.airdropToken(
+      'BmJvUzoiiNBRx3v2Gqsix9WvVtw8FaztrfBHQyqpMbTd',
+      'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+      1_000n
+    );
+    // delegate reward token account
+    await ctx.fund
+      .restakingVault(
+        'BmJvUzoiiNBRx3v2Gqsix9WvVtw8FaztrfBHQyqpMbTd',
+        'Vau1t6sLNxnzB7ZDsef8TLbPLfyZMYXH8WTNqUdm9g8'
+      )!
+      // @ts-ignore - Property 'delegateRewardTokenAccount' does not exist on type 'SolvVaultAccountContext | JitoVaultAccountContext | VirtualVaultAccountContext'.
+      .delegateRewardTokenAccount.execute({
+        mint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+        newDelegate: 'Ee1W9enx3w2zv3pkgyNSqWteCaNJwxXBLydDMdTdPUzC',
+      });
+
+    await ctx.fund.reserve.supportedTokens.resolve(true);
+    const supportedTokenOperationReservedAmountBefore =
+      ctx.fund.reserve.supportedTokens.children.find(
+        (token) =>
+          token.account!.data.mint ==
+          'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL'
+      )!.account!.data.amount;
+
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestRestakingYield',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    await ctx.fund.reserve.supportedTokens.resolve(true);
+    const supportedTokenOperationReservedAmountAfter =
+      ctx.fund.reserve.supportedTokens.children.find(
+        (token) =>
+          token.account!.data.mint ==
+          'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL'
+      )!.account!.data.amount;
+
+    expect(supportedTokenOperationReservedAmountAfter).toBeGreaterThan(
+      supportedTokenOperationReservedAmountBefore
+    );
+  });
+
+  test('reward is transferred to revenue account based on commission rate during harvest command execution (swap reward)', async () => {
+    // create vault ATA
+    await validator.airdropToken(
+      'BmJvUzoiiNBRx3v2Gqsix9WvVtw8FaztrfBHQyqpMbTd',
+      'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+      1_000_000_000n
+    );
+    // jitoSOL delegation
+    await ctx.fund.restakingVaults[0].delegateRewardTokenAccount.execute({
+      mint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+      newDelegate: 'Ee1W9enx3w2zv3pkgyNSqWteCaNJwxXBLydDMdTdPUzC',
+    });
+
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestRestakingYield',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    const programRevenueTokenAccount =
+      sdk.TokenAccountContext.fromAssociatedTokenSeeds(restaking, () =>
+        Promise.resolve({
+          owner: 'GuSruSKKCmAGuWMeMsiw3mbNhjeiRtNhnh9Eatgz33NA',
+          mint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+        })
+      );
+
+    for (
+      let rewardCommissionRateBps = 10;
+      rewardCommissionRateBps <= 1000;
+      rewardCommissionRateBps += 90
+    ) {
+      await ctx.fund.updateRestakingVaultStrategy.execute({
+        vault: 'BmJvUzoiiNBRx3v2Gqsix9WvVtw8FaztrfBHQyqpMbTd',
+        rewardCommissionRateBps,
+      });
+
+      const programRevenueCompoundRewardTokenAmountBefore =
+        await programRevenueTokenAccount
+          .resolveAccount(true)
+          .then((account) => account!.data.amount);
+
+      await validator.airdropToken(
+        'BmJvUzoiiNBRx3v2Gqsix9WvVtw8FaztrfBHQyqpMbTd',
+        'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+        1_123_456_789n
+      );
+
+      // harvest compounding reward
+      await ctx.fund.runCommand.executeChained({
+        forceResetCommand: 'HarvestRestakingYield',
+        operator: restaking.knownAddresses.fundManager,
+      });
+
+      const programRevenueCompoundRewardTokenAmountAfter =
+        await programRevenueTokenAccount
+          .resolveAccount(true)
+          .then((account) => account!.data.amount);
+
+      expect(
+        programRevenueCompoundRewardTokenAmountAfter -
+          programRevenueCompoundRewardTokenAmountBefore
+      ).toEqual((1_123_456_789n * BigInt(rewardCommissionRateBps)) / 10000n);
+    }
+
+    // reset commision rate to 0
+    await expect(
+      ctx.fund.updateRestakingVaultStrategy.execute({
+        vault: 'BmJvUzoiiNBRx3v2Gqsix9WvVtw8FaztrfBHQyqpMbTd',
+        rewardCommissionRateBps: 0,
       })
+    ).resolves.not.toThrow();
+  });
+
+  /** 6. operation cycle */
+  test('run operation cycles through multiple epoches to test cash-in/out flows including (un)stake/(un)restake', async () => {
+    const tokenAmount = 1_000_000_000_000n;
+
+    await validator.airdropToken(
+      user1.address!,
+      'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
+      tokenAmount
+    );
+
+    await expect(
+      user1.deposit.execute(
+        {
+          assetMint: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
+          assetAmount: tokenAmount,
+        },
+        {
+          signers: [signer1],
+        }
+      )
     ).resolves.not.toThrow();
 
     await expect(
-      ctx.fund.removeTokenSwapStrategy.execute({
-        fromTokenMint: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL', // invalid from token mint
-        toTokenMint: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
-        swapSource: {
-          __kind: 'OrcaDEXLiquidityPool',
-          address: 'G2FiE1yn9N9ZJx5e1E2LxxMnHvb1H3hCuHLPfKJ98smA',
-        }
-      })
-    ).rejects.toThrowError('Transaction simulation failed'); // fund: token swap strategy not found.
-    await expect(
-      ctx.fund.removeTokenSwapStrategy.execute({
-        fromTokenMint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
-        toTokenMint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn', // invalid to token mint
-        swapSource: {
-          __kind: 'OrcaDEXLiquidityPool',
-          address: 'G2FiE1yn9N9ZJx5e1E2LxxMnHvb1H3hCuHLPfKJ98smA',
-        }
-      })
-    ).rejects.toThrowError('Transaction simulation failed'); // fund: token swap strategy not found.
-    await expect(
-      ctx.fund.removeTokenSwapStrategy.execute({
-        fromTokenMint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
-        toTokenMint: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
-        swapSource: {
-          __kind: 'OrcaDEXLiquidityPool',
-          address: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL', // invalid swap source
-        }
-      })
-    ).rejects.toThrowError('Transaction simulation failed'); // fund: token swap strategy validation error.
+      ctx.fund.runCommand.executeChained(null)
+    ).resolves.not.toThrow();
 
-    const fund_2 = await ctx.fund.resolve(true);
-    expect(fund_2.tokenSwapStrategies).toHaveLength(0);
+    // all assets should be restaked fully (practically a coupe of JTO can be left)
+    await expect(ctx.fund.reserve.supportedTokens.resolve(true)).resolves
+      .toMatchInlineSnapshot(`
+      [
+        {
+          "amount": 3n,
+          "closeAuthority": {
+            "__option": "None",
+          },
+          "delegate": {
+            "__option": "None",
+          },
+          "delegatedAmount": 0n,
+          "isNative": {
+            "__option": "None",
+          },
+          "mint": "jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL",
+          "owner": "3L8ZfDZxC1Q5vPiLdmxRvNRESJJvVud91zTWqV2yTga9",
+          "state": 1,
+        },
+      ]
+    `);
+
+    // now trigger cash-out flow
+    await expect(
+      user1.requestWithdrawal.execute(
+        {
+          assetMint: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
+          receiptTokenAmount: tokenAmount,
+        },
+        { signers: [signer1] }
+      )
+    ).resolves.toMatchObject({
+      events: {
+        userRequestedWithdrawalFromFund: {
+          supportedTokenMint: {
+            __option: 'Some',
+            value: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
+          },
+          requestedReceiptTokenAmount: tokenAmount,
+        },
+      },
+    });
+
+    const withdrawalLastProcessedBatchId = await ctx.fund
+      .resolveAccount(true)
+      .then(
+        (account) =>
+          account!.data.supportedTokens.find(
+            (token) =>
+              token.mint == 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL'
+          )!.token.withdrawalLastProcessedBatchId
+      );
+
+    // to enqueue withdrawal batch and make an unrestake request from vaults
+    await expect(
+      ctx.fund.runCommand.executeChained(null)
+    ).resolves.not.toThrow();
+
+    await expect(validator.skipEpoch()).resolves.not.toThrow();
+    await expect(validator.skipEpoch()).resolves.not.toThrow();
+
+    // to claim unrestaked vst from vaults and process withdrawal batch
+    await expect(
+      ctx.fund.runCommand.executeChained(null)
+    ).resolves.not.toThrow();
+
+    await expect(
+      ctx.fund
+        .resolveAccount(true)
+        .then(
+          (account) =>
+            account!.data.supportedTokens.find(
+              (token) =>
+                token.mint == 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL'
+            )!.token.withdrawalLastProcessedBatchId
+        )
+    ).resolves.toEqual(withdrawalLastProcessedBatchId + 1n);
+    await expectMasked(ctx.fund.latestWithdrawalBatches.resolve(true)).resolves
+      .toMatchInlineSnapshot(`
+      [
+        {
+          "assetFeeAmount": 2040676312n,
+          "assetUserAmount": 2038635636164n,
+          "batchId": 2n,
+          "claimedAssetUserAmount": 0n,
+          "claimedReceiptTokenAmount": 0n,
+          "numClaimedRequests": 0n,
+          "numRequests": 1n,
+          "processedAt": "MASKED(/.*At?$/)",
+          "receiptTokenAmount": 1000000000000n,
+          "receiptTokenMint": "bxn2sjQkkoe1MevsZHWQdVeaY18uTNr9KYUjJsYmC7v",
+          "supportedTokenMint": {
+            "__option": "Some",
+            "value": "jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL",
+          },
+          "supportedTokenProgram": {
+            "__option": "Some",
+            "value": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          },
+        },
+      ]
+    `);
   });
 });

@@ -23,21 +23,21 @@ import {
   type GetDiscriminatedUnionVariantContent,
 } from '@solana/kit';
 import {
-  getUnrestakeVSTCommandItemDecoder,
-  getUnrestakeVSTCommandItemEncoder,
-  type UnrestakeVSTCommandItem,
-  type UnrestakeVSTCommandItemArgs,
+  getUnrestakeVRTCommandItemDecoder,
+  getUnrestakeVRTCommandItemEncoder,
+  type UnrestakeVRTCommandItem,
+  type UnrestakeVRTCommandItemArgs,
 } from '.';
 
 export type UnrestakeVRTCommandState =
   | { __kind: 'New' }
-  | { __kind: 'Prepare'; items: Array<UnrestakeVSTCommandItem> }
-  | { __kind: 'Execute'; items: Array<UnrestakeVSTCommandItem> };
+  | { __kind: 'Prepare'; items: Array<UnrestakeVRTCommandItem> }
+  | { __kind: 'Execute'; items: Array<UnrestakeVRTCommandItem> };
 
 export type UnrestakeVRTCommandStateArgs =
   | { __kind: 'New' }
-  | { __kind: 'Prepare'; items: Array<UnrestakeVSTCommandItemArgs> }
-  | { __kind: 'Execute'; items: Array<UnrestakeVSTCommandItemArgs> };
+  | { __kind: 'Prepare'; items: Array<UnrestakeVRTCommandItemArgs> }
+  | { __kind: 'Execute'; items: Array<UnrestakeVRTCommandItemArgs> };
 
 export function getUnrestakeVRTCommandStateEncoder(): Encoder<UnrestakeVRTCommandStateArgs> {
   return getDiscriminatedUnionEncoder([
@@ -45,13 +45,13 @@ export function getUnrestakeVRTCommandStateEncoder(): Encoder<UnrestakeVRTComman
     [
       'Prepare',
       getStructEncoder([
-        ['items', getArrayEncoder(getUnrestakeVSTCommandItemEncoder())],
+        ['items', getArrayEncoder(getUnrestakeVRTCommandItemEncoder())],
       ]),
     ],
     [
       'Execute',
       getStructEncoder([
-        ['items', getArrayEncoder(getUnrestakeVSTCommandItemEncoder())],
+        ['items', getArrayEncoder(getUnrestakeVRTCommandItemEncoder())],
       ]),
     ],
   ]);
@@ -63,13 +63,13 @@ export function getUnrestakeVRTCommandStateDecoder(): Decoder<UnrestakeVRTComman
     [
       'Prepare',
       getStructDecoder([
-        ['items', getArrayDecoder(getUnrestakeVSTCommandItemDecoder())],
+        ['items', getArrayDecoder(getUnrestakeVRTCommandItemDecoder())],
       ]),
     ],
     [
       'Execute',
       getStructDecoder([
-        ['items', getArrayDecoder(getUnrestakeVSTCommandItemDecoder())],
+        ['items', getArrayDecoder(getUnrestakeVRTCommandItemDecoder())],
       ]),
     ],
   ]);

@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
 use crate::errors::VaultError;
+use crate::events;
 use crate::states::VaultAccount;
 
 #[event_cpi]
@@ -47,7 +48,10 @@ pub struct FundManagerContext<'info> {
     pub token_program: Program<'info, Token>,
 }
 
-pub fn process_deposit(ctx: Context<FundManagerContext>, vst_amount: u64) -> Result<()> {
+pub fn process_deposit(
+    ctx: &mut Context<FundManagerContext>,
+    vst_amount: u64,
+) -> Result<events::FundManagerDepositedToVault> {
     let FundManagerContext {
         payer,
         vault_account,
@@ -94,14 +98,24 @@ pub fn process_deposit(ctx: Context<FundManagerContext>, vst_amount: u64) -> Res
         )?;
     }
 
-    Ok(())
+    Ok(events::FundManagerDepositedToVault {
+        vault: vault_account.key(),
+        vault_supported_token_mint: vault_supported_token_mint.key(),
+        vault_receipt_token_mint: vault_receipt_token_mint.key(),
+        deposited_vst_amount: vst_amount,
+        minted_vrt_amount: vrt_amount,
+    })
 }
 
-pub fn process_request_withdrawal(ctx: Context<FundManagerContext>, vrt_amount: u64) -> Result<()> {
+pub fn process_request_withdrawal(
+    ctx: &mut Context<FundManagerContext>,
+    vrt_amount: u64,
+) -> Result<Option<events::FundManagerRequestedWithdrawalFromVault>> {
     let FundManagerContext {
         payer,
         vault_account,
         vault_receipt_token_mint,
+        vault_supported_token_mint,
         payer_vault_receipt_token_account,
         token_program,
         ..
@@ -110,9 +124,13 @@ pub fn process_request_withdrawal(ctx: Context<FundManagerContext>, vrt_amount: 
     require_gt!(vrt_amount, 0);
     require_gte!(payer_vault_receipt_token_account.amount, vrt_amount);
 
-    let vrt_amount = vault_account
+    let (requested_vrt_amount, estimated_vst_withdrawal_amount) = vault_account
         .load_mut()?
         .enqueue_withdrawal_request(vrt_amount)?;
+
+    if requested_vrt_amount == 0 {
+        return Ok(None);
+    }
 
     anchor_spl::token::burn(
         CpiContext::new(
@@ -123,15 +141,24 @@ pub fn process_request_withdrawal(ctx: Context<FundManagerContext>, vrt_amount: 
                 authority: payer.to_account_info(),
             },
         ),
-        vrt_amount,
+        requested_vrt_amount,
     )?;
 
-    Ok(())
+    Ok(Some(events::FundManagerRequestedWithdrawalFromVault {
+        vault: vault_account.key(),
+        vault_supported_token_mint: vault_supported_token_mint.key(),
+        vault_receipt_token_mint: vault_receipt_token_mint.key(),
+        requested_vrt_amount,
+        estimated_vst_amount: estimated_vst_withdrawal_amount,
+    }))
 }
 
-pub fn process_withdraw(ctx: Context<FundManagerContext>) -> Result<()> {
+pub fn process_withdraw(
+    ctx: &mut Context<FundManagerContext>,
+) -> Result<Option<events::FundManagerWithdrewFromVault>> {
     let FundManagerContext {
         vault_account,
+        vault_receipt_token_mint,
         vault_supported_token_mint,
         payer_vault_supported_token_account,
         vault_vault_supported_token_account,
@@ -139,9 +166,15 @@ pub fn process_withdraw(ctx: Context<FundManagerContext>) -> Result<()> {
         ..
     } = ctx.accounts;
 
-    let vst_amount = vault_account.load_mut()?.claim_vst()?;
+    let (burnt_vrt_amount, claimed_vst_amount, extra_vst_amount, deducted_vst_fee_amount) =
+        vault_account.load_mut()?.claim_vst()?;
 
-    if vst_amount > 0 {
+    if burnt_vrt_amount == 0 {
+        return Ok(None);
+    }
+
+    let total_claimed_vst_amount = claimed_vst_amount + extra_vst_amount;
+    if total_claimed_vst_amount > 0 {
         anchor_spl::token::transfer_checked(
             CpiContext::new_with_signer(
                 token_program.to_account_info(),
@@ -153,10 +186,18 @@ pub fn process_withdraw(ctx: Context<FundManagerContext>) -> Result<()> {
                 },
                 &[&vault_account.load()?.get_seeds()],
             ),
-            vst_amount,
+            total_claimed_vst_amount,
             vault_supported_token_mint.decimals,
         )?;
     }
 
-    Ok(())
+    Ok(Some(events::FundManagerWithdrewFromVault {
+        vault: vault_account.key(),
+        vault_supported_token_mint: vault_supported_token_mint.key(),
+        vault_receipt_token_mint: vault_receipt_token_mint.key(),
+        burnt_vrt_amount,
+        claimed_vst_amount,
+        extra_vst_amount,
+        deducted_vst_fee_amount,
+    }))
 }

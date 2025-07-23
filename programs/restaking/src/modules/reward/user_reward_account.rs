@@ -10,9 +10,6 @@ use super::*;
 /// ## Version History
 /// * v1: Initial Version (4248 ~= 4.14KB)
 pub const USER_REWARD_ACCOUNT_CURRENT_VERSION: u16 = 1;
-#[constant]
-pub const USER_REWARD_ACCOUNT_CURRENT_SIZE: u64 =
-    8 + std::mem::size_of::<UserRewardAccount>() as u64;
 
 #[account(zero_copy)]
 #[repr(C)]
@@ -141,13 +138,22 @@ impl UserRewardAccount {
         .0
     }
 
-    /// authority = user or delegate
+    /// authority = user or delegate (if exists)
     fn assert_authority_is_user_or_delegate(&self, authority: &Pubkey) -> Result<()> {
-        if self.user != *authority && self.delegate != *authority {
+        #[allow(clippy::nonminimal_bool)] // is_none_or method since = 1.82.0
+        if self.user != *authority
+            && !self
+                .get_delegate()
+                .is_some_and(|delegate| delegate == authority)
+        {
             err!(ErrorCode::RewardInvalidUserRewardAccountAuthorityError)?;
         }
 
         Ok(())
+    }
+
+    pub(super) fn get_delegate(&self) -> Option<&Pubkey> {
+        (self.delegate != Pubkey::default()).then_some(&self.delegate)
     }
 
     pub(super) fn set_delegate(
@@ -156,7 +162,7 @@ impl UserRewardAccount {
         delegate: Option<Pubkey>,
     ) -> Result<()> {
         self.assert_authority_is_user_or_delegate(authority)?;
-        self.delegate = delegate.unwrap_or_else(|| Pubkey::default());
+        self.delegate = delegate.unwrap_or_default();
 
         Ok(())
     }

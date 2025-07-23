@@ -1,5 +1,4 @@
 use anchor_lang::prelude::*;
-use std::ops::Neg;
 
 use crate::errors::ErrorCode;
 use crate::modules::fund::{WeightedAllocationParticipant, WeightedAllocationStrategy};
@@ -7,10 +6,7 @@ use crate::modules::pricing::TokenPricingSource;
 use crate::modules::staking::*;
 use crate::utils::{AccountInfoExt, AsAccountInfo, PDASeeds};
 
-use super::{
-    FundAccount, FundService, OperationCommandContext, OperationCommandEntry,
-    OperationCommandResult, SelfExecutable, UnrestakeVRTCommand, FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
-};
+use super::*;
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
 pub struct UnstakeLSTCommand {
@@ -127,9 +123,9 @@ struct UnstakeResult {
 const SPL_STAKE_MINIMUM_DELEGATION_LAMPORTS: u64 = 1_000_000_000;
 
 impl SelfExecutable for UnstakeLSTCommand {
-    fn execute<'a, 'info>(
+    fn execute<'info>(
         &self,
-        ctx: &mut OperationCommandContext<'info, 'a>,
+        ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
     ) -> Result<(
         Option<OperationCommandResult>,
@@ -164,7 +160,6 @@ impl SelfExecutable for UnstakeLSTCommand {
 }
 
 // These are implementations of each command state.
-#[deny(clippy::wildcard_enum_match_arm)]
 impl UnstakeLSTCommand {
     /// An initial state of `UnstakeLST` command.
     /// In this state, operator iterates the fund and
@@ -247,8 +242,7 @@ impl UnstakeLSTCommand {
                             }
                         })
                     })
-                    .collect::<Result<Vec<_>>>()?
-                    .into_iter(),
+                    .collect::<Result<Vec<_>>>()?,
             );
             unstaking_strategy.cut_greedy(
                 unstaking_obligated_amount_as_sol
@@ -756,15 +750,6 @@ impl UnstakeLSTCommand {
             pool_token_program,
         )?;
 
-        // first update stake pool balance
-        spl_stake_pool_service.update_stake_pool_balance_if_needed(
-            withdraw_authority,
-            reserve_stake_account,
-            manager_fee_account,
-            validator_list_account,
-            clock,
-        )?;
-
         let fund_account = ctx.fund_account.load()?;
 
         // Statistics
@@ -781,6 +766,7 @@ impl UnstakeLSTCommand {
                     withdraw_authority,
                     reserve_stake_account,
                     manager_fee_account,
+                    validator_list_account,
                     clock,
                     stake_history,
                     stake_program,
@@ -818,6 +804,7 @@ impl UnstakeLSTCommand {
                 spl_stake_pool_service.withdraw_stake(
                     ctx.system_program,
                     withdraw_authority,
+                    reserve_stake_account,
                     manager_fee_account,
                     validator_list_account,
                     clock,
@@ -901,8 +888,8 @@ impl UnstakeLSTCommand {
                 total_unstaking_sol_amount + total_unstaked_sol_amount,
             )?);
         require_gte!(
-            expected_pool_token_fee_amount,
-            total_deducted_pool_token_fee_amount
+            MAX_FEE_TOLERANCE,
+            expected_pool_token_fee_amount.abs_diff(total_deducted_pool_token_fee_amount)
         );
 
         // calculate deducted fee as SOL (will be added to SOL receivable)
@@ -1001,7 +988,11 @@ impl UnstakeLSTCommand {
         let expected_sol_fee_amount = pricing_service
             .get_token_amount_as_sol(pool_token_mint.key, item.allocated_token_amount)?
             .saturating_sub(unstaking_sol_amount);
-        require_gte!(expected_sol_fee_amount, deducted_sol_fee_amount);
+
+        require_gte!(
+            MAX_FEE_TOLERANCE,
+            expected_sol_fee_amount.abs_diff(deducted_sol_fee_amount)
+        );
 
         Ok(Some(UnstakeResult {
             to_sol_account_amount: fund_reserve_account.lamports(),

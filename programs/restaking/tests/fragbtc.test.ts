@@ -31,13 +31,11 @@ import { initializeFragBTC } from './fragbtc.init';
  * 15. run enqueuWithdrawalBatch, processWithdrawalBatch command
  * 16. user1 withdraw from 1,2 requestIds
  * 17. user1 deposit 1~5 zBTC, cbBTC each
- * 18. delegate user2 reward account -> user1
- * 19. delegate user2 reward account -> user2
- * 20. settle with threshold
- *  20-1. settle not occurs by min amount threshold
- *  20-2. settle not occurs by timestamp threshold
- *  20-3. settle not fully occurs by max amount threshold
- *  20-4. settle occurs by all threshold conditions passed
+ * 18. settle with threshold
+ *  18-1. settle not occurs by min amount threshold
+ *  18-2. settle not occurs by timestamp threshold
+ *  18-3. settle not fully occurs by max amount threshold
+ *  18-4. settle occurs by all threshold conditions passed
  */
 
 describe('restaking.fragBTC test', async () => {
@@ -142,6 +140,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 0n,
             "operationTotalAmount": 0n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "H6pGcL98Rkz2aV8pq5jDEMdtrnogAmhUM5w8RAsddeB6",
           },
           {
@@ -151,6 +150,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 0n,
             "operationTotalAmount": 0n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "5zXiPsDznkiEA4nKvWEWuJEYBupPEBAdA1Qnb7j25PdJ",
           },
           {
@@ -160,6 +160,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 0n,
             "operationTotalAmount": 0n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
           },
         ],
@@ -240,7 +241,6 @@ describe('restaking.fragBTC test', async () => {
             "tokenAccumulatedDepositCapacityAmount": 18446744073709551615n,
             "tokenDepositable": true,
             "tokenMint": "zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg",
-            "tokenRebalancingAmount": 0n,
             "tokenWithdrawable": true,
             "tokenWithdrawalNormalReserveMaxAmount": 18446744073709551615n,
             "tokenWithdrawalNormalReserveRateBps": 30,
@@ -252,7 +252,6 @@ describe('restaking.fragBTC test', async () => {
             "tokenAccumulatedDepositCapacityAmount": 18446744073709551615n,
             "tokenDepositable": true,
             "tokenMint": "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
-            "tokenRebalancingAmount": 0n,
             "tokenWithdrawable": true,
             "tokenWithdrawalNormalReserveMaxAmount": 18446744073709551615n,
             "tokenWithdrawalNormalReserveRateBps": 30,
@@ -264,7 +263,6 @@ describe('restaking.fragBTC test', async () => {
             "tokenAccumulatedDepositCapacityAmount": 18446744073709551615n,
             "tokenDepositable": true,
             "tokenMint": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
-            "tokenRebalancingAmount": 0n,
             "tokenWithdrawable": true,
             "tokenWithdrawalNormalReserveMaxAmount": 18446744073709551615n,
             "tokenWithdrawalNormalReserveRateBps": 30,
@@ -296,6 +294,7 @@ describe('restaking.fragBTC test', async () => {
               "__kind": "SolvBTCVault",
               "address": "H6pGcL98Rkz2aV8pq5jDEMdtrnogAmhUM5w8RAsddeB6",
             },
+            "rewardCommissionRateBps": 0,
             "solAllocationCapacityAmount": 18446744073709551615n,
             "solAllocationWeight": 1n,
             "vault": "H6pGcL98Rkz2aV8pq5jDEMdtrnogAmhUM5w8RAsddeB6",
@@ -308,6 +307,7 @@ describe('restaking.fragBTC test', async () => {
               "__kind": "SolvBTCVault",
               "address": "5zXiPsDznkiEA4nKvWEWuJEYBupPEBAdA1Qnb7j25PdJ",
             },
+            "rewardCommissionRateBps": 0,
             "solAllocationCapacityAmount": 18446744073709551615n,
             "solAllocationWeight": 1n,
             "vault": "5zXiPsDznkiEA4nKvWEWuJEYBupPEBAdA1Qnb7j25PdJ",
@@ -320,6 +320,7 @@ describe('restaking.fragBTC test', async () => {
               "__kind": "SolvBTCVault",
               "address": "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
             },
+            "rewardCommissionRateBps": 0,
             "solAllocationCapacityAmount": 18446744073709551615n,
             "solAllocationWeight": 1n,
             "vault": "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
@@ -589,6 +590,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 0n,
             "operationTotalAmount": 0n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "H6pGcL98Rkz2aV8pq5jDEMdtrnogAmhUM5w8RAsddeB6",
           },
           {
@@ -598,6 +600,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 0n,
             "operationTotalAmount": 0n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "5zXiPsDznkiEA4nKvWEWuJEYBupPEBAdA1Qnb7j25PdJ",
           },
           {
@@ -607,6 +610,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 0n,
             "operationTotalAmount": 0n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
           },
         ],
@@ -1076,6 +1080,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 0n,
             "operationTotalAmount": 0n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "H6pGcL98Rkz2aV8pq5jDEMdtrnogAmhUM5w8RAsddeB6",
           },
           {
@@ -1085,6 +1090,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 0n,
             "operationTotalAmount": 0n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "5zXiPsDznkiEA4nKvWEWuJEYBupPEBAdA1Qnb7j25PdJ",
           },
           {
@@ -1094,6 +1100,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 0n,
             "operationTotalAmount": 0n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
           },
         ],
@@ -1155,36 +1162,7 @@ describe('restaking.fragBTC test', async () => {
     `);
   });
 
-  test('user can update reward pools and sync with global reward account anytime', async () => {
-    const user1Reward_1 = await user1.reward.resolve(true);
-
-    // user1 updateRewardPools
-    await user1.reward.updatePools.execute(null);
-
-    const user1Reward_2 = await user1.reward.resolve(true);
-
-    const elapsedSlots =
-      user1Reward_2?.basePool.updatedSlot! -
-      user1Reward_1?.basePool.updatedSlot!;
-    const increasedContribution =
-      user1Reward_2?.basePool.contribution! -
-      user1Reward_1?.basePool.contribution!;
-    expect(increasedContribution, 't7_1').toEqual(
-      elapsedSlots *
-        user1Reward_2?.basePool.tokenAllocatedAmount.records[0].amount! *
-        BigInt(
-          user1Reward_2?.basePool.tokenAllocatedAmount.records[0]
-            .contributionAccrualRate!
-        ) *
-        100n
-    );
-    expect(
-      user1Reward_2?.basePool.settlements[0].settledAmount,
-      't7_2'
-    ).toEqual(0n);
-  });
-
-  /** 3. operation and reward **/
+  /** 3. reward settlement by operation **/
   test('fund can settle distributing rewards by operation', async () => {
     // drop distribution token to the vault
     await validator.airdropToken(
@@ -1195,7 +1173,7 @@ describe('restaking.fragBTC test', async () => {
 
     // run operator to harvest
     await ctx.fund.runCommand.executeChained({
-      forceResetCommand: 'HarvestReward',
+      forceResetCommand: 'HarvestRestakingYield',
       operator: restaking.knownAddresses.fundManager,
     });
 
@@ -1548,9 +1526,132 @@ describe('restaking.fragBTC test', async () => {
     const user2Reward_2 = await user2.reward.resolve(true);
   });
 
-  /** 4. claim */
+  test('settle should not occur if threshold is not matched', async () => {
+    const rewardTokenMint = 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq';
+
+    // 1. update distributing reward amount threshold -> settle would not occur
+    await ctx.fund.updateRestakingVaultRewardHarvestThreshold.execute({
+      vault: solv.zBTC.address!,
+      rewardTokenMint,
+      harvestThresholdMinAmount: 600_000_000n,
+      harvestThresholdMaxAmount: 700_000_000n,
+      harvestThresholdIntervalSeconds: 1n,
+    });
+
+    // drop distribution token to the vault
+    await validator.airdropToken(
+      solv.zBTC.address!,
+      rewardTokenMint,
+      500_000_000n
+    );
+
+    const globalReward_4 = await ctx.reward.resolve(true);
+
+    // try to settle global reward
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestRestakingYield',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    const globalReward_5 = await ctx.reward.resolve(true);
+
+    // settle not occurs
+    expect(
+      globalReward_5?.basePool.settlements[0].settlementBlocksLastSlot!
+    ).toEqual(
+      globalReward_4?.basePool.settlements[0].settlementBlocksLastSlot!
+    );
+
+    // 2. update distributing reward interval second threshold -> settle would not occur
+    await ctx.fund.updateRestakingVaultRewardHarvestThreshold.execute({
+      vault: solv.zBTC.address!,
+      rewardTokenMint,
+      harvestThresholdMinAmount: 200_000_000n,
+      harvestThresholdMaxAmount: 300_000_000n,
+      harvestThresholdIntervalSeconds: 100n,
+    });
+
+    // try to settle global reward
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestRestakingYield',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    const globalReward_6 = await ctx.reward.resolve(true);
+
+    // settle not occurs
+    expect(
+      globalReward_6?.basePool.settlements[0].settlementBlocksLastSlot!
+    ).toEqual(
+      globalReward_4?.basePool.settlements[0].settlementBlocksLastSlot!
+    );
+
+    // 3. update distributing reward interval second threshold -> now settle would occur but not fully settled due to max amount threshold
+    await ctx.fund.updateRestakingVaultRewardHarvestThreshold.execute({
+      vault: solv.zBTC.address!,
+      rewardTokenMint,
+      harvestThresholdMinAmount: 200_000_000n,
+      harvestThresholdMaxAmount: 300_000_000n,
+      harvestThresholdIntervalSeconds: 0n,
+    });
+
+    // now settle occurs but not fully settled
+    await validator.skipSlots(1n);
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestRestakingYield',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    const globalReward_7 = await ctx.reward.resolve(true);
+
+    expect(
+      globalReward_7?.basePool.settlements[0].settlementBlocksLastSlot!
+    ).toBeGreaterThan(
+      globalReward_4?.basePool.settlements[0].settlementBlocksLastSlot!
+    );
+
+    expect(
+      globalReward_7?.basePool.settlements[0].settledAmount! -
+        globalReward_4?.basePool.settlements[0].settledAmount!
+    ).toEqual(300_000_000n);
+
+    // 4. now fully settled
+    await validator.skipSlots(1n);
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestRestakingYield',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    const globalReward_8 = await ctx.reward.resolve(true);
+
+    expect(
+      globalReward_8?.basePool.settlements[0].settlementBlocksLastSlot!
+    ).toBeGreaterThan(
+      globalReward_7?.basePool.settlements[0].settlementBlocksLastSlot!
+    );
+
+    expect(
+      globalReward_8?.basePool.settlements[0].settledAmount! -
+        globalReward_7?.basePool.settlements[0].settledAmount!
+    ).toEqual(200_000_000n);
+  });
+
+  /** 4. reward claim */
   test('user can claim reward token after settlement', async () => {
-    const claimRes = await user1.reward.claim.execute(
+    const rewardBefore = (await ctx.reward.resolve(true))!;
+    const userRewardBefore = (await user1.reward.resolve(true))!;
+    const userRewardAmountBefore = await user1.rewardTokens
+      .resolve(true)
+      .then(
+        (tokens) =>
+          tokens.find(
+            (token) =>
+              token !== null &&
+              token.mint == 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq'
+          )?.amount ?? 0n
+      );
+
+    const res = await user1.reward.claim.execute(
       {
         mint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
         amount: null,
@@ -1560,41 +1661,35 @@ describe('restaking.fragBTC test', async () => {
     );
 
     const claimedRewardAmount =
-      claimRes.events?.userClaimedReward?.claimedRewardTokenAmount;
+      res.events?.userClaimedReward?.claimedRewardTokenAmount;
+
+    const rewardAfter = (await ctx.reward.resolve(true))!;
+    const userRewardAfter = (await user1.reward.resolve(true))!;
+    const userRewardAmountAfter = await user1.rewardTokens
+      .resolve(true)
+      .then(
+        (tokens) =>
+          tokens.find(
+            (token) =>
+              token !== null &&
+              token.mint == 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq'
+          )!.amount
+      );
 
     // check claimed amount at settlement equals to real claimed amount from claim event
-    const user1Reward_4 = await user1.reward.resolve(true);
     expect(
-      user1Reward_4?.basePool.settlements.map(
-        (settlement) => settlement.claimedAmount
-      ),
-      't9_1'
-    ).toEqual([claimedRewardAmount]);
+      rewardAfter.basePool.settlements[0].claimedAmount -
+        rewardBefore.basePool.settlements[0].claimedAmount
+    ).toEqual(claimedRewardAmount);
+    expect(
+      userRewardAfter.basePool.settlements[0].claimedAmount -
+        userRewardBefore.basePool.settlements[0].claimedAmount
+    ).toEqual(claimedRewardAmount);
 
     // check claimed amount has moved to user1's reward token account
-    await expect(
-      user1.rewardTokens
-        .resolve(true)
-        .then((tokens) => tokens.map((token) => token?.amount)),
-      't9_2'
-    ).resolves.toEqual([undefined, claimedRewardAmount]);
-
-    const user1RewardTokenAccounts = await user1.rewardTokens.resolve(true);
-    const user1ZeusRewardTokenAccount = user1RewardTokenAccounts.filter(
-      (tokenAccount) =>
-        tokenAccount !== null &&
-        tokenAccount.mint.toString() ==
-          'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq'
-    )[0];
-    expect(user1ZeusRewardTokenAccount.amount, 't9_3').toEqual(
+    expect(userRewardAmountAfter - userRewardAmountBefore).toEqual(
       claimedRewardAmount
     );
-
-    const globalReward_2 = await ctx.reward.resolve(true);
-    expect(
-      globalReward_2?.basePool.settlements[0].claimedAmount,
-      't9_4'
-    ).toEqual(user1Reward_4?.basePool.settlements[0].claimedAmount);
   });
 
   test('settle -> everyone claim -> update reward pool -> check the remaining amount', async () => {
@@ -1607,16 +1702,21 @@ describe('restaking.fragBTC test', async () => {
       rewardAmount
     );
 
-    const globalReward_2 = await ctx.reward.resolve(true);
-    const user1Reward_4 = await user1.reward.resolve(true);
-    const user2Reward_2 = await user2.reward.resolve(true);
+    await ctx.reward.updatePools.execute(null);
+    await user1.reward.updatePools.execute(null);
+    await user2.reward.updatePools.execute(null);
+
+    const globalReward_0 = (await ctx.reward.resolve(true))!;
+    const user1Reward_0 = (await user1.reward.resolve(true))!;
+    const user2Reward_0 = (await user2.reward.resolve(true))!;
 
     // settle global reward
-    const settleRewardRes = await ctx.reward.settleReward.execute({
-      mint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
-      amount: rewardAmount,
-    });
-    await expectMasked(settleRewardRes).resolves.toMatchInlineSnapshot(`
+    await expectMasked(
+      ctx.reward.settleReward.execute({
+        mint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
+        amount: rewardAmount,
+      })
+    ).resolves.toMatchInlineSnapshot(`
       {
         "args": {
           "amount": 100000000000n,
@@ -1636,22 +1736,42 @@ describe('restaking.fragBTC test', async () => {
       }
     `);
 
+    const globalReward_1 = (await ctx.reward.resolve(true))!;
+
     // check global reward pool settlement amount delta
-    const globalReward_3 = await ctx.reward.resolve(true);
+    const globalSettlement_0 = globalReward_0.basePool.settlements[0];
+    const globalSettlement_1 = globalReward_1.basePool.settlements[0];
+    const lastSettlementBlock_1 =
+      globalSettlement_1.blocks[globalSettlement_1.blocks.length - 1];
+    const globalSettledContribution_1 =
+      lastSettlementBlock_1.endingContribution -
+      lastSettlementBlock_1.startingContribution;
+    expect(
+      globalSettlement_1.settledAmount - globalSettlement_0.settledAmount
+    ).toEqual(rewardAmount);
+    expect(
+      globalSettlement_1.settlementBlocksLastRewardPoolContribution -
+        globalSettlement_0.settlementBlocksLastRewardPoolContribution
+    ).toEqual(globalSettledContribution_1);
 
-    const settledAmountDeltas = globalReward_3?.basePool.settlements.map(
-      (afterSettlement, i) => {
-        const beforeSettlement = globalReward_2?.basePool.settlements[i];
-        const beforeSettledAmount = beforeSettlement?.settledAmount ?? 0n;
-        return afterSettlement.settledAmount - beforeSettledAmount;
-      }
+    // update user1 reward
+    await user1.reward.updatePools.execute(null);
+
+    const user1Reward_1 = (await user1.reward.resolve(true))!;
+
+    // check user1 reward pool settlement amount delta
+    const user1Settlement_0 = user1Reward_0.basePool.settlements[0];
+    const user1Settlement_1 = user1Reward_1.basePool.settlements[0];
+    const user1SettledContribution_1 =
+      user1Settlement_1.settledContribution -
+      user1Settlement_0.settledContribution;
+    expect(
+      user1Settlement_1.settledAmount - user1Settlement_0.settledAmount
+    ).toEqual(
+      (rewardAmount * user1SettledContribution_1) / globalSettledContribution_1
     );
-    expect(settledAmountDeltas, 't10_1').toEqual([rewardAmount]);
 
-    await user1.reward.updatePools.execute(null); // just did updatedPools to check abount claimedRewardTokenAmount at the event is correct
-    const user1Reward_5 = await user1.reward.resolve(true);
-
-    // user1 claim total
+    // user1 claims
     const user1ClaimRes = await user1.reward.claim.execute(
       {
         mint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq',
@@ -1661,34 +1781,14 @@ describe('restaking.fragBTC test', async () => {
       { signers: [signer1] }
     );
 
-    // check user1 reward pool settlement amount delta
-    const user1Reward_6 = await user1.reward.resolve(true);
+    const user1Reward_2 = (await user1.reward.resolve(true))!;
 
-    const globalSettledContribution_1 =
-      globalReward_3?.basePool.settlements[0].blocks[0].endingContribution! -
-      globalReward_3?.basePool.settlements[0].blocks[0].startingContribution!;
-
+    const user1Settlement_2 = user1Reward_2.basePool.settlements[0];
     expect(
-      user1ClaimRes.events?.userClaimedReward?.claimedRewardTokenAmount,
-      't10_2'
+      user1ClaimRes.events?.userClaimedReward?.claimedRewardTokenAmount
     ).toEqual(
-      user1Reward_5?.basePool.settlements[0].settledAmount! -
-        user1Reward_5?.basePool.settlements[0].claimedAmount!
+      user1Settlement_1.settledAmount! - user1Settlement_1.claimedAmount!
     );
-
-    const user1SettledAmountDeltas = user1Reward_6?.basePool.settlements.map(
-      (afterSettlement, i) => {
-        const beforeSettlement = user1Reward_4?.basePool.settlements[i];
-        const beforeSettledAmount = beforeSettlement?.settledAmount ?? 0n;
-        return afterSettlement.settledAmount - beforeSettledAmount;
-      }
-    );
-    expect(user1SettledAmountDeltas!, 't10_3').toEqual([
-      (rewardAmount *
-        (user1Reward_6?.basePool.settlements[0].settledContribution! -
-          user1Reward_4?.basePool.settlements[0].settledContribution!)) /
-        globalSettledContribution_1,
-    ]);
 
     // user2 claim total
     await user2.reward.claim.execute(
@@ -1700,32 +1800,39 @@ describe('restaking.fragBTC test', async () => {
       { signers: [signer2] }
     );
 
-    const user2Reward_3 = await user2.reward.resolve(true);
+    const user2Reward_2 = (await user2.reward.resolve(true))!;
 
-    const user2SettledAmountDeltas = user2Reward_3?.basePool.settlements.map(
-      (afterSettlement, i) => {
-        const beforeSettlement = user2Reward_2?.basePool.settlements[i];
-        const beforeSettledAmount = beforeSettlement?.settledAmount ?? 0n;
-        return afterSettlement.settledAmount - beforeSettledAmount;
-      }
+    // check user2 reward pool settlement amount delta
+    const user2Settlement_0 = user2Reward_0.basePool.settlements[0];
+    const user2Settlement_2 = user2Reward_2.basePool.settlements[0];
+    const user2SettledContribution_1 =
+      user2Settlement_2.settledContribution -
+      user2Settlement_0.settledContribution;
+    expect(
+      user2Settlement_2.settledAmount - user2Settlement_0.settledAmount
+    ).toEqual(
+      (rewardAmount * user2SettledContribution_1) / globalSettledContribution_1
     );
-    expect(user2SettledAmountDeltas!, ' t10_4').toEqual([
-      (rewardAmount *
-        (user2Reward_3?.basePool.settlements[0].settledContribution! -
-          user2Reward_2?.basePool.settlements[0].settledContribution!)) /
-        globalSettledContribution_1,
-    ]);
 
-    // update global reward
-    await validator.skipSlots(2n);
+    // update
     await ctx.reward.updatePools.execute(null);
+    await user1.reward.updatePools.execute(null);
+
+    const globalReward_2 = (await ctx.reward.resolve(true))!;
 
     // check remaing amount == 1
-    const globalReward_4 = await ctx.reward.resolve(true);
+    const globalSettlement_2 = globalReward_2.basePool.settlements[0];
+    expect(
+      globalSettlement_2.remainingAmount - globalSettlement_1.remainingAmount
+    ).toEqual(1n);
 
-    expect(globalReward_4?.basePool.settlements[0].claimedAmount).toEqual(
-      user1Reward_6?.basePool.settlements[0].claimedAmount! +
-        user2Reward_3?.basePool.settlements[0].claimedAmount!
+    expect(
+      globalSettlement_2.claimedAmount - globalSettlement_1.claimedAmount
+    ).toEqual(
+      user1Settlement_2.claimedAmount -
+        user1Settlement_1.claimedAmount +
+        user2Settlement_2.claimedAmount -
+        user2Settlement_0.claimedAmount
     );
   });
 
@@ -1902,166 +2009,8 @@ describe('restaking.fragBTC test', async () => {
     ]);
   });
 
-  /** 6. delegate */
-  test('delegate reward account from user2 to user1', async () => {
-    const user2DelegateRes = await user2.reward.delegate.execute(
-      { newDelegate: signer1.address },
-      { signers: [signer2] }
-    );
-    await expectMasked(user2DelegateRes).resolves.toMatchInlineSnapshot(`
-      {
-        "args": {
-          "delegate": null,
-          "newDelegate": "AWb2qUvuFzbVN5Eu7tZY8gM745pus5DhTGgo8U8Bd8X2",
-        },
-        "events": {
-          "unknown": [],
-          "userDelegatedRewardAccount": {
-            "delegate": {
-              "__option": "Some",
-              "value": "AWb2qUvuFzbVN5Eu7tZY8gM745pus5DhTGgo8U8Bd8X2",
-            },
-            "receiptTokenMint": "ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz",
-            "user": "CCgWk6XBuLqZTcDuJa4ZKGUM22cLXUFAxJSHiZdm3T3b",
-            "userRewardAccount": "5vjNrtqwKRB68nTfwN3gZayEADap2947MuZp43bCdLo1",
-          },
-        },
-        "signature": "MASKED(signature)",
-        "slot": "MASKED(/[.*S|s]lots?$/)",
-        "succeeded": true,
-      }
-    `);
-    await expect(
-      user2.reward.resolve(true).then((res) => res?.delegate)
-    ).resolves.toEqual(signer1.address);
-
-    await user2.reward.delegate.execute(
-      { delegate: signer1.address, newDelegate: signer2.address },
-      { signers: [signer1] }
-    );
-
-    // fails to delegate
-    await expect(
-      user2.reward.delegate.execute(
-        { delegate: signer1.address, newDelegate: signer2.address },
-        { signers: [signer1] }
-      )
-    ).rejects.toThrowError('Transaction simulation failed'); // reward: user reward account authority must be either user or delegate
-  });
-
-  /** 7. settle with threshold */
-  test('settle should not occur if threshold is not matched', async () => {
-    const rewardTokenMint = 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq';
-
-    // 1. update distributing reward amount threshold -> settle would not occur
-    await ctx.fund.updateRestakingVaultRewardHarvestThreshold.execute({
-      vault: solv.zBTC.address!,
-      rewardTokenMint,
-      harvestThresholdMinAmount: 600_000_000n,
-      harvestThresholdMaxAmount: 700_000_000n,
-      harvestThresholdIntervalSeconds: 1n,
-    });
-
-    // drop distribution token to the vault
-    await validator.airdropToken(
-      solv.zBTC.address!,
-      rewardTokenMint,
-      500_000_000n
-    );
-
-    const globalReward_4 = await ctx.reward.resolve(true);
-
-    // try to settle global reward
-    await ctx.fund.runCommand.executeChained({
-      forceResetCommand: 'HarvestReward',
-      operator: restaking.knownAddresses.fundManager,
-    });
-
-    const globalReward_5 = await ctx.reward.resolve(true);
-
-    // settle not occurs
-    expect(
-      globalReward_5?.basePool.settlements[0].settlementBlocksLastSlot!
-    ).toEqual(
-      globalReward_4?.basePool.settlements[0].settlementBlocksLastSlot!
-    );
-
-    // 2. update distributing reward interval second threshold -> settle would not occur
-    await ctx.fund.updateRestakingVaultRewardHarvestThreshold.execute({
-      vault: solv.zBTC.address!,
-      rewardTokenMint,
-      harvestThresholdMinAmount: 200_000_000n,
-      harvestThresholdMaxAmount: 300_000_000n,
-      harvestThresholdIntervalSeconds: 100n,
-    });
-
-    // try to settle global reward
-    await ctx.fund.runCommand.executeChained({
-      forceResetCommand: 'HarvestReward',
-      operator: restaking.knownAddresses.fundManager,
-    });
-
-    const globalReward_6 = await ctx.reward.resolve(true);
-
-    // settle not occurs
-    expect(
-      globalReward_6?.basePool.settlements[0].settlementBlocksLastSlot!
-    ).toEqual(
-      globalReward_4?.basePool.settlements[0].settlementBlocksLastSlot!
-    );
-
-    // 3. update distributing reward interval second threshold -> now settle would occur but not fully settled due to max amount threshold
-    await ctx.fund.updateRestakingVaultRewardHarvestThreshold.execute({
-      vault: solv.zBTC.address!,
-      rewardTokenMint,
-      harvestThresholdMinAmount: 200_000_000n,
-      harvestThresholdMaxAmount: 300_000_000n,
-      harvestThresholdIntervalSeconds: 0n,
-    });
-
-    // now settle occurs but not fully settled
-    await validator.skipSlots(1n);
-    await ctx.fund.runCommand.executeChained({
-      forceResetCommand: 'HarvestReward',
-      operator: restaking.knownAddresses.fundManager,
-    });
-
-    const globalReward_7 = await ctx.reward.resolve(true);
-
-    expect(
-      globalReward_7?.basePool.settlements[0].settlementBlocksLastSlot!
-    ).toBeGreaterThan(
-      globalReward_4?.basePool.settlements[0].settlementBlocksLastSlot!
-    );
-
-    expect(
-      globalReward_7?.basePool.settlements[0].settledAmount! -
-        globalReward_4?.basePool.settlements[0].settledAmount!
-    ).toEqual(300_000_000n);
-
-    // 4. now fully settled
-    await validator.skipSlots(1n);
-    await ctx.fund.runCommand.executeChained({
-      forceResetCommand: 'HarvestReward',
-      operator: restaking.knownAddresses.fundManager,
-    });
-
-    const globalReward_8 = await ctx.reward.resolve(true);
-
-    expect(
-      globalReward_8?.basePool.settlements[0].settlementBlocksLastSlot!
-    ).toBeGreaterThan(
-      globalReward_7?.basePool.settlements[0].settlementBlocksLastSlot!
-    );
-
-    expect(
-      globalReward_8?.basePool.settlements[0].settledAmount! -
-        globalReward_7?.basePool.settlements[0].settledAmount!
-    ).toEqual(200_000_000n);
-  });
-
   // TODO: full operation test through cash in/out flow
-  /** 8. operation cycle */
+  /** 6. operation cycle */
   test('fragBTC does restake/unrestake assets into/from solvBTC vault', async () => {
     // no changes on fragBTC price
     await expectMasked(ctx.resolve(true)).resolves.toMatchInlineSnapshot(`
@@ -2100,6 +2049,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 0n,
             "operationTotalAmount": 0n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "H6pGcL98Rkz2aV8pq5jDEMdtrnogAmhUM5w8RAsddeB6",
           },
           {
@@ -2109,6 +2059,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 0n,
             "operationTotalAmount": 0n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "5zXiPsDznkiEA4nKvWEWuJEYBupPEBAdA1Qnb7j25PdJ",
           },
           {
@@ -2118,6 +2069,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 0n,
             "operationTotalAmount": 0n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
           },
         ],
@@ -2214,6 +2166,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 2174937031n,
             "operationTotalAmount": 2174937031n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "H6pGcL98Rkz2aV8pq5jDEMdtrnogAmhUM5w8RAsddeB6",
           },
           {
@@ -2223,6 +2176,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 1483191359n,
             "operationTotalAmount": 1483191359n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "5zXiPsDznkiEA4nKvWEWuJEYBupPEBAdA1Qnb7j25PdJ",
           },
           {
@@ -2232,6 +2186,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 1945996280n,
             "operationTotalAmount": 1945996280n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
           },
         ],
@@ -2341,6 +2296,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 2174937031n,
             "operationTotalAmount": 2174937031n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "H6pGcL98Rkz2aV8pq5jDEMdtrnogAmhUM5w8RAsddeB6",
           },
           {
@@ -2350,6 +2306,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 1483191359n,
             "operationTotalAmount": 1483191359n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "5zXiPsDznkiEA4nKvWEWuJEYBupPEBAdA1Qnb7j25PdJ",
           },
           {
@@ -2359,6 +2316,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 1945996280n,
             "operationTotalAmount": 1945996280n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
           },
         ],
@@ -2466,6 +2424,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 2174937031n,
             "operationTotalAmount": 2174937031n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "H6pGcL98Rkz2aV8pq5jDEMdtrnogAmhUM5w8RAsddeB6",
           },
           {
@@ -2475,6 +2434,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 1483191359n,
             "operationTotalAmount": 1483191359n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "5zXiPsDznkiEA4nKvWEWuJEYBupPEBAdA1Qnb7j25PdJ",
           },
           {
@@ -2484,6 +2444,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 1945996280n,
             "operationTotalAmount": 1945996280n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
           },
         ],
@@ -2592,18 +2553,19 @@ describe('restaking.fragBTC test', async () => {
         "depositResidualMicroReceiptTokenAmount": 964414n,
         "metadata": null,
         "normalizedToken": null,
-        "oneReceiptTokenAsSOL": 672352352237n,
+        "oneReceiptTokenAsSOL": 672352352226n,
         "receiptTokenDecimals": 8,
         "receiptTokenMint": "ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz",
         "receiptTokenSupply": 5720987629n,
         "restakingVaultReceiptTokens": [
           {
             "mint": "DNLsKFnrBjTBKp1eSwt8z1iNu2T2PL3MnxZFsGEEpQCf",
-            "oneReceiptTokenAsSol": 709711095602n,
+            "oneReceiptTokenAsSol": 709711095573n,
             "operationReceivableAmount": 0n,
             "operationReservedAmount": 2274637031n,
             "operationTotalAmount": 2274637031n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "H6pGcL98Rkz2aV8pq5jDEMdtrnogAmhUM5w8RAsddeB6",
           },
           {
@@ -2613,6 +2575,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 1483191359n,
             "operationTotalAmount": 1483191359n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "5zXiPsDznkiEA4nKvWEWuJEYBupPEBAdA1Qnb7j25PdJ",
           },
           {
@@ -2622,6 +2585,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 1945996280n,
             "operationTotalAmount": 1945996280n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
           },
         ],
@@ -2800,8 +2764,8 @@ describe('restaking.fragBTC test', async () => {
     // process withdrawal from solv vault
     await expect(
       solv.zBTC.completeWithdrawalRequests.execute({
-        burntSolvReceiptTokenAmount: 88147709n,
-        redeemedSupportedTokenAmount: (88147709n * 110n) / 100n,
+        burntSolvReceiptTokenAmount: 88147707n,
+        redeemedSupportedTokenAmount: (88147707n * 110n) / 100n,
         oldOneSolvReceiptTokenAsMicroSupportedTokenAmount: 1_1000_0000_000000n,
       })
     ).resolves.not.toThrow();
@@ -2823,7 +2787,7 @@ describe('restaking.fragBTC test', async () => {
             "mint": "ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq",
           },
         ],
-        "oneReceiptTokenAsMicroSupportedTokenAmount": 109574877179602n,
+        "oneReceiptTokenAsMicroSupportedTokenAmount": 109574877225154n,
         "oneReceiptTokenAsSupportedTokenAmount": 109574877n,
         "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 110000000000000n,
         "oneSolvReceiptTokenAsSupportedTokenAmount": 110000000n,
@@ -2831,16 +2795,18 @@ describe('restaking.fragBTC test', async () => {
         "receiptTokenMint": "DNLsKFnrBjTBKp1eSwt8z1iNu2T2PL3MnxZFsGEEpQCf",
         "receiptTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
         "receiptTokenSupply": 2186147332n,
+        "solvProtocolDepositFeeRate": 0,
         "solvProtocolWallet": "GiDkDCZjVC8Nk1Fd457qGSV2g3MQX62n7cV5CvgFyGfF",
         "solvProtocolWithdrawalFeeRate": 0,
-        "solvReceiptTokenAmount": 2911852291n,
+        "solvReceiptTokenAmount": 2911852293n,
         "solvReceiptTokenDecimals": 8,
         "solvReceiptTokenMint": "SoLvzL3ZVjofmNB5LYFrf94QtNhMUSea4DawFhnAau8",
         "solvReceiptTokenOperationReceivableAmount": 0n,
-        "solvReceiptTokenOperationReservedAmount": 2177698412n,
+        "solvReceiptTokenOperationReservedAmount": 2177698414n,
         "supportedTokenAmount": 1000000000n,
         "supportedTokenDecimals": 8,
         "supportedTokenMint": "zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg",
+        "supportedTokenOperationReceivableAmount": 0n,
         "supportedTokenOperationReservedAmount": 0n,
         "supportedTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
         "withdrawal": {
@@ -2849,15 +2815,17 @@ describe('restaking.fragBTC test', async () => {
             "requests": [
               {
                 "id": 1n,
+                "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 110000000000000n,
+                "oneSolvReceiptTokenAsSupportedTokenAmount": 110000000n,
                 "receiptTokenEnqueuedAmount": 88489699n,
-                "solvReceiptTokenLockedAmount": 88147709n,
+                "solvReceiptTokenLockedAmount": 88147707n,
                 "supportedTokenLockedAmount": 0n,
-                "supportedTokenTotalEstimatedAmount": 96962479n,
+                "supportedTokenTotalEstimatedAmount": 96962478n,
               },
             ],
-            "supportedTokenDeductedFeeAmount": 0n,
+            "supportedTokenDeductedFeeAmount": 1n,
             "supportedTokenExtraClaimableAmount": 0n,
-            "supportedTokenTotalClaimableAmount": 96962479n,
+            "supportedTokenTotalClaimableAmount": 96962477n,
           },
           "enqueued": {
             "receiptTokenEnqueuedAmount": 0n,
@@ -2900,18 +2868,19 @@ describe('restaking.fragBTC test', async () => {
         "depositResidualMicroReceiptTokenAmount": 964414n,
         "metadata": null,
         "normalizedToken": null,
-        "oneReceiptTokenAsSOL": 672352352135n,
+        "oneReceiptTokenAsSOL": 672352352226n,
         "receiptTokenDecimals": 8,
         "receiptTokenMint": "ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz",
         "receiptTokenSupply": 5720987629n,
         "restakingVaultReceiptTokens": [
           {
             "mint": "DNLsKFnrBjTBKp1eSwt8z1iNu2T2PL3MnxZFsGEEpQCf",
-            "oneReceiptTokenAsSol": 709711095335n,
+            "oneReceiptTokenAsSol": 709711095868n,
             "operationReceivableAmount": 0n,
             "operationReservedAmount": 2186147332n,
             "operationTotalAmount": 2186147332n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 96962478n,
             "vault": "H6pGcL98Rkz2aV8pq5jDEMdtrnogAmhUM5w8RAsddeB6",
           },
           {
@@ -2921,6 +2890,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 1483191359n,
             "operationTotalAmount": 1483191359n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "5zXiPsDznkiEA4nKvWEWuJEYBupPEBAdA1Qnb7j25PdJ",
           },
           {
@@ -2930,6 +2900,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 1945996280n,
             "operationTotalAmount": 1945996280n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
           },
         ],
@@ -2940,9 +2911,9 @@ describe('restaking.fragBTC test', async () => {
             "mint": "zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg",
             "oneTokenAsReceiptToken": 96332686n,
             "oneTokenAsSol": 647695086539n,
-            "operationReceivableAmount": 96962479n,
+            "operationReceivableAmount": 96962478n,
             "operationReservedAmount": 6844444n,
-            "operationTotalAmount": 103806923n,
+            "operationTotalAmount": 103806922n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
             "unstakingAmountAsSOL": 0n,
             "withdrawable": true,
@@ -3016,18 +2987,19 @@ describe('restaking.fragBTC test', async () => {
         "depositResidualMicroReceiptTokenAmount": 964414n,
         "metadata": null,
         "normalizedToken": null,
-        "oneReceiptTokenAsSOL": 672352352471n,
+        "oneReceiptTokenAsSOL": 672352352678n,
         "receiptTokenDecimals": 8,
         "receiptTokenMint": "ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz",
         "receiptTokenSupply": 5620987629n,
         "restakingVaultReceiptTokens": [
           {
             "mint": "DNLsKFnrBjTBKp1eSwt8z1iNu2T2PL3MnxZFsGEEpQCf",
-            "oneReceiptTokenAsSol": 709711095335n,
+            "oneReceiptTokenAsSol": 709711095868n,
             "operationReceivableAmount": 0n,
             "operationReservedAmount": 2186147332n,
             "operationTotalAmount": 2186147332n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "H6pGcL98Rkz2aV8pq5jDEMdtrnogAmhUM5w8RAsddeB6",
           },
           {
@@ -3037,6 +3009,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 1483191359n,
             "operationTotalAmount": 1483191359n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "5zXiPsDznkiEA4nKvWEWuJEYBupPEBAdA1Qnb7j25PdJ",
           },
           {
@@ -3046,6 +3019,7 @@ describe('restaking.fragBTC test', async () => {
             "operationReservedAmount": 1945996280n,
             "operationTotalAmount": 1945996280n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
           },
         ],
@@ -3062,10 +3036,10 @@ describe('restaking.fragBTC test', async () => {
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
             "unstakingAmountAsSOL": 0n,
             "withdrawable": true,
-            "withdrawableValueAsReceiptTokenAmount": 2307618932n,
+            "withdrawableValueAsReceiptTokenAmount": 2307618934n,
             "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
-            "withdrawalResidualMicroAssetAmount": 910935n,
-            "withdrawalUserReservedAmount": 103599312n,
+            "withdrawalResidualMicroAssetAmount": 924919n,
+            "withdrawalUserReservedAmount": 103599311n,
           },
           {
             "decimals": 8,
@@ -3079,7 +3053,7 @@ describe('restaking.fragBTC test', async () => {
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
             "unstakingAmountAsSOL": 0n,
             "withdrawable": true,
-            "withdrawableValueAsReceiptTokenAmount": 1433097379n,
+            "withdrawableValueAsReceiptTokenAmount": 1433097378n,
             "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
             "withdrawalResidualMicroAssetAmount": 16418n,
             "withdrawalUserReservedAmount": 0n,
@@ -3124,7 +3098,7 @@ describe('restaking.fragBTC test', async () => {
             "mint": "ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq",
           },
         ],
-        "oneReceiptTokenAsMicroSupportedTokenAmount": 109574877179602n,
+        "oneReceiptTokenAsMicroSupportedTokenAmount": 109574877225154n,
         "oneReceiptTokenAsSupportedTokenAmount": 109574877n,
         "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 110000000000000n,
         "oneSolvReceiptTokenAsSupportedTokenAmount": 110000000n,
@@ -3132,16 +3106,18 @@ describe('restaking.fragBTC test', async () => {
         "receiptTokenMint": "DNLsKFnrBjTBKp1eSwt8z1iNu2T2PL3MnxZFsGEEpQCf",
         "receiptTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
         "receiptTokenSupply": 2186147332n,
+        "solvProtocolDepositFeeRate": 0,
         "solvProtocolWallet": "GiDkDCZjVC8Nk1Fd457qGSV2g3MQX62n7cV5CvgFyGfF",
         "solvProtocolWithdrawalFeeRate": 0,
-        "solvReceiptTokenAmount": 2911852291n,
+        "solvReceiptTokenAmount": 2911852293n,
         "solvReceiptTokenDecimals": 8,
         "solvReceiptTokenMint": "SoLvzL3ZVjofmNB5LYFrf94QtNhMUSea4DawFhnAau8",
         "solvReceiptTokenOperationReceivableAmount": 0n,
-        "solvReceiptTokenOperationReservedAmount": 2177698412n,
-        "supportedTokenAmount": 903037521n,
+        "solvReceiptTokenOperationReservedAmount": 2177698414n,
+        "supportedTokenAmount": 903037523n,
         "supportedTokenDecimals": 8,
         "supportedTokenMint": "zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg",
+        "supportedTokenOperationReceivableAmount": 0n,
         "supportedTokenOperationReservedAmount": 0n,
         "supportedTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
         "withdrawal": {
@@ -3288,5 +3264,1324 @@ describe('restaking.fragBTC test', async () => {
         "succeeded": true,
       }
     `);
+  });
+
+  test('fragBTC APY can be estimated through vault supported token compounded amount', async () => {
+    /*
+     * VRT price can be same OR increased based on how solv protocol operates deposited asset. (We assume VRT price doesn't decrease right now)
+     * Test two possible cases whether harvest_restaking_yield command emits correct event.
+     * Since harvest command iterate all vaults in fragBTC fund and runCommand returns last result, we use last vault(wBTC vault) for testing.
+     */
+
+    // reset VST compounded amount
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestRestakingYield',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    // 1) VRT Price remains same
+    // 1-1) VRT Amount remains same
+    await expectMasked(ctx.fund.restakingVaults[2].resolve(true)).resolves
+      .toMatchInlineSnapshot(`
+      {
+        "admin": {
+          "fundManager": "BEpVRdWw6VhvfwfQufB9iqcJ6acf51XRP1jETCvGDBVE",
+          "rewardManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+          "solvManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+          "vaultManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+        },
+        "delegatedRewardTokens": [],
+        "oneReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+        "oneReceiptTokenAsSupportedTokenAmount": 100000000n,
+        "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+        "oneSolvReceiptTokenAsSupportedTokenAmount": 100000000n,
+        "receiptTokenDecimals": 8,
+        "receiptTokenMint": "4hNFn9hWmL4xxH7PxnZntFcDyEhXx5vHu4uM5rNj4fcL",
+        "receiptTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "receiptTokenSupply": 1945996280n,
+        "solvProtocolDepositFeeRate": 0,
+        "solvProtocolWallet": "11111111111111111111111111111111",
+        "solvProtocolWithdrawalFeeRate": 0,
+        "solvReceiptTokenAmount": 0n,
+        "solvReceiptTokenDecimals": 8,
+        "solvReceiptTokenMint": "SoLvzL3ZVjofmNB5LYFrf94QtNhMUSea4DawFhnAau8",
+        "solvReceiptTokenOperationReceivableAmount": 0n,
+        "solvReceiptTokenOperationReservedAmount": 0n,
+        "supportedTokenAmount": 1945996280n,
+        "supportedTokenDecimals": 8,
+        "supportedTokenMint": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
+        "supportedTokenOperationReceivableAmount": 0n,
+        "supportedTokenOperationReservedAmount": 1945996280n,
+        "supportedTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "withdrawal": {
+          "completed": {
+            "receiptTokenProcessedAmount": 0n,
+            "requests": [],
+            "supportedTokenDeductedFeeAmount": 0n,
+            "supportedTokenExtraClaimableAmount": 0n,
+            "supportedTokenTotalClaimableAmount": 0n,
+          },
+          "enqueued": {
+            "receiptTokenEnqueuedAmount": 0n,
+            "requests": [],
+            "solvReceiptTokenLockedAmount": 0n,
+            "supportedTokenLockedAmount": 0n,
+          },
+          "processing": {
+            "receiptTokenProcessingAmount": 0n,
+            "requests": [],
+            "supportedTokenReceivableAmount": 0n,
+          },
+        },
+      }
+    `);
+
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'ClaimUnrestakedVST',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'UnrestakeVRT',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'RestakeVST',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    // harvest yield
+    let res = await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestRestakingYield',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    let evt = res.events!.operatorRanFundCommand!;
+    let result = isSome(evt.result)
+      ? (evt.result.value
+          .fields[0] as restakingTypes.HarvestRestakingYieldCommandResult)
+      : null;
+
+    // result value is None since there is no VRT price change, compounded VST amount is 0
+    expect(result).toBeNull();
+
+    // 1-2) VRT Amount increases (user deposits vst -> restake vst command executed)
+    await validator.airdropToken(
+      user1.address!,
+      '3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh',
+      100_0000_0000n
+    );
+
+    await user1.deposit.execute(
+      {
+        assetMint: '3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh',
+        assetAmount: 20_0000_0000n,
+      },
+      { signers: [signer1] }
+    );
+
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'RestakeVST',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    await expectMasked(ctx.fund.restakingVaults[2].resolve(true)).resolves
+      .toMatchInlineSnapshot(`
+      {
+        "admin": {
+          "fundManager": "BEpVRdWw6VhvfwfQufB9iqcJ6acf51XRP1jETCvGDBVE",
+          "rewardManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+          "solvManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+          "vaultManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+        },
+        "delegatedRewardTokens": [],
+        "oneReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+        "oneReceiptTokenAsSupportedTokenAmount": 100000000n,
+        "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+        "oneSolvReceiptTokenAsSupportedTokenAmount": 100000000n,
+        "receiptTokenDecimals": 8,
+        "receiptTokenMint": "4hNFn9hWmL4xxH7PxnZntFcDyEhXx5vHu4uM5rNj4fcL",
+        "receiptTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "receiptTokenSupply": 3939996280n,
+        "solvProtocolDepositFeeRate": 0,
+        "solvProtocolWallet": "11111111111111111111111111111111",
+        "solvProtocolWithdrawalFeeRate": 0,
+        "solvReceiptTokenAmount": 0n,
+        "solvReceiptTokenDecimals": 8,
+        "solvReceiptTokenMint": "SoLvzL3ZVjofmNB5LYFrf94QtNhMUSea4DawFhnAau8",
+        "solvReceiptTokenOperationReceivableAmount": 0n,
+        "solvReceiptTokenOperationReservedAmount": 0n,
+        "supportedTokenAmount": 3939996280n,
+        "supportedTokenDecimals": 8,
+        "supportedTokenMint": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
+        "supportedTokenOperationReceivableAmount": 0n,
+        "supportedTokenOperationReservedAmount": 3939996280n,
+        "supportedTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "withdrawal": {
+          "completed": {
+            "receiptTokenProcessedAmount": 0n,
+            "requests": [],
+            "supportedTokenDeductedFeeAmount": 0n,
+            "supportedTokenExtraClaimableAmount": 0n,
+            "supportedTokenTotalClaimableAmount": 0n,
+          },
+          "enqueued": {
+            "receiptTokenEnqueuedAmount": 0n,
+            "requests": [],
+            "solvReceiptTokenLockedAmount": 0n,
+            "supportedTokenLockedAmount": 0n,
+          },
+          "processing": {
+            "receiptTokenProcessingAmount": 0n,
+            "requests": [],
+            "supportedTokenReceivableAmount": 0n,
+          },
+        },
+      }
+    `);
+
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'ClaimUnrestakedVST',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'UnrestakeVRT',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'RestakeVST',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    // harvest yield
+    res = await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestRestakingYield',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    evt = res.events!.operatorRanFundCommand!;
+    result = isSome(evt.result)
+      ? (evt.result.value
+          .fields[0] as restakingTypes.HarvestRestakingYieldCommandResult)
+      : null;
+
+    // result value is None since there is no VRT price change, compounded VST amount is 0
+    expect(result).toBeNull();
+
+    // 1-3) VRT Amount decreases (user requests withdraw -> full command cycle executed)
+    await user1.requestWithdrawal.execute(
+      {
+        assetMint: '3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh',
+        receiptTokenAmount: 10_0000_0000n,
+      },
+      { signers: [signer1] }
+    );
+
+    await ctx.fund.runCommand.executeChained(null);
+
+    await expectMasked(ctx.fund.restakingVaults[2].resolve(true)).resolves
+      .toMatchInlineSnapshot(`
+      {
+        "admin": {
+          "fundManager": "BEpVRdWw6VhvfwfQufB9iqcJ6acf51XRP1jETCvGDBVE",
+          "rewardManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+          "solvManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+          "vaultManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+        },
+        "delegatedRewardTokens": [],
+        "oneReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+        "oneReceiptTokenAsSupportedTokenAmount": 100000000n,
+        "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+        "oneSolvReceiptTokenAsSupportedTokenAmount": 100000000n,
+        "receiptTokenDecimals": 8,
+        "receiptTokenMint": "4hNFn9hWmL4xxH7PxnZntFcDyEhXx5vHu4uM5rNj4fcL",
+        "receiptTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "receiptTokenSupply": 2913782586n,
+        "solvProtocolDepositFeeRate": 0,
+        "solvProtocolWallet": "11111111111111111111111111111111",
+        "solvProtocolWithdrawalFeeRate": 0,
+        "solvReceiptTokenAmount": 0n,
+        "solvReceiptTokenDecimals": 8,
+        "solvReceiptTokenMint": "SoLvzL3ZVjofmNB5LYFrf94QtNhMUSea4DawFhnAau8",
+        "solvReceiptTokenOperationReceivableAmount": 0n,
+        "solvReceiptTokenOperationReservedAmount": 0n,
+        "supportedTokenAmount": 3939996280n,
+        "supportedTokenDecimals": 8,
+        "supportedTokenMint": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
+        "supportedTokenOperationReceivableAmount": 0n,
+        "supportedTokenOperationReservedAmount": 2913782586n,
+        "supportedTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "withdrawal": {
+          "completed": {
+            "receiptTokenProcessedAmount": 0n,
+            "requests": [],
+            "supportedTokenDeductedFeeAmount": 0n,
+            "supportedTokenExtraClaimableAmount": 0n,
+            "supportedTokenTotalClaimableAmount": 0n,
+          },
+          "enqueued": {
+            "receiptTokenEnqueuedAmount": 1026213694n,
+            "requests": [
+              {
+                "id": 1n,
+                "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+                "oneSolvReceiptTokenAsSupportedTokenAmount": 100000000n,
+                "receiptTokenEnqueuedAmount": 1026213694n,
+                "solvReceiptTokenLockedAmount": 0n,
+                "supportedTokenLockedAmount": 1026213694n,
+                "supportedTokenTotalEstimatedAmount": 1026213694n,
+              },
+            ],
+            "solvReceiptTokenLockedAmount": 0n,
+            "supportedTokenLockedAmount": 1026213694n,
+          },
+          "processing": {
+            "receiptTokenProcessingAmount": 0n,
+            "requests": [],
+            "supportedTokenReceivableAmount": 0n,
+          },
+        },
+      }
+    `);
+
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'ClaimUnrestakedVST',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'UnrestakeVRT',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'RestakeVST',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    // harvest yield
+    res = await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestRestakingYield',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    evt = res.events!.operatorRanFundCommand!;
+    result = isSome(evt.result)
+      ? (evt.result.value
+          .fields[0] as restakingTypes.HarvestRestakingYieldCommandResult)
+      : null;
+
+    // result value is None since there is no VRT price change, compounded VST amount is 0
+    expect(result).toBeNull();
+
+    // 2) VRT Price increases
+    // mock solv operation
+    await validator.airdropToken(
+      solv.wBTC.address!,
+      'SoLvzL3ZVjofmNB5LYFrf94QtNhMUSea4DawFhnAau8',
+      100_0000_0000n
+    );
+    await solv.wBTC.setSolvProtocolWallet.execute({ address: feePayer });
+
+    await expectMasked(ctx.fund.restakingVaults[2].resolve(true)).resolves
+      .toMatchInlineSnapshot(`
+      {
+        "admin": {
+          "fundManager": "BEpVRdWw6VhvfwfQufB9iqcJ6acf51XRP1jETCvGDBVE",
+          "rewardManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+          "solvManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+          "vaultManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+        },
+        "delegatedRewardTokens": [],
+        "oneReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+        "oneReceiptTokenAsSupportedTokenAmount": 100000000n,
+        "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+        "oneSolvReceiptTokenAsSupportedTokenAmount": 100000000n,
+        "receiptTokenDecimals": 8,
+        "receiptTokenMint": "4hNFn9hWmL4xxH7PxnZntFcDyEhXx5vHu4uM5rNj4fcL",
+        "receiptTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "receiptTokenSupply": 2913782586n,
+        "solvProtocolDepositFeeRate": 0,
+        "solvProtocolWallet": "GiDkDCZjVC8Nk1Fd457qGSV2g3MQX62n7cV5CvgFyGfF",
+        "solvProtocolWithdrawalFeeRate": 0,
+        "solvReceiptTokenAmount": 10000000000n,
+        "solvReceiptTokenDecimals": 8,
+        "solvReceiptTokenMint": "SoLvzL3ZVjofmNB5LYFrf94QtNhMUSea4DawFhnAau8",
+        "solvReceiptTokenOperationReceivableAmount": 0n,
+        "solvReceiptTokenOperationReservedAmount": 0n,
+        "supportedTokenAmount": 3939996280n,
+        "supportedTokenDecimals": 8,
+        "supportedTokenMint": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
+        "supportedTokenOperationReceivableAmount": 0n,
+        "supportedTokenOperationReservedAmount": 2913782586n,
+        "supportedTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "withdrawal": {
+          "completed": {
+            "receiptTokenProcessedAmount": 0n,
+            "requests": [],
+            "supportedTokenDeductedFeeAmount": 0n,
+            "supportedTokenExtraClaimableAmount": 0n,
+            "supportedTokenTotalClaimableAmount": 0n,
+          },
+          "enqueued": {
+            "receiptTokenEnqueuedAmount": 1026213694n,
+            "requests": [
+              {
+                "id": 1n,
+                "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+                "oneSolvReceiptTokenAsSupportedTokenAmount": 100000000n,
+                "receiptTokenEnqueuedAmount": 1026213694n,
+                "solvReceiptTokenLockedAmount": 0n,
+                "supportedTokenLockedAmount": 1026213694n,
+                "supportedTokenTotalEstimatedAmount": 1026213694n,
+              },
+            ],
+            "solvReceiptTokenLockedAmount": 0n,
+            "supportedTokenLockedAmount": 1026213694n,
+          },
+          "processing": {
+            "receiptTokenProcessingAmount": 0n,
+            "requests": [],
+            "supportedTokenReceivableAmount": 0n,
+          },
+        },
+      }
+    `);
+
+    // user deposits wBTC to trigger VRT price change
+    await user1.deposit.execute(
+      {
+        assetMint: '3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh',
+        assetAmount: 10_0000_0000n,
+      },
+      { signers: [signer1] }
+    );
+
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'RestakeVST',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    await expectMasked(ctx.fund.restakingVaults[2].resolve(true)).resolves
+      .toMatchInlineSnapshot(`
+      {
+        "admin": {
+          "fundManager": "BEpVRdWw6VhvfwfQufB9iqcJ6acf51XRP1jETCvGDBVE",
+          "rewardManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+          "solvManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+          "vaultManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+        },
+        "delegatedRewardTokens": [],
+        "oneReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+        "oneReceiptTokenAsSupportedTokenAmount": 100000000n,
+        "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+        "oneSolvReceiptTokenAsSupportedTokenAmount": 100000000n,
+        "receiptTokenDecimals": 8,
+        "receiptTokenMint": "4hNFn9hWmL4xxH7PxnZntFcDyEhXx5vHu4uM5rNj4fcL",
+        "receiptTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "receiptTokenSupply": 2913782586n,
+        "solvProtocolDepositFeeRate": 0,
+        "solvProtocolWallet": "GiDkDCZjVC8Nk1Fd457qGSV2g3MQX62n7cV5CvgFyGfF",
+        "solvProtocolWithdrawalFeeRate": 0,
+        "solvReceiptTokenAmount": 10000000000n,
+        "solvReceiptTokenDecimals": 8,
+        "solvReceiptTokenMint": "SoLvzL3ZVjofmNB5LYFrf94QtNhMUSea4DawFhnAau8",
+        "solvReceiptTokenOperationReceivableAmount": 0n,
+        "solvReceiptTokenOperationReservedAmount": 0n,
+        "supportedTokenAmount": 3939996280n,
+        "supportedTokenDecimals": 8,
+        "supportedTokenMint": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
+        "supportedTokenOperationReceivableAmount": 0n,
+        "supportedTokenOperationReservedAmount": 2913782586n,
+        "supportedTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "withdrawal": {
+          "completed": {
+            "receiptTokenProcessedAmount": 0n,
+            "requests": [],
+            "supportedTokenDeductedFeeAmount": 0n,
+            "supportedTokenExtraClaimableAmount": 0n,
+            "supportedTokenTotalClaimableAmount": 0n,
+          },
+          "enqueued": {
+            "receiptTokenEnqueuedAmount": 1026213694n,
+            "requests": [
+              {
+                "id": 1n,
+                "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+                "oneSolvReceiptTokenAsSupportedTokenAmount": 100000000n,
+                "receiptTokenEnqueuedAmount": 1026213694n,
+                "solvReceiptTokenLockedAmount": 0n,
+                "supportedTokenLockedAmount": 1026213694n,
+                "supportedTokenTotalEstimatedAmount": 1026213694n,
+              },
+            ],
+            "solvReceiptTokenLockedAmount": 0n,
+            "supportedTokenLockedAmount": 1026213694n,
+          },
+          "processing": {
+            "receiptTokenProcessingAmount": 0n,
+            "requests": [],
+            "supportedTokenReceivableAmount": 0n,
+          },
+        },
+      }
+    `);
+
+    await solv.wBTC.confirmDeposits.execute(null);
+
+    await expectMasked(ctx.fund.restakingVaults[2].resolve(true)).resolves
+      .toMatchInlineSnapshot(`
+      {
+        "admin": {
+          "fundManager": "BEpVRdWw6VhvfwfQufB9iqcJ6acf51XRP1jETCvGDBVE",
+          "rewardManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+          "solvManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+          "vaultManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+        },
+        "delegatedRewardTokens": [],
+        "oneReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+        "oneReceiptTokenAsSupportedTokenAmount": 100000000n,
+        "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+        "oneSolvReceiptTokenAsSupportedTokenAmount": 100000000n,
+        "receiptTokenDecimals": 8,
+        "receiptTokenMint": "4hNFn9hWmL4xxH7PxnZntFcDyEhXx5vHu4uM5rNj4fcL",
+        "receiptTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "receiptTokenSupply": 2913782586n,
+        "solvProtocolDepositFeeRate": 0,
+        "solvProtocolWallet": "GiDkDCZjVC8Nk1Fd457qGSV2g3MQX62n7cV5CvgFyGfF",
+        "solvProtocolWithdrawalFeeRate": 0,
+        "solvReceiptTokenAmount": 10000000000n,
+        "solvReceiptTokenDecimals": 8,
+        "solvReceiptTokenMint": "SoLvzL3ZVjofmNB5LYFrf94QtNhMUSea4DawFhnAau8",
+        "solvReceiptTokenOperationReceivableAmount": 2913782586n,
+        "solvReceiptTokenOperationReservedAmount": 0n,
+        "supportedTokenAmount": 1026213694n,
+        "supportedTokenDecimals": 8,
+        "supportedTokenMint": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
+        "supportedTokenOperationReceivableAmount": 0n,
+        "supportedTokenOperationReservedAmount": 0n,
+        "supportedTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "withdrawal": {
+          "completed": {
+            "receiptTokenProcessedAmount": 0n,
+            "requests": [],
+            "supportedTokenDeductedFeeAmount": 0n,
+            "supportedTokenExtraClaimableAmount": 0n,
+            "supportedTokenTotalClaimableAmount": 0n,
+          },
+          "enqueued": {
+            "receiptTokenEnqueuedAmount": 1026213694n,
+            "requests": [
+              {
+                "id": 1n,
+                "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+                "oneSolvReceiptTokenAsSupportedTokenAmount": 100000000n,
+                "receiptTokenEnqueuedAmount": 1026213694n,
+                "solvReceiptTokenLockedAmount": 0n,
+                "supportedTokenLockedAmount": 1026213694n,
+                "supportedTokenTotalEstimatedAmount": 1026213694n,
+              },
+            ],
+            "solvReceiptTokenLockedAmount": 0n,
+            "supportedTokenLockedAmount": 1026213694n,
+          },
+          "processing": {
+            "receiptTokenProcessingAmount": 0n,
+            "requests": [],
+            "supportedTokenReceivableAmount": 0n,
+          },
+        },
+      }
+    `);
+
+    // trigger VRT price change by increasing SRT value ***
+
+    const priceIncreasedAmountAsPercent = 10n;
+    const receivableSolvReceiptTokenAmount = 29_1378_2586n;
+    const expectedSupportedTokenAmount = receivableSolvReceiptTokenAmount;
+
+    await solv.wBTC.completeDeposits.execute({
+      redeemedSolvReceiptTokenAmount: receivableSolvReceiptTokenAmount,
+      newOneSolvReceiptTokenAsMicroSupportedTokenAmount:
+        (1_0000_0000_000000n * (100n + priceIncreasedAmountAsPercent)) / 100n,
+    });
+
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'ClaimUnrestakedVST',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    // harvest yield - VST compounded amount should be 10%
+    res = await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestRestakingYield',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    evt = res.events!.operatorRanFundCommand!;
+    result = isSome(evt.result)
+      ? (evt.result.value
+          .fields[0] as restakingTypes.HarvestRestakingYieldCommandResult)
+      : null;
+
+    // compounded vst amount should be 10% of expected supported token amount
+    expect(result?.vaultSupportedTokenCompoundedAmount).toEqual(
+      (expectedSupportedTokenAmount * priceIncreasedAmountAsPercent) / 100n
+    );
+
+    // check whether supported_token_compounded_amount value in RestakingVault struct is reset to '0'
+    expect(
+      await ctx.fund
+        .resolveAccount(true)
+        .then(
+          (fundAccount) =>
+            fundAccount!.data.restakingVaults[2].supportedTokenCompoundedAmount
+        )
+    ).toEqual(0n);
+  });
+
+  test('duplicate withdrawal requests can be prevented by adopting pending_supported_token_unrestaking_amount', async () => {
+    await ctx.fund.runCommand.executeChained(null);
+
+    await validator.airdropToken(
+      solv.cbBTC.address!,
+      'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
+      10_0000_0000n
+    );
+
+    await validator.airdropToken(
+      solv.cbBTC.address!,
+      'SoLvzL3ZVjofmNB5LYFrf94QtNhMUSea4DawFhnAau8',
+      10_0000_0000n
+    );
+
+    await expectMasked(ctx.fund.restakingVaults[1].resolve(true)).resolves
+      .toMatchInlineSnapshot(`
+      {
+        "admin": {
+          "fundManager": "BEpVRdWw6VhvfwfQufB9iqcJ6acf51XRP1jETCvGDBVE",
+          "rewardManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+          "solvManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+          "vaultManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+        },
+        "delegatedRewardTokens": [],
+        "oneReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+        "oneReceiptTokenAsSupportedTokenAmount": 100000000n,
+        "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+        "oneSolvReceiptTokenAsSupportedTokenAmount": 100000000n,
+        "receiptTokenDecimals": 8,
+        "receiptTokenMint": "BDYcrsJ6Y4kPdkReieh4RV58ziMNsYnMPpnDZgyAsdmh",
+        "receiptTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "receiptTokenSupply": 1483191359n,
+        "solvProtocolDepositFeeRate": 0,
+        "solvProtocolWallet": "11111111111111111111111111111111",
+        "solvProtocolWithdrawalFeeRate": 0,
+        "solvReceiptTokenAmount": 1000000000n,
+        "solvReceiptTokenDecimals": 8,
+        "solvReceiptTokenMint": "SoLvzL3ZVjofmNB5LYFrf94QtNhMUSea4DawFhnAau8",
+        "solvReceiptTokenOperationReceivableAmount": 0n,
+        "solvReceiptTokenOperationReservedAmount": 0n,
+        "supportedTokenAmount": 2483191359n,
+        "supportedTokenDecimals": 8,
+        "supportedTokenMint": "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
+        "supportedTokenOperationReceivableAmount": 0n,
+        "supportedTokenOperationReservedAmount": 1483191359n,
+        "supportedTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "withdrawal": {
+          "completed": {
+            "receiptTokenProcessedAmount": 0n,
+            "requests": [],
+            "supportedTokenDeductedFeeAmount": 0n,
+            "supportedTokenExtraClaimableAmount": 0n,
+            "supportedTokenTotalClaimableAmount": 0n,
+          },
+          "enqueued": {
+            "receiptTokenEnqueuedAmount": 0n,
+            "requests": [],
+            "solvReceiptTokenLockedAmount": 0n,
+            "supportedTokenLockedAmount": 0n,
+          },
+          "processing": {
+            "receiptTokenProcessingAmount": 0n,
+            "requests": [],
+            "supportedTokenReceivableAmount": 0n,
+          },
+        },
+      }
+    `);
+
+    await validator.airdropToken(
+      user1.address!,
+      'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
+      100_0000_0000n
+    );
+
+    // 1) user tries to deposit -> request withdraw. Since there is sufficient amount of tokens in fund reserve,
+    // withdraw request shouldn't be enqueued to solv wrapper.
+    await user1.deposit.execute(
+      {
+        assetMint: 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
+        assetAmount: 5_0000_0000n,
+      },
+      { signers: [signer1] }
+    );
+
+    await user1.requestWithdrawal.execute(
+      {
+        assetMint: 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
+        receiptTokenAmount: 2_0000_0000n,
+      },
+      { signers: [signer1] }
+    );
+
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'EnqueueWithdrawalBatch',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'UnrestakeVRT',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    await expectMasked(ctx.fund.restakingVaults[1].resolve(true)).resolves
+      .toMatchInlineSnapshot(`
+      {
+        "admin": {
+          "fundManager": "BEpVRdWw6VhvfwfQufB9iqcJ6acf51XRP1jETCvGDBVE",
+          "rewardManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+          "solvManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+          "vaultManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+        },
+        "delegatedRewardTokens": [],
+        "oneReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+        "oneReceiptTokenAsSupportedTokenAmount": 100000000n,
+        "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+        "oneSolvReceiptTokenAsSupportedTokenAmount": 100000000n,
+        "receiptTokenDecimals": 8,
+        "receiptTokenMint": "BDYcrsJ6Y4kPdkReieh4RV58ziMNsYnMPpnDZgyAsdmh",
+        "receiptTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "receiptTokenSupply": 1483191359n,
+        "solvProtocolDepositFeeRate": 0,
+        "solvProtocolWallet": "11111111111111111111111111111111",
+        "solvProtocolWithdrawalFeeRate": 0,
+        "solvReceiptTokenAmount": 1000000000n,
+        "solvReceiptTokenDecimals": 8,
+        "solvReceiptTokenMint": "SoLvzL3ZVjofmNB5LYFrf94QtNhMUSea4DawFhnAau8",
+        "solvReceiptTokenOperationReceivableAmount": 0n,
+        "solvReceiptTokenOperationReservedAmount": 0n,
+        "supportedTokenAmount": 2483191359n,
+        "supportedTokenDecimals": 8,
+        "supportedTokenMint": "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
+        "supportedTokenOperationReceivableAmount": 0n,
+        "supportedTokenOperationReservedAmount": 1483191359n,
+        "supportedTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "withdrawal": {
+          "completed": {
+            "receiptTokenProcessedAmount": 0n,
+            "requests": [],
+            "supportedTokenDeductedFeeAmount": 0n,
+            "supportedTokenExtraClaimableAmount": 0n,
+            "supportedTokenTotalClaimableAmount": 0n,
+          },
+          "enqueued": {
+            "receiptTokenEnqueuedAmount": 0n,
+            "requests": [],
+            "solvReceiptTokenLockedAmount": 0n,
+            "supportedTokenLockedAmount": 0n,
+          },
+          "processing": {
+            "receiptTokenProcessingAmount": 0n,
+            "requests": [],
+            "supportedTokenReceivableAmount": 0n,
+          },
+        },
+      }
+    `);
+
+    // 2) RestakeVST command is executed to mint vrt. When user tries to withdraw repeatedly, only one withdraw request should be enqueued.
+    let res = await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'RestakeVST',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    let restakeVstEvt = res.events!.operatorRanFundCommand!;
+    let restakeVstResult = isSome(restakeVstEvt.result)
+      ? (restakeVstEvt.result.value
+          .fields[0] as restakingTypes.RestakeVSTCommandResult)
+      : null;
+
+    expect(restakeVstResult!.depositedSupportedTokenAmount).toBeLessThanOrEqual(
+      3_0000_0000n
+    );
+
+    await expectMasked(ctx.fund.restakingVaults[1].resolve(true)).resolves
+      .toMatchInlineSnapshot(`
+      {
+        "admin": {
+          "fundManager": "BEpVRdWw6VhvfwfQufB9iqcJ6acf51XRP1jETCvGDBVE",
+          "rewardManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+          "solvManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+          "vaultManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+        },
+        "delegatedRewardTokens": [],
+        "oneReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+        "oneReceiptTokenAsSupportedTokenAmount": 100000000n,
+        "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+        "oneSolvReceiptTokenAsSupportedTokenAmount": 100000000n,
+        "receiptTokenDecimals": 8,
+        "receiptTokenMint": "BDYcrsJ6Y4kPdkReieh4RV58ziMNsYnMPpnDZgyAsdmh",
+        "receiptTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "receiptTokenSupply": 1767230386n,
+        "solvProtocolDepositFeeRate": 0,
+        "solvProtocolWallet": "11111111111111111111111111111111",
+        "solvProtocolWithdrawalFeeRate": 0,
+        "solvReceiptTokenAmount": 1000000000n,
+        "solvReceiptTokenDecimals": 8,
+        "solvReceiptTokenMint": "SoLvzL3ZVjofmNB5LYFrf94QtNhMUSea4DawFhnAau8",
+        "solvReceiptTokenOperationReceivableAmount": 0n,
+        "solvReceiptTokenOperationReservedAmount": 0n,
+        "supportedTokenAmount": 2767230386n,
+        "supportedTokenDecimals": 8,
+        "supportedTokenMint": "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
+        "supportedTokenOperationReceivableAmount": 0n,
+        "supportedTokenOperationReservedAmount": 1767230386n,
+        "supportedTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "withdrawal": {
+          "completed": {
+            "receiptTokenProcessedAmount": 0n,
+            "requests": [],
+            "supportedTokenDeductedFeeAmount": 0n,
+            "supportedTokenExtraClaimableAmount": 0n,
+            "supportedTokenTotalClaimableAmount": 0n,
+          },
+          "enqueued": {
+            "receiptTokenEnqueuedAmount": 0n,
+            "requests": [],
+            "solvReceiptTokenLockedAmount": 0n,
+            "supportedTokenLockedAmount": 0n,
+          },
+          "processing": {
+            "receiptTokenProcessingAmount": 0n,
+            "requests": [],
+            "supportedTokenReceivableAmount": 0n,
+          },
+        },
+      }
+    `);
+
+    await user1.requestWithdrawal.execute(
+      {
+        assetMint: 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
+        receiptTokenAmount: 1_0000_0000n,
+      },
+      { signers: [signer1] }
+    );
+
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'EnqueueWithdrawalBatch',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    // 1st Unrestake command
+    res = await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'UnrestakeVRT',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    let unrestakeVrtEvt = res.events!.operatorRanFundCommand!;
+    let unrestakeVrtResult = isSome(unrestakeVrtEvt.result)
+      ? (unrestakeVrtEvt.result.value
+          .fields[0] as restakingTypes.UnrestakeVRTCommandResult)
+      : null;
+
+    expect(unrestakeVrtResult!.unrestakingTokenAmount).toBeGreaterThanOrEqual(
+      1_0000_0000n
+    );
+
+    await expectMasked(ctx.fund.restakingVaults[1].resolve(true)).resolves
+      .toMatchInlineSnapshot(`
+      {
+        "admin": {
+          "fundManager": "BEpVRdWw6VhvfwfQufB9iqcJ6acf51XRP1jETCvGDBVE",
+          "rewardManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+          "solvManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+          "vaultManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+        },
+        "delegatedRewardTokens": [],
+        "oneReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+        "oneReceiptTokenAsSupportedTokenAmount": 100000000n,
+        "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+        "oneSolvReceiptTokenAsSupportedTokenAmount": 100000000n,
+        "receiptTokenDecimals": 8,
+        "receiptTokenMint": "BDYcrsJ6Y4kPdkReieh4RV58ziMNsYnMPpnDZgyAsdmh",
+        "receiptTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "receiptTokenSupply": 1665962861n,
+        "solvProtocolDepositFeeRate": 0,
+        "solvProtocolWallet": "11111111111111111111111111111111",
+        "solvProtocolWithdrawalFeeRate": 0,
+        "solvReceiptTokenAmount": 1000000000n,
+        "solvReceiptTokenDecimals": 8,
+        "solvReceiptTokenMint": "SoLvzL3ZVjofmNB5LYFrf94QtNhMUSea4DawFhnAau8",
+        "solvReceiptTokenOperationReceivableAmount": 0n,
+        "solvReceiptTokenOperationReservedAmount": 0n,
+        "supportedTokenAmount": 2767230386n,
+        "supportedTokenDecimals": 8,
+        "supportedTokenMint": "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
+        "supportedTokenOperationReceivableAmount": 0n,
+        "supportedTokenOperationReservedAmount": 1665962861n,
+        "supportedTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "withdrawal": {
+          "completed": {
+            "receiptTokenProcessedAmount": 0n,
+            "requests": [],
+            "supportedTokenDeductedFeeAmount": 0n,
+            "supportedTokenExtraClaimableAmount": 0n,
+            "supportedTokenTotalClaimableAmount": 0n,
+          },
+          "enqueued": {
+            "receiptTokenEnqueuedAmount": 101267525n,
+            "requests": [
+              {
+                "id": 1n,
+                "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+                "oneSolvReceiptTokenAsSupportedTokenAmount": 100000000n,
+                "receiptTokenEnqueuedAmount": 101267525n,
+                "solvReceiptTokenLockedAmount": 0n,
+                "supportedTokenLockedAmount": 101267525n,
+                "supportedTokenTotalEstimatedAmount": 101267525n,
+              },
+            ],
+            "solvReceiptTokenLockedAmount": 0n,
+            "supportedTokenLockedAmount": 101267525n,
+          },
+          "processing": {
+            "receiptTokenProcessingAmount": 0n,
+            "requests": [],
+            "supportedTokenReceivableAmount": 0n,
+          },
+        },
+      }
+    `);
+
+    // check pending amount value
+    expect(
+      await ctx.fund
+        .resolveAccount(true)
+        .then(
+          (fundAccount) =>
+            fundAccount!.data.restakingVaults[1]
+              .pendingSupportedTokenUnrestakingAmount
+        )
+    ).toEqual(101267525n);
+
+    // 2nd Unrestake command
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'UnrestakeVRT',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    await expectMasked(ctx.fund.restakingVaults[1].resolve(true)).resolves
+      .toMatchInlineSnapshot(`
+      {
+        "admin": {
+          "fundManager": "BEpVRdWw6VhvfwfQufB9iqcJ6acf51XRP1jETCvGDBVE",
+          "rewardManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+          "solvManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+          "vaultManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+        },
+        "delegatedRewardTokens": [],
+        "oneReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+        "oneReceiptTokenAsSupportedTokenAmount": 100000000n,
+        "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+        "oneSolvReceiptTokenAsSupportedTokenAmount": 100000000n,
+        "receiptTokenDecimals": 8,
+        "receiptTokenMint": "BDYcrsJ6Y4kPdkReieh4RV58ziMNsYnMPpnDZgyAsdmh",
+        "receiptTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "receiptTokenSupply": 1665962861n,
+        "solvProtocolDepositFeeRate": 0,
+        "solvProtocolWallet": "11111111111111111111111111111111",
+        "solvProtocolWithdrawalFeeRate": 0,
+        "solvReceiptTokenAmount": 1000000000n,
+        "solvReceiptTokenDecimals": 8,
+        "solvReceiptTokenMint": "SoLvzL3ZVjofmNB5LYFrf94QtNhMUSea4DawFhnAau8",
+        "solvReceiptTokenOperationReceivableAmount": 0n,
+        "solvReceiptTokenOperationReservedAmount": 0n,
+        "supportedTokenAmount": 2767230386n,
+        "supportedTokenDecimals": 8,
+        "supportedTokenMint": "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
+        "supportedTokenOperationReceivableAmount": 0n,
+        "supportedTokenOperationReservedAmount": 1665962861n,
+        "supportedTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "withdrawal": {
+          "completed": {
+            "receiptTokenProcessedAmount": 0n,
+            "requests": [],
+            "supportedTokenDeductedFeeAmount": 0n,
+            "supportedTokenExtraClaimableAmount": 0n,
+            "supportedTokenTotalClaimableAmount": 0n,
+          },
+          "enqueued": {
+            "receiptTokenEnqueuedAmount": 101267525n,
+            "requests": [
+              {
+                "id": 1n,
+                "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+                "oneSolvReceiptTokenAsSupportedTokenAmount": 100000000n,
+                "receiptTokenEnqueuedAmount": 101267525n,
+                "solvReceiptTokenLockedAmount": 0n,
+                "supportedTokenLockedAmount": 101267525n,
+                "supportedTokenTotalEstimatedAmount": 101267525n,
+              },
+            ],
+            "solvReceiptTokenLockedAmount": 0n,
+            "supportedTokenLockedAmount": 101267525n,
+          },
+          "processing": {
+            "receiptTokenProcessingAmount": 0n,
+            "requests": [],
+            "supportedTokenReceivableAmount": 0n,
+          },
+        },
+      }
+    `);
+
+    // 3rd Unrestake command
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'UnrestakeVRT',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    await expectMasked(ctx.fund.restakingVaults[1].resolve(true)).resolves
+      .toMatchInlineSnapshot(`
+      {
+        "admin": {
+          "fundManager": "BEpVRdWw6VhvfwfQufB9iqcJ6acf51XRP1jETCvGDBVE",
+          "rewardManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+          "solvManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+          "vaultManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+        },
+        "delegatedRewardTokens": [],
+        "oneReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+        "oneReceiptTokenAsSupportedTokenAmount": 100000000n,
+        "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+        "oneSolvReceiptTokenAsSupportedTokenAmount": 100000000n,
+        "receiptTokenDecimals": 8,
+        "receiptTokenMint": "BDYcrsJ6Y4kPdkReieh4RV58ziMNsYnMPpnDZgyAsdmh",
+        "receiptTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "receiptTokenSupply": 1665962861n,
+        "solvProtocolDepositFeeRate": 0,
+        "solvProtocolWallet": "11111111111111111111111111111111",
+        "solvProtocolWithdrawalFeeRate": 0,
+        "solvReceiptTokenAmount": 1000000000n,
+        "solvReceiptTokenDecimals": 8,
+        "solvReceiptTokenMint": "SoLvzL3ZVjofmNB5LYFrf94QtNhMUSea4DawFhnAau8",
+        "solvReceiptTokenOperationReceivableAmount": 0n,
+        "solvReceiptTokenOperationReservedAmount": 0n,
+        "supportedTokenAmount": 2767230386n,
+        "supportedTokenDecimals": 8,
+        "supportedTokenMint": "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
+        "supportedTokenOperationReceivableAmount": 0n,
+        "supportedTokenOperationReservedAmount": 1665962861n,
+        "supportedTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "withdrawal": {
+          "completed": {
+            "receiptTokenProcessedAmount": 0n,
+            "requests": [],
+            "supportedTokenDeductedFeeAmount": 0n,
+            "supportedTokenExtraClaimableAmount": 0n,
+            "supportedTokenTotalClaimableAmount": 0n,
+          },
+          "enqueued": {
+            "receiptTokenEnqueuedAmount": 101267525n,
+            "requests": [
+              {
+                "id": 1n,
+                "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+                "oneSolvReceiptTokenAsSupportedTokenAmount": 100000000n,
+                "receiptTokenEnqueuedAmount": 101267525n,
+                "solvReceiptTokenLockedAmount": 0n,
+                "supportedTokenLockedAmount": 101267525n,
+                "supportedTokenTotalEstimatedAmount": 101267525n,
+              },
+            ],
+            "solvReceiptTokenLockedAmount": 0n,
+            "supportedTokenLockedAmount": 101267525n,
+          },
+          "processing": {
+            "receiptTokenProcessingAmount": 0n,
+            "requests": [],
+            "supportedTokenReceivableAmount": 0n,
+          },
+        },
+      }
+    `);
+
+    // 3) If user requests more token to withdraw so that pending amount can not afford user requests, additional request should be enqueued.
+    await user1.requestWithdrawal.execute(
+      {
+        assetMint: 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
+        receiptTokenAmount: 1_0000_0000n,
+      },
+      { signers: [signer1] }
+    );
+
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'EnqueueWithdrawalBatch',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    res = await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'UnrestakeVRT',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    unrestakeVrtEvt = res.events!.operatorRanFundCommand!;
+    unrestakeVrtResult = isSome(unrestakeVrtEvt.result)
+      ? (unrestakeVrtEvt.result.value
+          .fields[0] as restakingTypes.UnrestakeVRTCommandResult)
+      : null;
+
+    await expectMasked(ctx.fund.restakingVaults[1].resolve(true)).resolves
+      .toMatchInlineSnapshot(`
+      {
+        "admin": {
+          "fundManager": "BEpVRdWw6VhvfwfQufB9iqcJ6acf51XRP1jETCvGDBVE",
+          "rewardManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+          "solvManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+          "vaultManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+        },
+        "delegatedRewardTokens": [],
+        "oneReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+        "oneReceiptTokenAsSupportedTokenAmount": 100000000n,
+        "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+        "oneSolvReceiptTokenAsSupportedTokenAmount": 100000000n,
+        "receiptTokenDecimals": 8,
+        "receiptTokenMint": "BDYcrsJ6Y4kPdkReieh4RV58ziMNsYnMPpnDZgyAsdmh",
+        "receiptTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "receiptTokenSupply": 1558732374n,
+        "solvProtocolDepositFeeRate": 0,
+        "solvProtocolWallet": "11111111111111111111111111111111",
+        "solvProtocolWithdrawalFeeRate": 0,
+        "solvReceiptTokenAmount": 1000000000n,
+        "solvReceiptTokenDecimals": 8,
+        "solvReceiptTokenMint": "SoLvzL3ZVjofmNB5LYFrf94QtNhMUSea4DawFhnAau8",
+        "solvReceiptTokenOperationReceivableAmount": 0n,
+        "solvReceiptTokenOperationReservedAmount": 0n,
+        "supportedTokenAmount": 2767230386n,
+        "supportedTokenDecimals": 8,
+        "supportedTokenMint": "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
+        "supportedTokenOperationReceivableAmount": 0n,
+        "supportedTokenOperationReservedAmount": 1558732374n,
+        "supportedTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "withdrawal": {
+          "completed": {
+            "receiptTokenProcessedAmount": 0n,
+            "requests": [],
+            "supportedTokenDeductedFeeAmount": 0n,
+            "supportedTokenExtraClaimableAmount": 0n,
+            "supportedTokenTotalClaimableAmount": 0n,
+          },
+          "enqueued": {
+            "receiptTokenEnqueuedAmount": 208498012n,
+            "requests": [
+              {
+                "id": 1n,
+                "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+                "oneSolvReceiptTokenAsSupportedTokenAmount": 100000000n,
+                "receiptTokenEnqueuedAmount": 101267525n,
+                "solvReceiptTokenLockedAmount": 0n,
+                "supportedTokenLockedAmount": 101267525n,
+                "supportedTokenTotalEstimatedAmount": 101267525n,
+              },
+              {
+                "id": 2n,
+                "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+                "oneSolvReceiptTokenAsSupportedTokenAmount": 100000000n,
+                "receiptTokenEnqueuedAmount": 107230487n,
+                "solvReceiptTokenLockedAmount": 0n,
+                "supportedTokenLockedAmount": 107230487n,
+                "supportedTokenTotalEstimatedAmount": 107230487n,
+              },
+            ],
+            "solvReceiptTokenLockedAmount": 0n,
+            "supportedTokenLockedAmount": 208498012n,
+          },
+          "processing": {
+            "receiptTokenProcessingAmount": 0n,
+            "requests": [],
+            "supportedTokenReceivableAmount": 0n,
+          },
+        },
+      }
+    `);
+
+    // check pending amount value
+    expect(
+      await ctx.fund
+        .resolveAccount(true)
+        .then(
+          (fundAccount) =>
+            fundAccount!.data.restakingVaults[1]
+              .pendingSupportedTokenUnrestakingAmount
+        )
+    ).toEqual(208498012n);
+
+    // 4) run claim command to flush enqueued request and set pending_supported_token_amount field to '0'
+    await solv.cbBTC.setSolvProtocolWallet.execute({ address: feePayer });
+    await solv.cbBTC.confirmWithdrawalRequests.execute(null);
+
+    await expectMasked(ctx.fund.restakingVaults[1].resolve(true)).resolves
+      .toMatchInlineSnapshot(`
+      {
+        "admin": {
+          "fundManager": "BEpVRdWw6VhvfwfQufB9iqcJ6acf51XRP1jETCvGDBVE",
+          "rewardManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+          "solvManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+          "vaultManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+        },
+        "delegatedRewardTokens": [],
+        "oneReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+        "oneReceiptTokenAsSupportedTokenAmount": 100000000n,
+        "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+        "oneSolvReceiptTokenAsSupportedTokenAmount": 100000000n,
+        "receiptTokenDecimals": 8,
+        "receiptTokenMint": "BDYcrsJ6Y4kPdkReieh4RV58ziMNsYnMPpnDZgyAsdmh",
+        "receiptTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "receiptTokenSupply": 1558732374n,
+        "solvProtocolDepositFeeRate": 0,
+        "solvProtocolWallet": "GiDkDCZjVC8Nk1Fd457qGSV2g3MQX62n7cV5CvgFyGfF",
+        "solvProtocolWithdrawalFeeRate": 0,
+        "solvReceiptTokenAmount": 1000000000n,
+        "solvReceiptTokenDecimals": 8,
+        "solvReceiptTokenMint": "SoLvzL3ZVjofmNB5LYFrf94QtNhMUSea4DawFhnAau8",
+        "solvReceiptTokenOperationReceivableAmount": 0n,
+        "solvReceiptTokenOperationReservedAmount": 0n,
+        "supportedTokenAmount": 2767230386n,
+        "supportedTokenDecimals": 8,
+        "supportedTokenMint": "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
+        "supportedTokenOperationReceivableAmount": 0n,
+        "supportedTokenOperationReservedAmount": 1558732374n,
+        "supportedTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "withdrawal": {
+          "completed": {
+            "receiptTokenProcessedAmount": 0n,
+            "requests": [],
+            "supportedTokenDeductedFeeAmount": 0n,
+            "supportedTokenExtraClaimableAmount": 0n,
+            "supportedTokenTotalClaimableAmount": 0n,
+          },
+          "enqueued": {
+            "receiptTokenEnqueuedAmount": 0n,
+            "requests": [],
+            "solvReceiptTokenLockedAmount": 0n,
+            "supportedTokenLockedAmount": 208498012n,
+          },
+          "processing": {
+            "receiptTokenProcessingAmount": 208498012n,
+            "requests": [
+              {
+                "id": 1n,
+                "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+                "oneSolvReceiptTokenAsSupportedTokenAmount": 100000000n,
+                "receiptTokenEnqueuedAmount": 101267525n,
+                "solvReceiptTokenLockedAmount": 0n,
+                "supportedTokenLockedAmount": 101267525n,
+                "supportedTokenTotalEstimatedAmount": 101267525n,
+              },
+              {
+                "id": 2n,
+                "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+                "oneSolvReceiptTokenAsSupportedTokenAmount": 100000000n,
+                "receiptTokenEnqueuedAmount": 107230487n,
+                "solvReceiptTokenLockedAmount": 0n,
+                "supportedTokenLockedAmount": 107230487n,
+                "supportedTokenTotalEstimatedAmount": 107230487n,
+              },
+            ],
+            "supportedTokenReceivableAmount": 208498012n,
+          },
+        },
+      }
+    `);
+
+    await solv.cbBTC.completeWithdrawalRequests.execute({
+      burntSolvReceiptTokenAmount: 0n,
+      redeemedSupportedTokenAmount: 0n,
+      oldOneSolvReceiptTokenAsMicroSupportedTokenAmount: 1_0000_0000_000000n,
+    });
+
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'ClaimUnrestakedVST',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    await expectMasked(ctx.fund.restakingVaults[1].resolve(true)).resolves
+      .toMatchInlineSnapshot(`
+      {
+        "admin": {
+          "fundManager": "BEpVRdWw6VhvfwfQufB9iqcJ6acf51XRP1jETCvGDBVE",
+          "rewardManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+          "solvManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+          "vaultManager": "9b2RSMDYskVvjVbwF4cVwEhZUaaaUgyYSxvESmnoS4LL",
+        },
+        "delegatedRewardTokens": [],
+        "oneReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+        "oneReceiptTokenAsSupportedTokenAmount": 100000000n,
+        "oneSolvReceiptTokenAsMicroSupportedTokenAmount": 100000000000000n,
+        "oneSolvReceiptTokenAsSupportedTokenAmount": 100000000n,
+        "receiptTokenDecimals": 8,
+        "receiptTokenMint": "BDYcrsJ6Y4kPdkReieh4RV58ziMNsYnMPpnDZgyAsdmh",
+        "receiptTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "receiptTokenSupply": 1558732374n,
+        "solvProtocolDepositFeeRate": 0,
+        "solvProtocolWallet": "GiDkDCZjVC8Nk1Fd457qGSV2g3MQX62n7cV5CvgFyGfF",
+        "solvProtocolWithdrawalFeeRate": 0,
+        "solvReceiptTokenAmount": 1000000000n,
+        "solvReceiptTokenDecimals": 8,
+        "solvReceiptTokenMint": "SoLvzL3ZVjofmNB5LYFrf94QtNhMUSea4DawFhnAau8",
+        "solvReceiptTokenOperationReceivableAmount": 0n,
+        "solvReceiptTokenOperationReservedAmount": 0n,
+        "supportedTokenAmount": 2558732374n,
+        "supportedTokenDecimals": 8,
+        "supportedTokenMint": "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
+        "supportedTokenOperationReceivableAmount": 0n,
+        "supportedTokenOperationReservedAmount": 1558732374n,
+        "supportedTokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "withdrawal": {
+          "completed": {
+            "receiptTokenProcessedAmount": 0n,
+            "requests": [],
+            "supportedTokenDeductedFeeAmount": 0n,
+            "supportedTokenExtraClaimableAmount": 0n,
+            "supportedTokenTotalClaimableAmount": 0n,
+          },
+          "enqueued": {
+            "receiptTokenEnqueuedAmount": 0n,
+            "requests": [],
+            "solvReceiptTokenLockedAmount": 0n,
+            "supportedTokenLockedAmount": 0n,
+          },
+          "processing": {
+            "receiptTokenProcessingAmount": 0n,
+            "requests": [],
+            "supportedTokenReceivableAmount": 0n,
+          },
+        },
+      }
+    `);
+
+    // check pending amount value
+    expect(
+      await ctx.fund
+        .resolveAccount(true)
+        .then(
+          (fundAccount) =>
+            fundAccount!.data.restakingVaults[1]
+              .pendingSupportedTokenUnrestakingAmount
+        )
+    ).toEqual(0n);
   });
 });

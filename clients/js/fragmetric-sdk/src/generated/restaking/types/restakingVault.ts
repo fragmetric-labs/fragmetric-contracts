@@ -16,6 +16,10 @@ import {
   getArrayEncoder,
   getBytesDecoder,
   getBytesEncoder,
+  getI128Decoder,
+  getI128Encoder,
+  getI64Decoder,
+  getI64Encoder,
   getStructDecoder,
   getStructEncoder,
   getU16Decoder,
@@ -35,12 +39,16 @@ import {
   getRestakingVaultDelegationEncoder,
   getRewardTokenDecoder,
   getRewardTokenEncoder,
+  getTokenExchangeRatioDecoder,
+  getTokenExchangeRatioEncoder,
   getTokenPricingSourcePodDecoder,
   getTokenPricingSourcePodEncoder,
   type RestakingVaultDelegation,
   type RestakingVaultDelegationArgs,
   type RewardToken,
   type RewardTokenArgs,
+  type TokenExchangeRatio,
+  type TokenExchangeRatioArgs,
   type TokenPricingSourcePod,
   type TokenPricingSourcePodArgs,
 } from '.';
@@ -74,6 +82,16 @@ export type RestakingVault = {
   padding4: ReadonlyUint8Array;
   numDistributingRewardTokens: number;
   distributingRewardTokens: Array<RewardToken>;
+  supportedTokenCompoundedAmount: bigint;
+  supportedTokenToReceiptTokenExchangeRatio: TokenExchangeRatio;
+  supportedTokenToReceiptTokenExchangeRatioUpdatedTimestamp: bigint;
+  padding5: ReadonlyUint8Array;
+  /**
+   * Expected amount of vst by unrestaking vrt.
+   * This field is updated when the vault uses vst as expected receivable amount after unrestaking process is completed.
+   * It does NOT include unrestaking amount as vrt.
+   */
+  pendingSupportedTokenUnrestakingAmount: bigint;
   reserved: ReadonlyUint8Array;
 };
 
@@ -106,6 +124,16 @@ export type RestakingVaultArgs = {
   padding4: ReadonlyUint8Array;
   numDistributingRewardTokens: number;
   distributingRewardTokens: Array<RewardTokenArgs>;
+  supportedTokenCompoundedAmount: number | bigint;
+  supportedTokenToReceiptTokenExchangeRatio: TokenExchangeRatioArgs;
+  supportedTokenToReceiptTokenExchangeRatioUpdatedTimestamp: number | bigint;
+  padding5: ReadonlyUint8Array;
+  /**
+   * Expected amount of vst by unrestaking vrt.
+   * This field is updated when the vault uses vst as expected receivable amount after unrestaking process is completed.
+   * It does NOT include unrestaking amount as vrt.
+   */
+  pendingSupportedTokenUnrestakingAmount: number | bigint;
   reserved: ReadonlyUint8Array;
 };
 
@@ -143,7 +171,18 @@ export function getRestakingVaultEncoder(): Encoder<RestakingVaultArgs> {
       'distributingRewardTokens',
       getArrayEncoder(getRewardTokenEncoder(), { size: 30 }),
     ],
-    ['reserved', fixEncoderSize(getBytesEncoder(), 856)],
+    ['supportedTokenCompoundedAmount', getI128Encoder()],
+    [
+      'supportedTokenToReceiptTokenExchangeRatio',
+      getTokenExchangeRatioEncoder(),
+    ],
+    [
+      'supportedTokenToReceiptTokenExchangeRatioUpdatedTimestamp',
+      getI64Encoder(),
+    ],
+    ['padding5', fixEncoderSize(getBytesEncoder(), 32)],
+    ['pendingSupportedTokenUnrestakingAmount', getU64Encoder()],
+    ['reserved', fixEncoderSize(getBytesEncoder(), 776)],
   ]);
 }
 
@@ -181,7 +220,18 @@ export function getRestakingVaultDecoder(): Decoder<RestakingVault> {
       'distributingRewardTokens',
       getArrayDecoder(getRewardTokenDecoder(), { size: 30 }),
     ],
-    ['reserved', fixDecoderSize(getBytesDecoder(), 856)],
+    ['supportedTokenCompoundedAmount', getI128Decoder()],
+    [
+      'supportedTokenToReceiptTokenExchangeRatio',
+      getTokenExchangeRatioDecoder(),
+    ],
+    [
+      'supportedTokenToReceiptTokenExchangeRatioUpdatedTimestamp',
+      getI64Decoder(),
+    ],
+    ['padding5', fixDecoderSize(getBytesDecoder(), 32)],
+    ['pendingSupportedTokenUnrestakingAmount', getU64Decoder()],
+    ['reserved', fixDecoderSize(getBytesDecoder(), 776)],
   ]);
 }
 

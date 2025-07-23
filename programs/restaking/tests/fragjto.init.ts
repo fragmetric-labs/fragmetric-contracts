@@ -61,7 +61,6 @@ export function initializeFragJTO(testCtx: TestSuiteContext) {
         tokenWithdrawable: true,
         tokenWithdrawalNormalReserveRateBps: 0,
         tokenWithdrawalNormalReserveMaxAmount: MAX_U64,
-        tokenRebalancingAmount: 0n,
         solAllocationWeight: 0n,
         solAllocationCapacityAmount: MAX_U64,
       }),
@@ -125,11 +124,6 @@ export function initializeFragJTO(testCtx: TestSuiteContext) {
       ctx.fund.addRestakingVaultCompoundingReward.execute({
         vault: 'BmJvUzoiiNBRx3v2Gqsix9WvVtw8FaztrfBHQyqpMbTd',
         rewardTokenMint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
-      }),
-    () =>
-      ctx.fund.addRestakingVaultDistributingReward.execute({
-        vault: 'BmJvUzoiiNBRx3v2Gqsix9WvVtw8FaztrfBHQyqpMbTd',
-        rewardTokenMint: 'REALSWTCH7J8JdafNBLZpfSCLiFwpMCqod2RpkU4RNn',
       }),
 
     // configure operator delegations

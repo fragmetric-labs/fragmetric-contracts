@@ -2,7 +2,7 @@ use std::num::NonZeroU32;
 
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program;
-use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
+use anchor_spl::token_interface::TokenAccount;
 use solana_program::stake::state::StakeStateV2;
 use spl_stake_pool::error::StakePoolError;
 use spl_stake_pool::state::{StakePool, ValidatorListHeader, ValidatorStakeInfo};
@@ -10,9 +10,12 @@ use spl_stake_pool::state::{StakePool, ValidatorListHeader, ValidatorStakeInfo};
 use crate::errors::ErrorCode;
 use crate::utils::SystemProgramExt;
 
-pub(in crate::modules) trait SPLStakePoolInterface: anchor_lang::Id {}
+use super::ValidateStakePool;
 
-pub(in crate::modules) struct SPLStakePool;
+pub trait SPLStakePoolInterface: anchor_lang::Id {}
+impl<T: anchor_lang::Id> SPLStakePoolInterface for T {}
+
+pub struct SPLStakePool;
 
 impl anchor_lang::Id for SPLStakePool {
     fn id() -> Pubkey {
@@ -20,16 +23,29 @@ impl anchor_lang::Id for SPLStakePool {
     }
 }
 
-impl SPLStakePoolInterface for SPLStakePool {}
-
 pub(in crate::modules) struct SPLStakePoolService<'info, T = SPLStakePool>
 where
     T: SPLStakePoolInterface,
 {
-    spl_stake_pool_program: Program<'info, T>,
+    spl_stake_pool_program: &'info AccountInfo<'info>,
     pool_account: &'info AccountInfo<'info>, // deserialize on-demand
-    pool_token_mint: InterfaceAccount<'info, Mint>,
-    pool_token_program: Interface<'info, TokenInterface>,
+    pool_token_mint: &'info AccountInfo<'info>,
+    pool_token_program: &'info AccountInfo<'info>,
+    _marker: std::marker::PhantomData<T>,
+}
+
+impl<T: SPLStakePoolInterface> ValidateStakePool for SPLStakePoolService<'_, T> {
+    #[inline(never)]
+    fn validate_stake_pool<'info>(
+        pool_account: &'info AccountInfo<'info>,
+        pool_token_mint: &Pubkey,
+    ) -> Result<()> {
+        let pool_account_data = Self::deserialize_pool_account(pool_account)?;
+
+        require_keys_eq!(pool_account_data.pool_mint, pool_token_mint.key());
+
+        Ok(())
+    }
 }
 
 impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
@@ -42,35 +58,37 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
     ) -> Result<Self> {
         let pool_account_data = Self::deserialize_pool_account(pool_account)?;
 
+        require_keys_eq!(T::id(), spl_stake_pool_program.key());
         require_keys_eq!(pool_account_data.pool_mint, pool_token_mint.key());
-        require_keys_eq!(*pool_token_mint.owner, *pool_token_program.key);
+        require_keys_eq!(pool_account_data.token_program_id, pool_token_program.key());
 
         Ok(Self {
-            spl_stake_pool_program: Program::try_from(spl_stake_pool_program)?,
+            spl_stake_pool_program,
             pool_account,
-            pool_token_mint: InterfaceAccount::try_from(pool_token_mint)?,
-            pool_token_program: Interface::try_from(pool_token_program)?,
+            pool_token_mint,
+            pool_token_program,
+            _marker: Default::default(),
         })
     }
 
     pub(super) fn deserialize_pool_account(pool_account: &AccountInfo) -> Result<StakePool> {
-        use borsh1::BorshDeserialize;
+        let pool_account_data = solana_program::borsh1::try_from_slice_unchecked::<StakePool>(
+            &pool_account.try_borrow_data()?,
+        )
+        .map_err(|_| error!(error::ErrorCode::AccountDidNotDeserialize))?;
 
-        let pool_account_data =
-            StakePool::deserialize(&mut pool_account.try_borrow_data()?.as_ref())
-                .map_err(|_| error!(error::ErrorCode::AccountDidNotDeserialize))?;
-
+        require_keys_eq!(*pool_account.owner, T::id());
         require_eq!(pool_account_data.is_valid(), true);
 
         Ok(pool_account_data)
     }
 
-    #[inline(always)]
     fn get_pool_account_data(&self) -> Result<StakePool> {
         Self::deserialize_pool_account(self.pool_account)
     }
 
     pub(super) fn deserialize_stake_account(stake_account: &AccountInfo) -> Result<StakeStateV2> {
+        require_keys_eq!(*stake_account.owner, solana_program::stake::program::ID);
         StakeStateV2::deserialize(&mut stake_account.try_borrow_data()?.as_ref())
             .map_err(|_| error!(error::ErrorCode::AccountDidNotDeserialize))
     }
@@ -113,7 +131,6 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
     /// * (5) reserve_stake_account(writable)
     /// * (6) manager_fee_account(writable)
     /// * (7) validator_list_account(writable)
-    /// * (8) sysvar clock
     #[inline(never)]
     pub fn find_accounts_to_deposit_sol(
         pool_account: &AccountInfo,
@@ -127,7 +144,6 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
                 (pool_account_data.reserve_stake, true),
                 (pool_account_data.manager_fee_account, true),
                 (pool_account_data.validator_list, true),
-                (solana_program::sysvar::clock::ID, false),
             ]);
 
         Ok(accounts)
@@ -214,6 +230,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
         withdraw_authority: &AccountInfo<'info>,
         reserve_stake_account: &AccountInfo<'info>,
         manager_fee_account: &AccountInfo<'info>,
+        validator_list_account: &AccountInfo<'info>,
 
         // variant
         to_pool_token_account: &'info AccountInfo<'info>,
@@ -222,6 +239,17 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
 
         sol_amount: u64,
     ) -> Result<(u64, u64, u64)> {
+        let pool_account_data = &mut self.get_pool_account_data()?;
+
+        // first update stake pool balance
+        self.update_stake_pool_balance_if_needed(
+            pool_account_data,
+            withdraw_authority,
+            reserve_stake_account,
+            manager_fee_account,
+            validator_list_account,
+        )?;
+
         let mut to_pool_token_account =
             InterfaceAccount::<TokenAccount>::try_from(to_pool_token_account)?;
         let to_pool_token_account_amount_before = to_pool_token_account.amount;
@@ -263,7 +291,6 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
             to_pool_token_account_amount - to_pool_token_account_amount_before;
 
         let deducted_pool_token_fee_amount = {
-            let pool_account_data = self.get_pool_account_data()?;
             let minted_amount = pool_account_data
                 .calc_pool_tokens_for_deposit(sol_amount)
                 .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
@@ -273,11 +300,17 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
             let referral_fee = pool_account_data
                 .calc_pool_tokens_sol_referral_fee(total_fee)
                 .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-            let manager_fee = total_fee.saturating_sub(referral_fee);
-            manager_fee
+            total_fee.saturating_sub(referral_fee) // manager_fee
         };
 
-        msg!("STAKE#spl: pool_token_mint={}, staked_sol_amount={}, deducted_pool_token_fee_amount={}, to_pool_token_account_amount={}, minted_pool_token_amount={}", self.pool_token_mint.key(), sol_amount, deducted_pool_token_fee_amount, to_pool_token_account_amount, minted_pool_token_amount);
+        msg!(
+            "STAKE#spl: pool_token_mint={}, staked_sol_amount={}, deducted_pool_token_fee_amount={}, to_pool_token_account_amount={}, minted_pool_token_amount={}",
+            self.pool_token_mint.key(),
+            sol_amount,
+            deducted_pool_token_fee_amount,
+            to_pool_token_account_amount,
+            minted_pool_token_amount
+        );
 
         Ok((
             to_pool_token_account_amount,
@@ -330,24 +363,24 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
         let mut validator_list_account_data = validator_list_account.try_borrow_mut_data()?;
         let (_, validator_list) =
             ValidatorListHeader::deserialize_vec(&mut validator_list_account_data)?;
-        let num_validator_stake_infos = validator_list.len() as usize;
-        let validator_stake_infos =
-            validator_list.deserialize_slice::<ValidatorStakeInfo>(0, num_validator_stake_infos)?;
+        let num_validator_stake_infos = validator_list.len();
+        let validator_stake_infos = validator_list
+            .deserialize_slice::<ValidatorStakeInfo>(0, num_validator_stake_infos as usize)?;
 
-        let num_validators = max_num_validators.min(num_validator_stake_infos);
+        let num_validators = max_num_validators.min(num_validator_stake_infos as usize);
         let mut validator_stake_accounts = Vec::with_capacity(num_validators);
 
         // To maximize available lamports to withdraw from active stake account,
         // we prefer accounts with more active staked sol amount.
-        let mut indices: Vec<_> = (0..num_validator_stake_infos).collect();
-        indices.sort_by(|left_index, right_index| {
+        let mut indices = (0..num_validator_stake_infos).collect::<Vec<_>>();
+        indices.sort_by_key(|index| {
+            let active_stake_lamports =
+                u64::from(validator_stake_infos[*index as usize].active_stake_lamports);
             // descending order
-            u64::from(validator_stake_infos[*right_index].active_stake_lamports).cmp(&u64::from(
-                validator_stake_infos[*left_index].active_stake_lamports,
-            ))
+            u64::MAX - active_stake_lamports
         });
         for i in 0..num_validators {
-            let validator_stake_info = &validator_stake_infos[indices[i]];
+            let validator_stake_info = &validator_stake_infos[indices[i] as usize];
             let (stake_account_address, _) = spl_stake_pool::find_stake_program_address(
                 self.spl_stake_pool_program.key,
                 &validator_stake_info.vote_account_address,
@@ -373,20 +406,16 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
         Ok(validator_stake_accounts)
     }
 
-    #[inline(never)]
-    pub fn update_stake_pool_balance_if_needed(
+    fn update_stake_pool_balance_if_needed(
         &self,
+        pool_account_data: &mut StakePool,
         // fixed
         withdraw_authority: &AccountInfo<'info>,
         reserve_stake_account: &AccountInfo<'info>,
         manager_fee_account: &AccountInfo<'info>,
         validator_list_account: &AccountInfo<'info>,
-        clock: &AccountInfo<'info>,
     ) -> Result<()> {
-        let pool_account_data = self.get_pool_account_data()?;
-        let clock = Clock::from_account_info(clock)?;
-
-        if pool_account_data.last_update_epoch >= clock.epoch {
+        if pool_account_data.last_update_epoch >= Clock::get()?.epoch {
             return Ok(());
         }
 
@@ -414,6 +443,8 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
             ],
         )?;
 
+        *pool_account_data = Self::deserialize_pool_account(self.pool_account)?;
+
         Ok(())
     }
 
@@ -428,6 +459,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
         withdraw_authority: &AccountInfo<'info>,
         reserve_stake_account: &AccountInfo<'info>,
         manager_fee_account: &AccountInfo<'info>,
+        validator_list_account: &AccountInfo<'info>,
         clock: &AccountInfo<'info>,
         stake_history: &AccountInfo<'info>,
         stake_program: &AccountInfo<'info>,
@@ -440,7 +472,17 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
 
         pool_token_amount: u64,
     ) -> Result<(u64, u64, u64)> {
-        let pool_account_data = &self.get_pool_account_data()?;
+        let pool_account_data = &mut self.get_pool_account_data()?;
+
+        // first update stake pool balance
+        self.update_stake_pool_balance_if_needed(
+            pool_account_data,
+            withdraw_authority,
+            reserve_stake_account,
+            manager_fee_account,
+            validator_list_account,
+        )?;
+
         let reserve_stake_account_data = &Self::deserialize_stake_account(reserve_stake_account)?;
 
         let to_sol_account_amount_before = to_sol_account.lamports();
@@ -452,7 +494,8 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
         .min(pool_token_amount);
 
         // Withdraw amount too small
-        if pool_token_amount == 0 {
+        // Due to withdrawal fee, withdrawing 1 token will fail.
+        if pool_token_amount < 2 {
             return Ok((0, 0, 0));
         }
 
@@ -496,7 +539,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
             .calc_pool_tokens_sol_withdrawal_fee(pool_token_amount)
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
 
-        msg!("UNSTAKE#spl: pool_token_mint={}, burnt_pool_token_amount={}, deducted_pool_token_fee_amount={}, to_sol_account_amount={}, unstaked_sol_amount={}, unstaking_sol_amount=0", self.pool_token_mint.key(), pool_token_amount, deducted_pool_token_fee_amount, to_sol_account_amount, unstaked_sol_amount);
+        msg!("UNSTAKE#spl: pool_token_mint={}, burnt_pool_token_amount={}, deducted_pool_token_fee_amount={}, to_sol_account_amount={}, unstaked_sol_amount={}", self.pool_token_mint.key(), pool_token_amount, deducted_pool_token_fee_amount, to_sol_account_amount, unstaked_sol_amount);
 
         Ok((
             pool_token_amount,
@@ -521,7 +564,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
         let minimum_reserved_sol_amount = spl_stake_pool::minimum_reserve_lamports(meta);
         let available_sol_amount = reserved_sol_amount.saturating_sub(minimum_reserved_sol_amount);
 
-        let available_pool_token_amount_to_burn = crate::utils::get_proportional_amount(
+        let available_pool_token_amount_to_burn = crate::utils::get_proportional_amount_u64(
             available_sol_amount,
             pool_account_data.pool_token_supply,
             pool_account_data.total_lamports,
@@ -530,7 +573,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
         // pool_token_amount = pool_token_burnt * (1 / 1 - f) = pool_token_burnt * (d / (d - n))
         let numerator = pool_account_data.sol_withdrawal_fee.numerator;
         let denominator = pool_account_data.sol_withdrawal_fee.denominator;
-        crate::utils::get_proportional_amount(
+        crate::utils::get_proportional_amount_u64(
             available_pool_token_amount_to_burn,
             denominator,
             denominator.saturating_sub(numerator),
@@ -547,6 +590,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
         // fixed
         system_program: &Program<'info, System>,
         withdraw_authority: &AccountInfo<'info>,
+        reserve_stake_account: &AccountInfo<'info>,
         manager_fee_account: &AccountInfo<'info>,
         validator_list_account: &AccountInfo<'info>,
         clock: &AccountInfo<'info>,
@@ -568,7 +612,17 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
 
         pool_token_amount: u64,
     ) -> Result<(u64, u64, u64)> {
-        let pool_account_data = &self.get_pool_account_data()?;
+        let pool_account_data = &mut self.get_pool_account_data()?;
+
+        // first update stake pool balance
+        self.update_stake_pool_balance_if_needed(
+            pool_account_data,
+            withdraw_authority,
+            reserve_stake_account,
+            manager_fee_account,
+            validator_list_account,
+        )?;
+
         let validator_stake_account_data =
             &Self::deserialize_stake_account(validator_stake_account)?;
 
@@ -580,11 +634,10 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
         .min(pool_token_amount);
 
         // withdraw amount too small
-        if pool_token_amount == 0 {
+        // Due to withdrawal fee, withdrawing 1 token will fail.
+        if pool_token_amount < 2 {
             return Ok((0, 0, 0));
         }
-
-        let payer_lamports_before = to_stake_account_rent_payer.lamports();
 
         // initialize `to_stake_account` first - will be used for split stake
         system_program.initialize_account(
@@ -596,7 +649,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
             &solana_program::stake::program::ID,
         )?;
 
-        let rent_payed = payer_lamports_before - to_stake_account_rent_payer.lamports();
+        let rent = to_stake_account.lamports();
 
         let withdraw_stake_ix = spl_stake_pool::instruction::withdraw_stake(
             self.spl_stake_pool_program.key,
@@ -634,7 +687,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
             from_pool_token_account_signer_seeds,
         )?;
 
-        let unstaking_sol_amount = to_stake_account.lamports().saturating_sub(rent_payed);
+        let unstaking_sol_amount = to_stake_account.lamports().saturating_sub(rent);
 
         // deactivate `to_stake_account` - since it's state is active now as
         // it has been splitted from active stake account
@@ -654,8 +707,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
             to_stake_account_withdraw_authority_seeds,
         )?;
 
-        let deducted_pool_token_fee_amount = self
-            .get_pool_account_data()?
+        let deducted_pool_token_fee_amount = pool_account_data
             .calc_pool_tokens_stake_withdrawal_fee(pool_token_amount)
             .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
 
@@ -706,7 +758,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
             return Ok(0);
         }
 
-        let available_pool_token_amount_to_burn = crate::utils::get_proportional_amount(
+        let available_pool_token_amount_to_burn = crate::utils::get_proportional_amount_u64(
             available_sol_amount,
             pool_account_data.pool_token_supply,
             pool_account_data.total_lamports,
@@ -715,7 +767,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
         // pool_token_amount = pool_token_burnt * (1 / 1 - f) = pool_token_burnt * (d / (d - n))
         let numerator = pool_account_data.stake_withdrawal_fee.numerator;
         let denominator = pool_account_data.stake_withdrawal_fee.denominator;
-        crate::utils::get_proportional_amount(
+        crate::utils::get_proportional_amount_u64(
             available_pool_token_amount_to_burn,
             denominator,
             denominator.saturating_sub(numerator),
@@ -773,7 +825,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
         let stake_account_data = &Self::deserialize_stake_account(from_stake_account)?;
 
         let to_sol_account_amount_before = to_sol_account.lamports();
-        // SAFE unwrap: withdrawable stake account always have meta
+        #[allow(clippy::unwrap_used)] // withdrawable stake account always have meta
         let from_stake_account_rent = stake_account_data.meta().unwrap().rent_exempt_reserve;
         let unstaked_sol_amount = from_stake_account.lamports() - from_stake_account_rent;
 
@@ -847,8 +899,8 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
                 .stake(clock.epoch, stake_history, new_rate_activation_epoch)
         } else {
             // Assume full stake if the stake account hasn't been
-            //  de-activated, because in the future the exposed stake
-            //  might be higher than stake.stake() due to warmup
+            // de-activated, because in the future the exposed stake
+            // might be higher than stake.stake() due to warmup
             stake.delegation.stake
         };
 

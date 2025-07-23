@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use bytemuck::Zeroable;
 
 use crate::errors::ErrorCode;
-use crate::modules::pricing::{Asset, PricingService, TokenValue, TokenValuePod};
+use crate::modules::pricing::{PricingService, TokenValuePod};
 
 use super::WithdrawalRequest;
 
@@ -45,9 +45,8 @@ pub(super) struct AssetState {
     pub withdrawal_user_reserved_amount: u64,
 
     /// asset: receivable amount that the fund may charge the users requesting withdrawals.
-    /// It is accrued during either the preparation of the withdrawal obligation or rebalancing of LST like fees from (un)staking or (un)restaking.
+    /// It is accrued during the preparation of the withdrawal obligation.
     /// And it shall be settled by the withdrawal fee normally. And it also can be written off by a donation operation.
-    /// Then it costs the rebalancing expense to the capital of the fund itself as an operation cost instead of charging the users requesting withdrawals.
     pub operation_receivable_amount: u64,
 
     /// asset: remaining asset for cash-in/out
@@ -109,7 +108,7 @@ impl AssetState {
 
     pub fn set_normal_reserve_rate_bps(&mut self, reserve_rate_bps: u16) -> Result<&mut Self> {
         require_gte!(
-            10_00, // 10%
+            100_00, // 100%
             reserve_rate_bps,
             ErrorCode::FundInvalidConfigurationUpdateError
         );
@@ -309,7 +308,7 @@ impl AssetState {
         &self,
         receipt_token_value: &TokenValuePod,
     ) -> Result<u64> {
-        Ok(crate::utils::get_proportional_amount(
+        Ok(crate::utils::get_proportional_amount_u64(
             self.get_total_amount(receipt_token_value),
             self.normal_reserve_rate_bps as u64,
             10_000,

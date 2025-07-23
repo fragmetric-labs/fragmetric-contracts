@@ -8,7 +8,7 @@ describe('restaking.frag2 test', async () => {
   beforeAll(() => testCtx.initializationTasks);
   afterAll(() => testCtx.validator.quit());
 
-  const { validator, feePayer, restaking, initializationTasks } = testCtx;
+  const { validator, feePayer, restaking, initializationTasks, sdk } = testCtx;
   const ctx = restaking.frag2;
 
   const [signer1, signer2] = await Promise.all([
@@ -75,6 +75,7 @@ describe('restaking.frag2 test', async () => {
             "operationReservedAmount": 0n,
             "operationTotalAmount": 0n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK",
           },
         ],
@@ -121,7 +122,6 @@ describe('restaking.frag2 test', async () => {
             "tokenAccumulatedDepositCapacityAmount": 18446744073709551615n,
             "tokenDepositable": true,
             "tokenMint": "FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5",
-            "tokenRebalancingAmount": 0n,
             "tokenWithdrawable": true,
             "tokenWithdrawalNormalReserveMaxAmount": 18446744073709551615n,
             "tokenWithdrawalNormalReserveRateBps": 0,
@@ -161,6 +161,7 @@ describe('restaking.frag2 test', async () => {
               "__kind": "VirtualVault",
               "address": "6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK",
             },
+            "rewardCommissionRateBps": 0,
             "solAllocationCapacityAmount": 0n,
             "solAllocationWeight": 0n,
             "vault": "6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK",
@@ -366,6 +367,7 @@ describe('restaking.frag2 test', async () => {
             "operationReservedAmount": 0n,
             "operationTotalAmount": 0n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK",
           },
         ],
@@ -393,7 +395,63 @@ describe('restaking.frag2 test', async () => {
     `);
   });
 
-  /** 3. virtual vault harvest */
+  /** 3. withdraw */
+  test('user can withdraw receipt token as frag', async () => {
+    await expect(
+      user1.requestWithdrawal.execute(
+        {
+          assetMint: 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5',
+          receiptTokenAmount: 1_000_000_000n,
+        },
+        { signers: [signer1] }
+      )
+    ).resolves.toMatchObject({
+      events: {
+        userRequestedWithdrawalFromFund: {
+          supportedTokenMint: {
+            __option: 'Some',
+            value: 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5',
+          },
+          requestedReceiptTokenAmount: 1_000_000_000n,
+        },
+      },
+    });
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'EnqueueWithdrawalBatch',
+    });
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'ProcessWithdrawalBatch',
+    });
+    await expect(
+      ctx.fund
+        .resolveAccount(true)
+        .then(
+          (account) =>
+            account?.data.supportedTokens.find(
+              (token) =>
+                token.mint == 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5'
+            )?.token.withdrawalLastProcessedBatchId
+        )
+    ).resolves.toEqual(1n);
+
+    const res = await user1.withdraw.execute(
+      {
+        assetMint: 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5',
+        requestId: 1n,
+      },
+      { signers: [signer1] }
+    );
+    const evt = res.events!.userWithdrewFromFund!;
+    expect(
+      evt.burntReceiptTokenAmount,
+      'burntReceiptTokenAmount = withdrawnAmount + deductedFeeAmount + [optional remainder]'
+    ).toBeOneOf([
+      evt.withdrawnAmount + evt.deductedFeeAmount,
+      evt.withdrawnAmount + evt.deductedFeeAmount + 1n,
+    ]);
+  });
+
+  /** 4. virtual vault harvest */
   test('virtual vault harvest/compound', async () => {
     const fragRewardAmount = 1_000_000_000n; // 20% of current fund NAV
     await validator.airdropToken(
@@ -406,7 +464,7 @@ describe('restaking.frag2 test', async () => {
 
     // run operator harvest
     await ctx.fund.runCommand.executeChained({
-      forceResetCommand: 'HarvestReward',
+      forceResetCommand: 'HarvestRestakingYield',
       operator: restaking.knownAddresses.fundManager,
     });
 
@@ -442,10 +500,10 @@ describe('restaking.frag2 test', async () => {
         "depositResidualMicroReceiptTokenAmount": 0n,
         "metadata": null,
         "normalizedToken": null,
-        "oneReceiptTokenAsSOL": 1444644923n,
+        "oneReceiptTokenAsSOL": 1504838461n,
         "receiptTokenDecimals": 9,
         "receiptTokenMint": "DCoj5m7joWjP9T3iPH22q7bDBoGkgUX4ffoL1eQZstwk",
-        "receiptTokenSupply": 5000000000n,
+        "receiptTokenSupply": 4000000000n,
         "restakingVaultReceiptTokens": [
           {
             "mint": "VVRTiZKXoPdME1ssmRdzowNG2VFVFG6Rmy9VViXaWa8",
@@ -454,6 +512,7 @@ describe('restaking.frag2 test', async () => {
             "operationReservedAmount": 0n,
             "operationTotalAmount": 0n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "unrestakingAmountAsSupportedToken": 0n,
             "vault": "6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK",
           },
         ],
@@ -462,17 +521,17 @@ describe('restaking.frag2 test', async () => {
             "decimals": 9,
             "depositable": true,
             "mint": "FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5",
-            "oneTokenAsReceiptToken": 833333333n,
+            "oneTokenAsReceiptToken": 799999999n,
             "oneTokenAsSol": 1203870769n,
             "operationReceivableAmount": 0n,
-            "operationReservedAmount": 6000000000n,
-            "operationTotalAmount": 6000000000n,
+            "operationReservedAmount": 5000000001n,
+            "operationTotalAmount": 5000000001n,
             "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
             "unstakingAmountAsSOL": 0n,
             "withdrawable": true,
-            "withdrawableValueAsReceiptTokenAmount": 5000000000n,
+            "withdrawableValueAsReceiptTokenAmount": 4000000000n,
             "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
-            "withdrawalResidualMicroAssetAmount": 0n,
+            "withdrawalResidualMicroAssetAmount": 999999n,
             "withdrawalUserReservedAmount": 0n,
           },
         ],
@@ -484,7 +543,7 @@ describe('restaking.frag2 test', async () => {
   test('virtual vault harvest/compound should not occur by compounding threshold', async () => {
     const rewardTokenMint = 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5';
 
-    // 1. update reward amount threshold -> harvest would not occur
+    // 1. reward min amount threshold -> harvest would not occur
     await ctx.fund.updateRestakingVaultRewardHarvestThreshold.execute({
       vault: '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
       rewardTokenMint,
@@ -508,7 +567,7 @@ describe('restaking.frag2 test', async () => {
 
     // run operator harvest
     await ctx.fund.runCommand.executeChained({
-      forceResetCommand: 'HarvestReward',
+      forceResetCommand: 'HarvestRestakingYield',
       operator: restaking.knownAddresses.fundManager,
     });
 
@@ -523,19 +582,18 @@ describe('restaking.frag2 test', async () => {
       fund_2_1_frag!.token.operationReservedAmount
     );
 
-    // 2. update reward interval second threshold -> harvest would not occur
+    // 2. reward interval second threshold -> harvest would not occur
     await ctx.fund.updateRestakingVaultRewardHarvestThreshold.execute({
       vault: '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
       rewardTokenMint,
       harvestThresholdMinAmount: 200_000_000n,
       harvestThresholdMaxAmount: 600_000_000n,
-      harvestThresholdIntervalSeconds:
-        BigInt(Math.floor(Date.now() / 1000)) + 100n,
+      harvestThresholdIntervalSeconds: 100n,
     });
 
     // try to harvest reward
     await ctx.fund.runCommand.executeChained({
-      forceResetCommand: 'HarvestReward',
+      forceResetCommand: 'HarvestRestakingYield',
       operator: restaking.knownAddresses.fundManager,
     });
 
@@ -550,7 +608,7 @@ describe('restaking.frag2 test', async () => {
       fund_2_1_frag!.token.operationReservedAmount
     );
 
-    // 3. update reward amount threshold, but harvest now occurs
+    // 3. reward max amount threshold -> only max amount harvested
     await ctx.fund.updateRestakingVaultRewardHarvestThreshold.execute({
       vault: '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
       rewardTokenMint,
@@ -561,7 +619,7 @@ describe('restaking.frag2 test', async () => {
 
     // harvest occurs
     await ctx.fund.runCommand.executeChained({
-      forceResetCommand: 'HarvestReward',
+      forceResetCommand: 'HarvestRestakingYield',
       operator: restaking.knownAddresses.fundManager,
     });
 
@@ -598,7 +656,7 @@ describe('restaking.frag2 test', async () => {
 
     // run operator harvest
     await ctx.fund.runCommand.executeChained({
-      forceResetCommand: 'HarvestReward',
+      forceResetCommand: 'HarvestRestakingYield',
       operator: restaking.knownAddresses.fundManager,
     });
 
@@ -610,7 +668,7 @@ describe('restaking.frag2 test', async () => {
     ).toEqual(voteRewardAmount);
   });
 
-  /** 5. reward settlement with clearing **/
+  /** 5. reward **/
   test('reward settlement clears one block before block addition when block queue is full', async () => {
     // ensure a few blocks filled
     await validator.airdropToken(
@@ -727,11 +785,11 @@ describe('restaking.frag2 test', async () => {
           "tokenAllocatedAmount": {
             "records": [
               {
-                "amount": 5000000000n,
+                "amount": 4000000000n,
                 "contributionAccrualRate": 1,
               },
             ],
-            "totalAmount": 5000000000n,
+            "totalAmount": 4000000000n,
           },
           "updatedSlot": "MASKED(/[.*S|s]lots?$/)",
         },
@@ -741,11 +799,11 @@ describe('restaking.frag2 test', async () => {
           "tokenAllocatedAmount": {
             "records": [
               {
-                "amount": 5000000000n,
+                "amount": 4000000000n,
                 "contributionAccrualRate": 1,
               },
             ],
-            "totalAmount": 5000000000n,
+            "totalAmount": 4000000000n,
           },
           "updatedSlot": "MASKED(/[.*S|s]lots?$/)",
         },
@@ -790,11 +848,11 @@ describe('restaking.frag2 test', async () => {
           "tokenAllocatedAmount": {
             "records": [
               {
-                "amount": 5000000000n,
+                "amount": 4000000000n,
                 "contributionAccrualRate": 1,
               },
             ],
-            "totalAmount": 5000000000n,
+            "totalAmount": 4000000000n,
           },
           "updatedSlot": "MASKED(/[.*S|s]lots?$/)",
         },
@@ -804,11 +862,11 @@ describe('restaking.frag2 test', async () => {
           "tokenAllocatedAmount": {
             "records": [
               {
-                "amount": 5000000000n,
+                "amount": 4000000000n,
                 "contributionAccrualRate": 1,
               },
             ],
-            "totalAmount": 5000000000n,
+            "totalAmount": 4000000000n,
           },
           "updatedSlot": "MASKED(/[.*S|s]lots?$/)",
         },
@@ -937,7 +995,7 @@ describe('restaking.frag2 test', async () => {
 
     // run operator harvest
     await ctx.fund.runCommand.executeChained({
-      forceResetCommand: 'HarvestReward',
+      forceResetCommand: 'HarvestRestakingYield',
       operator: restaking.knownAddresses.fundManager,
     });
 
@@ -962,5 +1020,279 @@ describe('restaking.frag2 test', async () => {
         remainingAmount +
         clearingBlockRemainingAmount
     );
+  });
+
+  test('reward is transferred to revenue account based on commission rate during harvest command execution (compound reward, distribute reward)', async () => {
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestRestakingYield',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    // loosen compound reward harvest threshold
+    await ctx.fund.updateRestakingVaultRewardHarvestThreshold.execute({
+      vault: '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
+      rewardTokenMint: 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5',
+      harvestThresholdMinAmount: 0n,
+      harvestThresholdMaxAmount: 18_446_744_073_709_551_615n,
+      harvestThresholdIntervalSeconds: 0n,
+    });
+
+    // loosen distribute reward harvest threshold
+    await ctx.fund.updateRestakingVaultRewardHarvestThreshold.execute({
+      vault: '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
+      rewardTokenMint: 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF',
+      harvestThresholdMinAmount: 0n,
+      harvestThresholdMaxAmount: 18_446_744_073_709_551_615n,
+      harvestThresholdIntervalSeconds: 0n,
+    });
+
+    await expectMasked(ctx.fund.resolve(true)).resolves.toMatchInlineSnapshot(`
+      {
+        "assetStrategies": [
+          {
+            "solAccumulatedDepositAmount": 0n,
+            "solAccumulatedDepositCapacityAmount": 18446744073709551615n,
+            "solDepositable": false,
+            "solWithdrawable": false,
+            "solWithdrawalNormalReserveMaxAmount": 18446744073709551615n,
+            "solWithdrawalNormalReserveRateBps": 0,
+          },
+          {
+            "solAllocationCapacityAmount": 18446744073709551615n,
+            "solAllocationWeight": 0n,
+            "tokenAccumulatedDepositAmount": 15000000000n,
+            "tokenAccumulatedDepositCapacityAmount": 18446744073709551615n,
+            "tokenDepositable": true,
+            "tokenMint": "FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5",
+            "tokenWithdrawable": true,
+            "tokenWithdrawalNormalReserveMaxAmount": 18446744073709551615n,
+            "tokenWithdrawalNormalReserveRateBps": 0,
+          },
+        ],
+        "generalStrategy": {
+          "depositEnabled": true,
+          "donationEnabled": false,
+          "operationEnabled": true,
+          "transferEnabled": true,
+          "withdrawalBatchThresholdSeconds": 1n,
+          "withdrawalEnabled": true,
+          "withdrawalFeeRateBps": 20,
+        },
+        "restakingVaultStrategies": [
+          {
+            "compoundingRewardTokens": [
+              {
+                "harvestThresholdIntervalSeconds": 0n,
+                "harvestThresholdMaxAmount": 18446744073709551615n,
+                "harvestThresholdMinAmount": 0n,
+                "lastHarvestedAt": "MASKED(/.*At?$/)",
+                "mint": "FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5",
+              },
+            ],
+            "delegations": [],
+            "distributingRewardTokens": [
+              {
+                "harvestThresholdIntervalSeconds": 0n,
+                "harvestThresholdMaxAmount": 18446744073709551615n,
+                "harvestThresholdMinAmount": 0n,
+                "lastHarvestedAt": "MASKED(/.*At?$/)",
+                "mint": "FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF",
+              },
+            ],
+            "pricingSource": {
+              "__kind": "VirtualVault",
+              "address": "6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK",
+            },
+            "rewardCommissionRateBps": 0,
+            "solAllocationCapacityAmount": 0n,
+            "solAllocationWeight": 0n,
+            "vault": "6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK",
+          },
+        ],
+        "tokenSwapStrategies": [],
+      }
+    `);
+
+    const programRevenueFragTokenAccount =
+      sdk.TokenAccountContext.fromAssociatedTokenSeeds(restaking, () =>
+        Promise.resolve({
+          owner: 'GuSruSKKCmAGuWMeMsiw3mbNhjeiRtNhnh9Eatgz33NA',
+          mint: 'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5',
+        })
+      );
+
+    const programRevenueFragVoteTokenAccount =
+      sdk.TokenAccountContext.fromAssociatedTokenSeeds(restaking, () =>
+        Promise.resolve({
+          owner: 'GuSruSKKCmAGuWMeMsiw3mbNhjeiRtNhnh9Eatgz33NA',
+          mint: 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF',
+        })
+      );
+
+    const MAX_REWARD_COMMISSION_RATE_BPS = 2500;
+
+    for (
+      let rewardCommissionRateBps = 0;
+      rewardCommissionRateBps <= MAX_REWARD_COMMISSION_RATE_BPS;
+      rewardCommissionRateBps += 130
+    ) {
+      await ctx.fund.runCommand.executeChained({
+        forceResetCommand: 'HarvestRestakingYield',
+        operator: restaking.knownAddresses.fundManager,
+      });
+
+      await ctx.fund.updateRestakingVaultStrategy.execute({
+        vault: '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
+        rewardCommissionRateBps: rewardCommissionRateBps as unknown as number,
+      });
+
+      // 1) compound reward (frag Token)
+      const fragTokenStatusBefore = await ctx.fund
+        .resolveAccount(true)
+        .then(
+          (fundAccount) =>
+            fundAccount!.data.supportedTokens.filter(
+              (supportedToken) =>
+                supportedToken.mint ==
+                'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5'
+            )[0]
+        );
+      const fragTokenAmountBefore =
+        fragTokenStatusBefore!.token.operationReservedAmount;
+
+      const programRevenueCompoundRewardTokenAmountBefore =
+        await programRevenueFragTokenAccount
+          .resolveAccount(true)
+          .then((account) => (account ? account.data.amount : 0n));
+
+      // airdrop compound reward (frag token)
+      await validator.airdropToken(
+        '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
+        'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5',
+        5_000_000_000_000n
+      );
+
+      // harvest compounding reward
+      await ctx.fund.runCommand.executeChained({
+        forceResetCommand: 'HarvestRestakingYield',
+        operator: restaking.knownAddresses.fundManager,
+      });
+
+      const fragTokenStatusAfter = await ctx.fund
+        .resolveAccount(true)
+        .then(
+          (fundAccount) =>
+            fundAccount!.data.supportedTokens.filter(
+              (supportedToken) =>
+                supportedToken.mint ==
+                'FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5'
+            )[0]
+        );
+      const fragTokenAmountAfter =
+        fragTokenStatusAfter!.token.operationReservedAmount;
+
+      const programRevenueCompoundRewardTokenAmountAfter =
+        await programRevenueFragTokenAccount
+          .resolveAccount(true)
+          .then((account) => (account ? account.data.amount : 0n));
+
+      const programRevenueCompoundRewardTokenAmountDelta =
+        programRevenueCompoundRewardTokenAmountAfter -
+        programRevenueCompoundRewardTokenAmountBefore;
+      const supportedTokenAccountBalanceDelta =
+        fragTokenAmountAfter - fragTokenAmountBefore;
+
+      expect(programRevenueCompoundRewardTokenAmountDelta).toEqual(
+        (5_000_000_000_000n * BigInt(rewardCommissionRateBps)) / 10000n
+      );
+      expect(
+        programRevenueCompoundRewardTokenAmountDelta +
+          supportedTokenAccountBalanceDelta
+      ).toEqual(5_000_000_000_000n);
+
+      // 2) distribute reward (frag vote Token)
+      const fragVoteTokenAmountBefore = (
+        await ctx.reward.reserve.rewardTokens.resolve(true)
+      ).filter(
+        (rewardToken) =>
+          rewardToken.mint == 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF'
+      )[0].amount;
+
+      const programRevenueDistributeRewardTokenAmountBefore =
+        await programRevenueFragVoteTokenAccount
+          .resolveAccount(true)
+          .then((account) => (account ? account.data.amount : 0n));
+
+      // airdrop distribute reward (frag vote token)
+      await validator.airdropToken(
+        '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
+        'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF',
+        123_456_789_987_654_321n
+      );
+
+      // harvest distributing reward
+      await ctx.fund.runCommand.executeChained({
+        forceResetCommand: 'HarvestRestakingYield',
+        operator: restaking.knownAddresses.fundManager,
+      });
+
+      const fragVoteTokenAmountAfter = (
+        await ctx.reward.reserve.rewardTokens.resolve(true)
+      ).filter(
+        (rewardToken) =>
+          rewardToken.mint == 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF'
+      )[0].amount;
+
+      const programRevenueDistributeRewardTokenAmountAfter =
+        await programRevenueFragVoteTokenAccount
+          .resolveAccount(true)
+          .then((account) => (account ? account.data.amount : 0n));
+
+      const programRevenueDistributeRewardTokenAmountDelta =
+        programRevenueDistributeRewardTokenAmountAfter -
+        programRevenueDistributeRewardTokenAmountBefore;
+      const rewardTokenAccountBalanceDelta = BigInt(
+        fragVoteTokenAmountAfter - fragVoteTokenAmountBefore
+      );
+
+      expect(programRevenueDistributeRewardTokenAmountDelta).toEqual(
+        (123_456_789_987_654_321n * BigInt(rewardCommissionRateBps)) / 10000n
+      );
+      expect(
+        programRevenueDistributeRewardTokenAmountDelta +
+          rewardTokenAccountBalanceDelta
+      ).toEqual(123_456_789_987_654_321n);
+    }
+
+    // hard limit test (reward commission bps <= 10%)
+    await expect(
+      ctx.fund.updateRestakingVaultStrategy.execute({
+        vault: '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
+        rewardCommissionRateBps: MAX_REWARD_COMMISSION_RATE_BPS,
+      })
+    ).resolves.not.toThrow();
+
+    await expect(
+      ctx.fund.updateRestakingVaultStrategy.execute({
+        vault: '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
+        rewardCommissionRateBps: MAX_REWARD_COMMISSION_RATE_BPS + 1,
+      })
+    ).rejects.toThrow();
+
+    // reset to 0
+    await expect(
+      ctx.fund.updateRestakingVaultStrategy.execute({
+        vault: '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
+        rewardCommissionRateBps: 0,
+      })
+    ).resolves.not.toThrow();
+  });
+
+  /** 6. Operation */
+  test('run full operation cycle for regression', async () => {
+    // frag2 operation will only initialize -> enqueue withdrawal -> process withdrawal.
+    // however this test case is to prevent breaking changes in other commands that affects the full cycle.
+    // For example, due to virtual vault's edge case, restaking-related command might be broken unless properly handled
+    await ctx.fund.runCommand.executeChained(null);
   });
 });

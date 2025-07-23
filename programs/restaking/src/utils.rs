@@ -72,7 +72,7 @@ impl<'info, T: ZeroCopyHeader + Owner> AccountLoaderExt<'info> for AccountLoader
 
 /// drops sub-decimal values.
 /// when both numerator and denominator are zero, returns `amount`.
-pub fn get_proportional_amount(amount: u64, numerator: u64, denominator: u64) -> Result<u64> {
+pub fn get_proportional_amount_u64(amount: u64, numerator: u64, denominator: u64) -> Result<u64> {
     if numerator == denominator || denominator == 0 && amount == 0 {
         return Ok(amount);
     }
@@ -80,10 +80,27 @@ pub fn get_proportional_amount(amount: u64, numerator: u64, denominator: u64) ->
         return Ok(numerator);
     }
 
-    (amount as u128)
-        .checked_mul(numerator as u128)
-        .and_then(|v| v.checked_div(denominator as u128))
-        .and_then(|v| u64::try_from(v).ok())
+    u64::try_from(amount as u128 * numerator as u128 / denominator as u128)
+        .map_err(|_| error!(errors::ErrorCode::CalculationArithmeticException))
+}
+
+/// This is for precise calculation.
+pub fn get_proportional_amount_u128(
+    amount: u128,
+    numerator: u128,
+    denominator: u128,
+) -> Result<u128> {
+    if numerator == denominator || denominator == 0 && amount == 0 {
+        return Ok(amount);
+    }
+    if amount == denominator {
+        return Ok(numerator);
+    }
+
+    U256::from(amount)
+        .checked_mul(U256::from(numerator))
+        .and_then(|numerator| numerator.checked_div(U256::from(denominator)))
+        .and_then(|amount| u128::try_from(amount).ok())
         .ok_or_else(|| error!(errors::ErrorCode::CalculationArithmeticException))
 }
 
@@ -442,6 +459,7 @@ pub(crate) use debug_msg_heap_size;
 
 #[allow(unused_imports)]
 pub(crate) use debug_msg_stack_size;
+use primitive_types::U256;
 
 /// Test utils.
 #[cfg(test)]

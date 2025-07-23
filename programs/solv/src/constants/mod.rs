@@ -1,7 +1,3 @@
-#![allow(dead_code, unused_imports)]
-mod common;
-pub use common::*;
-
 #[cfg(not(any(feature = "devnet", feature = "mainnet")))]
 mod local;
 #[cfg(not(any(feature = "devnet", feature = "mainnet")))]

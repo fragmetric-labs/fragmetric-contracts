@@ -1,15 +1,11 @@
 use anchor_lang::prelude::*;
 
 use crate::errors::ErrorCode;
-use crate::modules::pricing::{self, TokenPricingSource};
+use crate::modules::pricing::TokenPricingSource;
 use crate::modules::staking::*;
 use crate::utils::{AccountInfoExt, AsAccountInfo, PDASeeds};
 
-use super::{
-    FundAccount, FundService, OperationCommandContext, OperationCommandEntry,
-    OperationCommandResult, ProcessWithdrawalBatchCommand, SelfExecutable,
-    FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
-};
+use super::*;
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
 pub struct ClaimUnstakedSOLCommand {
@@ -98,9 +94,9 @@ pub struct ClaimUnstakedSOLCommandResultAssetReceivable {
 }
 
 impl SelfExecutable for ClaimUnstakedSOLCommand {
-    fn execute<'a, 'info>(
+    fn execute<'info>(
         &self,
-        ctx: &mut OperationCommandContext<'info, 'a>,
+        ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
     ) -> Result<(
         Option<OperationCommandResult>,
@@ -135,7 +131,6 @@ impl SelfExecutable for ClaimUnstakedSOLCommand {
 }
 
 // These are implementations of each command state.
-#[deny(clippy::wildcard_enum_match_arm)]
 impl ClaimUnstakedSOLCommand {
     /// An initial state of `ClaimUnstakedSOL` command.
     /// In this state, operator iterates the fund and
@@ -517,7 +512,7 @@ impl ClaimUnstakedSOLCommand {
             // while paying treasury debt, offsets available receivables and sends remaining to the treasury account.
             let mut fund_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?;
             let mut pricing_service =
-                fund_service.new_pricing_service(remaining_accounts.into_iter().copied(), false)?;
+                fund_service.new_pricing_service(remaining_accounts.iter().copied(), false)?;
 
             let (
                 transferred_sol_revenue_amount,
@@ -619,7 +614,7 @@ impl ClaimUnstakedSOLCommand {
             let fund_stake_account_address = *FundAccount::find_stake_account_address(
                 &ctx.fund_account.key(),
                 &pool_account_address,
-                index as u8,
+                index,
             );
 
             require_keys_eq!(fund_stake_account_address, fund_stake_account.key());

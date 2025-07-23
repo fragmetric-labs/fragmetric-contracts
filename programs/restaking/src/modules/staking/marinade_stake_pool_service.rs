@@ -1,17 +1,32 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program;
 use anchor_spl::token::Token;
-use anchor_spl::token_interface::{Mint, TokenAccount};
+use anchor_spl::token_interface::TokenAccount;
 use marinade_cpi::marinade::accounts::{State, TicketAccountData};
-use marinade_cpi::marinade::program::MarinadeFinance;
 
 use crate::utils::SystemProgramExt;
 
+use super::ValidateStakePool;
+
 pub(in crate::modules) struct MarinadeStakePoolService<'info> {
-    marinade_stake_pool_program: Program<'info, MarinadeFinance>,
-    pool_account: Account<'info, State>,
-    pool_token_mint: InterfaceAccount<'info, Mint>,
-    pool_token_program: Program<'info, Token>,
+    marinade_stake_pool_program: &'info AccountInfo<'info>,
+    pool_account: &'info AccountInfo<'info>,
+    pool_token_mint: &'info AccountInfo<'info>,
+    pool_token_program: &'info AccountInfo<'info>,
+}
+
+impl ValidateStakePool for MarinadeStakePoolService<'_> {
+    #[inline(never)]
+    fn validate_stake_pool<'info>(
+        pool_account: &'info AccountInfo<'info>,
+        pool_token_mint: &Pubkey,
+    ) -> Result<()> {
+        let pool_account = Self::deserialize_pool_account(pool_account)?;
+
+        require_keys_eq!(pool_account.msol_mint, *pool_token_mint);
+
+        Ok(())
+    }
 }
 
 impl<'info> MarinadeStakePoolService<'info> {
@@ -22,39 +37,41 @@ impl<'info> MarinadeStakePoolService<'info> {
         pool_token_mint: &'info AccountInfo<'info>,
         pool_token_program: &'info AccountInfo<'info>,
     ) -> Result<Self> {
-        let pool_account = Self::deserialize_pool_account(pool_account)?;
+        let pool = &*Self::deserialize_pool_account(pool_account)?;
 
-        require_keys_eq!(pool_account.msol_mint, pool_token_mint.key());
+        require_keys_eq!(
+            marinade_cpi::marinade::ID,
+            marinade_stake_pool_program.key(),
+        );
+        require_keys_eq!(pool.msol_mint, pool_token_mint.key());
         require_keys_eq!(*pool_token_mint.owner, *pool_token_program.key);
 
         Ok(Self {
+            marinade_stake_pool_program,
             pool_account,
-            marinade_stake_pool_program: Program::try_from(marinade_stake_pool_program)?,
-            pool_token_mint: InterfaceAccount::try_from(pool_token_mint)?,
-            pool_token_program: Program::try_from(pool_token_program)?,
+            pool_token_mint,
+            pool_token_program,
         })
     }
 
-    #[inline(always)]
-    pub(super) fn deserialize_pool_account(
-        pool_account: &'info AccountInfo<'info>,
-    ) -> Result<Account<'info, State>> {
-        Account::<State>::try_from(pool_account)
+    pub(super) fn deserialize_pool_account<'a>(
+        pool_account: &'a AccountInfo<'a>,
+    ) -> Result<Account<'a, State>> {
+        Account::try_from(pool_account)
     }
 
-    #[inline(always)]
-    fn deserialize_withdrawal_ticket_account(
-        withdrawal_ticket_account: &'info AccountInfo<'info>,
-    ) -> Result<Account<'info, TicketAccountData>> {
+    fn deserialize_withdrawal_ticket_account<'a>(
+        withdrawal_ticket_account: &'a AccountInfo<'a>,
+    ) -> Result<Account<'a, TicketAccountData>> {
         Account::try_from(withdrawal_ticket_account)
     }
 
     fn find_pool_account_derived_address<'a>(
         pool_account: &impl AsRef<AccountInfo<'a>>,
-        seed: &'static [u8],
+        seed: impl AsRef<[u8]>,
     ) -> Pubkey {
         Pubkey::find_program_address(
-            &[pool_account.as_ref().key.as_ref(), seed],
+            &[pool_account.as_ref().key.as_ref(), seed.as_ref()],
             &marinade_cpi::marinade::ID,
         )
         .0
@@ -178,14 +195,6 @@ impl<'info> MarinadeStakePoolService<'info> {
         total_lamports_under_control.saturating_sub(pool_account.circulating_ticket_balance)
     }
 
-    pub fn get_min_deposit_sol_amount(&self) -> u64 {
-        self.pool_account.min_deposit
-    }
-
-    pub fn get_min_withdraw_sol_amount(&self) -> u64 {
-        self.pool_account.min_withdraw
-    }
-
     /// returns [to_pool_token_account_amount, minted_pool_token_amount] (no fee)
     #[inline(never)]
     pub fn deposit_sol(
@@ -205,13 +214,15 @@ impl<'info> MarinadeStakePoolService<'info> {
 
         sol_amount: u64,
     ) -> Result<(u64, u64)> {
-        if sol_amount < self.get_min_deposit_sol_amount() {
-            return Ok((0, 0));
-        }
+        let pool_account = Self::deserialize_pool_account(self.pool_account)?;
 
         let mut to_pool_token_account =
             InterfaceAccount::<TokenAccount>::try_from(to_pool_token_account)?;
         let to_pool_token_account_amount_before = to_pool_token_account.amount;
+
+        if sol_amount < pool_account.min_deposit {
+            return Ok((to_pool_token_account_amount_before, 0));
+        }
 
         marinade_cpi::marinade::cpi::deposit(
             CpiContext::new_with_signer(
@@ -280,13 +291,15 @@ impl<'info> MarinadeStakePoolService<'info> {
 
         pool_token_amount: u64,
     ) -> Result<(u64, u64)> {
-        let sol_amount = crate::utils::get_proportional_amount(
+        let pool_account = &Self::deserialize_pool_account(self.pool_account)?;
+
+        let sol_amount = crate::utils::get_proportional_amount_u64(
             pool_token_amount,
-            Self::get_total_virtual_staked_lamports(&self.pool_account),
-            self.pool_account.msol_supply,
+            Self::get_total_virtual_staked_lamports(pool_account),
+            pool_account.msol_supply,
         )?;
 
-        if sol_amount < self.get_min_withdraw_sol_amount() {
+        if sol_amount < pool_account.min_withdraw {
             return Ok((0, 0));
         }
 
@@ -320,15 +333,12 @@ impl<'info> MarinadeStakePoolService<'info> {
         let withdrawal_ticket_account =
             Self::deserialize_withdrawal_ticket_account(new_withdrawal_ticket_account)?;
         let unstaking_sol_amount = withdrawal_ticket_account.lamports_amount;
-        let deducted_sol_fee_amount = {
-            let fee_numerator = self.pool_account.delayed_unstake_fee.bp_cents;
-            let fee_denominator = 1_000_000 - fee_numerator;
-            crate::utils::get_proportional_amount(
-                unstaking_sol_amount,
-                fee_numerator as u64,
-                fee_denominator as u64,
-            )?
-        };
+        // ref: https://github.com/marinade-finance/liquid-staking-program/blob/main/programs/marinade-finance/src/instructions/delayed_unstake/order_unstake.rs#L61
+        let deducted_sol_fee_amount = crate::utils::get_proportional_amount_u64(
+            sol_amount,
+            pool_account.delayed_unstake_fee.bp_cents as u64,
+            1_000_000,
+        )?;
 
         msg!("UNSTAKE#marinade: pool_token_mint={}, burnt_pool_token_amount={}, deducted_sol_fee_amount={}, unstaked_sol_amount={}", self.pool_token_mint.key(), pool_token_amount, deducted_sol_fee_amount, unstaking_sol_amount);
 
@@ -351,11 +361,13 @@ impl<'info> MarinadeStakePoolService<'info> {
         withdrawal_ticket_account_beneficiary: &AccountInfo<'info>,
         withdrawal_ticket_account_beneficiary_seeds: &[&[&[u8]]],
     ) -> Result<u64> {
+        let pool_account = &Self::deserialize_pool_account(self.pool_account)?;
         let withdrawal_ticket_account =
             &Self::deserialize_withdrawal_ticket_account(withdrawal_ticket_account)?;
 
         // Withdrawal ticket is not claimable yet
-        if !self.is_withdrawal_ticket_claimable(
+        if !Self::is_withdrawal_ticket_claimable(
+            pool_account,
             pool_reserve_account,
             &Clock::from_account_info(clock)?,
             withdrawal_ticket_account,
@@ -411,7 +423,7 @@ impl<'info> MarinadeStakePoolService<'info> {
     }
 
     fn is_withdrawal_ticket_claimable(
-        &self,
+        pool_account: &Account<State>,
         pool_reserve_account: &AccountInfo,
         clock: &Clock,
         withdrawal_ticket_account: &Account<TicketAccountData>,
@@ -430,7 +442,7 @@ impl<'info> MarinadeStakePoolService<'info> {
 
         // There should be enough lamports in pool reserve account.
         if withdrawal_ticket_account.lamports_amount
-            > pool_reserve_account.lamports() - self.pool_account.rent_exempt_for_token_acc
+            > pool_reserve_account.lamports() - pool_account.rent_exempt_for_token_acc
         {
             return false;
         }

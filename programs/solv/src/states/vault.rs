@@ -6,14 +6,18 @@ use crate::errors::VaultError;
 
 #[constant]
 /// ## Version History
-/// * v1: initial version (0x2800 = 10240 = 10KiB)
+/// * v1: deprecated
+/// * v2: initial version (0x2800 = 10240 = 10KiB)
 pub const VAULT_ACCOUNT_CURRENT_VERSION: u16 = 2;
 
-pub const MAX_WITHDRAWAL_REQUESTS: usize = 80;
+pub const MAX_WITHDRAWAL_REQUESTS: usize = 60;
 pub const MAX_DELEGATED_REWARD_TOKEN_MINTS: usize = 30;
+
+const SOLV_PROTOCOL_MAX_EXTRA_FEE_AMOUNT: u64 = 20_000;
 
 #[repr(C)]
 #[account(zero_copy)]
+#[cfg_attr(test, derive(Debug))]
 pub struct VaultAccount {
     // Header (offset = 0x0008)
     pub(crate) data_version: u16,
@@ -33,11 +37,14 @@ pub struct VaultAccount {
     /// expecting to earn yield.
     pub(crate) solv_manager: Pubkey,
 
+    // TODO/phase3: deprecate
     pub(crate) solv_protocol_wallet: Pubkey,
+    // TODO/phase3: deprecate
+    solv_protocol_deposit_fee_rate_bps: u16,
     // TODO/phase3: deprecate
     solv_protocol_withdrawal_fee_rate_bps: u16,
 
-    _reserved0: [u8; 334],
+    _reserved0: [u8; 332],
 
     // VRT (offset = 0x0200)
     pub(crate) vault_receipt_token_mint: Pubkey,
@@ -64,13 +71,19 @@ pub struct VaultAccount {
 
     /// VST reserved amount for operation - will be deposited to the Solv protocol
     vst_operation_reserved_amount: u64,
+    /// VST receivable amount for operation - offsetted by fund manager OR via donation
+    ///
+    /// ## Where does VST receivables come from?
+    ///
+    /// During deposit & withdraw from solv protocol, there is a protocol fee.
+    /// It will prevent the NAV loss considering fee as receivable.
+    /// Receivables will then be offsetted when fund manager withdraws VST, as a withdrawal fee.
+    ///
+    /// Another scenario is when solv manager adjusts SRT exchange rate (to lower price).
+    /// By human fault, SRT exchange rate might be set higher (for example, missed protocol extra fee).
+    /// In this case, by adjusting SRT exchange rate, decreased net asset value will be VST receivable.
+    vst_operation_receivable_amount: u64,
     /// VST locked amount for withdrawal - will be locked until withdrawal is completed
-    ///
-    /// ## Why VST locked??
-    ///
-    /// If SRT is insufficient for withdrawal, insufficient amount will be taken directly from VST operation reserved.
-    /// For example, assuming srt_reserve = 30, exchange_rate = 1:1.5 and trying to take 40 SRT expecting to receive 60 VST,
-    /// then 10 SRT is insufficient so 10 * 1.5 = 15 VST will be taken from VST operation reserved and locked until withdrawal is completed.
     vst_withdrawal_locked_amount: u64,
     /// Ready to claim amount.
     vst_reserved_amount_to_claim: u64,
@@ -83,7 +96,7 @@ pub struct VaultAccount {
     /// amount that will be able to claim when withdrawal is completed.
     vst_receivable_amount_to_claim: u64,
 
-    _reserved2: [u8; 424],
+    _reserved2: [u8; 416],
 
     // SRT (offset = 0x0600)
     pub(crate) solv_receipt_token_mint: Pubkey,
@@ -92,7 +105,7 @@ pub struct VaultAccount {
 
     /// SRT reserved amount for operation - used to withdraw VST from the solv protocol
     srt_operation_reserved_amount: u64,
-    // TODO/phase3: deprecate
+    /// SRT receivable amount for operation - will be offsetted when deposit completes to solv protocol
     srt_operation_receivable_amount: u64,
     /// SRT locked amount for withdrawal - will be sent to the Solv protocol when withdrawal starts
     srt_withdrawal_locked_amount: u64,
@@ -118,27 +131,37 @@ pub struct VaultAccount {
     _reserved6: [u8; 3128],
 }
 
+const BPS: u16 = 10_000;
+
 #[repr(C)]
 #[zero_copy]
 #[derive(Default)]
+#[cfg_attr(test, derive(Debug))]
 struct WithdrawalRequest {
     request_id: u64,
     vrt_withdrawal_requested_amount: u64,
-    /// SRT locked amount for withdrawal - will be sent to the Solv protocol when withdrawal starts (but field remains unchanged)
+    /// Locked SRT amount for withdrawal - will be sent to the Solv protocol when withdrawal starts (but field remains unchanged)
     srt_withdrawal_locked_amount: u64,
-    /// VST locked amount for withdrawal - will be locked until withdrawal is completed (but field remains unchanged)
+    /// Locked VST amount for withdrawal - will be locked until withdrawal is completed (but field remains unchanged)
     vst_withdrawal_locked_amount: u64,
     /// Total estimated amount of VST to be withdrawn by this request.
-    /// Obviously this includes `vst_withdrawal_locked_amount`.
-    /// First recorded as receivable amount when withdrawal starts,
-    /// then recorded as reserved amount after completion, with fee amount deducted.
+    /// First recorded as `vst_receivable_amount_to_claim` when withdrawal starts,
+    /// then after withdrawal completes, the actual VST withdrawn amount is recorded as
+    /// `vst_reserved_amount_to_claim` + `vst_extra_amount_to_claim` + `vst_deducted_fee_amount`.
+    /// Deducted solv protocol withdrawal fee is added to `vst_deducted_fee_amount`.
+    ///
+    /// ```txt
+    /// `vst_withdrawal_total_estimated_amount` = `srt_withdrawal_locked_amount` as VST + `vst_withdrawal_locked_amount` + `vst_deducted_fee_amount`
+    /// ```
     vst_withdrawal_total_estimated_amount: u64,
+    /// SRT price when requeest is enqueued - will be used for price validation
+    one_srt_as_micro_vst: u64,
 
     /// 0: enqueued
     /// 1: processing
     /// 2: completed
     state: u8,
-    _reserved: [u8; 7],
+    _reserved: [u8; 15],
 }
 
 const WITHDRAWAL_REQUEST_STATE_ENQUEUED: u8 = 0;
@@ -247,16 +270,16 @@ impl VaultAccount {
             // VRT
             self.vault_receipt_token_mint = vault_receipt_token_mint.key();
             self.vault_receipt_token_decimals = vault_receipt_token_mint.decimals;
+            self.one_vrt_as_micro_vst = 10u64.pow(vault_receipt_token_mint.decimals as u32 + 6);
 
             // VST
             self.vault_supported_token_mint = vault_supported_token_mint.key();
             self.vault_supported_token_decimals = vault_supported_token_mint.decimals;
-            self.one_vrt_as_micro_vst = 10u64.pow(vault_supported_token_mint.decimals as u32 + 6);
 
             // SRT
             self.solv_receipt_token_mint = solv_receipt_token_mint.key();
             self.solv_receipt_token_decimals = solv_receipt_token_mint.decimals;
-            self.one_srt_as_micro_vst = 10u64.pow(vault_supported_token_mint.decimals as u32 + 6);
+            self.one_srt_as_micro_vst = 10u64.pow(solv_receipt_token_mint.decimals as u32 + 6);
 
             // Set header
             self.bump = bump;
@@ -268,10 +291,18 @@ impl VaultAccount {
         Ok(())
     }
 
+    pub fn get_vault_manager(&self) -> Pubkey {
+        self.vault_manager
+    }
+
     pub(crate) fn set_vault_manager(&mut self, vault_manager: Pubkey) -> Result<()> {
         self.vault_manager = vault_manager;
 
         Ok(())
+    }
+
+    pub fn get_reward_manager(&self) -> Pubkey {
+        self.reward_manager
     }
 
     pub(crate) fn set_reward_manager(&mut self, reward_manager: Pubkey) -> Result<()> {
@@ -290,12 +321,17 @@ impl VaultAccount {
         Ok(())
     }
 
+    pub fn get_solv_manager(&self) -> Pubkey {
+        self.solv_manager
+    }
+
     pub(crate) fn set_solv_manager(&mut self, solv_manager: Pubkey) -> Result<()> {
         self.solv_manager = solv_manager;
 
         Ok(())
     }
 
+    // TODO/phase3: deprecate
     pub(crate) fn set_solv_protocol_wallet(&mut self, solv_protocol_wallet: Pubkey) -> Result<()> {
         if self.solv_protocol_wallet != Pubkey::default() {
             err!(VaultError::SolvProtocolWalletAlreadySetError)?;
@@ -307,14 +343,29 @@ impl VaultAccount {
     }
 
     pub fn get_withdrawal_fee_rate_bps(&self) -> u16 {
-        self.solv_protocol_withdrawal_fee_rate_bps
+        self.solv_protocol_deposit_fee_rate_bps + self.solv_protocol_withdrawal_fee_rate_bps
+    }
+
+    // TODO/phase3: deprecate
+    pub(crate) fn set_solv_protocol_deposit_fee_rate_bps(
+        &mut self,
+        fee_rate_bps: u16,
+    ) -> Result<&mut Self> {
+        // hard limit: 10%
+        if fee_rate_bps >= 1_000 {
+            err!(VaultError::InvalidSolvProtocolDepositFeeRateError)?;
+        }
+
+        self.solv_protocol_deposit_fee_rate_bps = fee_rate_bps;
+
+        Ok(self)
     }
 
     // TODO/phase3: deprecate
     pub(crate) fn set_solv_protocol_withdrawal_fee_rate_bps(
         &mut self,
         fee_rate_bps: u16,
-    ) -> Result<()> {
+    ) -> Result<&mut Self> {
         // hard limit: 10%
         if fee_rate_bps >= 1_000 {
             err!(VaultError::InvalidSolvProtocolWithdrawalFeeRateError)?;
@@ -322,7 +373,7 @@ impl VaultAccount {
 
         self.solv_protocol_withdrawal_fee_rate_bps = fee_rate_bps;
 
-        Ok(())
+        Ok(self)
     }
 
     pub fn get_vrt_mint(&self) -> Pubkey {
@@ -333,25 +384,67 @@ impl VaultAccount {
         self.vrt_supply
     }
 
+    /// ENQUEUED + PROCESSING
     pub fn get_vrt_withdrawal_incompleted_amount(&self) -> u64 {
         self.vrt_withdrawal_enqueued_amount + self.vrt_withdrawal_processing_amount
     }
 
+    /// COMPLETE
     pub fn get_vrt_withdrawal_completed_amount(&self) -> u64 {
         self.vrt_withdrawal_completed_amount
     }
 
-    /// VRT price = Net Asset Value (as VST) / VRT supply
-    /// NAV = VST (operation reserved) + SRT (operation reserved + receivable) as VST
+    /// * VRT price = NAV / VRT supply
+    /// * NAV = VST (operation reserved + receivable) + floor(SRT (operation reserved) as VST) + floor(SRT (operation receivable) as VST)
+    fn update_vrt_exchange_rate(&mut self) -> Result<()> {
+        let net_asset_value_as_vst = self
+            .get_net_asset_value_as_vst()
+            .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
+
+        self.one_vrt_as_micro_vst = if self.vrt_supply == 0 || net_asset_value_as_vst == 0 {
+            10u64.pow(self.vault_receipt_token_decimals as u32 + 6)
+        } else {
+            div_util(
+                10u64.pow(self.vault_receipt_token_decimals as u32 + 6) as u128
+                    * net_asset_value_as_vst as u128,
+                self.vrt_supply,
+                false,
+            )
+            .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?
+        };
+
+        Ok(())
+    }
+
+    /// informative VRT redepmtion rate
+    pub fn get_one_vrt_as_micro_vst(&self) -> u64 {
+        self.one_vrt_as_micro_vst
+    }
+
+    /// VRT mint amount = floor(VST * VRT supply / NAV) ?? VST
+    /// * VRT price = NAV / VRT supply
+    /// * NAV = VST (operation reserved + receivable) + floor(SRT (operation reserved) as VST) + floor(SRT (operation receivable) as VST)
     pub(crate) fn mint_vrt(&mut self, vst_amount: u64) -> Result<u64> {
         let vrt_amount = self.get_vrt_amount_to_mint(vst_amount)?;
 
         self.vrt_supply += vrt_amount;
         self.vst_operation_reserved_amount += vst_amount;
 
+        self.update_vrt_exchange_rate()?;
+
+        #[cfg(not(test))]
+        msg!(
+            "Mint VRT: vst_amount={}, vrt_amount={}",
+            vst_amount,
+            vrt_amount
+        );
+
         Ok(vrt_amount)
     }
 
+    /// VRT mint amount = floor(VST * VRT supply / NAV) ?? VST
+    /// * VRT price = NAV / VRT supply
+    /// * NAV = VST (operation reserved + receivable) + floor(SRT (operation reserved) as VST) + floor(SRT (operation receivable) as VST)
     pub fn get_vrt_amount_to_mint(&self, vst_amount: u64) -> Result<u64> {
         let net_asset_value_as_vst = self
             .get_net_asset_value_as_vst()
@@ -374,52 +467,23 @@ impl VaultAccount {
         self.vault_supported_token_mint
     }
 
-    /// NAV = VST (operation reserved) + SRT (operation reserved + receivable) as VST
+    /// NAV = VST (operation reserved + receivable) + floor(SRT (operation reserved) as VST) + floor(SRT (operation receivable) as VST)
     pub fn get_net_asset_value_as_vst(&self) -> Option<u64> {
+        let srt_exchange_rate = self.get_srt_exchange_rate();
         let srt_operation_reserved_amount_as_vst =
-            self.get_srt_exchange_rate().get_srt_amount_as_vst(
-                // TODO/phase3: deprecate srt_operation_receivable_amount
-                self.srt_operation_reserved_amount + self.srt_operation_receivable_amount,
-                false,
-            )?;
+            srt_exchange_rate.get_srt_amount_as_vst(self.srt_operation_reserved_amount, false)?;
+        let srt_operation_receivable_amount_as_vst =
+            srt_exchange_rate.get_srt_amount_as_vst(self.srt_operation_receivable_amount, false)?;
 
-        Some(self.vst_operation_reserved_amount + srt_operation_reserved_amount_as_vst)
+        Some(
+            self.vst_operation_reserved_amount
+                + self.vst_operation_receivable_amount
+                + srt_operation_reserved_amount_as_vst
+                + srt_operation_receivable_amount_as_vst,
+        )
     }
 
-    /// NAV = VST (operation reserved) + SRT (operation reserved + receivable) as VST
-    pub fn get_net_asset_value_as_micro_vst(&self) -> Option<u64> {
-        // TODO/phase3: deprecate srt_operation_receivable_amount
-        let srt_operation_reserved_amount_as_micro_vst =
-            self.get_srt_exchange_rate().get_srt_amount_as_vst(
-                1_000_000
-                    * (self.srt_operation_reserved_amount + self.srt_operation_receivable_amount),
-                false,
-            )?;
-        let vst_operation_reserved_amount_as_micro = 1_000_000 * self.vst_operation_reserved_amount;
-
-        Some(vst_operation_reserved_amount_as_micro + srt_operation_reserved_amount_as_micro_vst)
-    }
-
-    fn update_vrt_exchange_rate(&mut self) -> Result<()> {
-        let net_asset_value_as_vst = self
-            .get_net_asset_value_as_vst()
-            .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
-
-        self.one_vrt_as_micro_vst = if self.vrt_supply == 0 || net_asset_value_as_vst == 0 {
-            10u64.pow(self.vault_supported_token_decimals as u32 + 6)
-        } else {
-            div_util(
-                10u64.pow(self.vault_receipt_token_decimals as u32 + 6) as u128
-                    * net_asset_value_as_vst as u128,
-                self.vrt_supply as u128,
-                false,
-            )
-            .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?
-        };
-
-        Ok(())
-    }
-
+    /// Minimum amount of VST required in vault token account
     pub(crate) fn get_vst_total_reserved_amount(&self) -> u64 {
         self.vst_operation_reserved_amount
             + self.vst_withdrawal_locked_amount
@@ -431,172 +495,317 @@ impl VaultAccount {
         self.vst_operation_reserved_amount
     }
 
-    pub fn get_vst_extra_amount_to_claim(&self) -> u64 {
-        self.vst_extra_amount_to_claim
-    }
-
     pub fn get_vst_deducted_fee_amount(&self) -> u64 {
         self.vst_deducted_fee_amount
     }
 
     pub fn get_vst_estimated_amount_from_last_withdrawal_request(&self) -> Result<u64> {
         if self.num_withdrawal_requests == 0 {
-            return err!(VaultError::WithdrawalRequestQueueNotSetError);
+            err!(VaultError::WithdrawalRequestNotFoundError)?;
         }
-
         Ok(
             self.withdrawal_requests[self.num_withdrawal_requests as usize - 1]
-                .get_vst_withdrawal_total_estimated_amount(),
+                .vst_withdrawal_total_estimated_amount,
         )
     }
 
+    pub fn get_vst_total_estimated_amount_from_completed_withdrawal_requests(&self) -> u64 {
+        self.vst_reserved_amount_to_claim + self.vst_deducted_fee_amount
+    }
+
+    /// Minimum amount of SRT required in vault token account
     pub(crate) fn get_srt_total_reserved_amount(&self) -> u64 {
         self.srt_operation_reserved_amount + self.srt_withdrawal_locked_amount
     }
 
-    // TODO/phase3: deprecate
-    pub(crate) fn get_srt_operation_receivable_amount_for_deposit(
-        &self,
-        vst_amount: u64,
-    ) -> Result<u64> {
-        self.get_srt_exchange_rate()
-            .get_vst_amount_as_srt(vst_amount, false)
-            .ok_or_else(|| error!(VaultError::CalculationArithmeticException))
+    pub(crate) fn get_one_srt_as_micro_vst(&self) -> u64 {
+        self.one_srt_as_micro_vst
     }
 
     fn get_srt_exchange_rate(&self) -> SRTExchangeRate {
         SRTExchangeRate::new(self.one_srt_as_micro_vst, self.solv_receipt_token_decimals)
     }
 
-    fn set_srt_exchange_rate_with_validation(
+    pub(crate) fn refresh_srt_exchange_rate_with_validation(
         &mut self,
-        one_srt_as_micro_vst: u64,
+        new_one_srt_as_micro_vst: u64,
         heuristic_validation: bool,
     ) -> Result<()> {
+        if self.is_deposit_in_progress() {
+            err!(VaultError::DepositInProgressError)?;
+        }
+
         // srt price must monotonically increase
-        if self.one_srt_as_micro_vst > one_srt_as_micro_vst {
+        if self.one_srt_as_micro_vst > new_one_srt_as_micro_vst {
             err!(VaultError::InvalidSRTPriceError)?;
         }
 
         // TODO: deprecate this heuristic assertion
         if heuristic_validation
-            && one_srt_as_micro_vst - self.one_srt_as_micro_vst > self.one_srt_as_micro_vst / 10
+            && new_one_srt_as_micro_vst - self.one_srt_as_micro_vst > self.one_srt_as_micro_vst / 10
         {
             err!(VaultError::InvalidSRTPriceError)?;
         }
 
-        self.one_srt_as_micro_vst = one_srt_as_micro_vst;
+        #[cfg(not(test))]
+        let old_one_srt_as_micro_vst = self.one_srt_as_micro_vst;
+        self.one_srt_as_micro_vst = new_one_srt_as_micro_vst;
+        self.update_vrt_exchange_rate()?;
+
+        #[cfg(not(test))]
+        msg!(
+            "Refresh SRT exchange rate: old={}, new = {}",
+            old_one_srt_as_micro_vst,
+            new_one_srt_as_micro_vst,
+        );
 
         Ok(())
     }
 
-    // TODO/phase3: deprecate
-    fn is_deposit_in_progress(&self) -> bool {
-        self.srt_operation_receivable_amount > 0
-    }
-
-    pub(crate) fn deposit_vst(
+    /// returns ∆vst_operation_receivable_amount
+    pub(crate) fn adjust_srt_exchange_rate_with_extra_vst_receivables(
         &mut self,
-        vst_amount: u64,
-        srt_amount: u64,
-        // one_srt_as_micro_vst: u64,
-    ) -> Result<()> {
-        // TODO/phase3: deprecate
+        new_one_srt_as_micro_vst: u64,
+        heuristic_validation: bool,
+    ) -> Result<u64> {
         if self.is_deposit_in_progress() {
             err!(VaultError::DepositInProgressError)?;
         }
 
-        let expected_srt_amount = self
+        if new_one_srt_as_micro_vst > self.one_srt_as_micro_vst {
+            err!(VaultError::InvalidSRTPriceError)?;
+        }
+
+        // TODO: deprecate this heuristic assertion
+        if heuristic_validation
+            && self.one_srt_as_micro_vst - new_one_srt_as_micro_vst > self.one_srt_as_micro_vst / 10
+        {
+            err!(VaultError::InvalidSRTPriceError)?;
+        }
+
+        let srt_operation_reserved_amount_as_vst = self
             .get_srt_exchange_rate()
-            .get_vst_amount_as_srt(vst_amount, false)
+            .get_srt_amount_as_vst(self.srt_operation_reserved_amount, false)
             .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
+        let post_srt_operation_reserved_amount_as_vst =
+            SRTExchangeRate::new(new_one_srt_as_micro_vst, self.solv_receipt_token_decimals)
+                .get_srt_amount_as_vst(self.srt_operation_reserved_amount, false)
+                .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
+        let extra_vst_receivable_amount =
+            srt_operation_reserved_amount_as_vst - post_srt_operation_reserved_amount_as_vst;
 
-        require_gte!(srt_amount, expected_srt_amount);
+        self.vst_operation_receivable_amount += extra_vst_receivable_amount;
+        #[cfg(not(test))]
+        let old_one_srt_as_micro_vst = self.one_srt_as_micro_vst;
+        self.one_srt_as_micro_vst = new_one_srt_as_micro_vst;
 
-        self.vst_operation_reserved_amount -= vst_amount;
-        // TODO/phase3: deprecate srt_receivable_amount and replace with the code below
-        // self.srt_operation_reserved_amount += srt_amount;
-        // self.set_srt_exchange_rate(one_srt_as_micro_vst)?;
-        self.srt_operation_receivable_amount = srt_amount;
+        #[cfg(not(test))]
+        msg!(
+            "Adjust SRT exchange rate: old={}, new={}, extra_vst_receivable_amount={}",
+            old_one_srt_as_micro_vst,
+            new_one_srt_as_micro_vst,
+            extra_vst_receivable_amount,
+        );
 
-        Ok(())
+        Ok(extra_vst_receivable_amount)
     }
 
-    // TODO/phase3: deprecate
+    fn is_deposit_in_progress(&self) -> bool {
+        self.srt_operation_receivable_amount > 0
+    }
+
+    /// Protocol extra fee is not accounted here - we don't know exact amount now
+    /// * VST protocol deposit fee = ceil(VST * solv_protocol_deposit_fee_rate)  
+    /// * SRT estimated = ceil((VST - protocol fee) as SRT)
+    ///
+    /// returns (srt_estimated_amount, solv_protocol_deposit_fee_amount_as_vst)
+    pub(crate) fn deposit_vst(&mut self, vst_amount: u64) -> Result<(u64, u64)> {
+        if self.is_deposit_in_progress() {
+            err!(VaultError::DepositInProgressError)?;
+        }
+
+        require_gte!(self.vst_operation_reserved_amount, vst_amount);
+
+        let solv_protocol_deposit_fee_amount_as_vst = div_util(
+            vst_amount as u128 * self.solv_protocol_deposit_fee_rate_bps as u128,
+            BPS,
+            true,
+        )
+        .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
+        let srt_estimated_amount = self
+            .get_srt_exchange_rate()
+            .get_vst_amount_as_srt(vst_amount - solv_protocol_deposit_fee_amount_as_vst, true)
+            .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
+
+        self.vst_operation_reserved_amount -= vst_amount;
+        self.vst_operation_receivable_amount += solv_protocol_deposit_fee_amount_as_vst;
+        self.srt_operation_receivable_amount = srt_estimated_amount;
+
+        self.update_vrt_exchange_rate()?;
+
+        #[cfg(not(test))]
+        msg!(
+            "Deposit VST: vst_amount={}, deposit_fee_amount_as_vst={}, srt_estimated_amount={}",
+            vst_amount,
+            solv_protocol_deposit_fee_amount_as_vst,
+            srt_estimated_amount,
+        );
+
+        Ok((
+            srt_estimated_amount,
+            solv_protocol_deposit_fee_amount_as_vst,
+        ))
+    }
+
+    /// Offset VST receivables with VST donation.
+    /// Cannot donate more than VST receivable.
+    pub(crate) fn donate_vst(&mut self, mut vst_amount: u64) -> Result<u64> {
+        vst_amount = std::cmp::min(vst_amount, self.vst_operation_receivable_amount);
+
+        self.vst_operation_reserved_amount += vst_amount;
+        self.vst_operation_receivable_amount -= vst_amount;
+
+        #[cfg(not(test))]
+        msg!("Donate VST: vst_amount={}", vst_amount);
+
+        Ok(vst_amount)
+    }
+
+    /// Offset VST receivables with SRT donation.
+    /// Cannot donate more than VST receivable.
+    pub(crate) fn donate_srt(&mut self, mut srt_amount: u64) -> Result<u64> {
+        let srt_exchange_rate = self.get_srt_exchange_rate();
+
+        let maximum_possible_srt_donation_amount = srt_exchange_rate
+            .get_vst_amount_as_srt(self.vst_operation_receivable_amount, false)
+            .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
+        srt_amount = std::cmp::min(srt_amount, maximum_possible_srt_donation_amount);
+
+        let srt_operation_reserved_amount_as_vst = srt_exchange_rate
+            .get_srt_amount_as_vst(self.srt_operation_reserved_amount, false)
+            .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
+        let post_srt_operation_reserved_amount_as_vst = srt_exchange_rate
+            .get_srt_amount_as_vst(self.srt_operation_reserved_amount + srt_amount, false)
+            .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
+        let offsetting_vst_operation_receivable_amount =
+            post_srt_operation_reserved_amount_as_vst - srt_operation_reserved_amount_as_vst;
+
+        // Validation
+        require_gte!(
+            self.vst_operation_receivable_amount,
+            offsetting_vst_operation_receivable_amount,
+        );
+
+        self.vst_operation_receivable_amount -= offsetting_vst_operation_receivable_amount;
+        self.srt_operation_reserved_amount += srt_amount;
+
+        #[cfg(not(test))]
+        msg!(
+            "Donate SRT: srt_amount={}, offsetted_vst_operation_receivable_amount={}",
+            srt_amount,
+            offsetting_vst_operation_receivable_amount,
+        );
+
+        Ok(srt_amount)
+    }
+
+    /// VST protocol extra fee = max(floor(SRT receivable as VST (w/ old price)) - floor(SRT as VST (w/ new price)), 0) ≤ HARD LIMIT(20000)
+    ///
+    /// returns (srt_operation_reserved_amount, solv_protocol_extra_fee_amount_as_vst)
     pub(crate) fn offset_srt_receivables(
         &mut self,
         srt_amount: u64,
         new_one_srt_as_micro_vst: u64,
         heuristic_validation: bool,
-    ) -> Result<()> {
+    ) -> Result<(u64, u64)> {
         if !self.is_deposit_in_progress() {
             err!(VaultError::DepositNotInProgressError)?;
         }
 
         let srt_amount_as_vst =
             SRTExchangeRate::new(new_one_srt_as_micro_vst, self.solv_receipt_token_decimals)
-                .get_srt_amount_as_vst(srt_amount, true) // provide a small tolerance here
+                .get_srt_amount_as_vst(srt_amount, false)
                 .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
-
         let srt_operation_receivable_amount_as_vst = self
             .get_srt_exchange_rate()
             .get_srt_amount_as_vst(self.srt_operation_receivable_amount, false)
             .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
 
-        require_gte!(srt_amount_as_vst, srt_operation_receivable_amount_as_vst);
+        let solv_protocol_extra_fee_amount_as_vst =
+            srt_operation_receivable_amount_as_vst.saturating_sub(srt_amount_as_vst);
 
-        self.srt_operation_receivable_amount = 0;
+        if solv_protocol_extra_fee_amount_as_vst > SOLV_PROTOCOL_MAX_EXTRA_FEE_AMOUNT {
+            err!(VaultError::InvalidSolvProtocolExtraFeeAmountError)?;
+        }
+
+        #[cfg(not(test))]
+        let offsetted_srt_operation_receivable_amount = self.srt_operation_receivable_amount;
+        self.vst_operation_receivable_amount += solv_protocol_extra_fee_amount_as_vst;
         self.srt_operation_reserved_amount += srt_amount;
+        self.srt_operation_receivable_amount = 0;
 
-        self.set_srt_exchange_rate_with_validation(new_one_srt_as_micro_vst, heuristic_validation)?;
-        self.update_vrt_exchange_rate()?;
+        #[cfg(not(test))]
+        let old_one_srt_as_micro_vst = self.one_srt_as_micro_vst;
+        self.refresh_srt_exchange_rate_with_validation(
+            new_one_srt_as_micro_vst,
+            heuristic_validation,
+        )?;
 
-        Ok(())
-    }
+        #[cfg(not(test))]
+        msg!(
+            "Offset SRT receivables: received_srt_amount={}, new_one_srt_as_micro_vst={}, offsetted_srt_operation_receivable_amount={}, old_one_srt_as_micro_vst={}, deducted_extra_fee_amount_as_vst={}",
+            srt_amount,
+            new_one_srt_as_micro_vst,
+            offsetted_srt_operation_receivable_amount,
+            old_one_srt_as_micro_vst,
+            solv_protocol_extra_fee_amount_as_vst,
+        );
 
-    #[allow(unused)]
-    fn get_withdrawal_requests_iter(&self) -> impl Iterator<Item = &WithdrawalRequest> {
-        self.withdrawal_requests[..self.num_withdrawal_requests as usize].iter()
+        Ok((
+            self.srt_operation_reserved_amount,
+            solv_protocol_extra_fee_amount_as_vst,
+        ))
     }
 
     fn get_withdrawal_requests_iter_mut(&mut self) -> impl Iterator<Item = &mut WithdrawalRequest> {
         self.withdrawal_requests[..self.num_withdrawal_requests as usize].iter_mut()
     }
 
-    // TODO/phase3: remove this comment after deprecating srt operation receivable amount
-    /// returns ∆vrt_withdrawal_enqueued_amount, which "might" be less than given vrt_amount,
+    /// returns (∆vrt_withdrawal_enqueued_amount, ∆vst_withdrawal_estimated_amount).
+    /// ∆vrt_withdrawal_enqueued_amount "might" be less than given vrt_amount,
     /// due to srt operation receivable amount.
-    pub(crate) fn enqueue_withdrawal_request(&mut self, mut vrt_amount: u64) -> Result<u64> {
+    pub(crate) fn enqueue_withdrawal_request(&mut self, mut vrt_amount: u64) -> Result<(u64, u64)> {
         let srt_exchange_rate = self.get_srt_exchange_rate();
-        let vst_operation_reserved_amount_as_srt = srt_exchange_rate
-            .get_vst_amount_as_srt(self.vst_operation_reserved_amount, true)
+        let srt_operation_reserved_amount_as_vst = srt_exchange_rate
+            .get_srt_amount_as_vst(self.srt_operation_reserved_amount, false)
             .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
-        // TODO/phase3: deprecate srt_receivable_amount
-        let net_asset_value_as_srt = vst_operation_reserved_amount_as_srt
-            + self.srt_operation_reserved_amount
-            + self.srt_operation_receivable_amount;
+        let srt_operation_receivable_amount_as_vst = srt_exchange_rate
+            .get_srt_amount_as_vst(self.srt_operation_receivable_amount, false)
+            .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
+        let net_asset_value_as_vst = self.vst_operation_reserved_amount
+            + self.vst_operation_receivable_amount
+            + srt_operation_reserved_amount_as_vst
+            + srt_operation_receivable_amount_as_vst;
 
-        // TODO/phase3: deprecate this block after deprecating srt_operation_receivable_amount
-        {
-            let net_asset_value_without_srt_receivable =
-                vst_operation_reserved_amount_as_srt + self.srt_operation_reserved_amount;
-            let maximum_possible_vrt_amount = if net_asset_value_as_srt == 0 {
-                // When net asset value is 0, obviously srt_receivable = 0 so all vrt is possible to withdraw
-                self.vrt_supply
-            } else {
-                div_util(
-                    self.vrt_supply as u128 * net_asset_value_without_srt_receivable as u128,
-                    net_asset_value_as_srt,
-                    false,
-                )
-                .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?
-            };
-            vrt_amount = vrt_amount.min(maximum_possible_vrt_amount);
-        }
+        // First, adjust VRT withdrawal request amount if needed, due to srt_operation_receivable_amount
+        let net_asset_value_without_srt_receivable_as_vst =
+            net_asset_value_as_vst - srt_operation_receivable_amount_as_vst;
+        let maximum_possible_vst_withdrawal_amount = if net_asset_value_as_vst == 0 {
+            // When net asset value is 0, obviously srt_receivable = 0 so all vrt is possible to withdraw
+            self.vrt_supply
+        } else {
+            div_util(
+                self.vrt_supply as u128 * net_asset_value_without_srt_receivable_as_vst as u128,
+                net_asset_value_as_vst,
+                false,
+            )
+            .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?
+        };
+        vrt_amount = std::cmp::min(vrt_amount, maximum_possible_vst_withdrawal_amount);
 
         // Ignore empty request
         if vrt_amount == 0 {
-            return Ok(0);
+            return Ok((0, 0));
         }
 
         // Withdrawal request is full
@@ -604,36 +813,124 @@ impl VaultAccount {
             err!(VaultError::ExceededMaxWithdrawalRequestsError)?;
         }
 
-        let srt_withdrawal_required_amount = div_util(
-            net_asset_value_as_srt as u128 * vrt_amount as u128,
-            self.vrt_supply, // We know vrt supply > 0 because we're trying to withdraw
-            true,
+        // Calculate target VST withdrawal amount,
+        // then calculate how to prepare required VST for withdrawal.
+        // First option is to pay with VST reserved.
+        // Second option is to take as withdrawal fee, then offset VST receivable.
+        // Last option is to withdraw SRT.
+        let target_vst_withdrawal_amount = div_util(
+            vrt_amount as u128 * net_asset_value_as_vst as u128,
+            self.vrt_supply, // We know vrt_supply > 0 because vrt_amount > 0
+            false,
         )
         .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
 
-        let srt_withdrawal_locked_amount =
-            srt_withdrawal_required_amount.min(self.srt_operation_reserved_amount);
-
-        // Insufficient amount will be taken directly from VST operation reserved
-        let insufficient_srt_amount = srt_withdrawal_required_amount - srt_withdrawal_locked_amount;
-        let vst_withdrawal_locked_amount = if vst_operation_reserved_amount_as_srt == 0 {
-            // When vst operation reserved amount as srt is 0, obviously insufficient srt amount = 0
+        // First, calculate fair amount of target VST offsetting receivable (will be taken as vst withdrawl fee)
+        let target_vst_offsetting_receivable_amount = if net_asset_value_as_vst == 0 {
             0
         } else {
             div_util(
-                self.vst_operation_reserved_amount as u128 * insufficient_srt_amount as u128,
-                vst_operation_reserved_amount_as_srt,
+                self.vst_operation_receivable_amount as u128 * target_vst_withdrawal_amount as u128,
+                net_asset_value_as_vst,
                 false,
             )
             .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?
         };
 
-        // VST estimation
-        let vst_withdrawal_estimated_amount_from_srt = srt_exchange_rate
-            .get_srt_amount_as_vst(srt_withdrawal_locked_amount, false)
+        // Then, pay with VST reserved as much as possible, in order to avoid solv protocol withdrawal fee
+        let vst_withdrawal_locked_amount = std::cmp::min(
+            self.vst_operation_reserved_amount,
+            target_vst_withdrawal_amount - target_vst_offsetting_receivable_amount,
+        );
+
+        // Finally, insufficient amount will be filled by withdrawing SRT
+        let insufficient_vst_amount = target_vst_withdrawal_amount
+            - target_vst_offsetting_receivable_amount
+            - vst_withdrawal_locked_amount;
+
+        let srt_withdrawal_locked_amount;
+        let srt_withdrawal_locked_amount_as_vst;
+        let post_srt_operation_reserved_amount_as_vst;
+        let vst_withdrawal_fee_amount;
+        let vst_offsetting_receivable_amount;
+
+        if insufficient_vst_amount == 0 {
+            // No insufficient amount, so no need to withdraw SRT
+            srt_withdrawal_locked_amount = 0;
+            srt_withdrawal_locked_amount_as_vst = 0;
+            post_srt_operation_reserved_amount_as_vst = srt_operation_reserved_amount_as_vst;
+            vst_withdrawal_fee_amount = target_vst_offsetting_receivable_amount;
+            vst_offsetting_receivable_amount = target_vst_offsetting_receivable_amount;
+        } else if insufficient_vst_amount >= srt_operation_reserved_amount_as_vst {
+            // Even full SRT withdrawal is not enough to fill insufficient amount,
+            // so  additionally offset VST receivable, which will be taken as VST withdrawal fee.
+            srt_withdrawal_locked_amount = self.srt_operation_reserved_amount;
+            srt_withdrawal_locked_amount_as_vst = srt_operation_reserved_amount_as_vst;
+            post_srt_operation_reserved_amount_as_vst = 0;
+
+            let insufficient_vst_amount =
+                insufficient_vst_amount - srt_withdrawal_locked_amount_as_vst;
+            vst_withdrawal_fee_amount =
+                target_vst_offsetting_receivable_amount + insufficient_vst_amount;
+            vst_offsetting_receivable_amount =
+                target_vst_offsetting_receivable_amount + insufficient_vst_amount;
+        } else {
+            // Calculate (almost) exact amount of SRT to withdraw, yet there exists small diff due to round down.
+            srt_withdrawal_locked_amount = srt_exchange_rate
+                .get_vst_amount_as_srt(insufficient_vst_amount, false)
+                .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
+            srt_withdrawal_locked_amount_as_vst = srt_exchange_rate
+                .get_srt_amount_as_vst(srt_withdrawal_locked_amount, false)
+                .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
+            post_srt_operation_reserved_amount_as_vst = srt_exchange_rate
+                .get_srt_amount_as_vst(
+                    self.srt_operation_reserved_amount - srt_withdrawal_locked_amount,
+                    false,
+                )
+                .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
+
+            // Due to round down, estimated VST withdrawal amount is little less than target VST withdrawal amount.
+            // Treat that diff as extra withdrawal fee so the estimation equals to target withdrawal amount.
+            let diff = insufficient_vst_amount - srt_withdrawal_locked_amount_as_vst;
+            vst_withdrawal_fee_amount = target_vst_offsetting_receivable_amount + diff;
+
+            // Due to round down, net asset value will decrease slightly less than target VST withdrawal amount.
+            // Resolve that diff by additionally offsetting VST receivable, as much as possible.
+            // Still, if there is insufficient VST receivable, net asset value will remain higher than expected.
+            let net_asset_value_decreased_amount_by_srt_withdrawal =
+                srt_operation_reserved_amount_as_vst - post_srt_operation_reserved_amount_as_vst;
+            let diff = insufficient_vst_amount - net_asset_value_decreased_amount_by_srt_withdrawal;
+            vst_offsetting_receivable_amount = std::cmp::min(
+                self.vst_operation_receivable_amount,
+                target_vst_offsetting_receivable_amount + diff,
+            );
+        }
+
+        let net_asset_value_decreased_amount_by_srt_withdrawal =
+            srt_operation_reserved_amount_as_vst - post_srt_operation_reserved_amount_as_vst;
+        let net_asset_value_decreasing_amount = vst_withdrawal_locked_amount
+            + vst_offsetting_receivable_amount
+            + net_asset_value_decreased_amount_by_srt_withdrawal;
+        let vst_withdrawal_total_estimated_amount = vst_withdrawal_locked_amount
+            + vst_withdrawal_fee_amount
+            + srt_withdrawal_locked_amount_as_vst;
+
+        // Validation
+        let tolerance = srt_exchange_rate
+            .get_srt_amount_as_vst(1, true)
             .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
-        let vst_withdrawal_total_estimated_amount =
-            vst_withdrawal_estimated_amount_from_srt + vst_withdrawal_locked_amount;
+        require_gte!(
+            net_asset_value_decreasing_amount,
+            target_vst_withdrawal_amount.saturating_sub(tolerance),
+        );
+        require_gte!(
+            target_vst_withdrawal_amount,
+            net_asset_value_decreasing_amount,
+        );
+        require_eq!(
+            target_vst_withdrawal_amount,
+            vst_withdrawal_total_estimated_amount,
+        );
 
         // Enqueue
         self.withdrawal_last_created_request_id += 1;
@@ -643,6 +940,7 @@ impl VaultAccount {
             srt_withdrawal_locked_amount,
             vst_withdrawal_locked_amount,
             vst_withdrawal_total_estimated_amount,
+            self.one_srt_as_micro_vst,
         );
         self.num_withdrawal_requests += 1;
 
@@ -653,17 +951,35 @@ impl VaultAccount {
         self.vrt_withdrawal_enqueued_amount += vrt_amount;
 
         self.vst_operation_reserved_amount -= vst_withdrawal_locked_amount;
+        self.vst_operation_receivable_amount -= vst_offsetting_receivable_amount;
         self.vst_withdrawal_locked_amount += vst_withdrawal_locked_amount;
 
         self.srt_operation_reserved_amount -= srt_withdrawal_locked_amount;
         self.srt_withdrawal_locked_amount += srt_withdrawal_locked_amount;
 
-        Ok(vrt_amount)
+        self.update_vrt_exchange_rate()?;
+
+        #[cfg(not(test))]
+        msg!(
+            "Enqueue withdrawal request: burnt_vrt_amount={}, vrt_withdrawal_enqueued_amount={}, vst_withdrawal_locked_amount={}, vst_withdrawal_fee_amount={}, srt_withdrawal_locked_amount={}",
+            vrt_amount,
+            self.vrt_withdrawal_enqueued_amount,
+            vst_withdrawal_locked_amount,
+            vst_withdrawal_fee_amount,
+            srt_withdrawal_locked_amount,
+        );
+
+        Ok((vrt_amount, vst_withdrawal_total_estimated_amount))
     }
 
-    /// returns srt_amount_to_withdraw
-    pub(crate) fn confirm_withdrawal_requests(&mut self) -> Result<u64> {
+    /// returns (srt_amount_to_withdraw, vst_estimated_amount_to_receive)
+    pub(crate) fn confirm_withdrawal_requests(&mut self) -> Result<(u64, u64)> {
         let srt_amount_to_withdraw = self.srt_withdrawal_locked_amount;
+        // NOTE: this estimation is quite imprecise, so only used for event emission & logging.
+        let vst_estimated_amount_to_receive = self
+            .get_srt_exchange_rate()
+            .get_srt_amount_as_vst(srt_amount_to_withdraw, false)
+            .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
 
         // Start
         let mut vst_receivable_amount_to_claim = 0;
@@ -684,36 +1000,58 @@ impl VaultAccount {
 
         self.srt_withdrawal_locked_amount = 0;
 
-        Ok(srt_amount_to_withdraw)
+        #[cfg(not(test))]
+        msg!(
+            "Confirm withdrawal requests: srt_amount_to_withdraw={}, vst_estimated_amount_to_receive={}, vst_receivable_amount_to_claim={}, total_vst_receivable_amount_to_claim={}, vrt_withdrawal_processing_amount={}",
+            srt_amount_to_withdraw,
+            vst_estimated_amount_to_receive,
+            vst_receivable_amount_to_claim,
+            self.vst_receivable_amount_to_claim,
+            self.vrt_withdrawal_processing_amount,
+        );
+
+        Ok((srt_amount_to_withdraw, vst_estimated_amount_to_receive))
     }
 
+    /// returns (∆vst_reserved_amount_to_claim, ∆vst_extra_amount_to_claim, ∆vst_deducted_fee_amount)
     pub(crate) fn complete_withdrawal_requests(
         &mut self,
         srt_amount: u64,
         vst_amount: u64,
-        old_one_srt_as_micro_vst: u64,
+        old_one_srt_as_micro_vst: u64, // SRT price which request processed at
         heuristic_validation: bool,
-    ) -> Result<()> {
-        // TODO/phase3: deprecate
+    ) -> Result<(u64, u64, u64)> {
         if self.is_deposit_in_progress() {
             err!(VaultError::DepositInProgressError)?;
         }
 
         // Validate vst_amount
-        // TODO/phase3: deprecate
-        let solv_protocol_withdrawal_fee_rate =
-            SolvProtocolWithdrawalFeeRate(self.solv_protocol_withdrawal_fee_rate_bps);
-
-        let srt_amount_as_vst =
-            SRTExchangeRate::new(old_one_srt_as_micro_vst, self.solv_receipt_token_decimals)
-                .get_srt_amount_as_vst(srt_amount, false)
-                .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
-        let vst_withdrawal_fee_amount = solv_protocol_withdrawal_fee_rate
-            .get_vst_withdrawal_fee(srt_amount_as_vst)
+        if srt_amount == 0 {
+            // Since there might exist requests without SRT withdrawal required,
+            // so completion with 0 SRT is allowed.
+            // In this case, obviously VST amount should be 0.
+            require_eq!(vst_amount, 0);
+        } else {
+            let srt_amount_as_vst =
+                SRTExchangeRate::new(old_one_srt_as_micro_vst, self.solv_receipt_token_decimals)
+                    .get_srt_amount_as_vst(srt_amount, false)
+                    .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
+            let solv_protocol_withdrawal_fee_amount_as_vst = div_util(
+                srt_amount_as_vst as u128 * self.solv_protocol_withdrawal_fee_rate_bps as u128,
+                BPS,
+                true,
+            )
             .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
-        let vst_withrawal_amount = srt_amount_as_vst - vst_withdrawal_fee_amount;
+            let expected_vst_amount =
+                srt_amount_as_vst - solv_protocol_withdrawal_fee_amount_as_vst;
 
-        require_gte!(vst_amount, vst_withrawal_amount);
+            let solv_protocol_extra_fee_amount_as_vst =
+                expected_vst_amount.saturating_sub(vst_amount);
+
+            if solv_protocol_extra_fee_amount_as_vst > SOLV_PROTOCOL_MAX_EXTRA_FEE_AMOUNT {
+                err!(VaultError::InvalidSolvProtocolExtraFeeAmountError)?;
+            }
+        }
 
         // Complete
         let mut vrt_withdrawal_requested_amount = 0;
@@ -729,6 +1067,10 @@ impl VaultAccount {
                 break;
             }
 
+            if request.one_srt_as_micro_vst > old_one_srt_as_micro_vst {
+                err!(VaultError::InvalidSRTPriceError)?;
+            }
+
             request.state = WITHDRAWAL_REQUEST_STATE_COMPLETED;
 
             vrt_withdrawal_requested_amount += request.vrt_withdrawal_requested_amount;
@@ -737,45 +1079,90 @@ impl VaultAccount {
             vst_withdrawal_total_estimated_amount += request.vst_withdrawal_total_estimated_amount;
         }
 
+        require_gt!(vrt_withdrawal_requested_amount, 0);
+
         // Check exact amount
         require_eq!(srt_withdrawal_locked_amount, srt_amount);
 
-        // Apply fee
-        let vst_estimated_solv_withdrawal_amount =
-            vst_withdrawal_total_estimated_amount - vst_withdrawal_locked_amount;
-        let vst_estimated_solv_protocol_fee_amount = solv_protocol_withdrawal_fee_rate
-            .get_vst_withdrawal_fee(vst_estimated_solv_withdrawal_amount)
-            .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
-        let vst_estimated_solv_withdrawal_amount_without_fee =
-            vst_estimated_solv_withdrawal_amount - vst_estimated_solv_protocol_fee_amount;
-        require_gte!(vst_amount, vst_estimated_solv_withdrawal_amount_without_fee);
+        // Apply withdrawal fee
+        let vst_withdrawal_fee_amount = div_util(
+            vst_withdrawal_total_estimated_amount as u128
+                * self.get_withdrawal_fee_rate_bps() as u128,
+            BPS,
+            true,
+        )
+        .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
+        let vst_withdrawal_estimated_amount_without_fee =
+            vst_withdrawal_total_estimated_amount - vst_withdrawal_fee_amount;
+
+        // Calculate surplus or shortage
+        let vst_withdrawal_amount_without_fee = vst_withdrawal_locked_amount + vst_amount;
+
+        let vst_reserved_amount_to_claim;
+        let vst_extra_amount_to_claim;
+        let vst_deducted_fee_amount;
+
+        if vst_withdrawal_amount_without_fee >= vst_withdrawal_estimated_amount_without_fee {
+            // Surplus as extra claimable amount
+            let surplus =
+                vst_withdrawal_amount_without_fee - vst_withdrawal_estimated_amount_without_fee;
+            vst_reserved_amount_to_claim = vst_withdrawal_estimated_amount_without_fee;
+            vst_extra_amount_to_claim = surplus;
+            vst_deducted_fee_amount = vst_withdrawal_fee_amount;
+        } else {
+            // Shortage as extra fee
+            let shortage =
+                vst_withdrawal_estimated_amount_without_fee - vst_withdrawal_amount_without_fee;
+            vst_reserved_amount_to_claim = vst_withdrawal_amount_without_fee;
+            vst_extra_amount_to_claim = 0;
+            vst_deducted_fee_amount = vst_withdrawal_fee_amount + shortage;
+        }
 
         // Update accountings
         self.vrt_withdrawal_processing_amount -= vrt_withdrawal_requested_amount;
         self.vrt_withdrawal_completed_amount += vrt_withdrawal_requested_amount;
 
         self.vst_withdrawal_locked_amount -= vst_withdrawal_locked_amount;
-        self.vst_reserved_amount_to_claim +=
-            vst_estimated_solv_withdrawal_amount_without_fee + vst_withdrawal_locked_amount;
-        self.vst_extra_amount_to_claim +=
-            vst_amount - vst_estimated_solv_withdrawal_amount_without_fee;
-        self.vst_deducted_fee_amount += vst_estimated_solv_protocol_fee_amount;
+        self.vst_reserved_amount_to_claim += vst_reserved_amount_to_claim;
+        self.vst_extra_amount_to_claim += vst_extra_amount_to_claim;
+        self.vst_deducted_fee_amount += vst_deducted_fee_amount;
         self.vst_receivable_amount_to_claim -= vst_withdrawal_total_estimated_amount;
 
         // TODO: deprecate this heuristic validation
         if old_one_srt_as_micro_vst < self.one_srt_as_micro_vst
             && heuristic_validation
-            && self.one_srt_as_micro_vst - old_one_srt_as_micro_vst < self.one_srt_as_micro_vst / 10
+            && self.one_srt_as_micro_vst - old_one_srt_as_micro_vst > self.one_srt_as_micro_vst / 10
         {
             err!(VaultError::InvalidSRTPriceError)?;
         }
 
-        Ok(())
+        #[cfg(not(test))]
+        msg!(
+            "Complete withdrawal requests: burnt_srt_amount={}, received_vst_amount={}, vst_withdrawal_unlocked_amount={}, vst_deducted_fee_amount={}, vst_extra_claimable_amount={}, total_vst_reserved_amount_to_claim={}, total_vst_extra_amount_to_claim={}, total_vst_deducted_fee_amount={}, vrt_withdrawal_completed_amount={}",
+            srt_amount,
+            vst_amount,
+            vst_withdrawal_locked_amount,
+            vst_deducted_fee_amount,
+            vst_extra_amount_to_claim,
+            self.vst_reserved_amount_to_claim,
+            self.vst_extra_amount_to_claim,
+            self.vst_deducted_fee_amount,
+            self.vrt_withdrawal_completed_amount,
+        );
+
+        Ok((
+            vst_reserved_amount_to_claim,
+            vst_extra_amount_to_claim,
+            vst_deducted_fee_amount,
+        ))
     }
 
-    /// returns claimed_vst_amount
-    pub(crate) fn claim_vst(&mut self) -> Result<u64> {
-        let vst_amount = self.get_vst_claimable_amount();
+    /// returns (vrt_burnt_amount, vst_claimed_amount, vst_extra_amount, vst_deducted_fee_amount)
+    pub(crate) fn claim_vst(&mut self) -> Result<(u64, u64, u64, u64)> {
+        let vrt_burnt_amount = self.vrt_withdrawal_completed_amount;
+        let vst_claimed_amount = self.vst_reserved_amount_to_claim;
+        let vst_extra_amount = self.vst_extra_amount_to_claim;
+        let vst_deducted_fee_amount = self.vst_deducted_fee_amount;
 
         // Clear completed withdrawal requests
         let num_completed_requests = self
@@ -793,10 +1180,24 @@ impl VaultAccount {
         self.vst_extra_amount_to_claim = 0;
         self.vst_deducted_fee_amount = 0;
 
-        Ok(vst_amount)
+        #[cfg(not(test))]
+        msg!(
+            "Claim VST: vrt_burnt_amount={}, vst_claimed_amount={}, vst_extra_amount={}, vst_deducted_fee_amount={}",
+            vrt_burnt_amount,
+            vst_claimed_amount,
+            vst_extra_amount,
+            vst_deducted_fee_amount,
+        );
+
+        Ok((
+            vrt_burnt_amount,
+            vst_claimed_amount,
+            vst_extra_amount,
+            vst_deducted_fee_amount,
+        ))
     }
 
-    pub fn get_vst_claimable_amount(&self) -> u64 {
+    pub fn get_vst_total_claimable_amount(&self) -> u64 {
         self.vst_reserved_amount_to_claim + self.vst_extra_amount_to_claim
     }
 
@@ -846,20 +1247,18 @@ impl WithdrawalRequest {
         &mut self,
         request_id: u64,
         vrt_withdrawal_requested_amount: u64,
-        srt_withdrawal_reserved_amount: u64,
-        vst_withdrawal_reserved_amount: u64,
+        srt_withdrawal_locked_amount: u64,
+        vst_withdrawal_locked_amount: u64,
         vst_withdrawal_total_estimated_amount: u64,
+        one_srt_as_micro_vst: u64,
     ) {
         self.request_id = request_id;
         self.vrt_withdrawal_requested_amount = vrt_withdrawal_requested_amount;
-        self.srt_withdrawal_locked_amount = srt_withdrawal_reserved_amount;
-        self.vst_withdrawal_locked_amount = vst_withdrawal_reserved_amount;
+        self.srt_withdrawal_locked_amount = srt_withdrawal_locked_amount;
+        self.vst_withdrawal_locked_amount = vst_withdrawal_locked_amount;
         self.vst_withdrawal_total_estimated_amount = vst_withdrawal_total_estimated_amount;
+        self.one_srt_as_micro_vst = one_srt_as_micro_vst;
         self.state = WITHDRAWAL_REQUEST_STATE_ENQUEUED;
-    }
-
-    fn get_vst_withdrawal_total_estimated_amount(&self) -> u64 {
-        self.vst_withdrawal_total_estimated_amount
     }
 }
 
@@ -893,20 +1292,11 @@ impl SRTExchangeRate {
     }
 }
 
-struct SolvProtocolWithdrawalFeeRate(u16);
-
-impl SolvProtocolWithdrawalFeeRate {
-    fn get_vst_withdrawal_fee(&self, vst_amount: u64) -> Option<u64> {
-        div_util(vst_amount as u128 * self.0 as u128, 10_000u64, true)
-    }
-}
-
-/// n > 0 && d > 0
-fn div_util<T1, T2>(numerator: T1, denominator: T2, round_up: bool) -> Option<u64>
+/// d > 0
+fn div_util<T>(mut numerator: u128, denominator: T, round_up: bool) -> Option<u64>
 where
-    u128: From<T1> + From<T2>,
+    u128: From<T>,
 {
-    let mut numerator = u128::from(numerator);
     let denominator = u128::from(denominator);
 
     if round_up {
@@ -921,12 +1311,15 @@ mod tests {
     use anyhow::anyhow;
     use bytemuck::Zeroable;
     use proptest::prelude::*;
+    use rust_decimal::Decimal;
 
     use super::*;
 
     impl VaultAccount {
         fn dummy() -> Self {
-            let mut vault = VaultAccount::zeroed();
+            let mut vault = Self::zeroed();
+            vault.solv_protocol_deposit_fee_rate_bps = 10;
+            vault.solv_protocol_withdrawal_fee_rate_bps = 10;
             vault.vault_receipt_token_mint = Pubkey::new_unique();
             vault.vault_supported_token_mint = Pubkey::new_unique();
             vault.solv_receipt_token_mint = Pubkey::new_unique();
@@ -935,7 +1328,25 @@ mod tests {
             vault
         }
 
+        fn srt_price_as_decimal(&self) -> Decimal {
+            Decimal::new(
+                self.one_srt_as_micro_vst as i64,
+                self.solv_receipt_token_decimals as u32 + 6,
+            )
+        }
+
+        fn vrt_price_as_decimal(&self) -> Decimal {
+            let nav = self.get_net_asset_value_as_vst().unwrap();
+            let supply = self.vrt_supply;
+            Decimal::new(nav as i64, 0) / Decimal::new(supply as i64, 0)
+        }
+
+        fn get_withdrawal_requests_iter(&self) -> impl Iterator<Item = &WithdrawalRequest> {
+            self.withdrawal_requests[..self.num_withdrawal_requests as usize].iter()
+        }
+
         fn assert_invariants(&self) -> anyhow::Result<()> {
+            // vrt_withdrawal_enqueued_amount = ∑request(state = ENQUEUED).vrt_withdrawal_requested_amount
             let vrt_withdrawal_enqueued_amount: u64 = self
                 .get_withdrawal_requests_iter()
                 .filter(|request| request.state == WITHDRAWAL_REQUEST_STATE_ENQUEUED)
@@ -950,6 +1361,7 @@ mod tests {
                 ));
             }
 
+            // vrt_withdrawal_processing_amount = ∑request(state = PROCESSING).vrt_withdrawal_requested_amount
             let vrt_withdrawal_processing_amount: u64 = self
                 .get_withdrawal_requests_iter()
                 .filter(|request| request.state == WITHDRAWAL_REQUEST_STATE_PROCESSING)
@@ -964,6 +1376,7 @@ mod tests {
                 ));
             }
 
+            // vrt_withdrawal_completed_amount = ∑request(state = COMPLETED).vrt_withdrawal_requested_amount
             let vrt_withdrawal_completed_amount: u64 = self
                 .get_withdrawal_requests_iter()
                 .filter(|request| request.state == WITHDRAWAL_REQUEST_STATE_COMPLETED)
@@ -978,6 +1391,7 @@ mod tests {
                 ));
             }
 
+            // vst_withdrawal_locked_amount = ∑request(state != COMPLETED).vst_withdrawal_locked_amount
             let vst_withdrawal_locked_amount: u64 = self
                 .get_withdrawal_requests_iter()
                 .filter(|request| request.state != WITHDRAWAL_REQUEST_STATE_COMPLETED)
@@ -986,12 +1400,13 @@ mod tests {
 
             if self.vst_withdrawal_locked_amount != vst_withdrawal_locked_amount {
                 return Err(anyhow!(
-                    "VST withdrawal locked amount({}) != ∑request(state != COMPLETED).vst_withdrawal_reserved_amount({})",
+                    "VST withdrawal locked amount({}) != ∑request(state != COMPLETED).vst_withdrawal_locked_amount({})",
                     self.vst_withdrawal_locked_amount,
                     vst_withdrawal_locked_amount,
                 ));
             }
 
+            // srt_withdrawal_locked_amount = ∑request(state == ENQUEUED).srt_withdrawal_reserved_amount
             let srt_withdrawal_locked_amount: u64 = self
                 .get_withdrawal_requests_iter()
                 .filter(|request| request.state == WITHDRAWAL_REQUEST_STATE_ENQUEUED)
@@ -1006,6 +1421,7 @@ mod tests {
                 ));
             }
 
+            // vst_receivable_amount_to_claim = ∑request(state == PROCESSING).vst_withdrawal_total_estimated_amount
             let vst_receivable_amount_to_claim: u64 = self
                 .get_withdrawal_requests_iter()
                 .filter(|request| request.state == WITHDRAWAL_REQUEST_STATE_PROCESSING)
@@ -1020,6 +1436,7 @@ mod tests {
                 ));
             }
 
+            // vst_reserved_amount_to_claim + vst_deducted_fee_amount = ∑request(state == COMPLETED).vst_withdrawal_total_estimated_amount
             let vst_reserved_amount_to_claim_plus_deducted_fee: u64 = self
                 .get_withdrawal_requests_iter()
                 .filter(|request| request.state == WITHDRAWAL_REQUEST_STATE_COMPLETED)
@@ -1037,6 +1454,67 @@ mod tests {
                 ));
             }
 
+            // VRT supply = 0 <=> Net Asset Value = 0
+            let nav = self
+                .get_net_asset_value_as_vst()
+                .ok_or_else(|| anyhow!("Invalid NAV"))?;
+
+            if self.vrt_supply == 0 && nav > 0 {
+                return Err(anyhow!("VRT supply = 0 but NAV({}) > 0", nav));
+            }
+
+            if self.vrt_supply > 0 && nav == 0 {
+                return Err(anyhow!("VRT supply({}) > 0 but NAV = 0", self.vrt_supply));
+            }
+
+            // VRT price ≥ 1 (might be different based on decimals)
+            if nav < self.vrt_supply {
+                return Err(anyhow!("VRT price({}) < 1", self.vrt_price_as_decimal()));
+            }
+
+            Ok(())
+        }
+
+        fn assert_price_increased(&self, old: &Self) -> anyhow::Result<()> {
+            // ∆SRT price ≥ 0
+            if self.one_srt_as_micro_vst < old.one_srt_as_micro_vst {
+                return Err(anyhow!(
+                    "SRT price({}) decreased, previously {}",
+                    self.srt_price_as_decimal(),
+                    old.srt_price_as_decimal(),
+                ));
+            }
+
+            // ∆VRT price ≥ 0
+            let nav = self
+                .get_net_asset_value_as_vst()
+                .ok_or_else(|| anyhow!("Invalid NAV"))?;
+            let old_nav = old
+                .get_net_asset_value_as_vst()
+                .ok_or_else(|| anyhow!("Invalid old NAV"))?;
+            if nav as u128 * (old.vrt_supply as u128) < old_nav as u128 * self.vrt_supply as u128 {
+                return Err(anyhow!(
+                    "VRT price({}) decreased, previously {}",
+                    self.vrt_price_as_decimal(),
+                    old.vrt_price_as_decimal(),
+                ));
+            }
+
+            Ok(())
+        }
+
+        fn assert_nav_unchanged(&self, old: &Self) -> anyhow::Result<()> {
+            let nav = self
+                .get_net_asset_value_as_vst()
+                .ok_or_else(|| anyhow!("Invalid NAV"))?;
+            let old_nav = old
+                .get_net_asset_value_as_vst()
+                .ok_or_else(|| anyhow!("Invalid old NAV"))?;
+
+            if nav != old_nav {
+                return Err(anyhow!("NAV({}) changed, previously {}", nav, old_nav));
+            }
+
             Ok(())
         }
     }
@@ -1046,259 +1524,818 @@ mod tests {
         assert_eq!(VaultAccount::get_size(), 1024 * 10);
     }
 
+    prop_compose! {
+        fn vault()
+            (vrt_supply in 1..u64::MAX)
+            (
+                vrt_supply in Just(vrt_supply),
+                extra_vst in 0..vrt_supply.min(u64::MAX - vrt_supply + 1),
+                one_srt_as_micro_vst in 100_000_000_000_000u64..200_000_000_000_000,
+            )
+        -> VaultAccount {
+            let mut vault = VaultAccount::dummy();
+            vault.vrt_supply = vrt_supply;
+            vault.vst_operation_reserved_amount = vrt_supply + extra_vst;
+            vault.one_srt_as_micro_vst = one_srt_as_micro_vst;
+            vault
+        }
+    }
+
+    prop_compose! {
+        fn vault_with_vst_receivable()
+            (vault in vault())
+            (
+                mut vault in Just(vault),
+                vst_receivable in 0..=vault.vst_operation_reserved_amount,
+            )
+        -> VaultAccount {
+            vault.vst_operation_reserved_amount -= vst_receivable;
+            vault.vst_operation_receivable_amount += vst_receivable;
+            vault
+        }
+    }
+
+    prop_compose! {
+        fn vault_and_vrt_withdrawal_amount()
+            (vault in vault_with_vst_receivable())
+            (
+                vault in Just(vault),
+                vrt_amount in 0..=vault.vrt_supply,
+            )
+        -> (VaultAccount, u64) {
+            (vault, vrt_amount)
+        }
+    }
+
+    prop_compose! {
+        fn vault_and_vst_donate_amount()
+            (vault in vault_with_vst_receivable())
+            (
+                vault in Just(vault),
+                vst_amount in 0..=vault.vst_operation_receivable_amount.saturating_mul(2),
+            )
+        -> (VaultAccount, u64) {
+            (vault, vst_amount)
+        }
+    }
+
     proptest! {
         #[test]
-        fn test_initial_mint_amount(vst_amount in 0..u64::MAX) {
+        fn test_initial_mint_vrt(
+            vst_amount in 0..u64::MAX
+        ) {
             let mut vault = VaultAccount::dummy();
+            let old_vault = vault.clone();
 
-            // Initial mint
+            // Price = 1
             let vrt_amount = vault.mint_vrt(vst_amount).unwrap();
             assert_eq!(vrt_amount, vst_amount);
 
-            assert_eq!(vault.vrt_supply, vrt_amount);
-            assert_eq!(vault.vst_operation_reserved_amount, vst_amount);
+            assert_eq!(
+                vault.vrt_supply,
+                old_vault.vrt_supply + vrt_amount,
+            );
+            assert_eq!(
+                vault.vst_operation_reserved_amount,
+                old_vault.vst_operation_reserved_amount + vst_amount,
+            );
 
             vault.assert_invariants().unwrap();
+            vault.assert_price_increased(&old_vault).unwrap();
         }
-    }
 
-    // TODO/phase3: deprecate
-    proptest! {
         #[test]
-        fn test_resolve_srt_receivables(vst_amount in 1..u64::MAX) {
-            let mut vault = VaultAccount::dummy();
-            vault.mint_vrt(vst_amount).unwrap();
-            vault.deposit_vst(vst_amount, vst_amount).unwrap();
-            vault.offset_srt_receivables(vst_amount, 100_000_000_000_000, true).unwrap();
+        fn test_mint_vrt(
+            mut vault in vault(),
+            mut vst_amount in 0..u64::MAX,
+        ) {
+            vst_amount = vst_amount.min(u64::MAX - vault.vst_operation_reserved_amount);
+            let old_vault = vault.clone();
 
+            // VRT Price ≥ 1
+            let vrt_amount = vault.mint_vrt(vst_amount).unwrap();
+            assert!(vrt_amount <= vst_amount);
+
+            assert_eq!(
+                vault.vrt_supply,
+                old_vault.vrt_supply + vrt_amount,
+            );
+            assert_eq!(
+                vault.vst_operation_reserved_amount,
+                old_vault.vst_operation_reserved_amount + vst_amount,
+            );
+
+            vault.assert_invariants().unwrap();
+            vault.assert_price_increased(&old_vault).unwrap();
+        }
+
+        #[test]
+        fn test_refresh_srt_exchange_rate_with_validation(
+            mut vault in vault(),
+        ) {
+            let old_vault = vault.clone();
+            let new_one_srt_as_micro_vst =
+                ((vault.one_srt_as_micro_vst as u128 + 19) * 21 / 20) as u64;
+
+            vault.refresh_srt_exchange_rate_with_validation(new_one_srt_as_micro_vst, true).unwrap();
+
+            vault.assert_invariants().unwrap();
+            vault.assert_price_increased(&old_vault).unwrap();
+        }
+
+        #[test]
+        fn test_adjust_srt_exchange_rate_with_extra_vst_receivables(
+            mut vault in vault(),
+        ) {
+            let old_vault = vault.clone();
+            let new_one_srt_as_micro_vst =
+                (vault.one_srt_as_micro_vst as u128 * 19 / 20) as u64;
+
+            vault.adjust_srt_exchange_rate_with_extra_vst_receivables(new_one_srt_as_micro_vst, true).unwrap();
+
+            vault.assert_invariants().unwrap();
+            vault.assert_nav_unchanged(&old_vault).unwrap();
+        }
+
+        #[test]
+        fn test_deposit_vst(
+            mut vault in vault(),
+        ) {
+            let old_vault = vault.clone();
+
+            // SRT Price ≥ 1
+            vault.deposit_vst(vault.vst_operation_reserved_amount).unwrap();
+            assert!(vault.srt_operation_receivable_amount <= old_vault.vst_operation_reserved_amount - vault.vst_operation_receivable_amount);
+
+            assert_eq!(vault.vst_operation_reserved_amount, 0);
+
+            vault.assert_invariants().unwrap();
+            vault.assert_price_increased(&old_vault).unwrap();
+        }
+
+        #[test]
+        fn test_donate_vst(
+            (mut vault, vst_amount) in vault_and_vst_donate_amount(),
+        ) {
+            let old_vault = vault.clone();
+
+            vault.donate_vst(vst_amount).unwrap();
+
+            vault.assert_invariants().unwrap();
+            vault.assert_nav_unchanged(&old_vault).unwrap();
+        }
+
+        #[test]
+        fn test_donate_srt(
+            (mut vault, vst_amount) in vault_and_vst_donate_amount(),
+        ) {
+            let srt_amount = vst_amount;
+            let old_vault = vault.clone();
+
+            vault.donate_srt(srt_amount).unwrap();
+
+            vault.assert_invariants().unwrap();
+            vault.assert_nav_unchanged(&old_vault).unwrap();
+        }
+
+        #[test]
+        fn test_offset_srt_receivables_no_price_increase(
+            mut vault in vault(),
+            extra_fee_amount_as_srt in 0..SOLV_PROTOCOL_MAX_EXTRA_FEE_AMOUNT / 3,
+        ) {
+            vault
+                .deposit_vst(vault.vst_operation_reserved_amount)
+                .unwrap();
+            let old_vault = vault.clone();
+
+            let srt_amount = vault.srt_operation_receivable_amount - extra_fee_amount_as_srt;
+            let new_one_srt_as_micro_vst = vault.one_srt_as_micro_vst;
+
+            vault.offset_srt_receivables(
+                srt_amount,
+                new_one_srt_as_micro_vst,
+                true,
+            )
+            .unwrap();
+
+            let vst_operation_receivable_amount_delta = vault.vst_operation_receivable_amount
+                - old_vault.vst_operation_receivable_amount;
+            let extra_fee_amount_as_vst = old_vault
+                .get_srt_exchange_rate()
+                .get_srt_amount_as_vst(extra_fee_amount_as_srt, false)
+                .unwrap();
+
+            assert_eq!(
+                vault.srt_operation_reserved_amount,
+                old_vault.srt_operation_reserved_amount + srt_amount,
+            );
+            assert_eq!(
+                vault.srt_operation_receivable_amount,
+                0,
+            );
+            assert!(vst_operation_receivable_amount_delta >= extra_fee_amount_as_vst);
+            assert!(vst_operation_receivable_amount_delta <= extra_fee_amount_as_vst + 1);
+
+            vault.assert_invariants().unwrap();
+            vault.assert_price_increased(&old_vault).unwrap();
+        }
+
+        #[test]
+        fn test_offset_srt_receivables_with_price_increase(
+            mut vault in vault(),
+            extra_fee_amount_as_srt in 0..SOLV_PROTOCOL_MAX_EXTRA_FEE_AMOUNT / 3,
+        ) {
+            vault
+                .deposit_vst(vault.vst_operation_reserved_amount)
+                .unwrap();
+            let old_vault = vault.clone();
+
+            let srt_amount = ((vault.srt_operation_receivable_amount as u128 * 20 / 21) as u64)
+                .saturating_sub(extra_fee_amount_as_srt);
+            let new_one_srt_as_micro_vst =
+                ((vault.one_srt_as_micro_vst as u128 + 19) * 21 / 20) as u64;
+
+            vault
+                .offset_srt_receivables(srt_amount, new_one_srt_as_micro_vst, true)
+                .unwrap();
+
+            let vst_operation_receivable_amount_delta =
+                vault.vst_operation_receivable_amount - old_vault.vst_operation_receivable_amount;
+            let extra_fee_amount_as_vst = vault
+                .get_srt_exchange_rate()
+                .get_srt_amount_as_vst(extra_fee_amount_as_srt + 1, false)
+                .unwrap();
+
+            assert_eq!(
+                vault.srt_operation_reserved_amount,
+                old_vault.srt_operation_reserved_amount + srt_amount,
+            );
             assert_eq!(vault.srt_operation_receivable_amount, 0);
+            assert!(vst_operation_receivable_amount_delta <= extra_fee_amount_as_vst + 2);
+
+            vault.assert_invariants().unwrap();
+            vault.assert_price_increased(&old_vault).unwrap();
+        }
+
+        #[test]
+        fn test_enqueue_withdrawal_request(
+            mut vault in vault(),
+        ) {
+            for (i, vrt_amount) in [vault.vrt_supply / 2, vault.vrt_supply - vault.vrt_supply / 2].into_iter().enumerate() {
+                let old_vault = vault.clone();
+
+                vault.enqueue_withdrawal_request(vrt_amount).unwrap();
+
+                assert_eq!(vault.num_withdrawal_requests, i as u8 + 1);
+                assert_eq!(
+                    vault
+                        .get_withdrawal_requests_iter()
+                        .filter(|request| request.state == WITHDRAWAL_REQUEST_STATE_ENQUEUED)
+                        .count(),
+                    i + 1,
+                );
+
+                vault.assert_invariants().unwrap();
+                vault.assert_price_increased(&old_vault).unwrap();
+            }
+        }
+
+        #[test]
+        fn test_enqueue_withdrawal_request_adjusts_vrt_amount_due_to_srt_receivable(
+            mut vault in vault(),
+        ) {
+            vault
+                .deposit_vst(vault.vst_operation_reserved_amount / 2)
+                .unwrap();
+            let old_vault = vault.clone();
+
+            let expected_vrt_amount = div_util(
+                vault.vrt_supply as u128
+                    * (vault.vst_operation_reserved_amount + vault.vst_operation_receivable_amount)
+                        as u128,
+                vault.get_net_asset_value_as_vst().unwrap(),
+                false,
+            )
+            .unwrap();
+            let expected_vst_amount = div_util(
+                expected_vrt_amount as u128 * vault.get_net_asset_value_as_vst().unwrap() as u128,
+                vault.vrt_supply,
+                false,
+            )
+            .unwrap();
+            let (vrt_amount, _) = vault.enqueue_withdrawal_request(vault.vrt_supply).unwrap();
+
+            assert_eq!(vrt_amount, expected_vrt_amount);
+            assert_eq!(vault.vrt_supply + expected_vrt_amount, old_vault.vrt_supply);
+            assert_eq!(vault.vrt_withdrawal_enqueued_amount, vrt_amount);
+            assert_eq!(
+                vault
+                    .get_vst_estimated_amount_from_last_withdrawal_request()
+                    .unwrap(),
+                expected_vst_amount,
+            );
+
+            vault.assert_invariants().unwrap();
+            vault.assert_price_increased(&old_vault).unwrap();
+        }
+
+        #[test]
+        fn test_enqueue_withdrawal_request_adjusts_offsetting_vrt_receivable_due_to_srt_receivable(
+            mut vault in vault(),
+        ) {
+            vault.solv_protocol_deposit_fee_rate_bps = 5000; // 50%
+            vault
+                .deposit_vst(vault.vst_operation_reserved_amount / 2)
+                .unwrap();
+            let old_vault = vault.clone();
+
+            let expected_vrt_amount = div_util(
+                vault.vrt_supply as u128
+                    * (vault.vst_operation_reserved_amount + vault.vst_operation_receivable_amount)
+                        as u128,
+                vault.get_net_asset_value_as_vst().unwrap(),
+                false,
+            )
+            .unwrap();
+            let expected_vst_amount = div_util(
+                expected_vrt_amount as u128 * vault.get_net_asset_value_as_vst().unwrap() as u128,
+                vault.vrt_supply,
+                false,
+            )
+            .unwrap();
+            let (vrt_amount, _) = vault.enqueue_withdrawal_request(vault.vrt_supply).unwrap();
+
+            assert_eq!(vrt_amount, expected_vrt_amount);
+            assert_eq!(vault.vrt_supply + expected_vrt_amount, old_vault.vrt_supply);
+            assert_eq!(vault.vrt_withdrawal_enqueued_amount, vrt_amount);
+            assert_eq!(
+                vault
+                    .get_vst_estimated_amount_from_last_withdrawal_request()
+                    .unwrap(),
+                expected_vst_amount,
+            );
+
+            let tolerance = old_vault.vst_operation_reserved_amount
+                + old_vault.vst_operation_receivable_amount
+                - div_util(
+                    vrt_amount as u128 * old_vault.get_net_asset_value_as_vst().unwrap() as u128,
+                    old_vault.vrt_supply,
+                    false,
+                )
+                .unwrap();
+            assert!(vault.vst_operation_receivable_amount <= tolerance);
+
+            vault.assert_invariants().unwrap();
+            vault.assert_price_increased(&old_vault).unwrap();
+        }
+
+        #[test]
+        fn test_enqueue_withdrawal_request_without_srt_operation_reserved(
+            (mut vault, vrt_amount) in vault_and_vrt_withdrawal_amount(),
+        ) {
+            let old_vault = vault.clone();
+
+            let expected_vst_amount = div_util(
+                vrt_amount as u128 * vault.get_net_asset_value_as_vst().unwrap() as u128,
+                vault.vrt_supply,
+                false,
+            )
+            .unwrap();
+            let (post_vrt_amount, _) = vault.enqueue_withdrawal_request(vrt_amount).unwrap();
+
+            assert_eq!(post_vrt_amount, vrt_amount);
+            assert_eq!(vault.vrt_supply + vrt_amount, old_vault.vrt_supply);
+            assert_eq!(vault.vrt_withdrawal_enqueued_amount, post_vrt_amount);
+            assert_eq!(
+                vault
+                    .get_vst_estimated_amount_from_last_withdrawal_request()
+                    .unwrap(),
+                expected_vst_amount,
+            );
+
+            vault.assert_invariants().unwrap();
+            vault.assert_price_increased(&old_vault).unwrap();
+        }
+
+        #[test]
+        fn test_enqueue_withdrawal_request_with_srt_operation_reserved(
+            (mut vault, vrt_amount) in vault_and_vrt_withdrawal_amount(),
+        ) {
+            vault.solv_protocol_deposit_fee_rate_bps = 0;
+            vault
+                .deposit_vst(vault.vst_operation_reserved_amount / 2)
+                .unwrap();
+            vault
+                .offset_srt_receivables(
+                    vault.srt_operation_receivable_amount,
+                    vault.one_srt_as_micro_vst,
+                    true,
+                )
+                .unwrap();
+            let old_vault = vault.clone();
+
+            let expected_vst_amount = div_util(
+                vrt_amount as u128 * vault.get_net_asset_value_as_vst().unwrap() as u128,
+                vault.vrt_supply,
+                false,
+            )
+            .unwrap();
+            let (post_vrt_amount, _) = vault.enqueue_withdrawal_request(vrt_amount).unwrap();
+
+            assert_eq!(post_vrt_amount, vrt_amount);
+            assert_eq!(vault.vrt_supply + vrt_amount, old_vault.vrt_supply);
+            assert_eq!(vault.vrt_withdrawal_enqueued_amount, post_vrt_amount);
+            assert_eq!(
+                vault
+                    .get_vst_estimated_amount_from_last_withdrawal_request()
+                    .unwrap(),
+                expected_vst_amount,
+            );
+
+            vault.assert_invariants().unwrap();
+            vault.assert_price_increased(&old_vault).unwrap();
+        }
+
+        #[test]
+        fn test_confirm_withdrawal_request(
+            mut vault in vault(),
+        ) {
+            vault.enqueue_withdrawal_request(vault.vrt_supply / 2).unwrap();
+            vault.enqueue_withdrawal_request(vault.vrt_supply).unwrap();
+            let old_vault = vault.clone();
+
+            vault.confirm_withdrawal_requests().unwrap();
+
+            assert_eq!(vault.srt_withdrawal_locked_amount, 0);
+            assert_eq!(vault.num_withdrawal_requests, 2);
+            assert_eq!(
+                vault
+                    .get_withdrawal_requests_iter()
+                    .filter(|request| request.state == WITHDRAWAL_REQUEST_STATE_ENQUEUED)
+                    .count(),
+                0,
+            );
+            assert_eq!(
+                vault
+                    .get_withdrawal_requests_iter()
+                    .filter(|request| request.state == WITHDRAWAL_REQUEST_STATE_PROCESSING)
+                    .count(),
+                2,
+            );
+
+            vault.assert_invariants().unwrap();
+            vault.assert_price_increased(&old_vault).unwrap();
+        }
+
+        #[test]
+        fn test_complete_withdrawal_request_one_by_one(
+            mut vault in vault(),
+            extra_fee_amount_as_vst in 0..=SOLV_PROTOCOL_MAX_EXTRA_FEE_AMOUNT,
+        ) {
+            vault.solv_protocol_deposit_fee_rate_bps = 0;
+            vault.solv_protocol_withdrawal_fee_rate_bps = 0;
+            vault
+                .deposit_vst(vault.vst_operation_reserved_amount)
+                .unwrap();
+            vault
+                .offset_srt_receivables(
+                    vault.srt_operation_receivable_amount,
+                    vault.one_srt_as_micro_vst,
+                    true,
+                )
+                .unwrap();
+            vault
+                .enqueue_withdrawal_request(vault.vrt_supply / 2)
+                .unwrap();
+            vault.enqueue_withdrawal_request(vault.vrt_supply).unwrap();
+            vault.confirm_withdrawal_requests().unwrap();
+
+            let mut shortage = 0;
+            for i in 0..2 {
+                let old_vault = vault.clone();
+
+                let srt_amount = vault.withdrawal_requests[i].srt_withdrawal_locked_amount;
+                let vst_amount = vault
+                    .get_srt_exchange_rate()
+                    .get_srt_amount_as_vst(srt_amount, false)
+                    .unwrap()
+                    .saturating_sub(extra_fee_amount_as_vst);
+                shortage += vault.withdrawal_requests[i].vst_withdrawal_total_estimated_amount
+                    - vst_amount;
+
+                vault
+                    .complete_withdrawal_requests(
+                        srt_amount,
+                        vst_amount,
+                        vault.one_srt_as_micro_vst,
+                        true,
+                    )
+                    .unwrap();
+
+                assert_eq!(vault.num_withdrawal_requests, 2);
+                assert_eq!(
+                    vault
+                        .get_withdrawal_requests_iter()
+                        .filter(|request| request.state == WITHDRAWAL_REQUEST_STATE_ENQUEUED)
+                        .count(),
+                    0,
+                );
+                assert_eq!(
+                    vault
+                        .get_withdrawal_requests_iter()
+                        .filter(|request| request.state == WITHDRAWAL_REQUEST_STATE_PROCESSING)
+                        .count(),
+                    1 - i,
+                );
+                assert_eq!(
+                    vault
+                        .get_withdrawal_requests_iter()
+                        .filter(|request| request.state == WITHDRAWAL_REQUEST_STATE_COMPLETED)
+                        .count(),
+                    1 + i,
+                );
+
+                assert_eq!(
+                    vault.vst_deducted_fee_amount,
+                    shortage,
+                );
+
+                vault.assert_invariants().unwrap();
+                vault.assert_price_increased(&old_vault).unwrap();
+            }
+        }
+
+        #[test]
+        fn test_complete_withdrawal_request_bulk(
+            mut vault in vault(),
+            extra_fee_amount_as_vst in 0..=SOLV_PROTOCOL_MAX_EXTRA_FEE_AMOUNT,
+        ) {
+            vault.solv_protocol_deposit_fee_rate_bps = 0;
+            vault.solv_protocol_withdrawal_fee_rate_bps = 0;
+            vault
+                .deposit_vst(vault.vst_operation_reserved_amount)
+                .unwrap();
+            vault
+                .offset_srt_receivables(
+                    vault.srt_operation_receivable_amount,
+                    vault.one_srt_as_micro_vst,
+                    true,
+                )
+                .unwrap();
+            vault
+                .enqueue_withdrawal_request(vault.vrt_supply / 2)
+                .unwrap();
+            vault.enqueue_withdrawal_request(vault.vrt_supply).unwrap();
+            vault.confirm_withdrawal_requests().unwrap();
+            let old_vault = vault.clone();
+
+            let srt_amount = vault
+                .get_withdrawal_requests_iter()
+                .map(|request| request.srt_withdrawal_locked_amount)
+                .sum();
+            let vst_amount = vault
+                .get_srt_exchange_rate()
+                .get_srt_amount_as_vst(srt_amount, false)
+                .unwrap()
+                .saturating_sub(extra_fee_amount_as_vst);
+            let shortage = vault.vst_receivable_amount_to_claim - vst_amount;
+
+            vault
+                .complete_withdrawal_requests(
+                    srt_amount,
+                    vst_amount,
+                    vault.one_srt_as_micro_vst,
+                    true,
+                )
+                .unwrap();
+
+            assert_eq!(vault.num_withdrawal_requests, 2);
+            assert_eq!(
+                vault
+                    .get_withdrawal_requests_iter()
+                    .filter(|request| request.state == WITHDRAWAL_REQUEST_STATE_ENQUEUED)
+                    .count(),
+                0,
+            );
+            assert_eq!(
+                vault
+                    .get_withdrawal_requests_iter()
+                    .filter(|request| request.state == WITHDRAWAL_REQUEST_STATE_PROCESSING)
+                    .count(),
+                0,
+            );
+            assert_eq!(
+                vault
+                    .get_withdrawal_requests_iter()
+                    .filter(|request| request.state == WITHDRAWAL_REQUEST_STATE_COMPLETED)
+                    .count(),
+                2,
+            );
+
+            assert_eq!(
+                vault.vst_deducted_fee_amount,
+                shortage,
+            );
+
+            vault.assert_invariants().unwrap();
+            vault.assert_price_increased(&old_vault).unwrap();
+        }
+
+        #[test]
+        fn test_complete_withdrawal_request_with_higher_price(
+            mut vault in vault(),
+            extra_fee_amount_as_vst in 0..=SOLV_PROTOCOL_MAX_EXTRA_FEE_AMOUNT,
+        ) {
+            if vault.vst_operation_reserved_amount > (1 << 62) {
+                vault.vst_operation_reserved_amount = 1 << 62;
+            }
+            vault.solv_protocol_deposit_fee_rate_bps = 0;
+            vault.solv_protocol_withdrawal_fee_rate_bps = 0;
+            vault
+                .deposit_vst(vault.vst_operation_reserved_amount)
+                .unwrap();
+            vault
+                .offset_srt_receivables(
+                    vault.srt_operation_receivable_amount,
+                    vault.one_srt_as_micro_vst,
+                    true,
+                )
+                .unwrap();
+            vault.enqueue_withdrawal_request(vault.vrt_supply).unwrap();
+            vault.confirm_withdrawal_requests().unwrap();
+            let old_vault = vault.clone();
+
+            let new_one_srt_as_micro_vst = (vault.one_srt_as_micro_vst as u128 * 21 / 20) as u64;
+            let new_srt_exchange_rate = SRTExchangeRate::new(new_one_srt_as_micro_vst, 8);
+
+            let srt_amount = vault.withdrawal_requests[0].srt_withdrawal_locked_amount;
+            let vst_amount = new_srt_exchange_rate
+                .get_srt_amount_as_vst(srt_amount, false)
+                .unwrap()
+                .saturating_sub(extra_fee_amount_as_vst);
+            let surplus_or_shortage =
+                vst_amount as i128 - vault.vst_receivable_amount_to_claim as i128;
+
+            vault
+                .complete_withdrawal_requests(
+                    srt_amount,
+                    vst_amount,
+                    new_one_srt_as_micro_vst,
+                    true,
+                )
+                .unwrap();
+
+            if surplus_or_shortage >= 0 {
+                let surplus = surplus_or_shortage as u64;
+                assert_eq!(vault.vst_extra_amount_to_claim, surplus);
+            } else {
+                let shortage = -surplus_or_shortage as u64;
+                assert_eq!(vault.vst_deducted_fee_amount, shortage);
+            }
+
+            vault.assert_invariants().unwrap();
+            vault.assert_price_increased(&old_vault).unwrap();
+        }
+
+        // If there is no extra fee then total withdrawal fee ≤ solv deposit + withdrawal fee
+        #[test]
+        fn test_complete_withdrawal_request_with_fee(
+            mut vault in vault(),
+        ) {
+            vault
+                .deposit_vst(vault.vst_operation_reserved_amount)
+                .unwrap();
+            vault
+                .offset_srt_receivables(
+                    vault.srt_operation_receivable_amount,
+                    vault.one_srt_as_micro_vst,
+                    true,
+                )
+                .unwrap();
+            vault.enqueue_withdrawal_request(vault.vrt_supply).unwrap();
+            vault.confirm_withdrawal_requests().unwrap();
+            let old_vault = vault.clone();
+
+            let srt_amount = vault.withdrawal_requests[0].srt_withdrawal_locked_amount;
+            let vst_amount_with_fee = vault
+                .get_srt_exchange_rate()
+                .get_srt_amount_as_vst(srt_amount, false)
+                .unwrap();
+            let solv_protocol_withdrawal_fee_amount_as_vst = div_util(
+                vst_amount_with_fee as u128 * vault.solv_protocol_withdrawal_fee_rate_bps as u128,
+                BPS,
+                true,
+            )
+            .unwrap();
+            let vst_amount = vst_amount_with_fee - solv_protocol_withdrawal_fee_amount_as_vst;
+
+            vault
+                .complete_withdrawal_requests(
+                    srt_amount,
+                    vst_amount,
+                    vault.one_srt_as_micro_vst,
+                    true,
+                )
+                .unwrap();
+
+            let vst_withdrawal_fee = div_util(
+                vault.withdrawal_requests[0].vst_withdrawal_total_estimated_amount as u128
+                    * vault.get_withdrawal_fee_rate_bps() as u128,
+                BPS,
+                true,
+            )
+            .unwrap();
+
+            assert_eq!(vault.vst_deducted_fee_amount, vst_withdrawal_fee);
+
+            vault.assert_invariants().unwrap();
+            vault.assert_price_increased(&old_vault).unwrap();
         }
     }
 
     #[test]
-    fn test_invalid_srt_exchange_rate_while_deposit() {
+    fn test_deposit_vst_fails_while_deposit_in_progress() {
         let mut vault = VaultAccount::dummy();
-        vault.mint_vrt(1_000_000).unwrap();
+        vault.mint_vrt(100).unwrap();
+        vault.deposit_vst(50).unwrap();
+        vault.deposit_vst(50).unwrap_err();
+    }
 
-        vault.deposit_vst(1_000_000, 1_000_000).unwrap();
+    #[test]
+    fn test_offset_srt_receivables_invalid_extra_fee_amount() {
+        let mut vault = VaultAccount::dummy();
+        vault.solv_protocol_deposit_fee_rate_bps = 0;
+
         vault
-            .offset_srt_receivables(2_000_000, 50_000_000_000_000, false)
+            .mint_vrt(SOLV_PROTOCOL_MAX_EXTRA_FEE_AMOUNT + 1)
+            .unwrap();
+        vault
+            .deposit_vst(SOLV_PROTOCOL_MAX_EXTRA_FEE_AMOUNT + 1)
+            .unwrap();
+        vault
+            .offset_srt_receivables(1, vault.one_srt_as_micro_vst, true)
+            .unwrap();
+
+        vault.mint_vrt(SOLV_PROTOCOL_MAX_EXTRA_FEE_AMOUNT).unwrap();
+        vault
+            .deposit_vst(SOLV_PROTOCOL_MAX_EXTRA_FEE_AMOUNT)
+            .unwrap();
+        vault
+            .offset_srt_receivables(0, vault.one_srt_as_micro_vst, true)
+            .unwrap();
+
+        vault
+            .mint_vrt(SOLV_PROTOCOL_MAX_EXTRA_FEE_AMOUNT + 1)
+            .unwrap();
+        vault
+            .deposit_vst(SOLV_PROTOCOL_MAX_EXTRA_FEE_AMOUNT + 1)
+            .unwrap();
+        vault
+            .offset_srt_receivables(0, vault.one_srt_as_micro_vst, true)
             .unwrap_err();
     }
 
     #[test]
-    fn test_valid_srt_exchnage_rate_while_deposit() {
+    fn test_offset_srt_receivables_invalid_srt_price() {
         let mut vault = VaultAccount::dummy();
-        vault.mint_vrt(1_000_000).unwrap();
 
-        vault.deposit_vst(1_000_000, 1_000_000).unwrap();
+        vault.mint_vrt(100).unwrap();
+        vault.deposit_vst(100).unwrap();
         vault
-            .offset_srt_receivables(500_000, 200_000_000_000_000, false)
-            .unwrap();
-
-        vault.assert_invariants().unwrap();
-    }
-
-    #[test]
-    fn test_simple_withdraw_procedure() {
-        let mut vault = VaultAccount::dummy();
-        let vrt_supply = vault.mint_vrt(1_000_000).unwrap();
-        vault.deposit_vst(1_000_000, 1_000_000).unwrap();
-        // 1 SRT = 2.18919457342449 => 1_000_000 VST = 456_789.xxx SRT => 456_789
-        vault
-            .offset_srt_receivables(456_789, 218_919_457_342_449, false)
-            .unwrap();
-        vault.assert_invariants().unwrap();
-
-        let srt_amount = 456_789;
-        assert_eq!(vault.srt_operation_reserved_amount, srt_amount);
-
-        vault.enqueue_withdrawal_request(500_000).unwrap();
-        vault.enqueue_withdrawal_request(500_000).unwrap();
-        vault.assert_invariants().unwrap();
-
-        assert_eq!(
-            vault.vrt_supply + vault.vrt_withdrawal_enqueued_amount,
-            vrt_supply,
-        );
-
-        assert_eq!(vault.get_srt_total_reserved_amount(), srt_amount);
-        assert_eq!(vault.srt_operation_reserved_amount, 0);
-        assert_eq!(vault.num_withdrawal_requests, 2);
-        assert_eq!(
-            vault.withdrawal_requests[0].srt_withdrawal_locked_amount,
-            228_395 // ceil(456_789 / 2)
-        );
-        assert_eq!(
-            vault.withdrawal_requests[1].srt_withdrawal_locked_amount,
-            228_394
-        );
-
-        vault.confirm_withdrawal_requests().unwrap();
-        vault.assert_invariants().unwrap();
-
-        assert!(vault
-            .get_withdrawal_requests_iter()
-            .all(|request| request.state > 0));
-
-        assert_eq!(vault.vrt_withdrawal_enqueued_amount, 0);
-        assert_eq!(vault.srt_withdrawal_locked_amount, 0);
-        assert_eq!(vault.vst_receivable_amount_to_claim, 999_999);
-
-        // 1 SRT = 2.18919457342449 => 456_789 SRT = 999_999.xxx VRT => 999_999
-        vault
-            .complete_withdrawal_requests(456_789, 1_000_000, 218_919_457_342_449, false)
-            .unwrap();
-        vault.assert_invariants().unwrap();
-
-        assert!(vault
-            .get_withdrawal_requests_iter()
-            .take(2)
-            .all(|request| request.state == WITHDRAWAL_REQUEST_STATE_COMPLETED));
-
-        assert_eq!(vault.vst_reserved_amount_to_claim, 999_999);
-        assert_eq!(vault.vst_receivable_amount_to_claim, 0);
-        assert_eq!(vault.vst_extra_amount_to_claim, 1);
-    }
-
-    #[test]
-    fn test_withdraw_procedure_partial_complete() {
-        let mut vault: VaultAccount = VaultAccount::dummy();
-        vault.mint_vrt(1_000_000).unwrap();
-        vault.deposit_vst(1_000_000, 1_000_000).unwrap();
-        // 1 SRT = 2.18919457342449 => 1_000_000 VST = 456_789.xxx SRT => 456_789
-        vault
-            .offset_srt_receivables(456_789, 218_919_457_342_449, false)
-            .unwrap();
-        vault.assert_invariants().unwrap();
-
-        vault.enqueue_withdrawal_request(500_000).unwrap();
-        vault.enqueue_withdrawal_request(500_000).unwrap();
-        vault.assert_invariants().unwrap();
-
-        vault.confirm_withdrawal_requests().unwrap();
-        vault.assert_invariants().unwrap();
-
-        // (Expected) 1 SRT = 2.18919457342449 => 228_395 SRT = 500001.xxx VRT => 500_001
-        // (Actual)   1 SRT = 2.18919936600787 => 228_395 SRT = 500002.xxx VRT => 500_002 (+ 0)
-        vault
-            .complete_withdrawal_requests(228_395, 500_002, 218_919_936_600_787, false)
-            .unwrap();
-        vault.assert_invariants().unwrap();
-
-        assert!(vault
-            .get_withdrawal_requests_iter()
-            .take(1)
-            .all(|request| request.state == WITHDRAWAL_REQUEST_STATE_COMPLETED));
-
-        assert_eq!(vault.vst_reserved_amount_to_claim, 500_001);
-        assert_eq!(vault.vst_receivable_amount_to_claim, 499_998);
-        assert_eq!(vault.vst_extra_amount_to_claim, 1);
-
-        // (Expected) 1 SRT = 2.18919457342449 => 228_394 SRT = 499998.xxx VRT => 499_998
-        // (Actual)   1 SRT = 2.18919936600787 => 228_394 SRT = 500000.xxx VRT => 500_000 (+ 2)
-        vault
-            .complete_withdrawal_requests(228_394, 500_000, 218_919_936_600_787, false)
-            .unwrap();
-        vault.assert_invariants().unwrap();
-
-        assert!(vault
-            .get_withdrawal_requests_iter()
-            .take(2)
-            .all(|request| request.state == WITHDRAWAL_REQUEST_STATE_COMPLETED));
-
-        assert_eq!(vault.vst_reserved_amount_to_claim, 999_999);
-        assert_eq!(vault.vst_receivable_amount_to_claim, 0);
-        assert_eq!(vault.vst_extra_amount_to_claim, 3);
-    }
-
-    // TODO/phase3: deprecate
-    #[test]
-    fn test_complete_withdrawal_should_fail_during_deposit() {
-        let mut vault: VaultAccount = VaultAccount::dummy();
-        vault.mint_vrt(1_000_000).unwrap();
-        vault.deposit_vst(1_000_000, 1_000_000).unwrap();
-        // 1 SRT = 2.18919457342449 => 1_000_000 VST = 456_789.xxx SRT => 456_789
-        vault
-            .offset_srt_receivables(456_789, 218_919_457_342_449, false)
-            .unwrap();
-        vault.assert_invariants().unwrap();
-
-        vault.enqueue_withdrawal_request(500_000).unwrap();
-        vault.enqueue_withdrawal_request(500_000).unwrap();
-        vault.assert_invariants().unwrap();
-
-        vault.confirm_withdrawal_requests().unwrap();
-        vault.assert_invariants().unwrap();
-
-        let vrt_amount = vault.mint_vrt(1_000_000).unwrap();
-        assert_eq!(vrt_amount, 1_000_000);
-        vault.deposit_vst(1_000_000, 456_789).unwrap();
-
-        // 1 SRT = 2.18919457 => 456_789 SRT = 999_999.xxx VRT => 999_999
-        vault
-            .complete_withdrawal_requests(456_789, 1_000_000, 218_919_457, false)
+            .offset_srt_receivables(200, 50_000_000_000_000, true)
             .unwrap_err();
     }
 
     #[test]
-    fn test_enqueue_withdrawal_can_only_enqueue_maximum_possible_amount() {
-        let mut vault: VaultAccount = VaultAccount::dummy();
-        vault.mint_vrt(1_000_000).unwrap();
-        vault.deposit_vst(1_000_000, 1_000_000).unwrap();
-        // 1 SRT = 2.18919457342449 => 1_000_000 VST = 456_789.xxx SRT => 456_789
-        vault
-            .offset_srt_receivables(456_789, 218_919_457_342_449, false)
-            .unwrap();
-        vault.assert_invariants().unwrap();
-
+    fn test_complete_withdrawal_fails_while_deposit_in_progress() {
+        let mut vault = VaultAccount::dummy();
+        vault.solv_protocol_deposit_fee_rate_bps = 0;
+        vault.solv_protocol_withdrawal_fee_rate_bps = 0;
         let vrt_amount = vault.mint_vrt(1_000_000).unwrap();
-        assert_eq!(vrt_amount, 1_000_001);
-        vault.deposit_vst(1_000_000, 456_789).unwrap();
-
-        let vrt_amount = vault.mint_vrt(1_000_000).unwrap();
-        assert_eq!(vrt_amount, 1_000_001);
-
-        let vrt_amount = vault.enqueue_withdrawal_request(3_000_000).unwrap();
-        assert_eq!(vrt_amount, 2_000_002);
-    }
-
-    #[test]
-    fn test_withdrawal_with_fee() {
-        let mut vault: VaultAccount = VaultAccount::dummy();
-        vault.mint_vrt(1_000_000).unwrap();
-        vault.deposit_vst(1_000_000, 1_000_000).unwrap();
-        // 1 SRT = 2.18919457342449 => 1_000_000 VST = 456_789.xxx SRT => 456_789
         vault
-            .offset_srt_receivables(456_789, 218_919_457_342_449, false)
+            .deposit_vst(vault.vst_operation_reserved_amount / 2)
             .unwrap();
-        vault.assert_invariants().unwrap();
-
-        vault.enqueue_withdrawal_request(500_000).unwrap();
-        vault.enqueue_withdrawal_request(500_000).unwrap();
-        vault.assert_invariants().unwrap();
-
+        vault
+            .offset_srt_receivables(
+                vault.srt_operation_receivable_amount,
+                vault.one_srt_as_micro_vst,
+                true,
+            )
+            .unwrap();
+        vault
+            .deposit_vst(vault.vst_operation_reserved_amount)
+            .unwrap();
+        vault.enqueue_withdrawal_request(vrt_amount).unwrap();
         vault.confirm_withdrawal_requests().unwrap();
-        vault.assert_invariants().unwrap();
 
         vault
-            .set_solv_protocol_withdrawal_fee_rate_bps(100)
-            .unwrap();
-
-        // 1 SRT = 2.18919457342449 => 456_789 SRT = 999_999.xxx VRT => 999_999
-        vault
-            .complete_withdrawal_requests(456_789, 990_000, 218_919_457_342_449, false)
-            .unwrap();
-        vault.assert_invariants().unwrap();
-
-        assert!(vault
-            .get_withdrawal_requests_iter()
-            .take(2)
-            .all(|request| request.state == WITHDRAWAL_REQUEST_STATE_COMPLETED));
-
-        assert_eq!(vault.vst_reserved_amount_to_claim, 989_999);
-        assert_eq!(vault.vst_receivable_amount_to_claim, 0);
-        assert_eq!(vault.vst_extra_amount_to_claim, 1);
+            .complete_withdrawal_requests(
+                vault.srt_withdrawal_locked_amount,
+                vault.vst_receivable_amount_to_claim,
+                vault.one_srt_as_micro_vst,
+                true,
+            )
+            .unwrap_err();
     }
 
     #[test]

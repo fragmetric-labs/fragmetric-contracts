@@ -86,10 +86,9 @@ impl WrappedToken {
         &mut self,
         wrapped_token_account: &Pubkey,
     ) -> Result<&mut WrappedTokenHolder> {
-        Ok(self
-            .get_holders_iter_mut()
+        self.get_holders_iter_mut()
             .find(|holder| holder.token_account == *wrapped_token_account)
-            .ok_or_else(|| ErrorCode::FundWrappedTokenHolderNotFoundError)?)
+            .ok_or_else(|| error!(ErrorCode::FundWrappedTokenHolderNotFoundError))
     }
 
     pub fn add_holder(&mut self, wrapped_token_account: Pubkey) -> Result<()> {

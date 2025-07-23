@@ -1,24 +1,15 @@
+use std::ops::Neg;
+
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount};
 use anchor_spl::{token::Token, token_interface::TokenInterface};
-use std::ops::Neg;
 
-use super::{
-    fund_account, ClaimUnstakedSOLCommand, FundService, OperationCommand, OperationCommandContext,
-    OperationCommandEntry, OperationCommandResult, SelfExecutable,
-    FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
-};
-use crate::modules::fund::commands::OperationCommand::{ClaimUnstakedSOL, UndelegateVST};
+use crate::errors;
 use crate::modules::fund::{WeightedAllocationParticipant, WeightedAllocationStrategy};
-use crate::{
-    errors,
-    modules::{
-        normalization::{NormalizedTokenPoolAccount, NormalizedTokenPoolService},
-        pricing::TokenPricingSource,
-    },
-    utils,
-};
-use anchor_lang::prelude::*;
+use crate::modules::normalization::{NormalizedTokenPoolAccount, NormalizedTokenPoolService};
+use crate::modules::pricing::TokenPricingSource;
+
+use super::*;
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
 pub struct DenormalizeNTCommand {
@@ -55,9 +46,9 @@ pub struct DenormalizeNTCommandResult {
 }
 
 impl SelfExecutable for DenormalizeNTCommand {
-    fn execute<'a, 'info>(
+    fn execute<'info>(
         &self,
-        ctx: &mut OperationCommandContext<'info, 'a>,
+        ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
     ) -> Result<(
         Option<OperationCommandResult>,
@@ -300,7 +291,7 @@ impl DenormalizeNTCommand {
                 let [normalized_token_pool_account, normalized_token_mint, normalized_token_program, supported_token_mint, supported_token_program, supported_token_reserve_account, fund_supported_token_reserve_account, fund_normalized_token_reserve_account, fund_reserve_account, pricing_sources @ ..] =
                     accounts
                 else {
-                    err!(ErrorCode::AccountNotEnoughKeys)?
+                    err!(error::ErrorCode::AccountNotEnoughKeys)?
                 };
                 require_keys_eq!(normalized_token_pool_account.key(), address);
 

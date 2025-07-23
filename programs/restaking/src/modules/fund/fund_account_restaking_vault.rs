@@ -5,11 +5,12 @@ use crate::errors::ErrorCode;
 use crate::modules::pricing::{TokenPricingSource, TokenPricingSourcePod};
 
 pub const FUND_ACCOUNT_MAX_RESTAKING_VAULT_DELEGATIONS: usize = 30;
+pub const FUND_ACCOUNT_MAX_REWARD_COMMISSION_RATE_BPS: usize = 2_500;
 pub const FUND_ACCOUNT_MAX_RESTAKING_VAULT_COMPOUNDING_REWARD_TOKENS: usize = 4;
 pub const FUND_ACCOUNT_MAX_RESTAKING_VAULT_DISTRIBUTING_REWARD_TOKENS: usize = 30;
 
 #[zero_copy]
-#[repr(C)]
+#[repr(C, packed(8))]
 pub(super) struct RestakingVault {
     pub vault: Pubkey,
     pub program: Pubkey,
@@ -49,11 +50,27 @@ pub(super) struct RestakingVault {
     distributing_reward_tokens:
         [RewardToken; FUND_ACCOUNT_MAX_RESTAKING_VAULT_DISTRIBUTING_REWARD_TOKENS],
 
-    _reserved: [u8; 856],
+    pub supported_token_compounded_amount: i128,
+    pub supported_token_to_receipt_token_exchange_ratio: TokenExchangeRatio,
+    pub supported_token_to_receipt_token_exchange_ratio_updated_timestamp: i64,
+
+    _padding5: [u8; 32],
+    /// Expected amount of vst by unrestaking vrt.
+    /// This field is updated when the vault uses vst as expected receivable amount after unrestaking process is completed.
+    /// It does NOT include unrestaking amount as vrt.
+    pub pending_supported_token_unrestaking_amount: u64,
+
+    _reserved: [u8; 776],
+}
+
+#[zero_copy]
+#[repr(C)]
+pub(super) struct TokenExchangeRatio {
+    pub numerator: u64,
+    pub denominator: u64,
 }
 
 impl RestakingVault {
-    #[deny(clippy::wildcard_enum_match_arm)]
     pub fn initialize(
         &mut self,
         vault: Pubkey,
@@ -116,11 +133,34 @@ impl RestakingVault {
         &mut self,
         weight: u64,
         sol_capacity_amount: u64,
-    ) -> Result<()> {
+    ) -> Result<&mut Self> {
         self.sol_allocation_weight = weight;
         self.sol_allocation_capacity_amount = sol_capacity_amount;
 
-        Ok(())
+        Ok(self)
+    }
+
+    pub fn set_reward_commission_rate_bps(
+        &mut self,
+        reward_commission_rate_bps: u16,
+    ) -> Result<&mut Self> {
+        // hard limit on reward commission rate to be less than or equal to 25%
+        require_gte!(
+            FUND_ACCOUNT_MAX_REWARD_COMMISSION_RATE_BPS,
+            reward_commission_rate_bps as usize
+        );
+
+        self.reward_commission_rate_bps = reward_commission_rate_bps;
+
+        Ok(self)
+    }
+
+    pub fn get_reward_commission_amount(&self, reward_token_amount: u64) -> Result<u64> {
+        crate::utils::get_proportional_amount_u64(
+            reward_token_amount,
+            self.reward_commission_rate_bps as u64,
+            10_000,
+        )
     }
 
     pub fn add_compounding_reward_token(
@@ -331,6 +371,51 @@ impl RestakingVault {
             .get(index)
             .ok_or_else(|| error!(ErrorCode::FundRestakingVaultOperatorNotFoundError))
     }
+
+    pub fn update_supported_token_compounded_amount(
+        &mut self,
+        supported_token_amount_numerator: u64,
+        receipt_token_amount_denominator: u64,
+    ) -> Result<()> {
+        let receipt_token_amount = self.receipt_token_operation_reserved_amount
+            + self.receipt_token_operation_receivable_amount;
+
+        // calculate supported token amount based on previous vault receipt token price
+        let supported_token_amount_before = crate::utils::get_proportional_amount_u64(
+            receipt_token_amount,
+            self.supported_token_to_receipt_token_exchange_ratio
+                .numerator,
+            self.supported_token_to_receipt_token_exchange_ratio
+                .denominator,
+        )?;
+
+        // calculate supported token amount based on current vault receipt token price
+        let supported_token_amount = crate::utils::get_proportional_amount_u64(
+            receipt_token_amount,
+            supported_token_amount_numerator,
+            receipt_token_amount_denominator,
+        )?;
+
+        self.supported_token_compounded_amount +=
+            supported_token_amount as i128 - supported_token_amount_before as i128;
+
+        Ok(())
+    }
+
+    pub fn update_supported_token_receipt_token_exchange_ratio(
+        &mut self,
+        supported_token_amount_numerator: u64,
+        receipt_token_amount_denominator: u64,
+    ) -> Result<()> {
+        self.supported_token_to_receipt_token_exchange_ratio = TokenExchangeRatio {
+            numerator: supported_token_amount_numerator,
+            denominator: receipt_token_amount_denominator,
+        };
+        self.supported_token_to_receipt_token_exchange_ratio_updated_timestamp =
+            Clock::get()?.unix_timestamp;
+
+        Ok(())
+    }
 }
 
 #[zero_copy]
@@ -346,10 +431,7 @@ pub(super) struct RestakingVaultDelegation {
     pub supported_token_delegated_amount: u64,
     pub supported_token_undelegating_amount: u64,
 
-    /// configuration: the amount requested to be undelegated as soon as possible regardless of current state, this value should be decreased by each undelegation requested amount.
-    pub supported_token_redelegating_amount: u64,
-
-    _reserved: [u8; 24],
+    _reserved: [u8; 32],
 }
 
 impl RestakingVaultDelegation {
@@ -368,18 +450,6 @@ impl RestakingVaultDelegation {
     ) -> Result<()> {
         self.supported_token_allocation_weight = weight;
         self.supported_token_allocation_capacity_amount = supported_token_capacity_amount;
-
-        Ok(())
-    }
-
-    pub fn set_supported_token_redelegating_amount(&mut self, token_amount: u64) -> Result<()> {
-        require_gte!(
-            token_amount,
-            self.supported_token_delegated_amount,
-            ErrorCode::FundInvalidConfigurationUpdateError
-        );
-
-        self.supported_token_redelegating_amount = token_amount;
 
         Ok(())
     }

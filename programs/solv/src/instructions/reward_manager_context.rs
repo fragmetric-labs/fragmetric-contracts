@@ -33,7 +33,9 @@ pub struct RewardManagerContext<'info> {
     pub token_program: Program<'info, Token>,
 }
 
-pub fn process_delegate_reward_token_account(ctx: Context<RewardManagerContext>) -> Result<()> {
+pub fn process_delegate_reward_token_account(
+    ctx: &mut Context<RewardManagerContext>,
+) -> Result<()> {
     let RewardManagerContext {
         delegate,
         vault_account,

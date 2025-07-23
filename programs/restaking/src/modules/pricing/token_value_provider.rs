@@ -184,10 +184,10 @@ impl TokenValuePod {
                     continue;
                 }
 
-                if existing_token_pricing_source.is_none() && token_pricing_source.is_some() {
-                    token_pricing_source
-                        .unwrap()
-                        .serialize_as_pod(existing_token_pricing_source);
+                if existing_token_pricing_source.is_none() {
+                    if let Some(token_pricing_source) = token_pricing_source {
+                        token_pricing_source.serialize_as_pod(existing_token_pricing_source);
+                    }
                 }
 
                 *existing_token_amount += token_amount;

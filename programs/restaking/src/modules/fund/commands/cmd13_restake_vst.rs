@@ -1,15 +1,12 @@
 use anchor_lang::prelude::*;
 
-use super::{
-    DelegateVSTCommand, FundService, OperationCommandContext, OperationCommandEntry,
-    OperationCommandResult, SelfExecutable, WeightedAllocationParticipant,
-    WeightedAllocationStrategy, FUND_ACCOUNT_MAX_RESTAKING_VAULTS,
-};
+use crate::errors;
 use crate::modules::fund::FUND_ACCOUNT_MAX_SUPPORTED_TOKENS;
 use crate::modules::pricing::TokenPricingSource;
 use crate::modules::restaking::{JitoRestakingVaultService, SolvBTCVaultService};
 use crate::utils::PDASeeds;
-use crate::{errors, modules::pricing};
+
+use super::*;
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
 pub struct RestakeVSTCommand {
@@ -53,9 +50,9 @@ pub struct RestakeVSTCommandResult {
 }
 
 impl SelfExecutable for RestakeVSTCommand {
-    fn execute<'a, 'info>(
+    fn execute<'info>(
         &self,
-        ctx: &mut OperationCommandContext<'info, 'a>,
+        ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
     ) -> Result<(
         Option<OperationCommandResult>,
@@ -67,7 +64,7 @@ impl SelfExecutable for RestakeVSTCommand {
         match &self.state {
             RestakeVSTCommandState::New => {
                 let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-                    .new_pricing_service(accounts.into_iter().copied(), true)?;
+                    .new_pricing_service(accounts.iter().copied(), true)?;
                 let fund_account = ctx.fund_account.load()?;
 
                 // find restakable tokens with their restakable amount among ST and NT
@@ -130,7 +127,7 @@ impl SelfExecutable for RestakeVSTCommand {
                         );
 
                     strategy
-                        .put(pricing_service.get_token_amount_as_sol(&token_mint, token_amount)?)?;
+                        .put(pricing_service.get_token_amount_as_sol(token_mint, token_amount)?)?;
 
                     for (index, strategy_participant) in
                         strategy.get_participants_iter().enumerate()
@@ -138,7 +135,7 @@ impl SelfExecutable for RestakeVSTCommand {
                         let allocated_sol_amount = strategy_participant.get_last_put_amount()?;
                         // try to deposit extra lamports to compensate for flooring errors for each token
                         let allocated_token_amount = (pricing_service
-                            .get_sol_amount_as_token(&token_mint, allocated_sol_amount)?
+                            .get_sol_amount_as_token(token_mint, allocated_sol_amount)?
                             + 1)
                         .min(token_amount);
 
@@ -159,7 +156,7 @@ impl SelfExecutable for RestakeVSTCommand {
                     }
                 }
 
-                if items.len() > 0 {
+                if !items.is_empty() {
                     remaining_items = Some(items);
                 }
             }
@@ -174,7 +171,7 @@ impl SelfExecutable for RestakeVSTCommand {
                     {
                         Some(TokenPricingSource::JitoRestakingVault { address }) => {
                             let [vault_program, vault_config, vault_account, ..] = accounts else {
-                                err!(ErrorCode::AccountNotEnoughKeys)?
+                                err!(error::ErrorCode::AccountNotEnoughKeys)?
                             };
                             require_keys_eq!(address, vault_account.key());
 
@@ -226,11 +223,11 @@ impl SelfExecutable for RestakeVSTCommand {
                         }
                         Some(TokenPricingSource::VirtualVault { .. }) => {
                             remaining_items =
-                                Some(items.into_iter().skip(1).copied().collect::<Vec<_>>());
+                                Some(items.iter().skip(1).copied().collect::<Vec<_>>());
                         }
                         Some(TokenPricingSource::SolvBTCVault { address }) => {
                             let [vault_program, vault_account, ..] = accounts else {
-                                err!(ErrorCode::AccountNotEnoughKeys)?
+                                err!(error::ErrorCode::AccountNotEnoughKeys)?
                             };
                             require_keys_eq!(vault_account.key(), address);
 
@@ -290,16 +287,18 @@ impl SelfExecutable for RestakeVSTCommand {
                 if let Some(item) = items.first() {
                     let fund_account = ctx.fund_account.load()?;
                     let restaking_vault = fund_account.get_restaking_vault(&item.vault)?;
-
-                    match restaking_vault
+                    let receipt_token_pricing_source = restaking_vault
                         .receipt_token_pricing_source
-                        .try_deserialize()?
-                    {
+                        .try_deserialize()?;
+
+                    drop(fund_account);
+
+                    match receipt_token_pricing_source {
                         Some(TokenPricingSource::JitoRestakingVault { address }) => {
                             let [vault_program, vault_config, vault_account, token_program, vault_receipt_token_mint, vault_receipt_token_fee_wallet_account, vault_supported_token_reserve_account, from_vault_supported_token_account, to_vault_receipt_token_account, fund_reserve_account, pricing_sources @ ..] =
                                 accounts
                             else {
-                                err!(ErrorCode::AccountNotEnoughKeys)?
+                                err!(error::ErrorCode::AccountNotEnoughKeys)?
                             };
                             require_keys_eq!(address, vault_account.key());
 
@@ -308,6 +307,24 @@ impl SelfExecutable for RestakeVSTCommand {
                                 vault_config,
                                 vault_account,
                             )?;
+
+                            let mut fund_account = ctx.fund_account.load_mut()?;
+                            let restaking_vault =
+                                fund_account.get_restaking_vault_mut(&item.vault)?;
+
+                            let (
+                                supported_token_amount_numerator,
+                                receipt_token_amount_denominator,
+                            ) = vault_service
+                                .get_supported_token_to_receipt_token_exchange_ratio()?;
+                            restaking_vault.update_supported_token_compounded_amount(
+                                supported_token_amount_numerator,
+                                receipt_token_amount_denominator,
+                            )?;
+
+                            drop(fund_account);
+
+                            let fund_account = ctx.fund_account.load()?;
 
                             let (
                                 to_vault_receipt_token_account_amount,
@@ -331,10 +348,8 @@ impl SelfExecutable for RestakeVSTCommand {
 
                             let mut pricing_service =
                                 FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-                                    .new_pricing_service(
-                                        pricing_sources.into_iter().copied(),
-                                        false,
-                                    )?;
+                                    .new_pricing_service(pricing_sources.iter().copied(), false)?;
+
                             let mut fund_account = ctx.fund_account.load_mut()?;
                             match fund_account.get_normalized_token_mut() {
                                 Some(normalized_token)
@@ -361,6 +376,17 @@ impl SelfExecutable for RestakeVSTCommand {
 
                             let restaking_vault =
                                 fund_account.get_restaking_vault_mut(&item.vault)?;
+
+                            let (
+                                supported_token_amount_numerator,
+                                receipt_token_amount_denominator,
+                            ) = vault_service
+                                .get_supported_token_to_receipt_token_exchange_ratio()?;
+                            restaking_vault.update_supported_token_receipt_token_exchange_ratio(
+                                supported_token_amount_numerator,
+                                receipt_token_amount_denominator,
+                            )?;
+
                             restaking_vault.receipt_token_operation_reserved_amount +=
                                 minted_vault_receipt_token_amount;
 
@@ -382,7 +408,7 @@ impl SelfExecutable for RestakeVSTCommand {
                             );
 
                             remaining_items =
-                                Some(items.into_iter().skip(1).copied().collect::<Vec<_>>());
+                                Some(items.iter().skip(1).copied().collect::<Vec<_>>());
 
                             drop(fund_account);
                             FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
@@ -390,18 +416,36 @@ impl SelfExecutable for RestakeVSTCommand {
                         }
                         Some(TokenPricingSource::VirtualVault { .. }) => {
                             remaining_items =
-                                Some(items.into_iter().skip(1).copied().collect::<Vec<_>>());
+                                Some(items.iter().skip(1).copied().collect::<Vec<_>>());
                         }
                         Some(TokenPricingSource::SolvBTCVault { address }) => {
                             let [vault_program, vault_account, vault_receipt_token_mint, vault_supported_token_mint, vault_vault_supported_token_account, token_program, event_authority, fund_vault_supported_token_account, fund_vault_receipt_token_account, fund_reserve, pricing_sources @ ..] =
                                 accounts
                             else {
-                                err!(ErrorCode::AccountNotEnoughKeys)?
+                                err!(error::ErrorCode::AccountNotEnoughKeys)?
                             };
                             require_keys_eq!(address, vault_account.key());
 
                             let vault_service =
                                 SolvBTCVaultService::new(vault_program, vault_account)?;
+
+                            let mut fund_account = ctx.fund_account.load_mut()?;
+                            let restaking_vault =
+                                fund_account.get_restaking_vault_mut(&item.vault)?;
+
+                            let (
+                                supported_token_amount_numerator,
+                                receipt_token_amount_denominator,
+                            ) = vault_service
+                                .get_supported_token_to_receipt_token_exchange_ratio()?;
+                            restaking_vault.update_supported_token_compounded_amount(
+                                supported_token_amount_numerator,
+                                receipt_token_amount_denominator,
+                            )?;
+
+                            drop(fund_account);
+
+                            let fund_account = ctx.fund_account.load()?;
 
                             let (
                                 fund_vault_receipt_token_account_amount,
@@ -425,10 +469,7 @@ impl SelfExecutable for RestakeVSTCommand {
 
                             let mut pricing_service =
                                 FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-                                    .new_pricing_service(
-                                        pricing_sources.into_iter().copied(),
-                                        false,
-                                    )?;
+                                    .new_pricing_service(pricing_sources.iter().copied(), false)?;
 
                             let mut fund_account = ctx.fund_account.load_mut()?;
 
@@ -439,6 +480,17 @@ impl SelfExecutable for RestakeVSTCommand {
 
                             let restaking_vault =
                                 fund_account.get_restaking_vault_mut(&item.vault)?;
+
+                            let (
+                                supported_token_amount_numerator,
+                                receipt_token_amount_denominator,
+                            ) = vault_service
+                                .get_supported_token_to_receipt_token_exchange_ratio()?;
+                            restaking_vault.update_supported_token_receipt_token_exchange_ratio(
+                                supported_token_amount_numerator,
+                                receipt_token_amount_denominator,
+                            )?;
+
                             restaking_vault.receipt_token_operation_reserved_amount +=
                                 minted_vault_receipt_token_amount;
 
@@ -460,7 +512,7 @@ impl SelfExecutable for RestakeVSTCommand {
                             );
 
                             remaining_items =
-                                Some(items.into_iter().skip(1).copied().collect::<Vec<_>>());
+                                Some(items.iter().skip(1).copied().collect::<Vec<_>>());
 
                             drop(fund_account);
                             FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
@@ -503,7 +555,7 @@ impl RestakeVSTCommand {
         ctx: &OperationCommandContext,
         remaining_items: Vec<RestakeVSTCommandItem>,
     ) -> Result<Option<OperationCommandEntry>> {
-        if remaining_items.len() == 0 {
+        if remaining_items.is_empty() {
             return Ok(None);
         }
 

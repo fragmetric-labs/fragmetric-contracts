@@ -74,7 +74,13 @@ export class JitoVaultAccountContext extends AccountContext<
         : 'BGTtt2wdTdhLyFQwSGbNriLZiCxXKBbm29bDvYZ4jD6G') as Address,
       'Switchboard'
     );
-    map.set('9KUp9bG7nYvSYy5iHqdHnfapS4cV8QfHmKhjqMsdK8n4' as Address, 'Ping');
+    map.set(
+      (cluster == 'devnet'
+        ? '9KUp9bG7nYvSYy5iHqdHnfapS4cV8QfHmKhjqMsdK8n4'
+        : '5W3VVyLkMVAjkistwKjuq33FRbMiyFqe2Qq3w55tZDj8') as Address,
+      'Ping'
+    );
+    map.set('CVrMxNfzEyDGa6akHjreTr2Vsdx3Pwv9dGWUm4j5Qebv' as Address, 'DePHY');
     return map;
   }
 
@@ -157,6 +163,33 @@ export class JitoVaultAccountContext extends AccountContext<
     },
     async (parent, address) => {
       return new TokenAccountContext(parent, address);
+    }
+  );
+
+  readonly withdrawalTickets = new IterativeAccountContext<
+    JitoVaultAccountContext,
+    JitoVaultWithdrawalTicketAccountContext
+  >(
+    this,
+    async (parent) => {
+      const [vaultAddress] = await Promise.all([parent.resolveAddress()]);
+      if (!vaultAddress) return null;
+
+      return (await Promise.all(
+        new Array(5).fill(null).map(async (_, i) => {
+          const index = i + 1;
+          return parent.parent.__getUnrestakingAuthorityAddress(
+            vaultAddress,
+            index
+          );
+        })
+      )) as Address[];
+    },
+    async (parent, authorityAddress) => {
+      return new JitoVaultWithdrawalTicketAccountContext(
+        parent,
+        authorityAddress
+      );
     }
   );
 
@@ -441,6 +474,66 @@ export class JitoVaultDelegationNCNContext extends AccountContext<
           : false,
         ncn: data?.ncn ?? this.__ncn,
         index: data?.index,
+      },
+    };
+    return res;
+  }
+}
+
+export class JitoVaultWithdrawalTicketAccountContext extends AccountContext<
+  JitoVaultAccountContext,
+  Account<jitoVault.VaultStakerWithdrawalTicket>
+> {
+  constructor(
+    readonly parent: JitoVaultAccountContext,
+    authorityAddressResolver: AccountAddressResolverVariant<JitoVaultAccountContext>
+  ) {
+    super(parent, async (vault) => {
+      const vaultAddress = (await vault.resolveAddress())!;
+      const authorityAddress = (await transformAddressResolverVariant(
+        authorityAddressResolver
+      )(vault))! as Address;
+      if (!(vaultAddress && authorityAddress)) return null;
+
+      const [withdrawalTicketAddress] = await getProgramDerivedAddress({
+        programAddress: jitoVault.JITO_VAULT_PROGRAM_ADDRESS,
+        seeds: [
+          getBytesEncoder().encode(
+            Buffer.from('vault_staker_withdrawal_ticket')
+          ),
+          getAddressEncoder().encode(vaultAddress),
+          getAddressEncoder().encode(authorityAddress),
+        ],
+      });
+      return withdrawalTicketAddress;
+    });
+  }
+
+  async resolve(noCache = false) {
+    const account = await this.resolveAccount(noCache);
+    if (!account) {
+      return null;
+    }
+
+    const { discriminator, bump, reserved, ...props } = account.data;
+
+    return {
+      ...props,
+    };
+  }
+
+  protected __decodeAccount(account: EncodedAccount) {
+    return jitoVault.decodeVaultStakerWithdrawalTicket(account);
+  }
+
+  toContextDescription() {
+    const desc = super.toContextDescription();
+    const data = this.__account?.data;
+    const res = {
+      ...desc,
+      properties: {
+        ...desc.properties,
+        authority: data?.base,
       },
     };
     return res;

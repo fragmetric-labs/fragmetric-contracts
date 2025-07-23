@@ -19,7 +19,7 @@ pub(super) struct TokenAllocatedAmount {
 impl TokenAllocatedAmount {
     /// Sum of contribution accrual rate (decimals = 2)
     /// e.g., rate = 135 => actual rate = 1.35
-    pub fn get_total_contribution_accrual_rate(&self) -> u64 {
+    pub fn get_total_contribution_accrual_rate(&self) -> u128 {
         self.records.iter().fold(0, |sum, record| {
             sum + record.get_total_contribution_accrual_rate()
         })
@@ -190,8 +190,8 @@ impl TokenAllocatedAmountRecord {
     /// Contribution accrual rate multiplied by amount (decimals = 2)
     /// e.g., rate = 135 => actual rate = 1.35
     #[inline(always)]
-    fn get_total_contribution_accrual_rate(&self) -> u64 {
-        self.amount * self.contribution_accrual_rate as u64
+    fn get_total_contribution_accrual_rate(&self) -> u128 {
+        self.amount as u128 * self.contribution_accrual_rate as u128
     }
 
     /// record is stale if amount = 0 and contribution accrual rate != 1.0.

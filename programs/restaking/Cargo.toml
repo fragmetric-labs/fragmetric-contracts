@@ -1,6 +1,6 @@
 [package]
 name = "restaking"
-version = "0.6.4"
+version = "0.6.6"
 description = "Fragmetric Liquid Restaking Program"
 authors = { workspace = true }
 repository = { workspace = true }
@@ -8,6 +8,9 @@ homepage = { workspace = true }
 license = { workspace = true }
 readme = { workspace = true }
 edition = { workspace = true }
+
+[lints]
+workspace = true
 
 [lib]
 crate-type = ["cdylib", "lib"]
@@ -32,7 +35,6 @@ mainnet = ["solv/mainnet"]
 [dependencies]
 anchor-lang = { workspace = true }
 anchor-spl = { workspace = true }
-borsh1 = { workspace = true }
 bytemuck = { workspace = true }
 jito-vault-sdk = { workspace = true }
 jito-vault-core = { workspace = true }

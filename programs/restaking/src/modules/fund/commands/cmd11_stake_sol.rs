@@ -4,11 +4,7 @@ use crate::errors::ErrorCode;
 use crate::modules::pricing::TokenPricingSource;
 use crate::modules::staking::*;
 
-use super::{
-    FundService, NormalizeSTCommand, OperationCommandContext, OperationCommandEntry,
-    OperationCommandResult, SelfExecutable, WeightedAllocationParticipant,
-    WeightedAllocationStrategy, FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
-};
+use super::*;
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
 pub struct StakeSOLCommand {
@@ -83,9 +79,9 @@ pub struct StakeSOLCommandResult {
 }
 
 impl SelfExecutable for StakeSOLCommand {
-    fn execute<'a, 'info>(
+    fn execute<'info>(
         &self,
-        ctx: &mut OperationCommandContext<'info, 'a>,
+        ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
     ) -> Result<(
         Option<OperationCommandResult>,
@@ -109,7 +105,6 @@ impl SelfExecutable for StakeSOLCommand {
 }
 
 // These are implementations of each command state.
-#[deny(clippy::wildcard_enum_match_arm)]
 impl StakeSOLCommand {
     /// An initial state of `StakeSOL` command.
     /// In this state, operator iterates the fund and
@@ -399,7 +394,7 @@ impl StakeSOLCommand {
         item: &StakeSOLCommandItem,
         pool_account_address: &Pubkey,
     ) -> Result<(u64, u64, u64)> {
-        let [fund_reserve_account, fund_supported_token_reserve_account, pool_program, pool_account, pool_token_mint, pool_token_program, withdraw_authority, reserve_stake_account, manager_fee_account, validator_list_account, clock, pricing_sources @ ..] =
+        let [fund_reserve_account, fund_supported_token_reserve_account, pool_program, pool_account, pool_token_mint, pool_token_program, withdraw_authority, reserve_stake_account, manager_fee_account, validator_list_account, pricing_sources @ ..] =
             accounts
         else {
             err!(error::ErrorCode::AccountNotEnoughKeys)?
@@ -414,15 +409,6 @@ impl StakeSOLCommand {
             pool_token_program,
         )?;
 
-        // first update stake pool balance
-        spl_stake_pool_service.update_stake_pool_balance_if_needed(
-            withdraw_authority,
-            reserve_stake_account,
-            manager_fee_account,
-            validator_list_account,
-            clock,
-        )?;
-
         let (
             to_pool_token_account_amount,
             minted_pool_token_amount,
@@ -431,6 +417,7 @@ impl StakeSOLCommand {
             withdraw_authority,
             reserve_stake_account,
             manager_fee_account,
+            validator_list_account,
             fund_supported_token_reserve_account,
             fund_reserve_account,
             &[&ctx.fund_account.load()?.get_reserve_account_seeds()],
@@ -445,9 +432,10 @@ impl StakeSOLCommand {
         let expected_pool_token_fee_amount = pricing_service
             .get_sol_amount_as_token(pool_token_mint.key, item.allocated_sol_amount)?
             .saturating_sub(minted_pool_token_amount);
+
         require_gte!(
-            expected_pool_token_fee_amount,
-            deducted_pool_token_fee_amount
+            MAX_FEE_TOLERANCE,
+            expected_pool_token_fee_amount.abs_diff(deducted_pool_token_fee_amount),
         );
 
         // calculate deducted fee as SOL (will be added to SOL receivable)
@@ -487,11 +475,6 @@ impl StakeSOLCommand {
             pool_token_program,
         )?;
 
-        // minimum deposit amount
-        if item.allocated_sol_amount < marinade_stake_pool_service.get_min_deposit_sol_amount() {
-            return Ok(None);
-        }
-
         // no fee
         let (to_pool_token_account_amount, minted_pool_token_amount) = marinade_stake_pool_service
             .deposit_sol(
@@ -506,6 +489,11 @@ impl StakeSOLCommand {
                 &[&ctx.fund_account.load()?.get_reserve_account_seeds()],
                 item.allocated_sol_amount,
             )?;
+
+        // Nothing happened
+        if minted_pool_token_amount == 0 {
+            return Ok(None);
+        }
 
         // pricing service with updated token values
         let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?

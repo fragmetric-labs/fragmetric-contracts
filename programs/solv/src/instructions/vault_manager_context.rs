@@ -71,7 +71,7 @@ pub struct VaultManagerVaultAccountUpdateContext<'info> {
 }
 
 pub fn process_initialize_vault_account(
-    ctx: Context<VaultManagerVaultAccountInitialContext>,
+    ctx: &mut Context<VaultManagerVaultAccountInitialContext>,
 ) -> Result<()> {
     let VaultManagerVaultAccountInitialContext {
         vault_manager,
@@ -113,7 +113,7 @@ pub fn process_initialize_vault_account(
 }
 
 pub fn process_update_vault_account_if_needed(
-    ctx: Context<VaultManagerVaultAccountUpdateContext>,
+    ctx: &mut Context<VaultManagerVaultAccountUpdateContext>,
 ) -> Result<()> {
     let VaultManagerVaultAccountUpdateContext {
         vault_manager,
@@ -132,34 +132,4 @@ pub fn process_update_vault_account_if_needed(
     )?;
 
     Ok(())
-}
-
-// TODO/v0.2.1: deprecate
-#[event_cpi]
-#[derive(Accounts)]
-pub struct CloseVaultAccountVersionOneContext<'info> {
-    #[account(mut)]
-    pub payer: Signer<'info>,
-
-    #[account(
-        mut,
-        seeds = [VaultAccount::SEED, vault_receipt_token_mint.key().as_ref()],
-        bump = vault_account.load()?.get_bump(),
-        constraint = vault_account.load()?.data_version == 1 @ VaultError::InvalidAccountDataVersionError,
-    )]
-    pub vault_account: AccountLoader<'info, VaultAccount>,
-
-    pub vault_receipt_token_mint: Account<'info, Mint>,
-}
-
-pub fn process_close_vault_account_version_one(
-    ctx: Context<CloseVaultAccountVersionOneContext>,
-) -> Result<()> {
-    let CloseVaultAccountVersionOneContext {
-        payer,
-        vault_account,
-        ..
-    } = ctx.accounts;
-
-    vault_account.close(payer.to_account_info())
 }

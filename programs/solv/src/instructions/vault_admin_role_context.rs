@@ -4,7 +4,6 @@ use anchor_spl::token::Mint;
 use crate::errors::VaultError;
 use crate::states::VaultAccount;
 
-#[allow(clippy::enum_variant_names)]
 #[derive(AnchorSerialize, AnchorDeserialize)]
 pub enum VaultAdminRole {
     VaultManager = 0,
@@ -32,7 +31,7 @@ pub struct VaultAdminRoleUpdateContext<'info> {
 }
 
 pub fn process_update_vault_admin_role(
-    ctx: Context<VaultAdminRoleUpdateContext>,
+    ctx: &mut Context<VaultAdminRoleUpdateContext>,
     role: VaultAdminRole,
 ) -> Result<()> {
     let VaultAdminRoleUpdateContext {

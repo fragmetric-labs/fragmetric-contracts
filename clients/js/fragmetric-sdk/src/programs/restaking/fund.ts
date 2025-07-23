@@ -11,6 +11,7 @@ import {
   getAddressEncoder,
   getBytesEncoder,
   getProgramDerivedAddress,
+  getU8Encoder,
   IAccountMeta,
   ReadonlyUint8Array,
 } from '@solana/kit';
@@ -193,6 +194,38 @@ export class RestakingFundAccountContext extends AccountContext<
       return new RestakingFundWithdrawalBatchAccountContext(parent, address);
     }
   );
+
+  async __getUnstakingAuthorityAddress(
+    poolAddress: string,
+    index: number
+  ): Promise<Address> {
+    const [address, _] = await getProgramDerivedAddress({
+      programAddress: this.parent.program.address,
+      seeds: [
+        getBytesEncoder().encode(Buffer.from('unstaking_ticket')),
+        getAddressEncoder().encode((await this.resolveAddress())!), // fund
+        getAddressEncoder().encode(poolAddress as Address), // stake pool
+        getU8Encoder().encode(index),
+      ],
+    });
+    return address as Address;
+  }
+
+  async __getUnrestakingAuthorityAddress(
+    vaultAddress: string,
+    index: number
+  ): Promise<Address> {
+    const [address, _] = await getProgramDerivedAddress({
+      programAddress: this.parent.program.address,
+      seeds: [
+        getBytesEncoder().encode(Buffer.from('unrestaking_ticket')),
+        getAddressEncoder().encode((await this.resolveAddress())!), // fund
+        getAddressEncoder().encode(vaultAddress as Address), // vault
+        getU8Encoder().encode(index),
+      ],
+    });
+    return address as Address;
+  }
 
   readonly restakingVaults = new IterativeAccountContext<
     any,
@@ -909,7 +942,6 @@ export class RestakingFundAccountContext extends AccountContext<
               item.token.normalReserveRateBps,
             tokenWithdrawalNormalReserveMaxAmount:
               item.token.normalReserveMaxAmount,
-            tokenRebalancingAmount: item.rebalancingAmount,
             solAllocationWeight: item.solAllocationWeight,
             solAllocationCapacityAmount: item.solAllocationCapacityAmount,
           };
@@ -936,10 +968,6 @@ export class RestakingFundAccountContext extends AccountContext<
               v.description('1 reserve rate = 1bps = 0.01%')
             ),
             tokenWithdrawalNormalReserveMaxAmount: v.bigint(),
-            tokenRebalancingAmount: v.pipe(
-              v.bigint(),
-              v.description('unused now')
-            ),
             solAllocationWeight: v.bigint(),
             solAllocationCapacityAmount: v.bigint(),
           }) as v.GenericSchema<
@@ -1252,6 +1280,7 @@ export class RestakingFundAccountContext extends AccountContext<
           },
           solAllocationWeight: item.solAllocationWeight,
           solAllocationCapacityAmount: item.solAllocationCapacityAmount,
+          rewardCommissionRateBps: item.rewardCommissionRateBps,
           delegations: item.delegations
             .slice(0, item.numDelegations)
             .map((delegationItem) => {
@@ -1264,8 +1293,6 @@ export class RestakingFundAccountContext extends AccountContext<
                   delegationItem.supportedTokenAllocationWeight,
                 tokenAllocationCapacityAmount:
                   delegationItem.supportedTokenAllocationCapacityAmount,
-                tokenRedelegatingAmount:
-                  delegationItem.supportedTokenRedelegatingAmount,
               };
               return delegationStrategy;
             }),
@@ -1356,6 +1383,8 @@ export class RestakingFundAccountContext extends AccountContext<
                   vaultSupportedTokenMint: vaultAccount.data.supportedMint,
                   fundManager: createNoopSigner(fundManager),
                   receiptTokenMint: data.receiptTokenMint,
+                  pricingSource:
+                    args.pricingSource as restaking.TokenPricingSourceArgs,
                   program: this.program.address,
                 },
                 {
@@ -1434,6 +1463,8 @@ export class RestakingFundAccountContext extends AccountContext<
                     vaultAccount.data.vaultSupportedTokenMint,
                   fundManager: createNoopSigner(fundManager),
                   receiptTokenMint: data.receiptTokenMint,
+                  pricingSource:
+                    args.pricingSource as restaking.TokenPricingSourceArgs,
                   program: this.program.address,
                 },
                 {
@@ -1510,6 +1541,8 @@ export class RestakingFundAccountContext extends AccountContext<
                   vaultSupportedTokenMint: vrtMint, // use same VRRT - notes no cash-in flow
                   fundManager: createNoopSigner(fundManager),
                   receiptTokenMint: data.receiptTokenMint,
+                  pricingSource:
+                    args.pricingSource as restaking.TokenPricingSourceArgs,
                   program: this.program.address,
                 },
                 {
@@ -1659,6 +1692,7 @@ export class RestakingFundAccountContext extends AccountContext<
         v.object({
           solAllocationWeight: v.bigint(),
           solAllocationCapacityAmount: v.bigint(),
+          rewardCommissionRateBps: v.number(),
           delegations: v.array(
             v.intersect([
               v.object({

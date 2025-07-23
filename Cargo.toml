@@ -24,6 +24,19 @@ license = "MIT"
 readme = "README.md"
 edition = "2021"
 
+[workspace.lints.rust]
+unexpected-cfgs = "allow"
+
+[workspace.lints.clippy]
+too-many-arguments = "allow"
+module-inception = "allow"
+inconsistent-digit-grouping = "allow"
+enum-variant-names = "allow"
+type-complexity = "allow"
+only-used-in-recursion = "allow"
+let-and-return = "allow"
+wildcard-enum-match-arm = "deny"
+
 [workspace.dependencies]
 anchor-lang = { version = "0.31.1", features = ["event-cpi"] }
 anchor-spl = { version = "0.31.1", features = ["memo"] }
@@ -36,10 +49,11 @@ spl-tlv-account-resolution = "0.9.0"
 spl-transfer-hook-interface = "0.9.0"
 spl-discriminator = "0.4.1"
 spl-stake-pool = { version = "2.0.1", features = ["no-entrypoint"] }
-borsh1 = { package = "borsh", version = "1.5.5" } # This version is used in spl-stake-pool
 proptest = "1.6.0"
 primitive-types = "0.13.1"
 once_cell = "1.21.3"
+rust_decimal = "1.37.1"
+rust_decimal_macros = "1.37.1"
 
 #borsh = "0.10.3"
 #thiserror = "1"

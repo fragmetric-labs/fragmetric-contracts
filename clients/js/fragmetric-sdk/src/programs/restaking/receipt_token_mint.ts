@@ -179,6 +179,7 @@ export class RestakingReceiptTokenMintAccountContext extends TokenMintAccountCon
               operationReservedAmount: v.receiptTokenOperationReservedAmount,
               operationReceivableAmount:
                 v.receiptTokenOperationReceivableAmount,
+              unrestakingAmountAsSupportedToken: v.pendingSupportedTokenUnrestakingAmount,
             };
           }),
           __lookupTableAddress: lookupTableAddress,

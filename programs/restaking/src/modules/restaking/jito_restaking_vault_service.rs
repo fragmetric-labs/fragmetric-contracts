@@ -1,20 +1,20 @@
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::program::invoke_signed;
-use anchor_lang::solana_program::system_program;
-use anchor_spl::associated_token;
-use anchor_spl::token::Token;
-use anchor_spl::token_interface::TokenAccount;
+use anchor_lang::solana_program;
+use anchor_spl::token_interface::{Mint, TokenAccount};
 use jito_vault_core::{
     config::Config, vault::Vault, vault_operator_delegation::VaultOperatorDelegation,
     vault_staker_withdrawal_ticket::VaultStakerWithdrawalTicket,
     vault_update_state_tracker::VaultUpdateStateTracker,
 };
 
-use crate::constants::{JITO_VAULT_CONFIG_ADDRESS, JITO_VAULT_PROGRAM_ID};
 use crate::errors::ErrorCode;
-use crate::modules::pricing::PricingService;
-use crate::utils;
 use crate::utils::AccountInfoExt;
+
+use super::ValidateVault;
+
+pub(super) const JITO_VAULT_PROGRAM_ID: Pubkey =
+    pubkey!("Vau1t6sLNxnzB7ZDsef8TLbPLfyZMYXH8WTNqUdm9g8");
+const JITO_VAULT_CONFIG_ADDRESS: Pubkey = pubkey!("UwuSgAq4zByffCGCrWH87DsjfsewYjuqHfJEpzw1Jq3");
 
 pub(in crate::modules) struct JitoRestakingVaultService<'info> {
     vault_program: &'info AccountInfo<'info>,
@@ -28,32 +28,45 @@ pub(in crate::modules) struct JitoRestakingVaultService<'info> {
     vault_program_fee_wallet: Pubkey,
 }
 
+impl ValidateVault for JitoRestakingVaultService<'_> {
+    #[inline(never)]
+    fn validate_vault(
+        vault_account: &AccountInfo,
+        vault_supported_token_mint: &InterfaceAccount<Mint>,
+        vault_receipt_token_mint: &InterfaceAccount<Mint>,
+        fund_account: &AccountInfo,
+    ) -> Result<()> {
+        let data = &Self::borrow_account_data(vault_account)?;
+        let vault = Self::deserialize_account_data::<Vault>(data)?;
+
+        require_keys_eq!(vault.supported_mint, vault_supported_token_mint.key());
+        require_keys_eq!(vault.vrt_mint, vault_receipt_token_mint.key());
+        require_keys_eq!(vault.delegation_admin, fund_account.key());
+
+        Ok(())
+    }
+}
+
 impl<'info> JitoRestakingVaultService<'info> {
     pub fn new(
         vault_program: &'info AccountInfo<'info>,
         vault_config_account: &'info AccountInfo<'info>,
         vault_account: &'info AccountInfo<'info>,
     ) -> Result<Self> {
-        require_keys_eq!(JITO_VAULT_PROGRAM_ID, vault_program.key());
-        require_keys_eq!(JITO_VAULT_CONFIG_ADDRESS, vault_config_account.key());
-        require_keys_eq!(*vault_config_account.owner, vault_program.key());
-        require_keys_eq!(*vault_account.owner, vault_program.key());
-
         let vault_config_data = &Self::borrow_account_data(vault_config_account)?;
         let vault_config = Self::deserialize_account_data::<Config>(vault_config_data)?;
         let vault_data = &Self::borrow_account_data(vault_account)?;
         let vault = Self::deserialize_account_data::<Vault>(vault_data)?;
 
+        require_keys_eq!(JITO_VAULT_PROGRAM_ID, vault_program.key());
+        require_keys_eq!(JITO_VAULT_CONFIG_ADDRESS, vault_config_account.key());
+
         let num_operators = vault.operator_count();
         let current_slot = Clock::get()?.slot;
         let last_update_slot = vault.last_full_state_update_slot();
         let epoch_length = vault_config.epoch_length();
-        let current_epoch = current_slot
-            .checked_div(epoch_length)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-        let last_update_epoch = last_update_slot
-            .checked_div(epoch_length)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+        let current_epoch = current_slot / epoch_length;
+        let last_update_epoch = last_update_slot / epoch_length;
 
         Ok(Self {
             vault_program,
@@ -66,22 +79,6 @@ impl<'info> JitoRestakingVaultService<'info> {
             epoch_length,
             vault_program_fee_wallet: vault_config.program_fee_wallet,
         })
-    }
-
-    pub fn validate_vault(
-        vault_account: &AccountInfo,
-        vault_supported_token_mint: &AccountInfo,
-        vault_receipt_token_mint: &AccountInfo,
-    ) -> Result<()> {
-        let data = &Self::borrow_account_data(vault_account)?;
-        let vault = Self::deserialize_account_data::<Vault>(data)?;
-
-        require_keys_eq!(vault.supported_mint, vault_supported_token_mint.key());
-        require_keys_eq!(*vault_supported_token_mint.owner, Token::id());
-        require_keys_eq!(vault.vrt_mint, vault_receipt_token_mint.key());
-        require_keys_eq!(*vault_receipt_token_mint.owner, Token::id());
-
-        Ok(())
     }
 
     /// returns [delegation_index, staked_amount, enqueued_for_cooldown_amount, cooling_down_amount]
@@ -109,6 +106,7 @@ impl<'info> JitoRestakingVaultService<'info> {
     fn borrow_account_data<'a, 'b>(
         account: &'a AccountInfo<'b>,
     ) -> Result<std::cell::Ref<'a, &'b mut [u8]>> {
+        require_keys_eq!(*account.owner, JITO_VAULT_PROGRAM_ID);
         Ok(account
             .data
             .try_borrow()
@@ -248,7 +246,7 @@ impl<'info> JitoRestakingVaultService<'info> {
                 jito_vault_sdk::instruction::WithdrawalAllocationMethod::Greedy,
             );
 
-        invoke_signed(
+        solana_program::program::invoke_signed(
             &initialize_vault_update_state_tracker_ix,
             &[
                 self.vault_program.to_account_info(),
@@ -319,7 +317,7 @@ impl<'info> JitoRestakingVaultService<'info> {
                     vault_update_state_tracker.key,
                 );
 
-            invoke_signed(
+            solana_program::program::invoke_signed(
                 &crank_vault_update_state_tracker_ix,
                 &[
                     self.vault_program.to_account_info(),
@@ -401,7 +399,7 @@ impl<'info> JitoRestakingVaultService<'info> {
                 payer.key,
                 self.current_epoch,
             );
-        invoke_signed(
+        solana_program::program::invoke_signed(
             &close_vault_update_state_tracker_ix,
             &[
                 self.vault_program.to_account_info(),
@@ -436,18 +434,16 @@ impl<'info> JitoRestakingVaultService<'info> {
             (anchor_spl::token::ID, false),
             (vault.vrt_mint, true),
             (
-                associated_token::get_associated_token_address_with_program_id(
+                anchor_spl::associated_token::get_associated_token_address(
                     &vault.fee_wallet,
                     &vault.vrt_mint,
-                    &anchor_spl::token::ID,
                 ),
                 true,
             ),
             (
-                associated_token::get_associated_token_address_with_program_id(
+                anchor_spl::associated_token::get_associated_token_address(
                     self.vault_account.key,
                     &vault.supported_mint,
-                    &anchor_spl::token::ID,
                 ),
                 true,
             ),
@@ -483,7 +479,7 @@ impl<'info> JitoRestakingVaultService<'info> {
             vault_receipt_token_fee_wallet_account.key,
             token_program.key,
         );
-        invoke_signed(
+        solana_program::program::invoke_signed(
             &update_vault_balance_ix,
             &[
                 self.vault_program.to_account_info(),
@@ -521,10 +517,13 @@ impl<'info> JitoRestakingVaultService<'info> {
         let supported_token_amount =
             supported_token_amount.min(vault_deposit_capacity - vault_tokens_deposited);
 
-        let deducted_supported_token_fee_amount =
-            utils::get_proportional_amount(supported_token_amount, vault_deposit_fee_bps, 10_000)?;
+        let deducted_supported_token_fee_amount = crate::utils::get_proportional_amount_u64(
+            supported_token_amount,
+            vault_deposit_fee_bps,
+            10_000,
+        )?;
 
-        let expected_minted_vault_receipt_token_amount = utils::get_proportional_amount(
+        let expected_minted_vault_receipt_token_amount = crate::utils::get_proportional_amount_u64(
             supported_token_amount - deducted_supported_token_fee_amount,
             vault_receipt_token_supply,
             vault_tokens_deposited,
@@ -545,7 +544,7 @@ impl<'info> JitoRestakingVaultService<'info> {
             expected_minted_vault_receipt_token_amount, // except fee
         );
 
-        invoke_signed(
+        solana_program::program::invoke_signed(
             &mint_to_ix,
             &[
                 self.vault_program.to_account_info(),
@@ -592,8 +591,8 @@ impl<'info> JitoRestakingVaultService<'info> {
 
         let accounts = Self::find_accounts_to_new(self.vault_account.key())?.chain([
             (anchor_spl::token::ID, false),
-            (associated_token::ID, false),
-            (system_program::ID, false),
+            (anchor_spl::associated_token::ID, false),
+            (anchor_lang::system_program::ID, false),
             (vault.vrt_mint, false),
         ]);
 
@@ -637,9 +636,9 @@ impl<'info> JitoRestakingVaultService<'info> {
             from_vault_receipt_token_account.amount;
 
         // create ATA for withdrawal ticket account
-        associated_token::create_idempotent(CpiContext::new_with_signer(
+        anchor_spl::associated_token::create_idempotent(CpiContext::new_with_signer(
             associated_token_program.to_account_info(),
-            associated_token::Create {
+            anchor_spl::associated_token::Create {
                 payer: payer.to_account_info(),
                 associated_token: withdrawal_ticket_receipt_token_account.to_account_info(),
                 authority: withdrawal_ticket_account.to_account_info(),
@@ -684,7 +683,7 @@ impl<'info> JitoRestakingVaultService<'info> {
             None,
             vault_receipt_token_amount,
         );
-        invoke_signed(
+        solana_program::program::invoke_signed(
             &enqueue_withdraw_ix,
             &[
                 self.vault_program.to_account_info(),
@@ -750,29 +749,26 @@ impl<'info> JitoRestakingVaultService<'info> {
 
         let accounts = Self::find_accounts_to_new(self.vault_account.key())?.chain([
             (anchor_spl::token::ID, false),
-            (system_program::ID, false),
+            (anchor_lang::system_program::ID, false),
             (vault.vrt_mint, true),
             (
-                associated_token::get_associated_token_address_with_program_id(
+                anchor_spl::associated_token::get_associated_token_address(
                     &self.vault_program_fee_wallet,
                     &vault.vrt_mint,
-                    &anchor_spl::token::ID,
                 ),
                 true,
             ),
             (
-                associated_token::get_associated_token_address_with_program_id(
+                anchor_spl::associated_token::get_associated_token_address(
                     &vault.fee_wallet,
                     &vault.vrt_mint,
-                    &anchor_spl::token::ID,
                 ),
                 true,
             ),
             (
-                associated_token::get_associated_token_address_with_program_id(
+                anchor_spl::associated_token::get_associated_token_address(
                     self.vault_account.key,
                     &vault.supported_mint,
-                    &anchor_spl::token::ID,
                 ),
                 true,
             ),
@@ -846,7 +842,7 @@ impl<'info> JitoRestakingVaultService<'info> {
             None,
         );
 
-        invoke_signed(
+        solana_program::program::invoke_signed(
             &withdraw_ix,
             &[
                 self.vault_program.to_account_info(),
@@ -983,7 +979,7 @@ impl<'info> JitoRestakingVaultService<'info> {
             vault.delegation_state.staked_amount()
         };
 
-        invoke_signed(
+        solana_program::program::invoke_signed(
             &add_delegation_ix,
             &[
                 self.vault_config_account.to_account_info(),
@@ -1061,7 +1057,7 @@ impl<'info> JitoRestakingVaultService<'info> {
                 + vault.delegation_state.cooling_down_amount()
         };
 
-        invoke_signed(
+        solana_program::program::invoke_signed(
             &cooldown_delegation_ix,
             &[
                 self.vault_config_account.clone(),
@@ -1088,5 +1084,12 @@ impl<'info> JitoRestakingVaultService<'info> {
         );
 
         Ok(())
+    }
+
+    pub fn get_supported_token_to_receipt_token_exchange_ratio(&self) -> Result<(u64, u64)> {
+        let data = &Self::borrow_account_data(self.vault_account)?;
+        let vault = Self::deserialize_account_data::<Vault>(data)?;
+
+        Ok((vault.tokens_deposited(), vault.vrt_supply()))
     }
 }

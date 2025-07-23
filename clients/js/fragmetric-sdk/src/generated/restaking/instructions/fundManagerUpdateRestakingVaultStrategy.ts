@@ -17,6 +17,8 @@ import {
   getProgramDerivedAddress,
   getStructDecoder,
   getStructEncoder,
+  getU16Decoder,
+  getU16Encoder,
   getU64Decoder,
   getU64Encoder,
   transformEncoder,
@@ -90,12 +92,14 @@ export type FundManagerUpdateRestakingVaultStrategyInstructionData = {
   vault: Address;
   solAllocationWeight: bigint;
   solAllocationCapacityAmount: bigint;
+  rewardCommissionRateBps: number;
 };
 
 export type FundManagerUpdateRestakingVaultStrategyInstructionDataArgs = {
   vault: Address;
   solAllocationWeight: number | bigint;
   solAllocationCapacityAmount: number | bigint;
+  rewardCommissionRateBps: number;
 };
 
 export function getFundManagerUpdateRestakingVaultStrategyInstructionDataEncoder(): Encoder<FundManagerUpdateRestakingVaultStrategyInstructionDataArgs> {
@@ -105,6 +109,7 @@ export function getFundManagerUpdateRestakingVaultStrategyInstructionDataEncoder
       ['vault', getAddressEncoder()],
       ['solAllocationWeight', getU64Encoder()],
       ['solAllocationCapacityAmount', getU64Encoder()],
+      ['rewardCommissionRateBps', getU16Encoder()],
     ]),
     (value) => ({
       ...value,
@@ -119,6 +124,7 @@ export function getFundManagerUpdateRestakingVaultStrategyInstructionDataDecoder
     ['vault', getAddressDecoder()],
     ['solAllocationWeight', getU64Decoder()],
     ['solAllocationCapacityAmount', getU64Decoder()],
+    ['rewardCommissionRateBps', getU16Decoder()],
   ]);
 }
 
@@ -147,6 +153,7 @@ export type FundManagerUpdateRestakingVaultStrategyAsyncInput<
   vault: FundManagerUpdateRestakingVaultStrategyInstructionDataArgs['vault'];
   solAllocationWeight: FundManagerUpdateRestakingVaultStrategyInstructionDataArgs['solAllocationWeight'];
   solAllocationCapacityAmount: FundManagerUpdateRestakingVaultStrategyInstructionDataArgs['solAllocationCapacityAmount'];
+  rewardCommissionRateBps: FundManagerUpdateRestakingVaultStrategyInstructionDataArgs['rewardCommissionRateBps'];
 };
 
 export async function getFundManagerUpdateRestakingVaultStrategyInstructionAsync<
@@ -267,6 +274,7 @@ export type FundManagerUpdateRestakingVaultStrategyInput<
   vault: FundManagerUpdateRestakingVaultStrategyInstructionDataArgs['vault'];
   solAllocationWeight: FundManagerUpdateRestakingVaultStrategyInstructionDataArgs['solAllocationWeight'];
   solAllocationCapacityAmount: FundManagerUpdateRestakingVaultStrategyInstructionDataArgs['solAllocationCapacityAmount'];
+  rewardCommissionRateBps: FundManagerUpdateRestakingVaultStrategyInstructionDataArgs['rewardCommissionRateBps'];
 };
 
 export function getFundManagerUpdateRestakingVaultStrategyInstruction<

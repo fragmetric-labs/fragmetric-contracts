@@ -266,7 +266,7 @@ export abstract class TestValidator<T extends TestValidatorType> {
           const tokenData = token.getTokenEncoder().encode({
             mint: mint,
             owner: tokenFaucetAddress,
-            amount: 1_000_000_000_000_000n,
+            amount: 10_000_000_000_000_000_000n,
             delegate: null,
             state: token.AccountState.Initialized,
             isNative: null,

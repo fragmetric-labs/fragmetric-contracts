@@ -6,7 +6,7 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::errors::ErrorCode;
 use crate::events;
-use crate::modules::pricing::{Asset, AssetPod, PricingService, TokenPricingSource, TokenValue};
+use crate::modules::pricing::{AssetPod, PricingService, TokenPricingSource};
 use crate::modules::reward;
 use crate::utils::*;
 
@@ -53,8 +53,7 @@ impl<'a, 'info> FundService<'a, 'info> {
         let mut pricing_service = if pricing_sources
             .clone()
             .into_iter()
-            .find(|source| source.key() == self.fund_account.key())
-            .is_some()
+            .any(|source| source.key() == self.fund_account.key())
         {
             PricingService::new(pricing_sources)
         } else {
@@ -238,7 +237,6 @@ impl<'a, 'info> FundService<'a, 'info> {
                             match token_pricing_source.try_deserialize()? {
                                 None => err!(ErrorCode::TokenPricingSourceAccountNotFoundError)?,
                                 Some(pricing_source) => {
-                                    #[deny(clippy::wildcard_enum_match_arm)]
                                     match pricing_source {
                                         TokenPricingSource::SPLStakePool { .. }
                                         | TokenPricingSource::MarinadeStakePool { .. }
@@ -552,7 +550,7 @@ impl<'a, 'info> FundService<'a, 'info> {
         Ok((num_withdrawal_batches, accounts))
     }
 
-    /// returns [processed_receipt_token_amount, required_asset_amount, reserved_asset_user_amount, deducted_asset_fee_amount, offsetted_asset_receivables]
+    /// returns [processed_receipt_token_amount, processed_batch_accounts, required_asset_amount, reserved_asset_user_amount, deducted_asset_fee_amount, offsetted_asset_receivables]
     pub(super) fn process_withdrawal_batches(
         &mut self,
         operator: &Signer<'info>,
@@ -576,7 +574,7 @@ impl<'a, 'info> FundService<'a, 'info> {
         _receipt_token_amount_to_return: u64,
 
         pricing_service: &PricingService,
-    ) -> Result<(u64, u64, u64, u64, Vec<(Option<Pubkey>, u64)>)> {
+    ) -> Result<(u64, Vec<Pubkey>, u64, u64, u64, Vec<(Option<Pubkey>, u64)>)> {
         let (
             supported_token_mint,
             supported_token_mint_key,
@@ -764,6 +762,7 @@ impl<'a, 'info> FundService<'a, 'info> {
         let asset_fee_amount_deducted = asset_fee_amount_processing;
         let mut offsetted_asset_receivables = Vec::<(Option<Pubkey>, u64)>::new();
 
+        let mut processed_batch_accounts = vec![];
         if processing_batch_count > 0 {
             let mut fund_account = self.fund_account.load_mut()?;
             fund_account.reload_receipt_token_supply(self.receipt_token_mint)?;
@@ -773,6 +772,8 @@ impl<'a, 'info> FundService<'a, 'info> {
                 .get_asset_state_mut(supported_token_mint_key)?
                 .dequeue_withdrawal_batches(processing_batch_count, self.current_timestamp)?;
             drop(fund_account);
+
+            processed_batch_accounts = Vec::with_capacity(processing_batch_count);
 
             require_gte!(
                 uninitialized_withdrawal_batch_accounts.len(),
@@ -845,12 +846,12 @@ impl<'a, 'info> FundService<'a, 'info> {
                 // offset asset_user_amount by asset_operation_reserved_amount
                 let mut fund_account = self.fund_account.load_mut()?;
                 let asset = fund_account.get_asset_state_mut(supported_token_mint_key)?;
-                asset.operation_reserved_amount -= asset_user_amount;
-                asset.withdrawal_user_reserved_amount += asset_user_amount;
                 if asset_user_amount_processing < asset_user_amount {
                     // prevent over-allocation due to conversion precision error
                     asset_user_amount = asset_user_amount_processing;
                 }
+                asset.operation_reserved_amount -= asset_user_amount;
+                asset.withdrawal_user_reserved_amount += asset_user_amount;
                 asset_user_amount_processing -= asset_user_amount;
                 receipt_token_amount_processing -= batch.receipt_token_amount;
 
@@ -866,6 +867,8 @@ impl<'a, 'info> FundService<'a, 'info> {
                     self.current_timestamp,
                 );
                 batch_account.exit(&crate::ID)?;
+
+                processed_batch_accounts.push(batch_account_address);
             }
 
             // during evaluation, up to [processing_batch_count] amounts can be deducted.
@@ -893,7 +896,7 @@ impl<'a, 'info> FundService<'a, 'info> {
                 transferred_asset_amount + offsetted_asset_amount,
                 asset_fee_amount_processing
             );
-            offsetted_asset_receivables.extend(offsetted_asset_receivables2.into_iter());
+            offsetted_asset_receivables.extend(offsetted_asset_receivables2);
             asset_fee_amount_processing = 0;
         }
 
@@ -918,6 +921,7 @@ impl<'a, 'info> FundService<'a, 'info> {
 
         Ok((
             receipt_token_amount_processed,
+            processed_batch_accounts,
             asset_amount_required,
             asset_user_amount_reserved,
             asset_fee_amount_deducted,

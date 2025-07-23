@@ -85,6 +85,7 @@ export type VaultAccount = {
    */
   solvManager: Address;
   solvProtocolWallet: Address;
+  solvProtocolDepositFeeRateBps: number;
   solvProtocolWithdrawalFeeRateBps: number;
   reserved0: ReadonlyUint8Array;
   vaultReceiptTokenMint: Address;
@@ -106,14 +107,20 @@ export type VaultAccount = {
   /** VST reserved amount for operation - will be deposited to the Solv protocol */
   vstOperationReservedAmount: bigint;
   /**
-   * VST locked amount for withdrawal - will be locked until withdrawal is completed
+   * VST receivable amount for operation - offsetted by fund manager OR via donation
    *
-   * ## Why VST locked??
+   * ## Where does VST receivables come from?
    *
-   * If SRT is insufficient for withdrawal, insufficient amount will be taken directly from VST operation reserved.
-   * For example, assuming srt_reserve = 30, exchange_rate = 1:1.5 and trying to take 40 SRT expecting to receive 60 VST,
-   * then 10 SRT is insufficient so 10 * 1.5 = 15 VST will be taken from VST operation reserved and locked until withdrawal is completed.
+   * During deposit & withdraw from solv protocol, there is a protocol fee.
+   * It will prevent the NAV loss considering fee as receivable.
+   * Receivables will then be offsetted when fund manager withdraws VST, as a withdrawal fee.
+   *
+   * Another scenario is when solv manager adjusts SRT exchange rate (to lower price).
+   * By human fault, SRT exchange rate might be set higher (for example, missed protocol extra fee).
+   * In this case, by adjusting SRT exchange rate, decreased net asset value will be VST receivable.
    */
+  vstOperationReceivableAmount: bigint;
+  /** VST locked amount for withdrawal - will be locked until withdrawal is completed */
   vstWithdrawalLockedAmount: bigint;
   /** Ready to claim amount. */
   vstReservedAmountToClaim: bigint;
@@ -133,6 +140,7 @@ export type VaultAccount = {
   padding3: ReadonlyUint8Array;
   /** SRT reserved amount for operation - used to withdraw VST from the solv protocol */
   srtOperationReservedAmount: bigint;
+  /** SRT receivable amount for operation - will be offsetted when deposit completes to solv protocol */
   srtOperationReceivableAmount: bigint;
   /** SRT locked amount for withdrawal - will be sent to the Solv protocol when withdrawal starts */
   srtWithdrawalLockedAmount: bigint;
@@ -175,6 +183,7 @@ export type VaultAccountArgs = {
    */
   solvManager: Address;
   solvProtocolWallet: Address;
+  solvProtocolDepositFeeRateBps: number;
   solvProtocolWithdrawalFeeRateBps: number;
   reserved0: ReadonlyUint8Array;
   vaultReceiptTokenMint: Address;
@@ -196,14 +205,20 @@ export type VaultAccountArgs = {
   /** VST reserved amount for operation - will be deposited to the Solv protocol */
   vstOperationReservedAmount: number | bigint;
   /**
-   * VST locked amount for withdrawal - will be locked until withdrawal is completed
+   * VST receivable amount for operation - offsetted by fund manager OR via donation
    *
-   * ## Why VST locked??
+   * ## Where does VST receivables come from?
    *
-   * If SRT is insufficient for withdrawal, insufficient amount will be taken directly from VST operation reserved.
-   * For example, assuming srt_reserve = 30, exchange_rate = 1:1.5 and trying to take 40 SRT expecting to receive 60 VST,
-   * then 10 SRT is insufficient so 10 * 1.5 = 15 VST will be taken from VST operation reserved and locked until withdrawal is completed.
+   * During deposit & withdraw from solv protocol, there is a protocol fee.
+   * It will prevent the NAV loss considering fee as receivable.
+   * Receivables will then be offsetted when fund manager withdraws VST, as a withdrawal fee.
+   *
+   * Another scenario is when solv manager adjusts SRT exchange rate (to lower price).
+   * By human fault, SRT exchange rate might be set higher (for example, missed protocol extra fee).
+   * In this case, by adjusting SRT exchange rate, decreased net asset value will be VST receivable.
    */
+  vstOperationReceivableAmount: number | bigint;
+  /** VST locked amount for withdrawal - will be locked until withdrawal is completed */
   vstWithdrawalLockedAmount: number | bigint;
   /** Ready to claim amount. */
   vstReservedAmountToClaim: number | bigint;
@@ -223,6 +238,7 @@ export type VaultAccountArgs = {
   padding3: ReadonlyUint8Array;
   /** SRT reserved amount for operation - used to withdraw VST from the solv protocol */
   srtOperationReservedAmount: number | bigint;
+  /** SRT receivable amount for operation - will be offsetted when deposit completes to solv protocol */
   srtOperationReceivableAmount: number | bigint;
   /** SRT locked amount for withdrawal - will be sent to the Solv protocol when withdrawal starts */
   srtWithdrawalLockedAmount: number | bigint;
@@ -252,8 +268,9 @@ export function getVaultAccountEncoder(): Encoder<VaultAccountArgs> {
       ['fundManager', getAddressEncoder()],
       ['solvManager', getAddressEncoder()],
       ['solvProtocolWallet', getAddressEncoder()],
+      ['solvProtocolDepositFeeRateBps', getU16Encoder()],
       ['solvProtocolWithdrawalFeeRateBps', getU16Encoder()],
-      ['reserved0', fixEncoderSize(getBytesEncoder(), 334)],
+      ['reserved0', fixEncoderSize(getBytesEncoder(), 332)],
       ['vaultReceiptTokenMint', getAddressEncoder()],
       ['vaultReceiptTokenDecimals', getU8Encoder()],
       ['padding1', fixEncoderSize(getBytesEncoder(), 7)],
@@ -267,12 +284,13 @@ export function getVaultAccountEncoder(): Encoder<VaultAccountArgs> {
       ['vaultSupportedTokenDecimals', getU8Encoder()],
       ['padding2', fixEncoderSize(getBytesEncoder(), 7)],
       ['vstOperationReservedAmount', getU64Encoder()],
+      ['vstOperationReceivableAmount', getU64Encoder()],
       ['vstWithdrawalLockedAmount', getU64Encoder()],
       ['vstReservedAmountToClaim', getU64Encoder()],
       ['vstExtraAmountToClaim', getU64Encoder()],
       ['vstDeductedFeeAmount', getU64Encoder()],
       ['vstReceivableAmountToClaim', getU64Encoder()],
-      ['reserved2', fixEncoderSize(getBytesEncoder(), 424)],
+      ['reserved2', fixEncoderSize(getBytesEncoder(), 416)],
       ['solvReceiptTokenMint', getAddressEncoder()],
       ['solvReceiptTokenDecimals', getU8Encoder()],
       ['padding3', fixEncoderSize(getBytesEncoder(), 7)],
@@ -286,7 +304,7 @@ export function getVaultAccountEncoder(): Encoder<VaultAccountArgs> {
       ['padding4', fixEncoderSize(getBytesEncoder(), 7)],
       [
         'withdrawalRequests',
-        getArrayEncoder(getWithdrawalRequestEncoder(), { size: 80 }),
+        getArrayEncoder(getWithdrawalRequestEncoder(), { size: 60 }),
       ],
       ['reserved4', fixEncoderSize(getBytesEncoder(), 240)],
       ['numDelegatedRewardTokenMints', getU8Encoder()],
@@ -312,8 +330,9 @@ export function getVaultAccountDecoder(): Decoder<VaultAccount> {
     ['fundManager', getAddressDecoder()],
     ['solvManager', getAddressDecoder()],
     ['solvProtocolWallet', getAddressDecoder()],
+    ['solvProtocolDepositFeeRateBps', getU16Decoder()],
     ['solvProtocolWithdrawalFeeRateBps', getU16Decoder()],
-    ['reserved0', fixDecoderSize(getBytesDecoder(), 334)],
+    ['reserved0', fixDecoderSize(getBytesDecoder(), 332)],
     ['vaultReceiptTokenMint', getAddressDecoder()],
     ['vaultReceiptTokenDecimals', getU8Decoder()],
     ['padding1', fixDecoderSize(getBytesDecoder(), 7)],
@@ -327,12 +346,13 @@ export function getVaultAccountDecoder(): Decoder<VaultAccount> {
     ['vaultSupportedTokenDecimals', getU8Decoder()],
     ['padding2', fixDecoderSize(getBytesDecoder(), 7)],
     ['vstOperationReservedAmount', getU64Decoder()],
+    ['vstOperationReceivableAmount', getU64Decoder()],
     ['vstWithdrawalLockedAmount', getU64Decoder()],
     ['vstReservedAmountToClaim', getU64Decoder()],
     ['vstExtraAmountToClaim', getU64Decoder()],
     ['vstDeductedFeeAmount', getU64Decoder()],
     ['vstReceivableAmountToClaim', getU64Decoder()],
-    ['reserved2', fixDecoderSize(getBytesDecoder(), 424)],
+    ['reserved2', fixDecoderSize(getBytesDecoder(), 416)],
     ['solvReceiptTokenMint', getAddressDecoder()],
     ['solvReceiptTokenDecimals', getU8Decoder()],
     ['padding3', fixDecoderSize(getBytesDecoder(), 7)],
@@ -346,7 +366,7 @@ export function getVaultAccountDecoder(): Decoder<VaultAccount> {
     ['padding4', fixDecoderSize(getBytesDecoder(), 7)],
     [
       'withdrawalRequests',
-      getArrayDecoder(getWithdrawalRequestDecoder(), { size: 80 }),
+      getArrayDecoder(getWithdrawalRequestDecoder(), { size: 60 }),
     ],
     ['reserved4', fixDecoderSize(getBytesDecoder(), 240)],
     ['numDelegatedRewardTokenMints', getU8Decoder()],

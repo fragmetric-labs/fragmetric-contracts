@@ -3,8 +3,7 @@ use anchor_spl::associated_token::spl_associated_token_account;
 
 use crate::constants::PROGRAM_REVENUE_ADDRESS;
 use crate::errors;
-use crate::modules::fund::commands::OperationCommand::UnrestakeVRT;
-use crate::modules::pricing::{Asset, TokenPricingSource};
+use crate::modules::pricing::TokenPricingSource;
 use crate::modules::restaking::{JitoRestakingVaultService, SolvBTCVaultService};
 use crate::modules::staking::{
     MarinadeStakePoolService, SPLStakePoolService, SanctumMultiValidatorSPLStakePoolService,
@@ -12,10 +11,7 @@ use crate::modules::staking::{
 };
 use crate::utils::AccountInfoExt;
 
-use super::{
-    FundService, OperationCommandContext, OperationCommandEntry, OperationCommandResult,
-    SelfExecutable, UnstakeLSTCommand, FUND_ACCOUNT_MAX_SUPPORTED_TOKENS,
-};
+use super::*;
 
 #[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug, Default)]
 pub struct ProcessWithdrawalBatchCommand {
@@ -39,15 +35,15 @@ pub enum ProcessWithdrawalBatchCommandState {
     },
 }
 
-#[derive(Clone, InitSpace, AnchorSerialize, AnchorDeserialize, Debug)]
+#[derive(Clone, AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct ProcessWithdrawalBatchCommandResult {
     pub requested_receipt_token_amount: u64,
     pub processed_receipt_token_amount: u64,
+    pub processed_batch_accounts: Vec<Pubkey>,
     pub asset_token_mint: Option<Pubkey>,
     pub required_asset_amount: u64,
     pub reserved_asset_user_amount: u64,
     pub deducted_asset_fee_amount: u64,
-    #[max_len(FUND_ACCOUNT_MAX_SUPPORTED_TOKENS)]
     pub offsetted_asset_receivables: Vec<ProcessWithdrawalBatchCommandResultAssetReceivable>,
     pub transferred_asset_revenue_amount: u64,
     pub withdrawal_fee_rate_bps: u16,
@@ -60,9 +56,9 @@ pub struct ProcessWithdrawalBatchCommandResultAssetReceivable {
 }
 
 impl SelfExecutable for ProcessWithdrawalBatchCommand {
-    fn execute<'a, 'info>(
+    fn execute<'info>(
         &self,
-        ctx: &mut OperationCommandContext<'info, 'a>,
+        ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
     ) -> Result<(
         Option<OperationCommandResult>,
@@ -200,7 +196,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                 let [program_revenue_account, program_supported_token_revenue_account, optional_associated_token_account_program, receipt_token_program, receipt_token_lock_account, fund_reserve_account, fund_treasury_account, optional_supported_token_mint, optional_supported_token_program, optional_fund_supported_token_reserve_account, optional_fund_supported_token_treasury_account, remaining_accounts @ ..] =
                     accounts
                 else {
-                    err!(ErrorCode::AccountNotEnoughKeys)?
+                    err!(error::ErrorCode::AccountNotEnoughKeys)?
                 };
 
                 let fund_account = ctx.fund_account.load()?;
@@ -272,7 +268,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         + num_supported_token_pricing_sources
                         + num_restaking_vault_pricing_sources
                 {
-                    err!(ErrorCode::AccountNotEnoughKeys)?;
+                    err!(error::ErrorCode::AccountNotEnoughKeys)?;
                 }
 
                 let (uninitialized_withdrawal_batch_accounts, remaining_accounts) =
@@ -416,6 +412,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                 // do process withdrawal
                 let (
                     processed_receipt_token_amount,
+                    processed_batch_accounts,
                     required_asset_amount,
                     reserved_asset_user_amount,
                     deducted_asset_fee_amount,
@@ -425,11 +422,12 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                     let mut fund_service =
                         FundService::new(ctx.receipt_token_mint, ctx.fund_account)?;
 
-                    let mut pricing_service = fund_service
-                        .new_pricing_service(pricing_sources.into_iter().copied(), false)?;
+                    let mut pricing_service =
+                        fund_service.new_pricing_service(pricing_sources.iter().copied(), false)?;
 
                     let (
                         processed_receipt_token_amount,
+                        processed_batch_accounts,
                         required_asset_amount,
                         reserved_asset_user_amount,
                         deducted_asset_fee_amount,
@@ -472,6 +470,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                     fund_service.update_asset_values(&mut pricing_service, true)?;
                     (
                         processed_receipt_token_amount,
+                        processed_batch_accounts,
                         required_asset_amount,
                         reserved_asset_user_amount,
                         deducted_asset_fee_amount,
@@ -485,6 +484,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         asset_token_mint,
                         requested_receipt_token_amount,
                         processed_receipt_token_amount,
+                        processed_batch_accounts,
                         required_asset_amount,
                         reserved_asset_user_amount,
                         deducted_asset_fee_amount,

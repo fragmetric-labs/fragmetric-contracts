@@ -1,37 +1,26 @@
-#![allow(unexpected_cfgs)]
 use anchor_lang::prelude::*;
 
 mod constants;
 mod errors;
+mod events;
 mod instructions;
 pub mod states;
 
-use constants::*;
+pub use constants::ID;
 use instructions::*;
 
 #[program]
 pub mod solv {
     use super::*;
 
-    // TODO/v0.2.1: deprecate
-    ////////////////////////////////////////////
-    // CloseVaultAccountVersionOneContext
-    ////////////////////////////////////////////
-
-    pub fn close_vault_account_version_one(
-        ctx: Context<CloseVaultAccountVersionOneContext>,
-    ) -> Result<()> {
-        process_close_vault_account_version_one(ctx)
-    }
-
     ////////////////////////////////////////////
     // VaultManagerVaultAccountInitialContext
     ////////////////////////////////////////////
 
     pub fn vault_manager_initialize_vault_account(
-        ctx: Context<VaultManagerVaultAccountInitialContext>,
+        mut ctx: Context<VaultManagerVaultAccountInitialContext>,
     ) -> Result<()> {
-        process_initialize_vault_account(ctx)
+        process_initialize_vault_account(&mut ctx)
     }
 
     ////////////////////////////////////////////
@@ -39,9 +28,9 @@ pub mod solv {
     ////////////////////////////////////////////
 
     pub fn vault_manager_update_vault_account_if_needed(
-        ctx: Context<VaultManagerVaultAccountUpdateContext>,
+        mut ctx: Context<VaultManagerVaultAccountUpdateContext>,
     ) -> Result<()> {
-        process_update_vault_account_if_needed(ctx)
+        process_update_vault_account_if_needed(&mut ctx)
     }
 
     ////////////////////////////////////////////
@@ -49,66 +38,132 @@ pub mod solv {
     ////////////////////////////////////////////
 
     pub fn update_vault_admin_role(
-        ctx: Context<VaultAdminRoleUpdateContext>,
+        mut ctx: Context<VaultAdminRoleUpdateContext>,
         role: VaultAdminRole,
     ) -> Result<()> {
-        process_update_vault_admin_role(ctx, role)
+        process_update_vault_admin_role(&mut ctx, role)
     }
 
     ////////////////////////////////////////////
     // FundManagerContext
     ////////////////////////////////////////////
 
-    pub fn fund_manager_deposit(ctx: Context<FundManagerContext>, vst_amount: u64) -> Result<()> {
-        fund_manager_context::process_deposit(ctx, vst_amount)
+    pub fn fund_manager_deposit(
+        mut ctx: Context<FundManagerContext>,
+        vst_amount: u64,
+    ) -> Result<()> {
+        emit_cpi!(process_deposit(&mut ctx, vst_amount)?);
+
+        Ok(())
     }
 
     pub fn fund_manager_request_withdrawal(
-        ctx: Context<FundManagerContext>,
+        mut ctx: Context<FundManagerContext>,
         vrt_amount: u64,
     ) -> Result<()> {
-        fund_manager_context::process_request_withdrawal(ctx, vrt_amount)
+        let event = process_request_withdrawal(&mut ctx, vrt_amount)?;
+
+        if let Some(event) = event {
+            emit_cpi!(event);
+        }
+
+        Ok(())
     }
 
-    pub fn fund_manager_withdraw(ctx: Context<FundManagerContext>) -> Result<()> {
-        fund_manager_context::process_withdraw(ctx)
+    pub fn fund_manager_withdraw(mut ctx: Context<FundManagerContext>) -> Result<()> {
+        let event = process_withdraw(&mut ctx)?;
+
+        if let Some(event) = event {
+            emit_cpi!(event);
+        }
+
+        Ok(())
     }
 
     ////////////////////////////////////////////
     // SolvManagerContext
     ////////////////////////////////////////////
 
-    pub fn solv_manager_confirm_deposits(ctx: Context<SolvManagerContext>) -> Result<()> {
-        solv_manager_context::process_confirm_deposits(ctx)
+    pub fn solv_manager_confirm_deposits(mut ctx: Context<SolvManagerContext>) -> Result<()> {
+        let event = process_confirm_deposits(&mut ctx)?;
+
+        if let Some(event) = event {
+            emit_cpi!(event);
+        }
+
+        Ok(())
     }
 
-    // TODO/phase3: deprecate
     pub fn solv_manager_complete_deposits(
-        ctx: Context<SolvManagerContext>,
+        mut ctx: Context<SolvManagerContext>,
         srt_amount: u64,
         new_one_srt_as_micro_vst: u64,
     ) -> Result<()> {
-        solv_manager_context::process_complete_deposits(ctx, srt_amount, new_one_srt_as_micro_vst)
+        emit_cpi!(process_complete_deposits(
+            &mut ctx,
+            srt_amount,
+            new_one_srt_as_micro_vst
+        )?);
+
+        Ok(())
     }
 
     pub fn solv_manager_confirm_withdrawal_requests(
-        ctx: Context<SolvManagerContext>,
+        mut ctx: Context<SolvManagerContext>,
     ) -> Result<()> {
-        solv_manager_context::process_confirm_withdrawal_requests(ctx)
+        emit_cpi!(process_confirm_withdrawal_requests(&mut ctx)?);
+
+        Ok(())
     }
 
     pub fn solv_manager_complete_withdrawal_requests(
-        ctx: Context<SolvManagerContext>,
+        mut ctx: Context<SolvManagerContext>,
         srt_amount: u64,
         vst_amount: u64,
         old_one_srt_as_micro_vst: u64,
     ) -> Result<()> {
-        solv_manager_context::process_complete_withdrawal_requests(
-            ctx,
+        emit_cpi!(process_complete_withdrawal_requests(
+            &mut ctx,
             srt_amount,
             vst_amount,
             old_one_srt_as_micro_vst,
-        )
+        )?);
+
+        Ok(())
+    }
+
+    pub fn solv_manager_refresh_solv_receipt_token_redemption_rate(
+        mut ctx: Context<SolvManagerContext>,
+        new_one_srt_as_micro_vst: u64,
+    ) -> Result<()> {
+        emit_cpi!(process_refresh_solv_receipt_token_redemption_rate(
+            &mut ctx,
+            new_one_srt_as_micro_vst
+        )?);
+
+        Ok(())
+    }
+
+    pub fn solv_manager_imply_solv_protocol_fee(
+        mut ctx: Context<SolvManagerContext>,
+        new_one_srt_as_micro_vst: u64,
+    ) -> Result<()> {
+        emit_cpi!(process_imply_solv_protocol_fee(
+            &mut ctx,
+            new_one_srt_as_micro_vst
+        )?);
+
+        Ok(())
+    }
+
+    pub fn solv_manager_confirm_donations(
+        mut ctx: Context<SolvManagerContext>,
+        srt_amount: u64,
+        vst_amount: u64,
+    ) -> Result<()> {
+        emit_cpi!(process_confirm_donations(&mut ctx, srt_amount, vst_amount)?);
+
+        Ok(())
     }
 
     ////////////////////////////////////////////
@@ -117,17 +172,18 @@ pub mod solv {
 
     // TODO/phase3: deprecate
     pub fn solv_manager_set_solv_protocol_wallet(
-        ctx: Context<SolvManagerConfigurationContext>,
+        mut ctx: Context<SolvManagerConfigurationContext>,
     ) -> Result<()> {
-        process_set_solv_protocol_wallet(ctx)
+        process_set_solv_protocol_wallet(&mut ctx)
     }
 
     // TODO/phase3: deprecate
-    pub fn solv_manager_set_solv_protocol_withdrawal_fee_rate(
-        ctx: Context<SolvManagerConfigurationContext>,
-        solv_protocol_withdrawal_fee_rate_bps: u16,
+    pub fn solv_manager_set_solv_protocol_fee_rate(
+        mut ctx: Context<SolvManagerConfigurationContext>,
+        deposit_fee_rate_bps: u16,
+        withdrawal_fee_rate_bps: u16,
     ) -> Result<()> {
-        process_set_solv_protocol_withdrawal_fee_rate(ctx, solv_protocol_withdrawal_fee_rate_bps)
+        process_set_solv_protocol_fee_rate(&mut ctx, deposit_fee_rate_bps, withdrawal_fee_rate_bps)
     }
 
     ////////////////////////////////////////////
@@ -135,8 +191,8 @@ pub mod solv {
     ////////////////////////////////////////////
 
     pub fn reward_manager_delegate_reward_token_account(
-        ctx: Context<RewardManagerContext>,
+        mut ctx: Context<RewardManagerContext>,
     ) -> Result<()> {
-        process_delegate_reward_token_account(ctx)
+        process_delegate_reward_token_account(&mut ctx)
     }
 }

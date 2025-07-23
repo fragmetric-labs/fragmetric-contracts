@@ -238,7 +238,7 @@ mod tests {
                     let price_f64 = sqrt_price_f64 * sqrt_price_f64;
 
                     let denominator = token_value.denominator;
-                    let resolved_token_amount_a_as_b = crate::utils::get_proportional_amount(
+                    let resolved_token_amount_a_as_b = crate::utils::get_proportional_amount_u64(
                         token_amount_a,
                         numerator,
                         denominator,
@@ -257,7 +257,7 @@ mod tests {
                     };
 
                     // Acceptance Criteria: price error within 2^-14 ~= 0.006%
-                    assert!(error < 1e-14);
+                    assert!(error < 1.0 / (1 << 14) as f32);
                 },
             );
     }
