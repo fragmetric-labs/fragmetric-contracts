@@ -293,7 +293,7 @@ impl<'info> MarinadeStakePoolService<'info> {
     ) -> Result<(u64, u64)> {
         let pool_account = &Self::deserialize_pool_account(self.pool_account)?;
 
-        let sol_amount = crate::utils::get_proportional_amount(
+        let sol_amount = crate::utils::get_proportional_amount_u64(
             pool_token_amount,
             Self::get_total_virtual_staked_lamports(pool_account),
             pool_account.msol_supply,
@@ -334,7 +334,7 @@ impl<'info> MarinadeStakePoolService<'info> {
             Self::deserialize_withdrawal_ticket_account(new_withdrawal_ticket_account)?;
         let unstaking_sol_amount = withdrawal_ticket_account.lamports_amount;
         // ref: https://github.com/marinade-finance/liquid-staking-program/blob/main/programs/marinade-finance/src/instructions/delayed_unstake/order_unstake.rs#L61
-        let deducted_sol_fee_amount = crate::utils::get_proportional_amount(
+        let deducted_sol_fee_amount = crate::utils::get_proportional_amount_u64(
             sol_amount,
             pool_account.delayed_unstake_fee.bp_cents as u64,
             1_000_000,

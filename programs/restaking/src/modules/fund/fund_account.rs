@@ -467,7 +467,7 @@ impl FundAccount {
 
     #[inline(always)]
     pub(super) fn get_withdrawal_fee_amount(&self, amount: u64) -> Result<u64> {
-        get_proportional_amount(amount, self.withdrawal_fee_rate_bps as u64, 10_000)
+        get_proportional_amount_u64(amount, self.withdrawal_fee_rate_bps as u64, 10_000)
     }
 
     pub(super) fn set_withdrawal_fee_rate_bps(&mut self, fee_rate_bps: u16) -> Result<&mut Self> {
