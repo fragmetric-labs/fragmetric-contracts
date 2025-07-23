@@ -2153,7 +2153,7 @@ describe('restaking.fragSOL test', async () => {
     // airdrop vrt to user first
     await validator.airdropToken(
       signer1.address,
-      restaking.fragSOL.fund.restakingVaults[0].receiptTokenMint.address,
+      assetMint,
       assetAmount
     );
 
