@@ -560,7 +560,6 @@ describe('restaking.fragSOL unit test', async () => {
     await expectMasked(
       user1.deposit.execute(
         {
-          assetType: 'supportedToken',
           assetMint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
           assetAmount: 10_000_000_000n,
         },
@@ -572,7 +571,6 @@ describe('restaking.fragSOL unit test', async () => {
           "applyPresetComputeUnitLimit": true,
           "assetAmount": 10000000000n,
           "assetMint": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
-          "assetType": "supportedToken",
           "metadata": null,
         },
         "events": {
@@ -661,7 +659,6 @@ describe('restaking.fragSOL unit test', async () => {
     await expectMasked(
       user1.deposit.execute(
         {
-          assetType: 'supportedToken',
           assetMint: 'FRAGME9aN7qzxkHPmVP22tDhG87srsR9pr5SY9XdRd9R',
           assetAmount: 1_000_000_000_000_000_000n,
         },
@@ -673,7 +670,6 @@ describe('restaking.fragSOL unit test', async () => {
           "applyPresetComputeUnitLimit": true,
           "assetAmount": 1000000000000000000n,
           "assetMint": "FRAGME9aN7qzxkHPmVP22tDhG87srsR9pr5SY9XdRd9R",
-          "assetType": "supportedToken",
           "metadata": null,
         },
         "events": {
@@ -729,7 +725,6 @@ describe('restaking.fragSOL unit test', async () => {
     // 1-1) user deposits 90 jupSOL
     await user3.deposit.execute(
       {
-        assetType: 'supportedToken',
         assetMint: 'jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v',
         assetAmount: 90_000_000_000n,
       },
@@ -1129,7 +1124,6 @@ describe('restaking.fragSOL unit test', async () => {
     await expectMasked(
       user2.deposit.execute(
         {
-          assetType: 'supportedToken',
           assetMint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
           assetAmount: 10_000_000_000n,
         },
@@ -1141,7 +1135,6 @@ describe('restaking.fragSOL unit test', async () => {
           "applyPresetComputeUnitLimit": true,
           "assetAmount": 10000000000n,
           "assetMint": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
-          "assetType": "supportedToken",
           "metadata": null,
         },
         "events": {

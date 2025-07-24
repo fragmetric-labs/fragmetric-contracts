@@ -253,12 +253,6 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
   readonly deposit = new TransactionTemplateContext(
     this,
     v.object({
-      assetType: v.pipe(
-        v.nullish(v.string(), null),
-        v.description(
-          'supportedToken for supported token, vaultReceiptToken for vault receipt token, null for SOL'
-        )
-      ),
       assetMint: v.pipe(
         v.nullish(v.string(), null),
         v.description(
@@ -318,8 +312,9 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
       addressLookupTables: [this.__resolveAddressLookupTable],
       instructions: [
         async (parent, args) => {
-          const [data, user] = await Promise.all([
+          const [data, fund, user] = await Promise.all([
             parent.parent.resolve(true),
+            parent.parent.fund.resolveAccount(true),
             parent.resolveAddress(),
           ]);
           if (!(data && user)) throw new Error('invalid context');
@@ -380,7 +375,16 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
 
             (async () => {
               const ix = await (async function (self) {
-                if (args.assetType === 'supportedToken') {
+                const supportedTokenMints = fund?.data.supportedTokens
+                  .map((supportedToken) => supportedToken.mint.toString())
+                  .filter((mint) => mint != '11111111111111111111111111111111');
+                const vaultReceiptTokenMints = fund?.data.restakingVaults
+                  .map((restakingVault) =>
+                    restakingVault.receiptTokenMint.toString()
+                  )
+                  .filter((mint) => mint != '11111111111111111111111111111111');
+
+                if (supportedTokenMints?.includes(args.assetMint!)) {
                   return restaking.getUserDepositSupportedTokenInstructionAsync(
                     {
                       user: createNoopSigner(user),
@@ -403,7 +407,12 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
                       programAddress: self.program.address,
                     }
                   );
-                } else if (args.assetType === 'vaultReceiptToken') {
+                } else if (vaultReceiptTokenMints?.includes(args.assetMint!)) {
+                  if (args.assetAmount !== null) {
+                    throw new Error(
+                      "Vault receipt token deposit's input amount is not allowed. This always deposits total vault receipt token balance of the account."
+                    );
+                  }
                   return restaking.getUserDepositVaultReceiptTokenInstructionAsync(
                     {
                       user: createNoopSigner(user),

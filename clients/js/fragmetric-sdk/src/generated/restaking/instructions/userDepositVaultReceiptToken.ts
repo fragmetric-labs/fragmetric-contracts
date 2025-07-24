@@ -67,7 +67,7 @@ export type UserDepositVaultReceiptTokenInstruction<
     | IAccountMeta<string> = 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb',
   TAccountVaultReceiptTokenProgram extends
     | string
-    | IAccountMeta<string> = string,
+    | IAccountMeta<string> = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
   TAccountFundAccount extends string | IAccountMeta<string> = string,
   TAccountFundReserveAccount extends string | IAccountMeta<string> = string,
   TAccountUserFundAccount extends string | IAccountMeta<string> = string,
@@ -205,7 +205,7 @@ export type UserDepositVaultReceiptTokenAsyncInput<
 > = {
   user: TransactionSigner<TAccountUser>;
   receiptTokenProgram?: Address<TAccountReceiptTokenProgram>;
-  vaultReceiptTokenProgram: Address<TAccountVaultReceiptTokenProgram>;
+  vaultReceiptTokenProgram?: Address<TAccountVaultReceiptTokenProgram>;
   fundAccount?: Address<TAccountFundAccount>;
   fundReserveAccount?: Address<TAccountFundReserveAccount>;
   userFundAccount?: Address<TAccountUserFundAccount>;
@@ -346,6 +346,10 @@ export async function getUserDepositVaultReceiptTokenInstructionAsync<
     accounts.receiptTokenProgram.value =
       'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb' as Address<'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb'>;
   }
+  if (!accounts.vaultReceiptTokenProgram.value) {
+    accounts.vaultReceiptTokenProgram.value =
+      'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA' as Address<'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'>;
+  }
   if (!accounts.fundAccount.value) {
     accounts.fundAccount.value = await getProgramDerivedAddress({
       programAddress,
@@ -393,12 +397,8 @@ export async function getUserDepositVaultReceiptTokenInstructionAsync<
           'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL' as Address<'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL'>,
         seeds: [
           getAddressEncoder().encode(expectAddress(accounts.user.value)),
-          getBytesEncoder().encode(
-            new Uint8Array([
-              6, 221, 246, 225, 215, 101, 161, 147, 217, 203, 225, 70, 206, 235,
-              121, 172, 28, 180, 133, 237, 95, 91, 55, 145, 58, 140, 245, 133,
-              126, 255, 0, 169,
-            ])
+          getAddressEncoder().encode(
+            expectAddress(accounts.vaultReceiptTokenProgram.value)
           ),
           getAddressEncoder().encode(
             expectAddress(accounts.vaultReceiptTokenMint.value)
@@ -415,12 +415,8 @@ export async function getUserDepositVaultReceiptTokenInstructionAsync<
           getAddressEncoder().encode(
             expectAddress(accounts.fundReserveAccount.value)
           ),
-          getBytesEncoder().encode(
-            new Uint8Array([
-              6, 221, 246, 225, 215, 101, 161, 147, 217, 203, 225, 70, 206, 235,
-              121, 172, 28, 180, 133, 237, 95, 91, 55, 145, 58, 140, 245, 133,
-              126, 255, 0, 169,
-            ])
+          getAddressEncoder().encode(
+            expectAddress(accounts.vaultReceiptTokenProgram.value)
           ),
           getAddressEncoder().encode(
             expectAddress(accounts.vaultReceiptTokenMint.value)
@@ -434,12 +430,8 @@ export async function getUserDepositVaultReceiptTokenInstructionAsync<
         'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL' as Address<'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL'>,
       seeds: [
         getAddressEncoder().encode(expectAddress(accounts.user.value)),
-        getBytesEncoder().encode(
-          new Uint8Array([
-            6, 221, 246, 225, 238, 117, 143, 222, 24, 66, 93, 188, 228, 108,
-            205, 218, 182, 26, 252, 77, 131, 185, 13, 39, 254, 189, 249, 40,
-            216, 161, 139, 252,
-          ])
+        getAddressEncoder().encode(
+          expectAddress(accounts.receiptTokenProgram.value)
         ),
         getAddressEncoder().encode(
           expectAddress(accounts.receiptTokenMint.value)
@@ -557,7 +549,7 @@ export type UserDepositVaultReceiptTokenInput<
 > = {
   user: TransactionSigner<TAccountUser>;
   receiptTokenProgram?: Address<TAccountReceiptTokenProgram>;
-  vaultReceiptTokenProgram: Address<TAccountVaultReceiptTokenProgram>;
+  vaultReceiptTokenProgram?: Address<TAccountVaultReceiptTokenProgram>;
   fundAccount: Address<TAccountFundAccount>;
   fundReserveAccount: Address<TAccountFundReserveAccount>;
   userFundAccount: Address<TAccountUserFundAccount>;
@@ -695,6 +687,10 @@ export function getUserDepositVaultReceiptTokenInstruction<
   if (!accounts.receiptTokenProgram.value) {
     accounts.receiptTokenProgram.value =
       'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb' as Address<'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb'>;
+  }
+  if (!accounts.vaultReceiptTokenProgram.value) {
+    accounts.vaultReceiptTokenProgram.value =
+      'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA' as Address<'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'>;
   }
   if (!accounts.instructionsSysvar.value) {
     accounts.instructionsSysvar.value =

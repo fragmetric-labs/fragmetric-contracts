@@ -255,7 +255,7 @@ describe('restaking.fragJTO test', async () => {
             "solAllocationCapacityAmount": 18446744073709551615n,
             "solAllocationWeight": 1n,
             "vault": "BmJvUzoiiNBRx3v2Gqsix9WvVtw8FaztrfBHQyqpMbTd",
-            "vaultReceiptTokenDepositable": 0,
+            "vaultReceiptTokenDepositable": false,
           },
         ],
         "tokenSwapStrategies": [
@@ -349,7 +349,6 @@ describe('restaking.fragJTO test', async () => {
     await expectMasked(
       user1.deposit.execute(
         {
-          assetType: 'supportedToken',
           assetMint: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
           assetAmount: 100n * AMOUNT_PER_JTO,
         },
@@ -361,7 +360,6 @@ describe('restaking.fragJTO test', async () => {
           "applyPresetComputeUnitLimit": true,
           "assetAmount": 100000000000n,
           "assetMint": "jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL",
-          "assetType": "supportedToken",
           "metadata": null,
         },
         "events": {
@@ -426,7 +424,6 @@ describe('restaking.fragJTO test', async () => {
     await expectMasked(
       user2.deposit.execute(
         {
-          assetType: 'supportedToken',
           assetMint: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
           assetAmount: 200n * AMOUNT_PER_JTO,
         },
@@ -438,7 +435,6 @@ describe('restaking.fragJTO test', async () => {
           "applyPresetComputeUnitLimit": true,
           "assetAmount": 200000000000n,
           "assetMint": "jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL",
-          "assetType": "supportedToken",
           "metadata": null,
         },
         "events": {
@@ -503,7 +499,6 @@ describe('restaking.fragJTO test', async () => {
     await expectMasked(
       user1.deposit.execute(
         {
-          assetType: 'supportedToken',
           assetMint: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
           assetAmount: 300n * AMOUNT_PER_JTO,
         },
@@ -515,7 +510,6 @@ describe('restaking.fragJTO test', async () => {
           "applyPresetComputeUnitLimit": true,
           "assetAmount": 300000000000n,
           "assetMint": "jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL",
-          "assetType": "supportedToken",
           "metadata": null,
         },
         "events": {
@@ -709,7 +703,6 @@ describe('restaking.fragJTO test', async () => {
     await expectMasked(
       user2.deposit.execute(
         {
-          assetType: 'supportedToken',
           assetMint: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
           assetAmount: 200n * AMOUNT_PER_JTO,
           metadata: {
@@ -728,7 +721,6 @@ describe('restaking.fragJTO test', async () => {
           "applyPresetComputeUnitLimit": true,
           "assetAmount": 200000000000n,
           "assetMint": "jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL",
-          "assetType": "supportedToken",
           "metadata": {
             "contributionAccrualRate": 150,
             "expiredAt": "MASKED(/.*At?$/)",
@@ -954,7 +946,6 @@ describe('restaking.fragJTO test', async () => {
     await expectMasked(
       user3.deposit.execute(
         {
-          assetType: 'supportedToken',
           assetMint: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
           assetAmount: 100n * AMOUNT_PER_JTO,
         },
@@ -966,7 +957,6 @@ describe('restaking.fragJTO test', async () => {
           "applyPresetComputeUnitLimit": true,
           "assetAmount": 100000000000n,
           "assetMint": "jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL",
-          "assetType": "supportedToken",
           "metadata": null,
         },
         "events": {
@@ -1329,7 +1319,6 @@ describe('restaking.fragJTO test', async () => {
     await expectMasked(
       user4.deposit.execute(
         {
-          assetType: 'supportedToken',
           assetMint: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
           assetAmount: 200n * AMOUNT_PER_JTO,
           metadata: {
@@ -1348,7 +1337,6 @@ describe('restaking.fragJTO test', async () => {
           "applyPresetComputeUnitLimit": true,
           "assetAmount": 200000000000n,
           "assetMint": "jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL",
-          "assetType": "supportedToken",
           "metadata": {
             "contributionAccrualRate": 150,
             "expiredAt": "MASKED(/.*At?$/)",
@@ -1493,7 +1481,6 @@ describe('restaking.fragJTO test', async () => {
     await expectMasked(
       user4.deposit.execute(
         {
-          assetType: 'supportedToken',
           assetMint: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
           assetAmount: 100n * AMOUNT_PER_JTO,
           metadata: {
@@ -1512,7 +1499,6 @@ describe('restaking.fragJTO test', async () => {
           "applyPresetComputeUnitLimit": true,
           "assetAmount": 100000000000n,
           "assetMint": "jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL",
-          "assetType": "supportedToken",
           "metadata": {
             "contributionAccrualRate": 130,
             "expiredAt": "MASKED(/.*At?$/)",
@@ -1660,7 +1646,6 @@ describe('restaking.fragJTO test', async () => {
     await expectMasked(
       user1.deposit.execute(
         {
-          assetType: 'supportedToken',
           assetMint: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
           assetAmount: 1_000_000_000n,
         },
@@ -1672,7 +1657,6 @@ describe('restaking.fragJTO test', async () => {
           "applyPresetComputeUnitLimit": true,
           "assetAmount": 1000000000n,
           "assetMint": "jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL",
-          "assetType": "supportedToken",
           "metadata": null,
         },
         "events": {
@@ -2059,7 +2043,6 @@ describe('restaking.fragJTO test', async () => {
     await expect(
       user1.deposit.execute(
         {
-          assetType: 'supportedToken',
           assetMint: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
           assetAmount: tokenAmount,
         },

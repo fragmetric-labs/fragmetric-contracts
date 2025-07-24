@@ -60,6 +60,7 @@ export type RestakingVault = {
   receiptTokenMint: Address;
   receiptTokenProgram: Address;
   receiptTokenDecimals: number;
+  receiptTokenDepositable: number;
   padding: ReadonlyUint8Array;
   /** transient price */
   oneReceiptTokenAsSol: bigint;
@@ -92,7 +93,6 @@ export type RestakingVault = {
    * It does NOT include unrestaking amount as vrt.
    */
   pendingSupportedTokenUnrestakingAmount: bigint;
-  receiptTokenDepositable: number;
   reserved: ReadonlyUint8Array;
 };
 
@@ -103,6 +103,7 @@ export type RestakingVaultArgs = {
   receiptTokenMint: Address;
   receiptTokenProgram: Address;
   receiptTokenDecimals: number;
+  receiptTokenDepositable: number;
   padding: ReadonlyUint8Array;
   /** transient price */
   oneReceiptTokenAsSol: number | bigint;
@@ -135,7 +136,6 @@ export type RestakingVaultArgs = {
    * It does NOT include unrestaking amount as vrt.
    */
   pendingSupportedTokenUnrestakingAmount: number | bigint;
-  receiptTokenDepositable: number;
   reserved: ReadonlyUint8Array;
 };
 
@@ -147,7 +147,8 @@ export function getRestakingVaultEncoder(): Encoder<RestakingVaultArgs> {
     ['receiptTokenMint', getAddressEncoder()],
     ['receiptTokenProgram', getAddressEncoder()],
     ['receiptTokenDecimals', getU8Encoder()],
-    ['padding', fixEncoderSize(getBytesEncoder(), 7)],
+    ['receiptTokenDepositable', getU8Encoder()],
+    ['padding', fixEncoderSize(getBytesEncoder(), 6)],
     ['oneReceiptTokenAsSol', getU64Encoder()],
     ['receiptTokenPricingSource', getTokenPricingSourcePodEncoder()],
     ['receiptTokenOperationReservedAmount', getU64Encoder()],
@@ -184,8 +185,7 @@ export function getRestakingVaultEncoder(): Encoder<RestakingVaultArgs> {
     ],
     ['padding5', fixEncoderSize(getBytesEncoder(), 32)],
     ['pendingSupportedTokenUnrestakingAmount', getU64Encoder()],
-    ['receiptTokenDepositable', getU8Encoder()],
-    ['reserved', fixEncoderSize(getBytesEncoder(), 775)],
+    ['reserved', fixEncoderSize(getBytesEncoder(), 776)],
   ]);
 }
 
@@ -197,7 +197,8 @@ export function getRestakingVaultDecoder(): Decoder<RestakingVault> {
     ['receiptTokenMint', getAddressDecoder()],
     ['receiptTokenProgram', getAddressDecoder()],
     ['receiptTokenDecimals', getU8Decoder()],
-    ['padding', fixDecoderSize(getBytesDecoder(), 7)],
+    ['receiptTokenDepositable', getU8Decoder()],
+    ['padding', fixDecoderSize(getBytesDecoder(), 6)],
     ['oneReceiptTokenAsSol', getU64Decoder()],
     ['receiptTokenPricingSource', getTokenPricingSourcePodDecoder()],
     ['receiptTokenOperationReservedAmount', getU64Decoder()],
@@ -234,8 +235,7 @@ export function getRestakingVaultDecoder(): Decoder<RestakingVault> {
     ],
     ['padding5', fixDecoderSize(getBytesDecoder(), 32)],
     ['pendingSupportedTokenUnrestakingAmount', getU64Decoder()],
-    ['receiptTokenDepositable', getU8Decoder()],
-    ['reserved', fixDecoderSize(getBytesDecoder(), 775)],
+    ['reserved', fixDecoderSize(getBytesDecoder(), 776)],
   ]);
 }
 

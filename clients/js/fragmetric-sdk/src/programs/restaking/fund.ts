@@ -1281,8 +1281,7 @@ export class RestakingFundAccountContext extends AccountContext<
           solAllocationWeight: item.solAllocationWeight,
           solAllocationCapacityAmount: item.solAllocationCapacityAmount,
           rewardCommissionRateBps: item.rewardCommissionRateBps,
-          vaultReceiptTokenDepositable:
-            item.receiptTokenDepositable as unknown as boolean,
+          vaultReceiptTokenDepositable: item.receiptTokenDepositable == 1,
           delegations: item.delegations
             .slice(0, item.numDelegations)
             .map((delegationItem) => {

@@ -8535,7 +8535,8 @@
           "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
         },
         {
-          "name": "vault_receipt_token_program"
+          "name": "vault_receipt_token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         },
         {
           "name": "fund_account",
@@ -8639,41 +8640,8 @@
                 "path": "user"
               },
               {
-                "kind": "const",
-                "value": [
-                  6,
-                  221,
-                  246,
-                  225,
-                  215,
-                  101,
-                  161,
-                  147,
-                  217,
-                  203,
-                  225,
-                  70,
-                  206,
-                  235,
-                  121,
-                  172,
-                  28,
-                  180,
-                  133,
-                  237,
-                  95,
-                  91,
-                  55,
-                  145,
-                  58,
-                  140,
-                  245,
-                  133,
-                  126,
-                  255,
-                  0,
-                  169
-                ]
+                "kind": "account",
+                "path": "vault_receipt_token_program"
               },
               {
                 "kind": "account",
@@ -8729,41 +8697,8 @@
                 "path": "fund_reserve_account"
               },
               {
-                "kind": "const",
-                "value": [
-                  6,
-                  221,
-                  246,
-                  225,
-                  215,
-                  101,
-                  161,
-                  147,
-                  217,
-                  203,
-                  225,
-                  70,
-                  206,
-                  235,
-                  121,
-                  172,
-                  28,
-                  180,
-                  133,
-                  237,
-                  95,
-                  91,
-                  55,
-                  145,
-                  58,
-                  140,
-                  245,
-                  133,
-                  126,
-                  255,
-                  0,
-                  169
-                ]
+                "kind": "account",
+                "path": "vault_receipt_token_program"
               },
               {
                 "kind": "account",
@@ -8819,41 +8754,8 @@
                 "path": "user"
               },
               {
-                "kind": "const",
-                "value": [
-                  6,
-                  221,
-                  246,
-                  225,
-                  238,
-                  117,
-                  143,
-                  222,
-                  24,
-                  66,
-                  93,
-                  188,
-                  228,
-                  108,
-                  205,
-                  218,
-                  182,
-                  26,
-                  252,
-                  77,
-                  131,
-                  185,
-                  13,
-                  39,
-                  254,
-                  189,
-                  249,
-                  40,
-                  216,
-                  161,
-                  139,
-                  252
-                ]
+                "kind": "account",
+                "path": "receipt_token_program"
               },
               {
                 "kind": "account",
@@ -15276,11 +15178,15 @@
             "type": "u8"
           },
           {
+            "name": "receipt_token_depositable",
+            "type": "u8"
+          },
+          {
             "name": "_padding",
             "type": {
               "array": [
                 "u8",
-                7
+                6
               ]
             }
           },
@@ -15444,15 +15350,11 @@
             "type": "u64"
           },
           {
-            "name": "receipt_token_depositable",
-            "type": "u8"
-          },
-          {
             "name": "_reserved",
             "type": {
               "array": [
                 "u8",
-                775
+                776
               ]
             }
           }
