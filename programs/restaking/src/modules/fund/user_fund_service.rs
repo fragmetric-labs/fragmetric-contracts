@@ -1,12 +1,13 @@
 use anchor_lang::prelude::*;
+use anchor_spl::token::Token;
 use anchor_spl::token_2022::Token2022;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 use anchor_spl::{token_2022, token_interface};
 
-use crate::events;
 use crate::modules::fund::{DepositMetadata, FundAccount, FundService, UserFundAccount};
 use crate::modules::reward::{RewardAccount, RewardService, UserRewardAccount};
 use crate::utils::PDASeeds;
+use crate::{errors, events};
 
 use super::FundWithdrawalBatchAccount;
 
@@ -58,7 +59,7 @@ impl<'a, 'info> UserFundService<'a, 'info> {
         })
     }
 
-    fn process_deposit(
+    fn process_deposit_asset(
         &mut self,
         // for SOL
         system_program: Option<&Program<'info, System>>,
@@ -154,7 +155,7 @@ impl<'a, 'info> UserFundService<'a, 'info> {
             fund_account.reload_receipt_token_supply(self.receipt_token_mint)?;
             fund_account.deposit_residual_micro_receipt_token_amount =
                 deposit_residual_micro_receipt_token_amount;
-            fund_account.deposit(supported_token_mint_key, asset_amount)?
+            fund_account.deposit_asset(supported_token_mint_key, asset_amount)?
         };
         assert_eq!(asset_amount, deposited_amount);
 
@@ -224,7 +225,7 @@ impl<'a, 'info> UserFundService<'a, 'info> {
         metadata: Option<DepositMetadata>,
         metadata_signer_key: &Pubkey,
     ) -> Result<events::UserDepositedToFund> {
-        self.process_deposit(
+        self.process_deposit_asset(
             Some(system_program),
             Some(fund_reserve_account),
             None,
@@ -251,7 +252,7 @@ impl<'a, 'info> UserFundService<'a, 'info> {
         metadata: Option<DepositMetadata>,
         metadata_signer_key: &Pubkey,
     ) -> Result<events::UserDepositedToFund> {
-        self.process_deposit(
+        self.process_deposit_asset(
             None,
             None,
             Some(supported_token_program),
@@ -268,7 +269,7 @@ impl<'a, 'info> UserFundService<'a, 'info> {
 
     pub fn process_deposit_vault_receipt_token(
         &mut self,
-        vault_receipt_token_program: &Interface<'info, TokenInterface>,
+        vault_receipt_token_program: &Program<'info, Token>,
         vault_receipt_token_mint: &InterfaceAccount<'info, Mint>,
         fund_vault_receipt_token_reserve_account: &InterfaceAccount<'info, TokenAccount>,
         user_vault_receipt_token_account: &InterfaceAccount<'info, TokenAccount>,
@@ -277,11 +278,6 @@ impl<'a, 'info> UserFundService<'a, 'info> {
         metadata: Option<DepositMetadata>,
         metadata_signer_key: &Pubkey,
     ) -> Result<events::UserDepositedToVault> {
-        // validate vault receipt token mint
-        self.fund_account
-            .load()?
-            .get_restaking_vault_by_receipt_token_mint(&vault_receipt_token_mint.key())?;
-
         // validate deposit metadata
         let (wallet_provider, contribution_accrual_rate) = metadata
             .map(|metadata| {
@@ -372,14 +368,20 @@ impl<'a, 'info> UserFundService<'a, 'info> {
         FundService::new(self.receipt_token_mint, self.fund_account)?
             .update_asset_values(&mut pricing_service, true)?;
 
+        let vault_key = self
+            .fund_account
+            .load()?
+            .get_restaking_vaults_iter()
+            .find(|restaking_vault| {
+                restaking_vault.receipt_token_mint == vault_receipt_token_mint.key()
+            })
+            .ok_or_else(|| error!(errors::ErrorCode::FundRestakingVaultNotFoundError))?
+            .vault;
+
         Ok(events::UserDepositedToVault {
             receipt_token_mint: self.receipt_token_mint.key(),
             fund_account: self.fund_account.key(),
-            vault_account: self
-                .fund_account
-                .load()?
-                .get_restaking_vault_by_receipt_token_mint(&vault_receipt_token_mint.key())?
-                .vault,
+            vault_account: vault_key,
             vault_receipt_token_mint: vault_receipt_token_mint.key(),
             updated_user_reward_accounts,
             user: self.user.key(),

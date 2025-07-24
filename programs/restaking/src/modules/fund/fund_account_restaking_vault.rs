@@ -19,7 +19,8 @@ pub(super) struct RestakingVault {
     pub receipt_token_mint: Pubkey,
     pub receipt_token_program: Pubkey,
     pub receipt_token_decimals: u8,
-    _padding: [u8; 7],
+    pub receipt_token_depositable: u8,
+    _padding: [u8; 6],
 
     /// transient price
     pub one_receipt_token_as_sol: u64,
@@ -60,9 +61,7 @@ pub(super) struct RestakingVault {
     /// It does NOT include unrestaking amount as vrt.
     pub pending_supported_token_unrestaking_amount: u64,
 
-    pub receipt_token_depositable: u8,
-
-    _reserved: [u8; 775],
+    _reserved: [u8; 776],
 }
 
 #[zero_copy]

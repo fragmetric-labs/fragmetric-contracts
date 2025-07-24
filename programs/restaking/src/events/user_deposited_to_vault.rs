@@ -1,6 +1,8 @@
 use anchor_lang::prelude::*;
 
 #[event]
+// This event's name is quite inaccurate, but named like this because this emits when user deposits his/her vault receipt token which received from the 'vault' to the fund.
+// So it's named like this for consistency with UserDepositedToFund event.
 pub struct UserDepositedToVault {
     pub receipt_token_mint: Pubkey,
     pub fund_account: Pubkey,

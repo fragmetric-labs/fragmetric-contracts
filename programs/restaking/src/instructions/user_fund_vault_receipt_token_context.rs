@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_lang::solana_program::sysvar::instructions as instructions_sysvar;
 use anchor_spl::token::Token;
 use anchor_spl::token_2022::Token2022;
-use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
+use anchor_spl::token_interface::{Mint, TokenAccount};
 
 use crate::errors::ErrorCode;
 use crate::modules::fund::{FundAccount, UserFundAccount};
@@ -16,7 +16,7 @@ pub struct UserFundVaultReceiptTokenContext<'info> {
 
     pub receipt_token_program: Program<'info, Token2022>,
 
-    pub vault_receipt_token_program: Interface<'info, TokenInterface>,
+    pub vault_receipt_token_program: Program<'info, Token>,
 
     #[account(
         mut,
@@ -52,7 +52,7 @@ pub struct UserFundVaultReceiptTokenContext<'info> {
         mut,
         associated_token::mint = vault_receipt_token_mint,
         associated_token::authority = user,
-        associated_token::token_program = Token::id(),
+        associated_token::token_program = vault_receipt_token_program,
     )]
     pub user_vault_receipt_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
@@ -60,7 +60,7 @@ pub struct UserFundVaultReceiptTokenContext<'info> {
         mut,
         associated_token::mint = vault_receipt_token_mint,
         associated_token::authority = fund_reserve_account,
-        associated_token::token_program = Token::id(),
+        associated_token::token_program = vault_receipt_token_program,
     )]
     pub fund_vault_receipt_token_reserve_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
@@ -68,7 +68,7 @@ pub struct UserFundVaultReceiptTokenContext<'info> {
         mut,
         associated_token::mint = receipt_token_mint,
         associated_token::authority = user,
-        associated_token::token_program = Token2022::id(),
+        associated_token::token_program = receipt_token_program,
     )]
     pub user_receipt_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
