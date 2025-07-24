@@ -6,7 +6,7 @@
  * @see https://github.com/codama-idl/codama
  */
 
-export * from './fundManagerDeposit';
+export * from './fundManagerDepositSupportedToken';
 export * from './fundManagerRequestWithdrawal';
 export * from './fundManagerWithdraw';
 export * from './rewardManagerDelegateRewardTokenAccount';
@@ -20,5 +20,6 @@ export * from './solvManagerRefreshSolvReceiptTokenRedemptionRate';
 export * from './solvManagerSetSolvProtocolFeeRate';
 export * from './solvManagerSetSolvProtocolWallet';
 export * from './updateVaultAdminRole';
+export * from './userDepositSolvReceiptToken';
 export * from './vaultManagerInitializeVaultAccount';
 export * from './vaultManagerUpdateVaultAccountIfNeeded';

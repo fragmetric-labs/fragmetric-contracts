@@ -41,32 +41,29 @@ import {
   type ResolvedAccount,
 } from '../shared';
 
-export const FUND_MANAGER_DEPOSIT_DISCRIMINATOR = new Uint8Array([
-  247, 63, 63, 225, 113, 82, 62, 70,
+export const USER_DEPOSIT_SOLV_RECEIPT_TOKEN_DISCRIMINATOR = new Uint8Array([
+  146, 147, 108, 143, 98, 30, 48, 151,
 ]);
 
-export function getFundManagerDepositDiscriminatorBytes() {
+export function getUserDepositSolvReceiptTokenDiscriminatorBytes() {
   return fixEncoderSize(getBytesEncoder(), 8).encode(
-    FUND_MANAGER_DEPOSIT_DISCRIMINATOR
+    USER_DEPOSIT_SOLV_RECEIPT_TOKEN_DISCRIMINATOR
   );
 }
 
-export type FundManagerDepositInstruction<
+export type UserDepositSolvReceiptTokenInstruction<
   TProgram extends string = typeof SOLV_PROGRAM_ADDRESS,
-  TAccountPayer extends string | IAccountMeta<string> = string,
-  TAccountFundManager extends string | IAccountMeta<string> = string,
+  TAccountUser extends string | IAccountMeta<string> = string,
   TAccountVaultAccount extends string | IAccountMeta<string> = string,
+  TAccountSolvReceiptTokenMint extends string | IAccountMeta<string> = string,
   TAccountVaultReceiptTokenMint extends string | IAccountMeta<string> = string,
-  TAccountVaultSupportedTokenMint extends
+  TAccountVaultSolvReceiptTokenAccount extends
     | string
     | IAccountMeta<string> = string,
-  TAccountPayerVaultReceiptTokenAccount extends
+  TAccountUserSolvReceiptTokenAccount extends
     | string
     | IAccountMeta<string> = string,
-  TAccountPayerVaultSupportedTokenAccount extends
-    | string
-    | IAccountMeta<string> = string,
-  TAccountVaultVaultSupportedTokenAccount extends
+  TAccountUserVaultReceiptTokenAccount extends
     | string
     | IAccountMeta<string> = string,
   TAccountTokenProgram extends
@@ -79,32 +76,27 @@ export type FundManagerDepositInstruction<
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
-      TAccountPayer extends string
-        ? ReadonlySignerAccount<TAccountPayer> &
-            IAccountSignerMeta<TAccountPayer>
-        : TAccountPayer,
-      TAccountFundManager extends string
-        ? ReadonlySignerAccount<TAccountFundManager> &
-            IAccountSignerMeta<TAccountFundManager>
-        : TAccountFundManager,
+      TAccountUser extends string
+        ? ReadonlySignerAccount<TAccountUser> & IAccountSignerMeta<TAccountUser>
+        : TAccountUser,
       TAccountVaultAccount extends string
         ? WritableAccount<TAccountVaultAccount>
         : TAccountVaultAccount,
+      TAccountSolvReceiptTokenMint extends string
+        ? ReadonlyAccount<TAccountSolvReceiptTokenMint>
+        : TAccountSolvReceiptTokenMint,
       TAccountVaultReceiptTokenMint extends string
         ? WritableAccount<TAccountVaultReceiptTokenMint>
         : TAccountVaultReceiptTokenMint,
-      TAccountVaultSupportedTokenMint extends string
-        ? ReadonlyAccount<TAccountVaultSupportedTokenMint>
-        : TAccountVaultSupportedTokenMint,
-      TAccountPayerVaultReceiptTokenAccount extends string
-        ? WritableAccount<TAccountPayerVaultReceiptTokenAccount>
-        : TAccountPayerVaultReceiptTokenAccount,
-      TAccountPayerVaultSupportedTokenAccount extends string
-        ? WritableAccount<TAccountPayerVaultSupportedTokenAccount>
-        : TAccountPayerVaultSupportedTokenAccount,
-      TAccountVaultVaultSupportedTokenAccount extends string
-        ? WritableAccount<TAccountVaultVaultSupportedTokenAccount>
-        : TAccountVaultVaultSupportedTokenAccount,
+      TAccountVaultSolvReceiptTokenAccount extends string
+        ? WritableAccount<TAccountVaultSolvReceiptTokenAccount>
+        : TAccountVaultSolvReceiptTokenAccount,
+      TAccountUserSolvReceiptTokenAccount extends string
+        ? WritableAccount<TAccountUserSolvReceiptTokenAccount>
+        : TAccountUserSolvReceiptTokenAccount,
+      TAccountUserVaultReceiptTokenAccount extends string
+        ? WritableAccount<TAccountUserVaultReceiptTokenAccount>
+        : TAccountUserVaultReceiptTokenAccount,
       TAccountTokenProgram extends string
         ? ReadonlyAccount<TAccountTokenProgram>
         : TAccountTokenProgram,
@@ -118,108 +110,106 @@ export type FundManagerDepositInstruction<
     ]
   >;
 
-export type FundManagerDepositInstructionData = {
+export type UserDepositSolvReceiptTokenInstructionData = {
   discriminator: ReadonlyUint8Array;
-  vstAmount: bigint;
+  srtAmount: bigint;
 };
 
-export type FundManagerDepositInstructionDataArgs = {
-  vstAmount: number | bigint;
+export type UserDepositSolvReceiptTokenInstructionDataArgs = {
+  srtAmount: number | bigint;
 };
 
-export function getFundManagerDepositInstructionDataEncoder(): Encoder<FundManagerDepositInstructionDataArgs> {
+export function getUserDepositSolvReceiptTokenInstructionDataEncoder(): Encoder<UserDepositSolvReceiptTokenInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
-      ['vstAmount', getU64Encoder()],
+      ['srtAmount', getU64Encoder()],
     ]),
-    (value) => ({ ...value, discriminator: FUND_MANAGER_DEPOSIT_DISCRIMINATOR })
+    (value) => ({
+      ...value,
+      discriminator: USER_DEPOSIT_SOLV_RECEIPT_TOKEN_DISCRIMINATOR,
+    })
   );
 }
 
-export function getFundManagerDepositInstructionDataDecoder(): Decoder<FundManagerDepositInstructionData> {
+export function getUserDepositSolvReceiptTokenInstructionDataDecoder(): Decoder<UserDepositSolvReceiptTokenInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
-    ['vstAmount', getU64Decoder()],
+    ['srtAmount', getU64Decoder()],
   ]);
 }
 
-export function getFundManagerDepositInstructionDataCodec(): Codec<
-  FundManagerDepositInstructionDataArgs,
-  FundManagerDepositInstructionData
+export function getUserDepositSolvReceiptTokenInstructionDataCodec(): Codec<
+  UserDepositSolvReceiptTokenInstructionDataArgs,
+  UserDepositSolvReceiptTokenInstructionData
 > {
   return combineCodec(
-    getFundManagerDepositInstructionDataEncoder(),
-    getFundManagerDepositInstructionDataDecoder()
+    getUserDepositSolvReceiptTokenInstructionDataEncoder(),
+    getUserDepositSolvReceiptTokenInstructionDataDecoder()
   );
 }
 
-export type FundManagerDepositAsyncInput<
-  TAccountPayer extends string = string,
-  TAccountFundManager extends string = string,
+export type UserDepositSolvReceiptTokenAsyncInput<
+  TAccountUser extends string = string,
   TAccountVaultAccount extends string = string,
+  TAccountSolvReceiptTokenMint extends string = string,
   TAccountVaultReceiptTokenMint extends string = string,
-  TAccountVaultSupportedTokenMint extends string = string,
-  TAccountPayerVaultReceiptTokenAccount extends string = string,
-  TAccountPayerVaultSupportedTokenAccount extends string = string,
-  TAccountVaultVaultSupportedTokenAccount extends string = string,
+  TAccountVaultSolvReceiptTokenAccount extends string = string,
+  TAccountUserSolvReceiptTokenAccount extends string = string,
+  TAccountUserVaultReceiptTokenAccount extends string = string,
   TAccountTokenProgram extends string = string,
   TAccountEventAuthority extends string = string,
   TAccountProgram extends string = string,
 > = {
-  payer: TransactionSigner<TAccountPayer>;
-  fundManager: TransactionSigner<TAccountFundManager>;
+  user: TransactionSigner<TAccountUser>;
   vaultAccount?: Address<TAccountVaultAccount>;
+  solvReceiptTokenMint: Address<TAccountSolvReceiptTokenMint>;
   vaultReceiptTokenMint: Address<TAccountVaultReceiptTokenMint>;
-  vaultSupportedTokenMint: Address<TAccountVaultSupportedTokenMint>;
-  payerVaultReceiptTokenAccount?: Address<TAccountPayerVaultReceiptTokenAccount>;
-  payerVaultSupportedTokenAccount?: Address<TAccountPayerVaultSupportedTokenAccount>;
-  vaultVaultSupportedTokenAccount?: Address<TAccountVaultVaultSupportedTokenAccount>;
+  vaultSolvReceiptTokenAccount?: Address<TAccountVaultSolvReceiptTokenAccount>;
+  userSolvReceiptTokenAccount?: Address<TAccountUserSolvReceiptTokenAccount>;
+  userVaultReceiptTokenAccount?: Address<TAccountUserVaultReceiptTokenAccount>;
   tokenProgram?: Address<TAccountTokenProgram>;
   eventAuthority?: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
-  vstAmount: FundManagerDepositInstructionDataArgs['vstAmount'];
+  srtAmount: UserDepositSolvReceiptTokenInstructionDataArgs['srtAmount'];
 };
 
-export async function getFundManagerDepositInstructionAsync<
-  TAccountPayer extends string,
-  TAccountFundManager extends string,
+export async function getUserDepositSolvReceiptTokenInstructionAsync<
+  TAccountUser extends string,
   TAccountVaultAccount extends string,
+  TAccountSolvReceiptTokenMint extends string,
   TAccountVaultReceiptTokenMint extends string,
-  TAccountVaultSupportedTokenMint extends string,
-  TAccountPayerVaultReceiptTokenAccount extends string,
-  TAccountPayerVaultSupportedTokenAccount extends string,
-  TAccountVaultVaultSupportedTokenAccount extends string,
+  TAccountVaultSolvReceiptTokenAccount extends string,
+  TAccountUserSolvReceiptTokenAccount extends string,
+  TAccountUserVaultReceiptTokenAccount extends string,
   TAccountTokenProgram extends string,
   TAccountEventAuthority extends string,
   TAccountProgram extends string,
   TProgramAddress extends Address = typeof SOLV_PROGRAM_ADDRESS,
 >(
-  input: FundManagerDepositAsyncInput<
-    TAccountPayer,
-    TAccountFundManager,
+  input: UserDepositSolvReceiptTokenAsyncInput<
+    TAccountUser,
     TAccountVaultAccount,
+    TAccountSolvReceiptTokenMint,
     TAccountVaultReceiptTokenMint,
-    TAccountVaultSupportedTokenMint,
-    TAccountPayerVaultReceiptTokenAccount,
-    TAccountPayerVaultSupportedTokenAccount,
-    TAccountVaultVaultSupportedTokenAccount,
+    TAccountVaultSolvReceiptTokenAccount,
+    TAccountUserSolvReceiptTokenAccount,
+    TAccountUserVaultReceiptTokenAccount,
     TAccountTokenProgram,
     TAccountEventAuthority,
     TAccountProgram
   >,
   config?: { programAddress?: TProgramAddress }
 ): Promise<
-  FundManagerDepositInstruction<
+  UserDepositSolvReceiptTokenInstruction<
     TProgramAddress,
-    TAccountPayer,
-    TAccountFundManager,
+    TAccountUser,
     TAccountVaultAccount,
+    TAccountSolvReceiptTokenMint,
     TAccountVaultReceiptTokenMint,
-    TAccountVaultSupportedTokenMint,
-    TAccountPayerVaultReceiptTokenAccount,
-    TAccountPayerVaultSupportedTokenAccount,
-    TAccountVaultVaultSupportedTokenAccount,
+    TAccountVaultSolvReceiptTokenAccount,
+    TAccountUserSolvReceiptTokenAccount,
+    TAccountUserVaultReceiptTokenAccount,
     TAccountTokenProgram,
     TAccountEventAuthority,
     TAccountProgram
@@ -230,27 +220,26 @@ export async function getFundManagerDepositInstructionAsync<
 
   // Original accounts.
   const originalAccounts = {
-    payer: { value: input.payer ?? null, isWritable: false },
-    fundManager: { value: input.fundManager ?? null, isWritable: false },
+    user: { value: input.user ?? null, isWritable: false },
     vaultAccount: { value: input.vaultAccount ?? null, isWritable: true },
+    solvReceiptTokenMint: {
+      value: input.solvReceiptTokenMint ?? null,
+      isWritable: false,
+    },
     vaultReceiptTokenMint: {
       value: input.vaultReceiptTokenMint ?? null,
       isWritable: true,
     },
-    vaultSupportedTokenMint: {
-      value: input.vaultSupportedTokenMint ?? null,
-      isWritable: false,
-    },
-    payerVaultReceiptTokenAccount: {
-      value: input.payerVaultReceiptTokenAccount ?? null,
+    vaultSolvReceiptTokenAccount: {
+      value: input.vaultSolvReceiptTokenAccount ?? null,
       isWritable: true,
     },
-    payerVaultSupportedTokenAccount: {
-      value: input.payerVaultSupportedTokenAccount ?? null,
+    userSolvReceiptTokenAccount: {
+      value: input.userSolvReceiptTokenAccount ?? null,
       isWritable: true,
     },
-    vaultVaultSupportedTokenAccount: {
-      value: input.vaultVaultSupportedTokenAccount ?? null,
+    userVaultReceiptTokenAccount: {
+      value: input.userVaultReceiptTokenAccount ?? null,
       isWritable: true,
     },
     tokenProgram: { value: input.tokenProgram ?? null, isWritable: false },
@@ -277,48 +266,8 @@ export async function getFundManagerDepositInstructionAsync<
       ],
     });
   }
-  if (!accounts.payerVaultReceiptTokenAccount.value) {
-    accounts.payerVaultReceiptTokenAccount.value =
-      await getProgramDerivedAddress({
-        programAddress:
-          'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL' as Address<'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL'>,
-        seeds: [
-          getAddressEncoder().encode(expectAddress(accounts.payer.value)),
-          getBytesEncoder().encode(
-            new Uint8Array([
-              6, 221, 246, 225, 215, 101, 161, 147, 217, 203, 225, 70, 206, 235,
-              121, 172, 28, 180, 133, 237, 95, 91, 55, 145, 58, 140, 245, 133,
-              126, 255, 0, 169,
-            ])
-          ),
-          getAddressEncoder().encode(
-            expectAddress(accounts.vaultReceiptTokenMint.value)
-          ),
-        ],
-      });
-  }
-  if (!accounts.payerVaultSupportedTokenAccount.value) {
-    accounts.payerVaultSupportedTokenAccount.value =
-      await getProgramDerivedAddress({
-        programAddress:
-          'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL' as Address<'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL'>,
-        seeds: [
-          getAddressEncoder().encode(expectAddress(accounts.payer.value)),
-          getBytesEncoder().encode(
-            new Uint8Array([
-              6, 221, 246, 225, 215, 101, 161, 147, 217, 203, 225, 70, 206, 235,
-              121, 172, 28, 180, 133, 237, 95, 91, 55, 145, 58, 140, 245, 133,
-              126, 255, 0, 169,
-            ])
-          ),
-          getAddressEncoder().encode(
-            expectAddress(accounts.vaultSupportedTokenMint.value)
-          ),
-        ],
-      });
-  }
-  if (!accounts.vaultVaultSupportedTokenAccount.value) {
-    accounts.vaultVaultSupportedTokenAccount.value =
+  if (!accounts.vaultSolvReceiptTokenAccount.value) {
+    accounts.vaultSolvReceiptTokenAccount.value =
       await getProgramDerivedAddress({
         programAddress:
           'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL' as Address<'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL'>,
@@ -334,7 +283,48 @@ export async function getFundManagerDepositInstructionAsync<
             ])
           ),
           getAddressEncoder().encode(
-            expectAddress(accounts.vaultSupportedTokenMint.value)
+            expectAddress(accounts.solvReceiptTokenMint.value)
+          ),
+        ],
+      });
+  }
+  if (!accounts.userSolvReceiptTokenAccount.value) {
+    accounts.userSolvReceiptTokenAccount.value = await getProgramDerivedAddress(
+      {
+        programAddress:
+          'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL' as Address<'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL'>,
+        seeds: [
+          getAddressEncoder().encode(expectAddress(accounts.user.value)),
+          getBytesEncoder().encode(
+            new Uint8Array([
+              6, 221, 246, 225, 215, 101, 161, 147, 217, 203, 225, 70, 206, 235,
+              121, 172, 28, 180, 133, 237, 95, 91, 55, 145, 58, 140, 245, 133,
+              126, 255, 0, 169,
+            ])
+          ),
+          getAddressEncoder().encode(
+            expectAddress(accounts.solvReceiptTokenMint.value)
+          ),
+        ],
+      }
+    );
+  }
+  if (!accounts.userVaultReceiptTokenAccount.value) {
+    accounts.userVaultReceiptTokenAccount.value =
+      await getProgramDerivedAddress({
+        programAddress:
+          'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL' as Address<'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL'>,
+        seeds: [
+          getAddressEncoder().encode(expectAddress(accounts.user.value)),
+          getBytesEncoder().encode(
+            new Uint8Array([
+              6, 221, 246, 225, 215, 101, 161, 147, 217, 203, 225, 70, 206, 235,
+              121, 172, 28, 180, 133, 237, 95, 91, 55, 145, 58, 140, 245, 133,
+              126, 255, 0, 169,
+            ])
+          ),
+          getAddressEncoder().encode(
+            expectAddress(accounts.vaultReceiptTokenMint.value)
           ),
         ],
       });
@@ -360,32 +350,30 @@ export async function getFundManagerDepositInstructionAsync<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
-      getAccountMeta(accounts.payer),
-      getAccountMeta(accounts.fundManager),
+      getAccountMeta(accounts.user),
       getAccountMeta(accounts.vaultAccount),
+      getAccountMeta(accounts.solvReceiptTokenMint),
       getAccountMeta(accounts.vaultReceiptTokenMint),
-      getAccountMeta(accounts.vaultSupportedTokenMint),
-      getAccountMeta(accounts.payerVaultReceiptTokenAccount),
-      getAccountMeta(accounts.payerVaultSupportedTokenAccount),
-      getAccountMeta(accounts.vaultVaultSupportedTokenAccount),
+      getAccountMeta(accounts.vaultSolvReceiptTokenAccount),
+      getAccountMeta(accounts.userSolvReceiptTokenAccount),
+      getAccountMeta(accounts.userVaultReceiptTokenAccount),
       getAccountMeta(accounts.tokenProgram),
       getAccountMeta(accounts.eventAuthority),
       getAccountMeta(accounts.program),
     ],
     programAddress,
-    data: getFundManagerDepositInstructionDataEncoder().encode(
-      args as FundManagerDepositInstructionDataArgs
+    data: getUserDepositSolvReceiptTokenInstructionDataEncoder().encode(
+      args as UserDepositSolvReceiptTokenInstructionDataArgs
     ),
-  } as FundManagerDepositInstruction<
+  } as UserDepositSolvReceiptTokenInstruction<
     TProgramAddress,
-    TAccountPayer,
-    TAccountFundManager,
+    TAccountUser,
     TAccountVaultAccount,
+    TAccountSolvReceiptTokenMint,
     TAccountVaultReceiptTokenMint,
-    TAccountVaultSupportedTokenMint,
-    TAccountPayerVaultReceiptTokenAccount,
-    TAccountPayerVaultSupportedTokenAccount,
-    TAccountVaultVaultSupportedTokenAccount,
+    TAccountVaultSolvReceiptTokenAccount,
+    TAccountUserSolvReceiptTokenAccount,
+    TAccountUserVaultReceiptTokenAccount,
     TAccountTokenProgram,
     TAccountEventAuthority,
     TAccountProgram
@@ -394,71 +382,66 @@ export async function getFundManagerDepositInstructionAsync<
   return instruction;
 }
 
-export type FundManagerDepositInput<
-  TAccountPayer extends string = string,
-  TAccountFundManager extends string = string,
+export type UserDepositSolvReceiptTokenInput<
+  TAccountUser extends string = string,
   TAccountVaultAccount extends string = string,
+  TAccountSolvReceiptTokenMint extends string = string,
   TAccountVaultReceiptTokenMint extends string = string,
-  TAccountVaultSupportedTokenMint extends string = string,
-  TAccountPayerVaultReceiptTokenAccount extends string = string,
-  TAccountPayerVaultSupportedTokenAccount extends string = string,
-  TAccountVaultVaultSupportedTokenAccount extends string = string,
+  TAccountVaultSolvReceiptTokenAccount extends string = string,
+  TAccountUserSolvReceiptTokenAccount extends string = string,
+  TAccountUserVaultReceiptTokenAccount extends string = string,
   TAccountTokenProgram extends string = string,
   TAccountEventAuthority extends string = string,
   TAccountProgram extends string = string,
 > = {
-  payer: TransactionSigner<TAccountPayer>;
-  fundManager: TransactionSigner<TAccountFundManager>;
+  user: TransactionSigner<TAccountUser>;
   vaultAccount: Address<TAccountVaultAccount>;
+  solvReceiptTokenMint: Address<TAccountSolvReceiptTokenMint>;
   vaultReceiptTokenMint: Address<TAccountVaultReceiptTokenMint>;
-  vaultSupportedTokenMint: Address<TAccountVaultSupportedTokenMint>;
-  payerVaultReceiptTokenAccount: Address<TAccountPayerVaultReceiptTokenAccount>;
-  payerVaultSupportedTokenAccount: Address<TAccountPayerVaultSupportedTokenAccount>;
-  vaultVaultSupportedTokenAccount: Address<TAccountVaultVaultSupportedTokenAccount>;
+  vaultSolvReceiptTokenAccount: Address<TAccountVaultSolvReceiptTokenAccount>;
+  userSolvReceiptTokenAccount: Address<TAccountUserSolvReceiptTokenAccount>;
+  userVaultReceiptTokenAccount: Address<TAccountUserVaultReceiptTokenAccount>;
   tokenProgram?: Address<TAccountTokenProgram>;
   eventAuthority: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
-  vstAmount: FundManagerDepositInstructionDataArgs['vstAmount'];
+  srtAmount: UserDepositSolvReceiptTokenInstructionDataArgs['srtAmount'];
 };
 
-export function getFundManagerDepositInstruction<
-  TAccountPayer extends string,
-  TAccountFundManager extends string,
+export function getUserDepositSolvReceiptTokenInstruction<
+  TAccountUser extends string,
   TAccountVaultAccount extends string,
+  TAccountSolvReceiptTokenMint extends string,
   TAccountVaultReceiptTokenMint extends string,
-  TAccountVaultSupportedTokenMint extends string,
-  TAccountPayerVaultReceiptTokenAccount extends string,
-  TAccountPayerVaultSupportedTokenAccount extends string,
-  TAccountVaultVaultSupportedTokenAccount extends string,
+  TAccountVaultSolvReceiptTokenAccount extends string,
+  TAccountUserSolvReceiptTokenAccount extends string,
+  TAccountUserVaultReceiptTokenAccount extends string,
   TAccountTokenProgram extends string,
   TAccountEventAuthority extends string,
   TAccountProgram extends string,
   TProgramAddress extends Address = typeof SOLV_PROGRAM_ADDRESS,
 >(
-  input: FundManagerDepositInput<
-    TAccountPayer,
-    TAccountFundManager,
+  input: UserDepositSolvReceiptTokenInput<
+    TAccountUser,
     TAccountVaultAccount,
+    TAccountSolvReceiptTokenMint,
     TAccountVaultReceiptTokenMint,
-    TAccountVaultSupportedTokenMint,
-    TAccountPayerVaultReceiptTokenAccount,
-    TAccountPayerVaultSupportedTokenAccount,
-    TAccountVaultVaultSupportedTokenAccount,
+    TAccountVaultSolvReceiptTokenAccount,
+    TAccountUserSolvReceiptTokenAccount,
+    TAccountUserVaultReceiptTokenAccount,
     TAccountTokenProgram,
     TAccountEventAuthority,
     TAccountProgram
   >,
   config?: { programAddress?: TProgramAddress }
-): FundManagerDepositInstruction<
+): UserDepositSolvReceiptTokenInstruction<
   TProgramAddress,
-  TAccountPayer,
-  TAccountFundManager,
+  TAccountUser,
   TAccountVaultAccount,
+  TAccountSolvReceiptTokenMint,
   TAccountVaultReceiptTokenMint,
-  TAccountVaultSupportedTokenMint,
-  TAccountPayerVaultReceiptTokenAccount,
-  TAccountPayerVaultSupportedTokenAccount,
-  TAccountVaultVaultSupportedTokenAccount,
+  TAccountVaultSolvReceiptTokenAccount,
+  TAccountUserSolvReceiptTokenAccount,
+  TAccountUserVaultReceiptTokenAccount,
   TAccountTokenProgram,
   TAccountEventAuthority,
   TAccountProgram
@@ -468,27 +451,26 @@ export function getFundManagerDepositInstruction<
 
   // Original accounts.
   const originalAccounts = {
-    payer: { value: input.payer ?? null, isWritable: false },
-    fundManager: { value: input.fundManager ?? null, isWritable: false },
+    user: { value: input.user ?? null, isWritable: false },
     vaultAccount: { value: input.vaultAccount ?? null, isWritable: true },
+    solvReceiptTokenMint: {
+      value: input.solvReceiptTokenMint ?? null,
+      isWritable: false,
+    },
     vaultReceiptTokenMint: {
       value: input.vaultReceiptTokenMint ?? null,
       isWritable: true,
     },
-    vaultSupportedTokenMint: {
-      value: input.vaultSupportedTokenMint ?? null,
-      isWritable: false,
-    },
-    payerVaultReceiptTokenAccount: {
-      value: input.payerVaultReceiptTokenAccount ?? null,
+    vaultSolvReceiptTokenAccount: {
+      value: input.vaultSolvReceiptTokenAccount ?? null,
       isWritable: true,
     },
-    payerVaultSupportedTokenAccount: {
-      value: input.payerVaultSupportedTokenAccount ?? null,
+    userSolvReceiptTokenAccount: {
+      value: input.userSolvReceiptTokenAccount ?? null,
       isWritable: true,
     },
-    vaultVaultSupportedTokenAccount: {
-      value: input.vaultVaultSupportedTokenAccount ?? null,
+    userVaultReceiptTokenAccount: {
+      value: input.userVaultReceiptTokenAccount ?? null,
       isWritable: true,
     },
     tokenProgram: { value: input.tokenProgram ?? null, isWritable: false },
@@ -512,32 +494,30 @@ export function getFundManagerDepositInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
-      getAccountMeta(accounts.payer),
-      getAccountMeta(accounts.fundManager),
+      getAccountMeta(accounts.user),
       getAccountMeta(accounts.vaultAccount),
+      getAccountMeta(accounts.solvReceiptTokenMint),
       getAccountMeta(accounts.vaultReceiptTokenMint),
-      getAccountMeta(accounts.vaultSupportedTokenMint),
-      getAccountMeta(accounts.payerVaultReceiptTokenAccount),
-      getAccountMeta(accounts.payerVaultSupportedTokenAccount),
-      getAccountMeta(accounts.vaultVaultSupportedTokenAccount),
+      getAccountMeta(accounts.vaultSolvReceiptTokenAccount),
+      getAccountMeta(accounts.userSolvReceiptTokenAccount),
+      getAccountMeta(accounts.userVaultReceiptTokenAccount),
       getAccountMeta(accounts.tokenProgram),
       getAccountMeta(accounts.eventAuthority),
       getAccountMeta(accounts.program),
     ],
     programAddress,
-    data: getFundManagerDepositInstructionDataEncoder().encode(
-      args as FundManagerDepositInstructionDataArgs
+    data: getUserDepositSolvReceiptTokenInstructionDataEncoder().encode(
+      args as UserDepositSolvReceiptTokenInstructionDataArgs
     ),
-  } as FundManagerDepositInstruction<
+  } as UserDepositSolvReceiptTokenInstruction<
     TProgramAddress,
-    TAccountPayer,
-    TAccountFundManager,
+    TAccountUser,
     TAccountVaultAccount,
+    TAccountSolvReceiptTokenMint,
     TAccountVaultReceiptTokenMint,
-    TAccountVaultSupportedTokenMint,
-    TAccountPayerVaultReceiptTokenAccount,
-    TAccountPayerVaultSupportedTokenAccount,
-    TAccountVaultVaultSupportedTokenAccount,
+    TAccountVaultSolvReceiptTokenAccount,
+    TAccountUserSolvReceiptTokenAccount,
+    TAccountUserVaultReceiptTokenAccount,
     TAccountTokenProgram,
     TAccountEventAuthority,
     TAccountProgram
@@ -546,36 +526,35 @@ export function getFundManagerDepositInstruction<
   return instruction;
 }
 
-export type ParsedFundManagerDepositInstruction<
+export type ParsedUserDepositSolvReceiptTokenInstruction<
   TProgram extends string = typeof SOLV_PROGRAM_ADDRESS,
   TAccountMetas extends readonly IAccountMeta[] = readonly IAccountMeta[],
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    payer: TAccountMetas[0];
-    fundManager: TAccountMetas[1];
-    vaultAccount: TAccountMetas[2];
+    user: TAccountMetas[0];
+    vaultAccount: TAccountMetas[1];
+    solvReceiptTokenMint: TAccountMetas[2];
     vaultReceiptTokenMint: TAccountMetas[3];
-    vaultSupportedTokenMint: TAccountMetas[4];
-    payerVaultReceiptTokenAccount: TAccountMetas[5];
-    payerVaultSupportedTokenAccount: TAccountMetas[6];
-    vaultVaultSupportedTokenAccount: TAccountMetas[7];
-    tokenProgram: TAccountMetas[8];
-    eventAuthority: TAccountMetas[9];
-    program: TAccountMetas[10];
+    vaultSolvReceiptTokenAccount: TAccountMetas[4];
+    userSolvReceiptTokenAccount: TAccountMetas[5];
+    userVaultReceiptTokenAccount: TAccountMetas[6];
+    tokenProgram: TAccountMetas[7];
+    eventAuthority: TAccountMetas[8];
+    program: TAccountMetas[9];
   };
-  data: FundManagerDepositInstructionData;
+  data: UserDepositSolvReceiptTokenInstructionData;
 };
 
-export function parseFundManagerDepositInstruction<
+export function parseUserDepositSolvReceiptTokenInstruction<
   TProgram extends string,
   TAccountMetas extends readonly IAccountMeta[],
 >(
   instruction: IInstruction<TProgram> &
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
-): ParsedFundManagerDepositInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 11) {
+): ParsedUserDepositSolvReceiptTokenInstruction<TProgram, TAccountMetas> {
+  if (instruction.accounts.length < 10) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -588,19 +567,18 @@ export function parseFundManagerDepositInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
-      payer: getNextAccount(),
-      fundManager: getNextAccount(),
+      user: getNextAccount(),
       vaultAccount: getNextAccount(),
+      solvReceiptTokenMint: getNextAccount(),
       vaultReceiptTokenMint: getNextAccount(),
-      vaultSupportedTokenMint: getNextAccount(),
-      payerVaultReceiptTokenAccount: getNextAccount(),
-      payerVaultSupportedTokenAccount: getNextAccount(),
-      vaultVaultSupportedTokenAccount: getNextAccount(),
+      vaultSolvReceiptTokenAccount: getNextAccount(),
+      userSolvReceiptTokenAccount: getNextAccount(),
+      userVaultReceiptTokenAccount: getNextAccount(),
       tokenProgram: getNextAccount(),
       eventAuthority: getNextAccount(),
       program: getNextAccount(),
     },
-    data: getFundManagerDepositInstructionDataDecoder().decode(
+    data: getUserDepositSolvReceiptTokenInstructionDataDecoder().decode(
       instruction.data
     ),
   };

@@ -16,6 +16,7 @@ pub struct FundManagerContext<'info> {
         seeds = [VaultAccount::SEED, vault_receipt_token_mint.key().as_ref()],
         bump = vault_account.load()?.get_bump(),
         has_one = fund_manager @ VaultError::VaultAdminMismatchError,
+        has_one = vault_receipt_token_mint @ VaultError::VaultReceiptTokenMintMismatchError,
         has_one = vault_supported_token_mint @ VaultError::VaultSupportedTokenMintMismatchError,
         constraint = vault_account.load()?.is_latest_version() @ VaultError::InvalidAccountDataVersionError,
     )]
@@ -48,10 +49,10 @@ pub struct FundManagerContext<'info> {
     pub token_program: Program<'info, Token>,
 }
 
-pub fn process_deposit(
+pub fn process_deposit_supported_token(
     ctx: &mut Context<FundManagerContext>,
     vst_amount: u64,
-) -> Result<events::FundManagerDepositedToVault> {
+) -> Result<events::FundManagerDepositedSupportedTokenToVault> {
     let FundManagerContext {
         payer,
         vault_account,
@@ -67,7 +68,7 @@ pub fn process_deposit(
     require_gt!(vst_amount, 0);
     require_gte!(payer_vault_supported_token_account.amount, vst_amount);
 
-    let vrt_amount = vault_account.load_mut()?.mint_vrt(vst_amount)?;
+    let vrt_amount = vault_account.load_mut()?.mint_vrt_with_vst(vst_amount)?;
 
     anchor_spl::token::transfer_checked(
         CpiContext::new(
@@ -98,7 +99,7 @@ pub fn process_deposit(
         )?;
     }
 
-    Ok(events::FundManagerDepositedToVault {
+    Ok(events::FundManagerDepositedSupportedTokenToVault {
         vault: vault_account.key(),
         vault_supported_token_mint: vault_supported_token_mint.key(),
         vault_receipt_token_mint: vault_receipt_token_mint.key(),

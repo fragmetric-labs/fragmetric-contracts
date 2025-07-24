@@ -421,10 +421,45 @@ impl VaultAccount {
         self.one_vrt_as_micro_vst
     }
 
+    /// SRT amount as VST = ∆(floor(SRT operation reserved amount as VST))
+    /// VRT mint amount = floor(SRT amount as VST amount) * VRT supply / NAV ?? SRT amount as VST amount
+    /// * VRT price = NAV / VRT supply
+    /// * NAV = VST (operation reserved + receivable) + floor(SRT (operation reserved) as VST) + floor(SRT (operation receivable) as VST)
+    pub(crate) fn mint_vrt_with_srt(&mut self, srt_amount: u64) -> Result<u64> {
+        // convert srt amount as vst amount
+        let srt_exchange_rate = self.get_srt_exchange_rate();
+
+        let srt_reserved_amount_before_as_vst = srt_exchange_rate
+            .get_srt_amount_as_vst(self.srt_operation_reserved_amount, false)
+            .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
+
+        let srt_reserved_amount_after_as_vst = srt_exchange_rate
+            .get_srt_amount_as_vst(self.srt_operation_reserved_amount + srt_amount, false)
+            .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
+
+        let vrt_amount = self.get_vrt_amount_to_mint(
+            srt_reserved_amount_after_as_vst - srt_reserved_amount_before_as_vst,
+        )?;
+
+        self.vrt_supply += vrt_amount;
+        self.srt_operation_reserved_amount += srt_amount;
+
+        self.update_vrt_exchange_rate()?;
+
+        #[cfg(not(test))]
+        msg!(
+            "Mint VRT: srt_amount={}, vrt_amount={}",
+            srt_amount,
+            vrt_amount
+        );
+
+        Ok(vrt_amount)
+    }
+
     /// VRT mint amount = floor(VST * VRT supply / NAV) ?? VST
     /// * VRT price = NAV / VRT supply
     /// * NAV = VST (operation reserved + receivable) + floor(SRT (operation reserved) as VST) + floor(SRT (operation receivable) as VST)
-    pub(crate) fn mint_vrt(&mut self, vst_amount: u64) -> Result<u64> {
+    pub(crate) fn mint_vrt_with_vst(&mut self, vst_amount: u64) -> Result<u64> {
         let vrt_amount = self.get_vrt_amount_to_mint(vst_amount)?;
 
         self.vrt_supply += vrt_amount;
@@ -445,7 +480,7 @@ impl VaultAccount {
     /// VRT mint amount = floor(VST * VRT supply / NAV) ?? VST
     /// * VRT price = NAV / VRT supply
     /// * NAV = VST (operation reserved + receivable) + floor(SRT (operation reserved) as VST) + floor(SRT (operation receivable) as VST)
-    pub fn get_vrt_amount_to_mint(&self, vst_amount: u64) -> Result<u64> {
+    fn get_vrt_amount_to_mint(&self, vst_amount: u64) -> Result<u64> {
         let net_asset_value_as_vst = self
             .get_net_asset_value_as_vst()
             .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
@@ -516,6 +551,10 @@ impl VaultAccount {
     /// Minimum amount of SRT required in vault token account
     pub(crate) fn get_srt_total_reserved_amount(&self) -> u64 {
         self.srt_operation_reserved_amount + self.srt_withdrawal_locked_amount
+    }
+
+    pub(crate) fn get_srt_operation_reserved_amount(&self) -> u64 {
+        self.srt_operation_reserved_amount
     }
 
     pub(crate) fn get_one_srt_as_micro_vst(&self) -> u64 {
@@ -1315,6 +1354,8 @@ mod tests {
 
     use super::*;
 
+    const BTC_MAX_SUPPLY: u64 = 2_100_000_000_000_000;
+
     impl VaultAccount {
         fn dummy() -> Self {
             let mut vault = Self::zeroed();
@@ -1581,14 +1622,14 @@ mod tests {
 
     proptest! {
         #[test]
-        fn test_initial_mint_vrt(
+        fn test_initial_mint_vrt_with_vst(
             vst_amount in 0..u64::MAX
         ) {
             let mut vault = VaultAccount::dummy();
             let old_vault = vault.clone();
 
             // Price = 1
-            let vrt_amount = vault.mint_vrt(vst_amount).unwrap();
+            let vrt_amount = vault.mint_vrt_with_vst(vst_amount).unwrap();
             assert_eq!(vrt_amount, vst_amount);
 
             assert_eq!(
@@ -1605,7 +1646,7 @@ mod tests {
         }
 
         #[test]
-        fn test_mint_vrt(
+        fn test_mint_vrt_with_vst(
             mut vault in vault(),
             mut vst_amount in 0..u64::MAX,
         ) {
@@ -1613,7 +1654,7 @@ mod tests {
             let old_vault = vault.clone();
 
             // VRT Price ≥ 1
-            let vrt_amount = vault.mint_vrt(vst_amount).unwrap();
+            let vrt_amount = vault.mint_vrt_with_vst(vst_amount).unwrap();
             assert!(vrt_amount <= vst_amount);
 
             assert_eq!(
@@ -1623,6 +1664,52 @@ mod tests {
             assert_eq!(
                 vault.vst_operation_reserved_amount,
                 old_vault.vst_operation_reserved_amount + vst_amount,
+            );
+
+            vault.assert_invariants().unwrap();
+            vault.assert_price_increased(&old_vault).unwrap();
+        }
+
+        #[test]
+        fn test_initial_mint_vrt_with_srt(srt_amount in 0..u64::MAX) {
+            let mut vault = VaultAccount::dummy();
+            let old_vault = vault.clone();
+
+            // Price = 1
+            let vrt_amount = vault.mint_vrt_with_srt(srt_amount).unwrap();
+            assert_eq!(vrt_amount, srt_amount);
+
+            assert_eq!(
+                vault.vrt_supply,
+                old_vault.vrt_supply + vrt_amount,
+            );
+            assert_eq!(
+                vault.srt_operation_reserved_amount,
+                old_vault.srt_operation_reserved_amount + srt_amount,
+            );
+
+            vault.assert_invariants().unwrap();
+            vault.assert_price_increased(&old_vault).unwrap();
+        }
+
+        #[test]
+        fn test_mint_vrt_with_srt(
+            mut vault in vault(),
+            mut srt_amount in 0..BTC_MAX_SUPPLY,
+        ) {
+            srt_amount = srt_amount.min(BTC_MAX_SUPPLY - vault.srt_operation_reserved_amount);
+
+            let old_vault = vault.clone();
+
+            let vrt_amount = vault.mint_vrt_with_srt(srt_amount).unwrap();
+
+            assert_eq!(
+                vault.vrt_supply,
+                old_vault.vrt_supply + vrt_amount,
+            );
+            assert_eq!(
+                vault.srt_operation_reserved_amount,
+                old_vault.srt_operation_reserved_amount + srt_amount,
             );
 
             vault.assert_invariants().unwrap();
@@ -2256,7 +2343,7 @@ mod tests {
     #[test]
     fn test_deposit_vst_fails_while_deposit_in_progress() {
         let mut vault = VaultAccount::dummy();
-        vault.mint_vrt(100).unwrap();
+        vault.mint_vrt_with_vst(100).unwrap();
         vault.deposit_vst(50).unwrap();
         vault.deposit_vst(50).unwrap_err();
     }
@@ -2267,7 +2354,7 @@ mod tests {
         vault.solv_protocol_deposit_fee_rate_bps = 0;
 
         vault
-            .mint_vrt(SOLV_PROTOCOL_MAX_EXTRA_FEE_AMOUNT + 1)
+            .mint_vrt_with_vst(SOLV_PROTOCOL_MAX_EXTRA_FEE_AMOUNT + 1)
             .unwrap();
         vault
             .deposit_vst(SOLV_PROTOCOL_MAX_EXTRA_FEE_AMOUNT + 1)
@@ -2276,7 +2363,9 @@ mod tests {
             .offset_srt_receivables(1, vault.one_srt_as_micro_vst, true)
             .unwrap();
 
-        vault.mint_vrt(SOLV_PROTOCOL_MAX_EXTRA_FEE_AMOUNT).unwrap();
+        vault
+            .mint_vrt_with_vst(SOLV_PROTOCOL_MAX_EXTRA_FEE_AMOUNT)
+            .unwrap();
         vault
             .deposit_vst(SOLV_PROTOCOL_MAX_EXTRA_FEE_AMOUNT)
             .unwrap();
@@ -2285,7 +2374,7 @@ mod tests {
             .unwrap();
 
         vault
-            .mint_vrt(SOLV_PROTOCOL_MAX_EXTRA_FEE_AMOUNT + 1)
+            .mint_vrt_with_vst(SOLV_PROTOCOL_MAX_EXTRA_FEE_AMOUNT + 1)
             .unwrap();
         vault
             .deposit_vst(SOLV_PROTOCOL_MAX_EXTRA_FEE_AMOUNT + 1)
@@ -2299,7 +2388,7 @@ mod tests {
     fn test_offset_srt_receivables_invalid_srt_price() {
         let mut vault = VaultAccount::dummy();
 
-        vault.mint_vrt(100).unwrap();
+        vault.mint_vrt_with_vst(100).unwrap();
         vault.deposit_vst(100).unwrap();
         vault
             .offset_srt_receivables(200, 50_000_000_000_000, true)
@@ -2311,7 +2400,7 @@ mod tests {
         let mut vault = VaultAccount::dummy();
         vault.solv_protocol_deposit_fee_rate_bps = 0;
         vault.solv_protocol_withdrawal_fee_rate_bps = 0;
-        let vrt_amount = vault.mint_vrt(1_000_000).unwrap();
+        let vrt_amount = vault.mint_vrt_with_vst(1_000_000).unwrap();
         vault
             .deposit_vst(vault.vst_operation_reserved_amount / 2)
             .unwrap();

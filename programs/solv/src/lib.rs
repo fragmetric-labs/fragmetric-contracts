@@ -48,11 +48,11 @@ pub mod solv {
     // FundManagerContext
     ////////////////////////////////////////////
 
-    pub fn fund_manager_deposit(
+    pub fn fund_manager_deposit_supported_token(
         mut ctx: Context<FundManagerContext>,
         vst_amount: u64,
     ) -> Result<()> {
-        emit_cpi!(process_deposit(&mut ctx, vst_amount)?);
+        emit_cpi!(process_deposit_supported_token(&mut ctx, vst_amount)?);
 
         Ok(())
     }
@@ -194,5 +194,18 @@ pub mod solv {
         mut ctx: Context<RewardManagerContext>,
     ) -> Result<()> {
         process_delegate_reward_token_account(&mut ctx)
+    }
+
+    ////////////////////////////////////////////
+    // UserContext
+    ////////////////////////////////////////////
+
+    pub fn user_deposit_solv_receipt_token(
+        mut ctx: Context<UserContext>,
+        srt_amount: u64,
+    ) -> Result<()> {
+        emit_cpi!(process_deposit_solv_receipt_token(&mut ctx, srt_amount)?);
+
+        Ok(())
     }
 }

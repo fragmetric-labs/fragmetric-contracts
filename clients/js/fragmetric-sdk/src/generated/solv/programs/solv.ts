@@ -14,7 +14,7 @@ import {
   type ReadonlyUint8Array,
 } from '@solana/kit';
 import {
-  type ParsedFundManagerDepositInstruction,
+  type ParsedFundManagerDepositSupportedTokenInstruction,
   type ParsedFundManagerRequestWithdrawalInstruction,
   type ParsedFundManagerWithdrawInstruction,
   type ParsedRewardManagerDelegateRewardTokenAccountInstruction,
@@ -28,6 +28,7 @@ import {
   type ParsedSolvManagerSetSolvProtocolFeeRateInstruction,
   type ParsedSolvManagerSetSolvProtocolWalletInstruction,
   type ParsedUpdateVaultAdminRoleInstruction,
+  type ParsedUserDepositSolvReceiptTokenInstruction,
   type ParsedVaultManagerInitializeVaultAccountInstruction,
   type ParsedVaultManagerUpdateVaultAccountIfNeededInstruction,
 } from '../instructions';
@@ -37,7 +38,7 @@ export const SOLV_PROGRAM_ADDRESS =
 
 export enum SolvAccount {
   VaultAccount,
-  FundManagerDepositedToVault,
+  FundManagerDepositedSupportedTokenToVault,
   FundManagerRequestedWithdrawalFromVault,
   FundManagerWithdrewFromVault,
   SolvManagerCompletedDeposits,
@@ -47,6 +48,7 @@ export enum SolvAccount {
   SolvManagerConfirmedWithdrawalRequests,
   SolvManagerImpliedSolvProtocolFee,
   SolvManagerRefreshedSRTRedemptionRate,
+  UserDepositedSolvReceiptTokenToVault,
 }
 
 export function identifySolvAccount(
@@ -68,12 +70,12 @@ export function identifySolvAccount(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([98, 202, 168, 50, 17, 11, 21, 216])
+        new Uint8Array([167, 207, 54, 10, 236, 116, 166, 82])
       ),
       0
     )
   ) {
-    return SolvAccount.FundManagerDepositedToVault;
+    return SolvAccount.FundManagerDepositedSupportedTokenToVault;
   }
   if (
     containsBytes(
@@ -174,13 +176,24 @@ export function identifySolvAccount(
   ) {
     return SolvAccount.SolvManagerRefreshedSRTRedemptionRate;
   }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([235, 223, 81, 120, 42, 155, 94, 44])
+      ),
+      0
+    )
+  ) {
+    return SolvAccount.UserDepositedSolvReceiptTokenToVault;
+  }
   throw new Error(
     'The provided account could not be identified as a solv account.'
   );
 }
 
 export enum SolvInstruction {
-  FundManagerDeposit,
+  FundManagerDepositSupportedToken,
   FundManagerRequestWithdrawal,
   FundManagerWithdraw,
   RewardManagerDelegateRewardTokenAccount,
@@ -194,6 +207,7 @@ export enum SolvInstruction {
   SolvManagerSetSolvProtocolFeeRate,
   SolvManagerSetSolvProtocolWallet,
   UpdateVaultAdminRole,
+  UserDepositSolvReceiptToken,
   VaultManagerInitializeVaultAccount,
   VaultManagerUpdateVaultAccountIfNeeded,
 }
@@ -206,12 +220,12 @@ export function identifySolvInstruction(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([247, 63, 63, 225, 113, 82, 62, 70])
+        new Uint8Array([243, 69, 64, 27, 80, 152, 119, 105])
       ),
       0
     )
   ) {
-    return SolvInstruction.FundManagerDeposit;
+    return SolvInstruction.FundManagerDepositSupportedToken;
   }
   if (
     containsBytes(
@@ -360,6 +374,17 @@ export function identifySolvInstruction(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([146, 147, 108, 143, 98, 30, 48, 151])
+      ),
+      0
+    )
+  ) {
+    return SolvInstruction.UserDepositSolvReceiptToken;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
         new Uint8Array([60, 93, 141, 114, 198, 61, 27, 137])
       ),
       0
@@ -387,8 +412,8 @@ export type ParsedSolvInstruction<
   TProgram extends string = '9beGuWXNoKPKCApT6xJUm5435Fz8EMGzoTTXgkcf3zAz',
 > =
   | ({
-      instructionType: SolvInstruction.FundManagerDeposit;
-    } & ParsedFundManagerDepositInstruction<TProgram>)
+      instructionType: SolvInstruction.FundManagerDepositSupportedToken;
+    } & ParsedFundManagerDepositSupportedTokenInstruction<TProgram>)
   | ({
       instructionType: SolvInstruction.FundManagerRequestWithdrawal;
     } & ParsedFundManagerRequestWithdrawalInstruction<TProgram>)
@@ -428,6 +453,9 @@ export type ParsedSolvInstruction<
   | ({
       instructionType: SolvInstruction.UpdateVaultAdminRole;
     } & ParsedUpdateVaultAdminRoleInstruction<TProgram>)
+  | ({
+      instructionType: SolvInstruction.UserDepositSolvReceiptToken;
+    } & ParsedUserDepositSolvReceiptTokenInstruction<TProgram>)
   | ({
       instructionType: SolvInstruction.VaultManagerInitializeVaultAccount;
     } & ParsedVaultManagerInitializeVaultAccountInstruction<TProgram>)
