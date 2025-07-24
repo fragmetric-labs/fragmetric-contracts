@@ -961,13 +961,30 @@ export class TransactionTemplateContext<
     signature: string,
     args: ARGS | null = null
   ): Promise<TransactionResultContext<this, ARGS, EVENTS>> {
-    const rawResult = await this.runtime.rpc
-      .getTransaction(signature as Signature, {
-        encoding: 'base64',
-        maxSupportedTransactionVersion: 0,
-        commitment: this.runtime.options.transaction.confirmationCommitment,
-      })
+    const txFetchOptions = {
+      encoding: 'base64',
+      maxSupportedTransactionVersion: 0,
+      commitment: this.runtime.options.transaction.confirmationCommitment,
+    } as const;
+
+    let rawResult = await this.runtime.rpc
+      .getTransaction(signature as Signature, txFetchOptions)
       .send();
+
+    let remainingAttempts =
+      this.runtime.options.transaction.maxRetriesOnNotFoundError;
+    const retryDelay =
+      this.runtime.options.transaction.retryIntervalMillisecondsOnNotFoundError;
+    // here a response with empty logMessages as not found one, assuming a RPC issue
+    while (!rawResult?.meta?.logMessages && remainingAttempts-- > 0) {
+      if (this.__debug) {
+        console.error(`retry getTransaction in ${retryDelay}ms`);
+      }
+      await new Promise((resolve) => setTimeout(resolve, retryDelay));
+      rawResult = await this.runtime.rpc
+        .getTransaction(signature as Signature, txFetchOptions)
+        .send();
+    }
 
     if (!rawResult) {
       return new TransactionResultContext(this, signature, args);
