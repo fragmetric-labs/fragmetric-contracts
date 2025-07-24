@@ -9,16 +9,16 @@
   },
   "instructions": [
     {
-      "name": "fund_manager_deposit",
+      "name": "fund_manager_deposit_supported_token",
       "discriminator": [
-        247,
-        63,
-        63,
-        225,
-        113,
-        82,
-        62,
-        70
+        243,
+        69,
+        64,
+        27,
+        80,
+        152,
+        119,
+        105
       ],
       "accounts": [
         {
@@ -56,7 +56,10 @@
         },
         {
           "name": "vault_receipt_token_mint",
-          "writable": true
+          "writable": true,
+          "relations": [
+            "vault_account"
+          ]
         },
         {
           "name": "vault_supported_token_mint",
@@ -426,7 +429,10 @@
         },
         {
           "name": "vault_receipt_token_mint",
-          "writable": true
+          "writable": true,
+          "relations": [
+            "vault_account"
+          ]
         },
         {
           "name": "vault_supported_token_mint",
@@ -796,7 +802,10 @@
         },
         {
           "name": "vault_receipt_token_mint",
-          "writable": true
+          "writable": true,
+          "relations": [
+            "vault_account"
+          ]
         },
         {
           "name": "vault_supported_token_mint",
@@ -1159,7 +1168,10 @@
           }
         },
         {
-          "name": "vault_receipt_token_mint"
+          "name": "vault_receipt_token_mint",
+          "relations": [
+            "vault_account"
+          ]
         },
         {
           "name": "reward_token_mint"
@@ -1342,7 +1354,10 @@
           }
         },
         {
-          "name": "vault_receipt_token_mint"
+          "name": "vault_receipt_token_mint",
+          "relations": [
+            "vault_account"
+          ]
         },
         {
           "name": "vault_supported_token_mint",
@@ -1813,7 +1828,10 @@
           }
         },
         {
-          "name": "vault_receipt_token_mint"
+          "name": "vault_receipt_token_mint",
+          "relations": [
+            "vault_account"
+          ]
         },
         {
           "name": "vault_supported_token_mint",
@@ -2288,7 +2306,10 @@
           }
         },
         {
-          "name": "vault_receipt_token_mint"
+          "name": "vault_receipt_token_mint",
+          "relations": [
+            "vault_account"
+          ]
         },
         {
           "name": "vault_supported_token_mint",
@@ -2750,7 +2771,10 @@
           }
         },
         {
-          "name": "vault_receipt_token_mint"
+          "name": "vault_receipt_token_mint",
+          "relations": [
+            "vault_account"
+          ]
         },
         {
           "name": "vault_supported_token_mint",
@@ -3221,7 +3245,10 @@
           }
         },
         {
-          "name": "vault_receipt_token_mint"
+          "name": "vault_receipt_token_mint",
+          "relations": [
+            "vault_account"
+          ]
         },
         {
           "name": "vault_supported_token_mint",
@@ -3683,7 +3710,10 @@
           }
         },
         {
-          "name": "vault_receipt_token_mint"
+          "name": "vault_receipt_token_mint",
+          "relations": [
+            "vault_account"
+          ]
         },
         {
           "name": "vault_supported_token_mint",
@@ -4150,7 +4180,10 @@
           }
         },
         {
-          "name": "vault_receipt_token_mint"
+          "name": "vault_receipt_token_mint",
+          "relations": [
+            "vault_account"
+          ]
         },
         {
           "name": "vault_supported_token_mint",
@@ -4614,7 +4647,10 @@
           }
         },
         {
-          "name": "vault_receipt_token_mint"
+          "name": "vault_receipt_token_mint",
+          "relations": [
+            "vault_account"
+          ]
         },
         {
           "name": "event_authority",
@@ -4706,7 +4742,10 @@
           }
         },
         {
-          "name": "vault_receipt_token_mint"
+          "name": "vault_receipt_token_mint",
+          "relations": [
+            "vault_account"
+          ]
         },
         {
           "name": "event_authority",
@@ -4786,7 +4825,10 @@
           }
         },
         {
-          "name": "vault_receipt_token_mint"
+          "name": "vault_receipt_token_mint",
+          "relations": [
+            "vault_account"
+          ]
         },
         {
           "name": "event_authority",
@@ -4829,6 +4871,372 @@
               "name": "VaultAdminRole"
             }
           }
+        }
+      ]
+    },
+    {
+      "name": "user_deposit_solv_receipt_token",
+      "discriminator": [
+        146,
+        147,
+        108,
+        143,
+        98,
+        30,
+        48,
+        151
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "signer": true
+        },
+        {
+          "name": "vault_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault_receipt_token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "solv_receipt_token_mint",
+          "relations": [
+            "vault_account"
+          ]
+        },
+        {
+          "name": "vault_receipt_token_mint",
+          "writable": true,
+          "relations": [
+            "vault_account"
+          ]
+        },
+        {
+          "name": "vault_solv_receipt_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "vault_account"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "solv_receipt_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "user_solv_receipt_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "user"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "solv_receipt_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "user_vault_receipt_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "user"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault_receipt_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "srt_amount",
+          "type": "u64"
         }
       ]
     },
@@ -5300,16 +5708,16 @@
   ],
   "events": [
     {
-      "name": "FundManagerDepositedToVault",
+      "name": "FundManagerDepositedSupportedTokenToVault",
       "discriminator": [
-        98,
-        202,
-        168,
-        50,
-        17,
-        11,
-        21,
-        216
+        167,
+        207,
+        54,
+        10,
+        236,
+        116,
+        166,
+        82
       ]
     },
     {
@@ -5428,6 +5836,19 @@
         222,
         223
       ]
+    },
+    {
+      "name": "UserDepositedSolvReceiptTokenToVault",
+      "discriminator": [
+        235,
+        223,
+        81,
+        120,
+        42,
+        155,
+        94,
+        44
+      ]
     }
   ],
   "errors": [
@@ -5515,11 +5936,16 @@
       "code": 6016,
       "name": "WithdrawalRequestNotFoundError",
       "msg": "withdrawal request not found"
+    },
+    {
+      "code": 6017,
+      "name": "VaultReceiptTokenMintMismatchError",
+      "msg": "vault receipt token mint mismatch"
     }
   ],
   "types": [
     {
-      "name": "FundManagerDepositedToVault",
+      "name": "FundManagerDepositedSupportedTokenToVault",
       "type": {
         "kind": "struct",
         "fields": [
@@ -5969,6 +6395,54 @@
           },
           {
             "name": "new_one_vrt_as_micro_vst",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "UserDepositedSolvReceiptTokenToVault",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "solv_receipt_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "vault_receipt_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "operation_reserved_srt_amount",
+            "type": "u64"
+          },
+          {
+            "name": "one_srt_as_micro_vst",
+            "type": "u64"
+          },
+          {
+            "name": "vrt_supply",
+            "type": "u64"
+          },
+          {
+            "name": "one_vrt_as_micro_vst",
+            "type": "u64"
+          },
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "deposited_srt_amount",
+            "type": "u64"
+          },
+          {
+            "name": "minted_vrt_amount",
             "type": "u64"
           }
         ]

@@ -21,6 +21,7 @@ import * as solv from '../../generated/solv';
 import { FundManagerAccountContext } from './fund_manager';
 import { SolvBTCVaultProgram } from './program';
 import { SolvProtocolWalletAccountContext } from './solv_protocol_wallet';
+import { SolvUserAccountContext } from './user';
 
 export class SolvVaultAccountContext extends AccountContext<
   SolvBTCVaultProgram,
@@ -223,6 +224,16 @@ export class SolvVaultAccountContext extends AccountContext<
   private readonly __seedReceiptTokenMint: Address;
   private readonly __seedSupportedTokenMint: Address;
   private readonly __seedSolvReceiptTokenMint: Address;
+
+  user(
+    addressResolver: AccountAddressResolverVariant<SolvVaultAccountContext>
+  ) {
+    return new SolvUserAccountContext(this, addressResolver);
+  }
+
+  readonly payer = this.user(
+    this.runtime.options.transaction.feePayer ?? (() => Promise.resolve(null))
+  );
 
   readonly receiptTokenMint = new TokenMintAccountContext(
     this,
@@ -620,7 +631,7 @@ export class SolvVaultAccountContext extends AccountContext<
               mint: vault.data.vaultReceiptTokenMint,
               owner: args.payer as Address,
             }),
-            solv.getFundManagerDepositInstructionAsync(
+            solv.getFundManagerDepositSupportedTokenInstructionAsync(
               {
                 fundManager: createNoopSigner(vault.data.fundManager),
                 payer: createNoopSigner(args.payer as Address),

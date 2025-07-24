@@ -23,6 +23,7 @@ pub struct VaultAdminRoleUpdateContext<'info> {
         mut,
         seeds = [VaultAccount::SEED, vault_receipt_token_mint.key().as_ref()],
         bump = vault_account.load()?.get_bump(),
+        has_one = vault_receipt_token_mint @ VaultError::VaultReceiptTokenMintMismatchError,
         constraint = vault_account.load()?.is_latest_version() @ VaultError::InvalidAccountDataVersionError,
     )]
     pub vault_account: AccountLoader<'info, VaultAccount>,

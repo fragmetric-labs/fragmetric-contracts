@@ -55,4 +55,7 @@ pub enum VaultError {
 
     #[msg("withdrawal request not found")]
     WithdrawalRequestNotFoundError,
+
+    #[msg("vault receipt token mint mismatch")]
+    VaultReceiptTokenMintMismatchError,
 }

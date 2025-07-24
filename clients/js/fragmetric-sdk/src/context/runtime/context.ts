@@ -69,6 +69,11 @@ export type RuntimeContextOptions<
     // automatically retries a transaction when it fails with block hash expiration or already sent tx and more.
     // never use this option in a production environment, it is for fast block-producing test validators.
     maxRetriesOnBlockErrors: number;
+
+    // tx fetch option; default is 500ms
+    retryIntervalMillisecondsOnNotFoundError: number;
+    // tx fetch option; default is 3
+    maxRetriesOnNotFoundError: number;
   };
   debug: boolean;
 };
@@ -170,6 +175,10 @@ export class RuntimeContext extends Context<null> implements Runtime {
         computeBudget: options?.transaction?.computeBudget ?? undefined,
         maxRetriesOnBlockErrors:
           options?.transaction?.maxRetriesOnBlockErrors ?? 0,
+        maxRetriesOnNotFoundError:
+          options?.transaction?.maxRetriesOnNotFoundError ?? 3,
+        retryIntervalMillisecondsOnNotFoundError:
+          options?.transaction?.maxRetriesOnNotFoundError ?? 500,
       },
       debug: options?.debug == true,
     };
