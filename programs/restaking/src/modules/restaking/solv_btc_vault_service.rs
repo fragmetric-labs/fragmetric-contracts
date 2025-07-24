@@ -2,8 +2,8 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::Token;
 use anchor_spl::token_interface::{Mint, TokenAccount};
 use solv::states::VaultAccount;
+use solv::ID as SOLV_PROGRAM_ID;
 
-use crate::constants::SOLV_PROGRAM_ID;
 use crate::errors::ErrorCode;
 
 use super::ValidateVault;

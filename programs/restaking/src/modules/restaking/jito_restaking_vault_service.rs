@@ -7,11 +7,14 @@ use jito_vault_core::{
     vault_update_state_tracker::VaultUpdateStateTracker,
 };
 
-use crate::constants::{JITO_VAULT_CONFIG_ADDRESS, JITO_VAULT_PROGRAM_ID};
 use crate::errors::ErrorCode;
 use crate::utils::AccountInfoExt;
 
 use super::ValidateVault;
+
+pub(super) const JITO_VAULT_PROGRAM_ID: Pubkey =
+    pubkey!("Vau1t6sLNxnzB7ZDsef8TLbPLfyZMYXH8WTNqUdm9g8");
+const JITO_VAULT_CONFIG_ADDRESS: Pubkey = pubkey!("UwuSgAq4zByffCGCrWH87DsjfsewYjuqHfJEpzw1Jq3");
 
 pub(in crate::modules) struct JitoRestakingVaultService<'info> {
     vault_program: &'info AccountInfo<'info>,
@@ -62,12 +65,8 @@ impl<'info> JitoRestakingVaultService<'info> {
         let current_slot = Clock::get()?.slot;
         let last_update_slot = vault.last_full_state_update_slot();
         let epoch_length = vault_config.epoch_length();
-        let current_epoch = current_slot
-            .checked_div(epoch_length)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-        let last_update_epoch = last_update_slot
-            .checked_div(epoch_length)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+        let current_epoch = current_slot / epoch_length;
+        let last_update_epoch = last_update_slot / epoch_length;
 
         Ok(Self {
             vault_program,
@@ -518,13 +517,13 @@ impl<'info> JitoRestakingVaultService<'info> {
         let supported_token_amount =
             supported_token_amount.min(vault_deposit_capacity - vault_tokens_deposited);
 
-        let deducted_supported_token_fee_amount = crate::utils::get_proportional_amount(
+        let deducted_supported_token_fee_amount = crate::utils::get_proportional_amount_u64(
             supported_token_amount,
             vault_deposit_fee_bps,
             10_000,
         )?;
 
-        let expected_minted_vault_receipt_token_amount = crate::utils::get_proportional_amount(
+        let expected_minted_vault_receipt_token_amount = crate::utils::get_proportional_amount_u64(
             supported_token_amount - deducted_supported_token_fee_amount,
             vault_receipt_token_supply,
             vault_tokens_deposited,

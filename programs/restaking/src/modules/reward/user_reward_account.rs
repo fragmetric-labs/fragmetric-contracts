@@ -10,9 +10,6 @@ use super::*;
 /// ## Version History
 /// * v1: Initial Version (4248 ~= 4.14KB)
 pub const USER_REWARD_ACCOUNT_CURRENT_VERSION: u16 = 1;
-#[constant]
-pub const USER_REWARD_ACCOUNT_CURRENT_SIZE: u64 =
-    8 + std::mem::size_of::<UserRewardAccount>() as u64;
 
 #[account(zero_copy)]
 #[repr(C)]

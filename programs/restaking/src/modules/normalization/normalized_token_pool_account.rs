@@ -265,21 +265,13 @@ impl NormalizedSupportedToken {
     }
 
     pub(super) fn lock_token(&mut self, token_amount: u64) -> Result<()> {
-        self.locked_amount = self
-            .locked_amount
-            .checked_add(token_amount)
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
+        self.locked_amount += token_amount;
 
         Ok(())
     }
 
     pub(super) fn unlock_token(&mut self, token_amount: u64) -> Result<()> {
-        self.locked_amount = self
-            .locked_amount
-            .checked_sub(token_amount)
-            .ok_or_else(|| {
-                error!(ErrorCode::NormalizedTokenPoolNotEnoughSupportedTokenException)
-            })?;
+        self.locked_amount -= token_amount;
 
         Ok(())
     }
@@ -288,24 +280,14 @@ impl NormalizedSupportedToken {
         &mut self,
         token_amount: u64,
     ) -> Result<()> {
-        self.locked_amount = self
-            .locked_amount
-            .checked_sub(token_amount)
-            .ok_or_else(|| {
-                error!(ErrorCode::NormalizedTokenPoolNotEnoughSupportedTokenException)
-            })?;
+        self.locked_amount -= token_amount;
         self.withdrawal_reserved_amount += token_amount;
 
         Ok(())
     }
 
     pub(super) fn settle_withdrawal_reserved_token(&mut self, token_amount: u64) -> Result<()> {
-        self.withdrawal_reserved_amount = self
-            .withdrawal_reserved_amount
-            .checked_sub(token_amount)
-            .ok_or_else(|| {
-                error!(ErrorCode::NormalizedTokenPoolNotEnoughSupportedTokenException)
-            })?;
+        self.withdrawal_reserved_amount -= token_amount;
 
         Ok(())
     }

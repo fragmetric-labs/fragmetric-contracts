@@ -6896,26 +6896,6 @@
   ],
   "constants": [
     {
-      "name": "CBBTC_MINT_ADDRESS",
-      "type": "pubkey",
-      "value": "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij"
-    },
-    {
-      "name": "DEVNET_PROGRAM_ID",
-      "type": "pubkey",
-      "value": "FsoLVPaSSXfsfZHYaxtQSZs6npFFUeRCyXB6dcC8ckn"
-    },
-    {
-      "name": "MAINNET_PROGRAM_ID",
-      "type": "pubkey",
-      "value": "FSoLvf9dv17a4DzMGYKxqFnDGj9EiXRW5wKrwQ39UDH"
-    },
-    {
-      "name": "TARGET",
-      "type": "string",
-      "value": "\"local\""
-    },
-    {
       "name": "VAULT_ACCOUNT_CURRENT_VERSION",
       "docs": [
         "## Version History",
@@ -6924,16 +6904,6 @@
       ],
       "type": "u16",
       "value": "2"
-    },
-    {
-      "name": "WBTC_MINT_ADDRESS",
-      "type": "pubkey",
-      "value": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh"
-    },
-    {
-      "name": "ZBTC_MINT_ADDRESS",
-      "type": "pubkey",
-      "value": "zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg"
     }
   ]
 }
