@@ -298,6 +298,7 @@ describe('restaking.fragBTC test', async () => {
             "solAllocationCapacityAmount": 18446744073709551615n,
             "solAllocationWeight": 1n,
             "vault": "H6pGcL98Rkz2aV8pq5jDEMdtrnogAmhUM5w8RAsddeB6",
+            "vaultReceiptTokenDepositable": false,
           },
           {
             "compoundingRewardTokens": [],
@@ -311,6 +312,7 @@ describe('restaking.fragBTC test', async () => {
             "solAllocationCapacityAmount": 18446744073709551615n,
             "solAllocationWeight": 1n,
             "vault": "5zXiPsDznkiEA4nKvWEWuJEYBupPEBAdA1Qnb7j25PdJ",
+            "vaultReceiptTokenDepositable": false,
           },
           {
             "compoundingRewardTokens": [],
@@ -324,6 +326,7 @@ describe('restaking.fragBTC test', async () => {
             "solAllocationCapacityAmount": 18446744073709551615n,
             "solAllocationWeight": 1n,
             "vault": "E8GGZBniH85AGo2oGHEf6VeBWEHs3u8SN8iiyUsMV82B",
+            "vaultReceiptTokenDepositable": false,
           },
         ],
         "tokenSwapStrategies": [],

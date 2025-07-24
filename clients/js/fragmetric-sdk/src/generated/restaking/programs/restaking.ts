@@ -69,6 +69,7 @@ import {
   type ParsedUserDelegateRewardAccountInstruction,
   type ParsedUserDepositSolInstruction,
   type ParsedUserDepositSupportedTokenInstruction,
+  type ParsedUserDepositVaultReceiptTokenInstruction,
   type ParsedUserRequestWithdrawalInstruction,
   type ParsedUserUnwrapReceiptTokenInstruction,
   type ParsedUserUpdateRewardPoolsInstruction,
@@ -102,6 +103,7 @@ export enum RestakingAccount {
   UserCreatedOrUpdatedRewardAccount,
   UserDelegatedRewardAccount,
   UserDepositedToFund,
+  UserDepositedToVault,
   UserRequestedWithdrawalFromFund,
   UserTransferredReceiptToken,
   UserUnwrappedReceiptToken,
@@ -338,6 +340,17 @@ export function identifyRestakingAccount(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([246, 243, 21, 7, 151, 242, 117, 202])
+      ),
+      0
+    )
+  ) {
+    return RestakingAccount.UserDepositedToVault;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
         new Uint8Array([23, 105, 171, 107, 172, 40, 226, 124])
       ),
       0
@@ -461,6 +474,7 @@ export enum RestakingInstruction {
   UserDelegateRewardAccount,
   UserDepositSol,
   UserDepositSupportedToken,
+  UserDepositVaultReceiptToken,
   UserRequestWithdrawal,
   UserUnwrapReceiptToken,
   UserUpdateRewardPools,
@@ -1083,6 +1097,17 @@ export function identifyRestakingInstruction(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([103, 39, 30, 146, 56, 237, 52, 37])
+      ),
+      0
+    )
+  ) {
+    return RestakingInstruction.UserDepositVaultReceiptToken;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
         new Uint8Array([147, 199, 177, 14, 195, 86, 62, 134])
       ),
       0
@@ -1329,6 +1354,9 @@ export type ParsedRestakingInstruction<
   | ({
       instructionType: RestakingInstruction.UserDepositSupportedToken;
     } & ParsedUserDepositSupportedTokenInstruction<TProgram>)
+  | ({
+      instructionType: RestakingInstruction.UserDepositVaultReceiptToken;
+    } & ParsedUserDepositVaultReceiptTokenInstruction<TProgram>)
   | ({
       instructionType: RestakingInstruction.UserRequestWithdrawal;
     } & ParsedUserRequestWithdrawalInstruction<TProgram>)

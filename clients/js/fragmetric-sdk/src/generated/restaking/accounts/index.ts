@@ -24,6 +24,7 @@ export * from './userCreatedOrUpdatedFundAccount';
 export * from './userCreatedOrUpdatedRewardAccount';
 export * from './userDelegatedRewardAccount';
 export * from './userDepositedToFund';
+export * from './userDepositedToVault';
 export * from './userFundAccount';
 export * from './userRequestedWithdrawalFromFund';
 export * from './userRewardAccount';

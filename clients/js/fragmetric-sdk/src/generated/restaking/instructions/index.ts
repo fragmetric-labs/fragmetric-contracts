@@ -61,6 +61,7 @@ export * from './userCreateRewardAccountIdempotent';
 export * from './userDelegateRewardAccount';
 export * from './userDepositSol';
 export * from './userDepositSupportedToken';
+export * from './userDepositVaultReceiptToken';
 export * from './userRequestWithdrawal';
 export * from './userUnwrapReceiptToken';
 export * from './userUpdateRewardPools';

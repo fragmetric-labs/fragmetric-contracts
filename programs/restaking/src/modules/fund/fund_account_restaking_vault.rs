@@ -19,7 +19,8 @@ pub(super) struct RestakingVault {
     pub receipt_token_mint: Pubkey,
     pub receipt_token_program: Pubkey,
     pub receipt_token_decimals: u8,
-    _padding: [u8; 7],
+    pub receipt_token_depositable: u8,
+    _padding: [u8; 6],
 
     /// transient price
     pub one_receipt_token_as_sol: u64,
@@ -155,12 +156,27 @@ impl RestakingVault {
         Ok(self)
     }
 
+    pub(super) fn set_receipt_token_depositable(&mut self, depositable: bool) -> &mut Self {
+        self.receipt_token_depositable = depositable as u8;
+        self
+    }
+
     pub fn get_reward_commission_amount(&self, reward_token_amount: u64) -> Result<u64> {
         crate::utils::get_proportional_amount_u64(
             reward_token_amount,
             self.reward_commission_rate_bps as u64,
             10_000,
         )
+    }
+
+    pub fn deposit_vault_receipt_token(&mut self, vault_receipt_token_amount: u64) -> Result<()> {
+        if self.receipt_token_depositable == 0 {
+            err!(ErrorCode::FundDepositNotSupportedAsset)?;
+        }
+
+        self.receipt_token_operation_reserved_amount += vault_receipt_token_amount;
+
+        Ok(())
     }
 
     pub fn add_compounding_reward_token(

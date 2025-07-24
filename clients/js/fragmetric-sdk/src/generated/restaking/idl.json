@@ -4751,6 +4751,10 @@
         {
           "name": "reward_commission_rate_bps",
           "type": "u16"
+        },
+        {
+          "name": "vault_receipt_token_depositable",
+          "type": "bool"
         }
       ]
     },
@@ -8506,6 +8510,403 @@
       ]
     },
     {
+      "name": "user_deposit_vault_receipt_token",
+      "discriminator": [
+        103,
+        39,
+        30,
+        146,
+        56,
+        237,
+        52,
+        37
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "signer": true,
+          "relations": [
+            "user_fund_account",
+            "user_reward_account"
+          ]
+        },
+        {
+          "name": "receipt_token_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "vault_receipt_token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "fund_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  117,
+                  110,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "fund_reserve_account",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  117,
+                  110,
+                  100,
+                  95,
+                  114,
+                  101,
+                  115,
+                  101,
+                  114,
+                  118,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user_fund_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  102,
+                  117,
+                  110,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              }
+            ]
+          }
+        },
+        {
+          "name": "receipt_token_mint",
+          "writable": true,
+          "relations": [
+            "fund_account",
+            "user_fund_account",
+            "reward_account",
+            "user_reward_account"
+          ]
+        },
+        {
+          "name": "vault_receipt_token_mint"
+        },
+        {
+          "name": "user_vault_receipt_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "user"
+              },
+              {
+                "kind": "account",
+                "path": "vault_receipt_token_program"
+              },
+              {
+                "kind": "account",
+                "path": "vault_receipt_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "fund_vault_receipt_token_reserve_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "fund_reserve_account"
+              },
+              {
+                "kind": "account",
+                "path": "vault_receipt_token_program"
+              },
+              {
+                "kind": "account",
+                "path": "vault_receipt_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "user_receipt_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "user"
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_program"
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "reward_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  119,
+                  97,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user_reward_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  114,
+                  101,
+                  119,
+                  97,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              }
+            ]
+          }
+        },
+        {
+          "name": "instructions_sysvar",
+          "address": "Sysvar1nstructions1111111111111111111111111"
+        },
+        {
+          "name": "event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "metadata",
+          "type": {
+            "option": {
+              "defined": {
+                "name": "DepositMetadata"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "user_request_withdrawal",
       "discriminator": [
         147,
@@ -11256,6 +11657,19 @@
         65,
         132,
         44
+      ]
+    },
+    {
+      "name": "UserDepositedToVault",
+      "discriminator": [
+        246,
+        243,
+        21,
+        7,
+        151,
+        242,
+        117,
+        202
       ]
     },
     {
@@ -14764,11 +15178,15 @@
             "type": "u8"
           },
           {
+            "name": "receipt_token_depositable",
+            "type": "u8"
+          },
+          {
             "name": "_padding",
             "type": {
               "array": [
                 "u8",
-                7
+                6
               ]
             }
           },
@@ -16630,6 +17048,72 @@
             "type": {
               "option": "pubkey"
             }
+          },
+          {
+            "name": "wallet_provider",
+            "type": {
+              "option": "string"
+            }
+          },
+          {
+            "name": "contribution_accrual_rate",
+            "type": {
+              "option": "u16"
+            }
+          },
+          {
+            "name": "deposited_amount",
+            "type": "u64"
+          },
+          {
+            "name": "minted_receipt_token_amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "UserDepositedToVault",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "receipt_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "fund_account",
+            "type": "pubkey"
+          },
+          {
+            "name": "vault_account",
+            "type": "pubkey"
+          },
+          {
+            "name": "vault_receipt_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "updated_user_reward_accounts",
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "user_receipt_token_account",
+            "type": "pubkey"
+          },
+          {
+            "name": "user_fund_account",
+            "type": "pubkey"
+          },
+          {
+            "name": "user_vault_receipt_token_account",
+            "type": "pubkey"
           },
           {
             "name": "wallet_provider",

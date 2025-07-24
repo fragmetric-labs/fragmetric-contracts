@@ -291,6 +291,7 @@ pub mod restaking {
         sol_allocation_weight: u64,
         sol_allocation_capacity_amount: u64,
         reward_commission_rate_bps: u16,
+        vault_receipt_token_depositable: bool,
     ) -> Result<()> {
         emit_cpi!(modules::fund::FundConfigurationService::new(
             &mut ctx.accounts.receipt_token_mint,
@@ -301,6 +302,7 @@ pub mod restaking {
             sol_allocation_weight,
             sol_allocation_capacity_amount,
             reward_commission_rate_bps,
+            vault_receipt_token_depositable,
         )?);
 
         Ok(())
@@ -1186,6 +1188,38 @@ pub mod restaking {
             &ctx.accounts.fund_reserve_account,
             &ctx.accounts.fund_treasury_account,
             request_id,
+        )?);
+
+        Ok(())
+    }
+
+    ////////////////////////////////////////////
+    // UserFundVaultReceiptTokenContext
+    ////////////////////////////////////////////
+
+    pub fn user_deposit_vault_receipt_token<'info>(
+        ctx: Context<'_, '_, 'info, 'info, UserFundVaultReceiptTokenContext<'info>>,
+        metadata: Option<modules::fund::DepositMetadata>,
+    ) -> Result<()> {
+        emit_cpi!(modules::fund::UserFundService::new(
+            &mut ctx.accounts.receipt_token_mint,
+            &ctx.accounts.receipt_token_program,
+            &mut ctx.accounts.fund_account,
+            &mut ctx.accounts.reward_account,
+            &ctx.accounts.user,
+            &mut ctx.accounts.user_receipt_token_account,
+            &mut ctx.accounts.user_fund_account,
+            &mut ctx.accounts.user_reward_account,
+        )?
+        .process_deposit_vault_receipt_token(
+            &ctx.accounts.vault_receipt_token_program,
+            &ctx.accounts.vault_receipt_token_mint,
+            &ctx.accounts.fund_vault_receipt_token_reserve_account,
+            &ctx.accounts.user_vault_receipt_token_account,
+            &ctx.accounts.instructions_sysvar,
+            ctx.remaining_accounts,
+            metadata,
+            &ADMIN_PUBKEY,
         )?);
 
         Ok(())

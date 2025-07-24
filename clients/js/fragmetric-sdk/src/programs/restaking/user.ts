@@ -255,9 +255,14 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
     v.object({
       assetMint: v.pipe(
         v.nullish(v.string(), null),
-        v.description('supported token mint to deposit, null to deposit SOL')
+        v.description(
+          'supported token mint or vault receipt token mint to deposit, null to deposit SOL'
+        )
       ),
-      assetAmount: v.pipe(v.bigint(), v.description('amount to deposit')),
+      assetAmount: v.pipe(
+        v.nullish(v.bigint(), null),
+        v.description('amount to deposit, null for vault receipt token deposit')
+      ),
       metadata: v.pipe(
         v.nullish(
           v.pipe(
@@ -301,13 +306,15 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
       anchorEventDecoders: getRestakingAnchorEventDecoders(
         'userDepositedToFund',
         'userCreatedOrUpdatedFundAccount',
-        'userCreatedOrUpdatedRewardAccount'
+        'userCreatedOrUpdatedRewardAccount',
+        'userDepositedToVault'
       ),
       addressLookupTables: [this.__resolveAddressLookupTable],
       instructions: [
         async (parent, args) => {
-          const [data, user] = await Promise.all([
+          const [data, fund, user] = await Promise.all([
             parent.parent.resolve(true),
+            parent.parent.fund.resolveAccount(true),
             parent.resolveAddress(),
           ]);
           if (!(data && user)) throw new Error('invalid context');
@@ -367,41 +374,81 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
             })(),
 
             (async () => {
-              const ix = await (args.assetMint
-                ? restaking.getUserDepositSupportedTokenInstructionAsync(
+              const ix = await (async function (self) {
+                const supportedTokenMints = fund?.data.supportedTokens
+                  .map((supportedToken) => supportedToken.mint.toString())
+                  .filter((mint) => mint != '11111111111111111111111111111111');
+                const vaultReceiptTokenMints = fund?.data.restakingVaults
+                  .map((restakingVault) =>
+                    restakingVault.receiptTokenMint.toString()
+                  )
+                  .filter((mint) => mint != '11111111111111111111111111111111');
+
+                if (supportedTokenMints?.includes(args.assetMint!)) {
+                  return restaking.getUserDepositSupportedTokenInstructionAsync(
                     {
                       user: createNoopSigner(user),
                       receiptTokenMint: data.receiptTokenMint,
                       supportedTokenProgram: token.TOKEN_PROGRAM_ADDRESS,
-                      program: this.program.address,
+                      program: self.program.address,
                       userSupportedTokenAccount:
                         await TokenAccountContext.findAssociatedTokenAccountAddress(
                           {
                             owner: user,
-                            mint: args.assetMint,
+                            mint: args.assetMint!,
                             tokenProgram: token.TOKEN_PROGRAM_ADDRESS,
                           }
                         ),
                       supportedTokenMint: args.assetMint as Address,
-                      amount: args.assetAmount,
+                      amount: args.assetAmount!,
                       metadata: args.metadata,
                     },
                     {
-                      programAddress: this.program.address,
+                      programAddress: self.program.address,
                     }
-                  )
-                : restaking.getUserDepositSolInstructionAsync(
+                  );
+                } else if (vaultReceiptTokenMints?.includes(args.assetMint!)) {
+                  if (args.assetAmount !== null) {
+                    throw new Error(
+                      "Vault receipt token deposit's input amount is not allowed. This always deposits total vault receipt token balance of the account."
+                    );
+                  }
+                  return restaking.getUserDepositVaultReceiptTokenInstructionAsync(
                     {
                       user: createNoopSigner(user),
                       receiptTokenMint: data.receiptTokenMint,
-                      program: this.program.address,
-                      amount: args.assetAmount,
+                      vaultReceiptTokenProgram: token.TOKEN_PROGRAM_ADDRESS,
+                      program: self.program.address,
+                      userVaultReceiptTokenAccount:
+                        await TokenAccountContext.findAssociatedTokenAccountAddress(
+                          {
+                            owner: user,
+                            mint: args.assetMint!,
+                            tokenProgram: token.TOKEN_PROGRAM_ADDRESS,
+                          }
+                        ),
+                      vaultReceiptTokenMint: args.assetMint as Address,
                       metadata: args.metadata,
                     },
                     {
-                      programAddress: this.program.address,
+                      programAddress: self.program.address,
                     }
-                  ));
+                  );
+                } else {
+                  return restaking.getUserDepositSolInstructionAsync(
+                    {
+                      user: createNoopSigner(user),
+                      receiptTokenMint: data.receiptTokenMint,
+                      program: self.program.address,
+                      amount: args.assetAmount!,
+                      metadata: args.metadata,
+                    },
+                    {
+                      programAddress: self.program.address,
+                    }
+                  );
+                }
+              })(this);
 
               for (const accountMeta of data.__pricingSources) {
                 ix.accounts.push(accountMeta);

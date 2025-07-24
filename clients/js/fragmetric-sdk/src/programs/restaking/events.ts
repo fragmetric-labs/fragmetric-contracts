@@ -26,6 +26,8 @@ import {
   getUserDelegatedRewardAccountDiscriminatorBytes,
   getUserDepositedToFundDecoder,
   getUserDepositedToFundDiscriminatorBytes,
+  getUserDepositedToVaultDecoder,
+  getUserDepositedToVaultDiscriminatorBytes,
   getUserRequestedWithdrawalFromFundDecoder,
   getUserRequestedWithdrawalFromFundDiscriminatorBytes,
   getUserTransferredReceiptTokenDecoder,
@@ -103,6 +105,10 @@ export const restakingAnchorEventDecoders = {
   userDepositedToFund: {
     discriminator: getUserDepositedToFundDiscriminatorBytes(),
     decoder: getUserDepositedToFundDecoder(),
+  },
+  userDepositedToVault: {
+    discriminator: getUserDepositedToVaultDiscriminatorBytes(),
+    decoder: getUserDepositedToVaultDecoder(),
   },
   userRequestedWithdrawalFromFund: {
     discriminator: getUserRequestedWithdrawalFromFundDiscriminatorBytes(),

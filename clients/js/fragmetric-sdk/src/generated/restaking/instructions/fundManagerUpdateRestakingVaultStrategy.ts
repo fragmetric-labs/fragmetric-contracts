@@ -12,6 +12,8 @@ import {
   fixEncoderSize,
   getAddressDecoder,
   getAddressEncoder,
+  getBooleanDecoder,
+  getBooleanEncoder,
   getBytesDecoder,
   getBytesEncoder,
   getProgramDerivedAddress,
@@ -93,6 +95,7 @@ export type FundManagerUpdateRestakingVaultStrategyInstructionData = {
   solAllocationWeight: bigint;
   solAllocationCapacityAmount: bigint;
   rewardCommissionRateBps: number;
+  vaultReceiptTokenDepositable: boolean;
 };
 
 export type FundManagerUpdateRestakingVaultStrategyInstructionDataArgs = {
@@ -100,6 +103,7 @@ export type FundManagerUpdateRestakingVaultStrategyInstructionDataArgs = {
   solAllocationWeight: number | bigint;
   solAllocationCapacityAmount: number | bigint;
   rewardCommissionRateBps: number;
+  vaultReceiptTokenDepositable: boolean;
 };
 
 export function getFundManagerUpdateRestakingVaultStrategyInstructionDataEncoder(): Encoder<FundManagerUpdateRestakingVaultStrategyInstructionDataArgs> {
@@ -110,6 +114,7 @@ export function getFundManagerUpdateRestakingVaultStrategyInstructionDataEncoder
       ['solAllocationWeight', getU64Encoder()],
       ['solAllocationCapacityAmount', getU64Encoder()],
       ['rewardCommissionRateBps', getU16Encoder()],
+      ['vaultReceiptTokenDepositable', getBooleanEncoder()],
     ]),
     (value) => ({
       ...value,
@@ -125,6 +130,7 @@ export function getFundManagerUpdateRestakingVaultStrategyInstructionDataDecoder
     ['solAllocationWeight', getU64Decoder()],
     ['solAllocationCapacityAmount', getU64Decoder()],
     ['rewardCommissionRateBps', getU16Decoder()],
+    ['vaultReceiptTokenDepositable', getBooleanDecoder()],
   ]);
 }
 
@@ -154,6 +160,7 @@ export type FundManagerUpdateRestakingVaultStrategyAsyncInput<
   solAllocationWeight: FundManagerUpdateRestakingVaultStrategyInstructionDataArgs['solAllocationWeight'];
   solAllocationCapacityAmount: FundManagerUpdateRestakingVaultStrategyInstructionDataArgs['solAllocationCapacityAmount'];
   rewardCommissionRateBps: FundManagerUpdateRestakingVaultStrategyInstructionDataArgs['rewardCommissionRateBps'];
+  vaultReceiptTokenDepositable: FundManagerUpdateRestakingVaultStrategyInstructionDataArgs['vaultReceiptTokenDepositable'];
 };
 
 export async function getFundManagerUpdateRestakingVaultStrategyInstructionAsync<
@@ -275,6 +282,7 @@ export type FundManagerUpdateRestakingVaultStrategyInput<
   solAllocationWeight: FundManagerUpdateRestakingVaultStrategyInstructionDataArgs['solAllocationWeight'];
   solAllocationCapacityAmount: FundManagerUpdateRestakingVaultStrategyInstructionDataArgs['solAllocationCapacityAmount'];
   rewardCommissionRateBps: FundManagerUpdateRestakingVaultStrategyInstructionDataArgs['rewardCommissionRateBps'];
+  vaultReceiptTokenDepositable: FundManagerUpdateRestakingVaultStrategyInstructionDataArgs['vaultReceiptTokenDepositable'];
 };
 
 export function getFundManagerUpdateRestakingVaultStrategyInstruction<

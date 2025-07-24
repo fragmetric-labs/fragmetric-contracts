@@ -839,7 +839,7 @@ impl FundAccount {
     }
 
     /// returns [deposited_amount]
-    pub(super) fn deposit(
+    pub(super) fn deposit_asset(
         &mut self,
         supported_token_mint: Option<Pubkey>,
         asset_amount: u64,
@@ -849,6 +849,24 @@ impl FundAccount {
         }
         self.get_asset_state_mut(supported_token_mint)?
             .deposit(asset_amount)
+    }
+
+    /// returns [deposited_vault_receipt_token_amount]
+    pub(super) fn deposit_vault_receipt_token(
+        &mut self,
+        vault_receipt_token_mint: &Pubkey,
+        vault_receipt_token_amount: u64,
+    ) -> Result<u64> {
+        if self.deposit_enabled == 0 {
+            err!(ErrorCode::FundDepositDisabledError)?
+        }
+
+        self.get_restaking_vaults_iter_mut()
+            .find(|restaking_vault| restaking_vault.receipt_token_mint == *vault_receipt_token_mint)
+            .ok_or_else(|| error!(ErrorCode::FundRestakingVaultNotFoundError))?
+            .deposit_vault_receipt_token(vault_receipt_token_amount)?;
+
+        Ok(vault_receipt_token_amount)
     }
 
     /// returns [deposited_amount, offsetted_receivable_amount]
@@ -1298,11 +1316,11 @@ mod tests {
         assert_eq!(fund.sol.operation_reserved_amount, 0);
         assert_eq!(fund.sol.accumulated_deposit_amount, 0);
 
-        fund.deposit(None, 100_000).unwrap_err();
+        fund.deposit_asset(None, 100_000).unwrap_err();
         fund.set_deposit_enabled(true);
-        fund.deposit(None, 100_000).unwrap_err();
+        fund.deposit_asset(None, 100_000).unwrap_err();
         fund.sol.set_depositable(true);
-        fund.deposit(None, 100_000).unwrap();
+        fund.deposit_asset(None, 100_000).unwrap();
         assert_eq!(fund.sol.operation_reserved_amount, 100_000);
         assert_eq!(fund.sol.accumulated_deposit_amount, 100_000);
 
@@ -1339,10 +1357,12 @@ mod tests {
         assert_eq!(fund.supported_tokens[0].token.operation_reserved_amount, 0);
         assert_eq!(fund.supported_tokens[0].token.accumulated_deposit_amount, 0);
 
-        fund.deposit(Some(supported_token_mint), 1_000).unwrap_err();
+        fund.deposit_asset(Some(supported_token_mint), 1_000)
+            .unwrap_err();
         fund.set_deposit_enabled(true);
         fund.supported_tokens[0].token.set_depositable(true);
-        fund.deposit(Some(supported_token_mint), 1_000).unwrap();
+        fund.deposit_asset(Some(supported_token_mint), 1_000)
+            .unwrap();
         assert_eq!(
             fund.supported_tokens[0].token.operation_reserved_amount,
             1_000
