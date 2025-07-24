@@ -1205,7 +1205,7 @@ describe('solv.zBTC test', async () => {
         (vaultData.srtOperationReservedAmount * vaultData.oneSrtAsMicroVst) /
           (1_0000_0000n * 1_000_000n) +
         (vaultData.srtOperationReceivableAmount * vaultData.oneSrtAsMicroVst) /
-          (1_0000_0000n * 1000_000n);
+          (1_0000_0000n * 1_000_000n);
 
       const netAssetValueAfter =
         vaultData.vstOperationReservedAmount +
@@ -1214,7 +1214,7 @@ describe('solv.zBTC test', async () => {
           vaultData.oneSrtAsMicroVst) /
           (1_0000_0000n * 1_000_000n) +
         (vaultData.srtOperationReceivableAmount * vaultData.oneSrtAsMicroVst) /
-          (1_0000_0000n * 1000_000n);
+          (1_0000_0000n * 1_000_000n);
 
       const expectedVRTAmount =
         ((netAssetValueAfter - netAssetValueBefore) * vrtSupply) /
