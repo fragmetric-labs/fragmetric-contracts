@@ -4633,7 +4633,7 @@ describe('restaking.fragBTC test', async () => {
 
       const expectedVRTAmount =
         ((netAssetValueAfter - netAssetValueBefore) * vrtSupply) /
-        (netAssetValueBefore === 0n ? 1n : netAssetValueBefore);
+        netAssetValueBefore;
 
       const resSolv = await user1Solv.deposit.execute(
         {
@@ -4651,7 +4651,6 @@ describe('restaking.fragBTC test', async () => {
       let tokenAmountDiff =
         currentUser1ReceiptTokenAmount - previousUser1ReceiptTokenAmount;
 
-      if (i == 1n) continue;
       expect(tokenAmountDiff).toEqual(expectedVRTAmount);
     }
 
