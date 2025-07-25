@@ -1910,9 +1910,12 @@ mod tests {
                 .unwrap();
             let old_vault = vault.clone();
 
+            let srt_operation_reserved_amount_as_vst = vault
+                .get_srt_exchange_rate()
+                .get_srt_amount_as_vst(vault.srt_operation_reserved_amount, false).unwrap();
             let expected_vrt_amount = div_util(
                 vault.vrt_supply as u128
-                    * (vault.vst_operation_reserved_amount + vault.vst_operation_receivable_amount)
+                    * (vault.vst_operation_reserved_amount + vault.vst_operation_receivable_amount + srt_operation_reserved_amount_as_vst)
                         as u128,
                 vault.get_net_asset_value_as_vst().unwrap(),
                 false,
@@ -1950,9 +1953,12 @@ mod tests {
                 .unwrap();
             let old_vault = vault.clone();
 
+            let srt_operation_reserved_amount_as_vst = vault
+                .get_srt_exchange_rate()
+                .get_srt_amount_as_vst(vault.srt_operation_reserved_amount, false).unwrap();
             let expected_vrt_amount = div_util(
                 vault.vrt_supply as u128
-                    * (vault.vst_operation_reserved_amount + vault.vst_operation_receivable_amount)
+                    * (vault.vst_operation_reserved_amount + vault.vst_operation_receivable_amount + srt_operation_reserved_amount_as_vst)
                         as u128,
                 vault.get_net_asset_value_as_vst().unwrap(),
                 false,
@@ -1976,8 +1982,12 @@ mod tests {
                 expected_vst_amount,
             );
 
+            let old_srt_operation_reserved_amount_as_vst = old_vault
+                .get_srt_exchange_rate()
+                .get_srt_amount_as_vst(old_vault.srt_operation_reserved_amount, false).unwrap();
             let tolerance = old_vault.vst_operation_reserved_amount
                 + old_vault.vst_operation_receivable_amount
+                + old_srt_operation_reserved_amount_as_vst
                 - div_util(
                     vrt_amount as u128 * old_vault.get_net_asset_value_as_vst().unwrap() as u128,
                     old_vault.vrt_supply,
