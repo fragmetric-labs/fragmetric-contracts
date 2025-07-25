@@ -1567,17 +1567,30 @@ mod tests {
 
     prop_compose! {
         fn vault()
-            (vrt_supply in 1..u64::MAX)
             (
-                vrt_supply in Just(vrt_supply),
-                extra_vst in 0..vrt_supply.min(u64::MAX - vrt_supply + 1),
+                vst_amount in 0..=BTC_MAX_SUPPLY,
                 one_srt_as_micro_vst in 100_000_000_000_000u64..200_000_000_000_000,
+            )
+            (
+                vst_amount in Just(vst_amount),
+                one_srt_as_micro_vst in Just(one_srt_as_micro_vst),
+                srt_amount in 0..=BTC_MAX_SUPPLY.min(
+                    (
+                        (BTC_MAX_SUPPLY - vst_amount) as u128 * 100_000_000_000_000 / one_srt_as_micro_vst as u128
+                    ) as u64
+                ),
             )
         -> VaultAccount {
             let mut vault = VaultAccount::dummy();
-            vault.vrt_supply = vrt_supply;
-            vault.vst_operation_reserved_amount = vrt_supply + extra_vst;
+
+            vault.vst_operation_reserved_amount = vst_amount;
+            vault.srt_operation_reserved_amount = srt_amount;
             vault.one_srt_as_micro_vst = one_srt_as_micro_vst;
+
+            let srt_amount_as_vst = vault.get_srt_exchange_rate().get_srt_amount_as_vst(srt_amount, false).unwrap();
+            vault.vrt_supply = vault.get_vrt_amount_to_mint(vst_amount + srt_amount_as_vst).unwrap();
+            vault.update_vrt_exchange_rate().unwrap();
+
             vault
         }
     }
