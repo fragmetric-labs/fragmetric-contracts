@@ -1711,7 +1711,7 @@ mod tests {
             mut srt_amount in 0..BTC_MAX_SUPPLY,
         ) {
             let nav = vault.get_net_asset_value_as_vst().unwrap();
-            srt_amount = srt_amount.min(BTC_MAX_SUPPLY.saturating_sub(nav));
+            srt_amount = srt_amount.min(BTC_MAX_SUPPLY - nav);
 
             let old_vault = vault.clone();
 
