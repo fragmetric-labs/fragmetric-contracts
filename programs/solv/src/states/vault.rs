@@ -1636,7 +1636,7 @@ mod tests {
     proptest! {
         #[test]
         fn test_initial_mint_vrt_with_vst(
-            vst_amount in 0..u64::MAX
+            vst_amount in 0..=BTC_MAX_SUPPLY
         ) {
             let mut vault = VaultAccount::dummy();
             let old_vault = vault.clone();
@@ -1661,9 +1661,9 @@ mod tests {
         #[test]
         fn test_mint_vrt_with_vst(
             mut vault in vault(),
-            mut vst_amount in 0..u64::MAX,
+            mut vst_amount in 0..=BTC_MAX_SUPPLY,
         ) {
-            vst_amount = vst_amount.min(u64::MAX - vault.vst_operation_reserved_amount);
+            vst_amount = vst_amount.min(BTC_MAX_SUPPLY - vault.vst_operation_reserved_amount);
             let old_vault = vault.clone();
 
             // VRT Price ≥ 1
@@ -1684,7 +1684,7 @@ mod tests {
         }
 
         #[test]
-        fn test_initial_mint_vrt_with_srt(srt_amount in 0..u64::MAX) {
+        fn test_initial_mint_vrt_with_srt(srt_amount in 0..=BTC_MAX_SUPPLY) {
             let mut vault = VaultAccount::dummy();
             let old_vault = vault.clone();
 
