@@ -376,15 +376,15 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
             (async () => {
               const ix = await (async function (self) {
                 const supportedTokenMints = fund?.data.supportedTokens
-                  .map((supportedToken) => supportedToken.mint.toString())
-                  .filter((mint) => mint != '11111111111111111111111111111111');
+                  .slice(0, fund.data.numSupportedTokens)
+                  .map((supportedToken) => supportedToken.mint.toString());
                 const vaultReceiptTokenMints = fund?.data.restakingVaults
+                  .slice(0, fund.data.numRestakingVaults)
                   .map((restakingVault) =>
                     restakingVault.receiptTokenMint.toString()
-                  )
-                  .filter((mint) => mint != '11111111111111111111111111111111');
+                  );
 
-                if (supportedTokenMints?.includes(args.assetMint!)) {
+                if (args.assetMint !== null && supportedTokenMints?.includes(args.assetMint)) {
                   return restaking.getUserDepositSupportedTokenInstructionAsync(
                     {
                       user: createNoopSigner(user),
@@ -407,7 +407,7 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
                       programAddress: self.program.address,
                     }
                   );
-                } else if (vaultReceiptTokenMints?.includes(args.assetMint!)) {
+                } else if (args.assetMint !== null && vaultReceiptTokenMints?.includes(args.assetMint)) {
                   if (args.assetAmount !== null) {
                     throw new Error(
                       "Vault receipt token deposit's input amount is not allowed. This always deposits total vault receipt token balance of the account."
