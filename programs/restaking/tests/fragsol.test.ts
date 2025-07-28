@@ -731,7 +731,7 @@ describe('restaking.fragSOL test', async () => {
             "solAllocationCapacityAmount": 18446744073709551615n,
             "solAllocationWeight": 1n,
             "vault": "HR1ANmDHjaEhknvsTaK48M5xZtbBiwNdXM5NTiWhAb4S",
-            "vaultReceiptTokenDepositable": true,
+            "vaultReceiptTokenDepositable": false,
           },
         ],
         "tokenSwapStrategies": [],
@@ -2138,77 +2138,5 @@ describe('restaking.fragSOL test', async () => {
       forceResetCommand: 'UnstakeLST',
       operator: restaking.knownAddresses.fundManager,
     });
-  });
-
-  test('user can deposit vrt and receive rt', async () => {
-    const assetMint =
-      restaking.fragSOL.fund.restakingVaults[0].receiptTokenMint.address;
-    const assetAmount = 100_000_000_000n; // 100 vrt
-
-    // airdrop vrt to user first
-    await validator.airdropToken(signer1.address, assetMint, assetAmount);
-
-    // deposit vrt to fund
-    const fund_1 = await ctx.fund.resolveAccount(true);
-    const user1_1 = await user1.resolve(true);
-
-    // deposit fails if tries to deposit specific amount of vault receipt token
-    await expect(
-      user1.deposit.execute({ assetMint, assetAmount }, { signers: [signer1] })
-    ).rejects.toThrowError();
-
-    const res_1 = await user1.deposit.execute(
-      {
-        assetMint,
-      },
-      { signers: [signer1] }
-    );
-    await expectMasked(res_1).resolves.toMatchInlineSnapshot(`
-      {
-        "args": {
-          "applyPresetComputeUnitLimit": true,
-          "assetAmount": null,
-          "assetMint": "CkXLPfDG3cDawtUvnztq99HdGoQWhJceBZxqKYL2TUrg",
-          "metadata": null,
-        },
-        "events": {
-          "unknown": [],
-          "userDepositedToVault": {
-            "contributionAccrualRate": {
-              "__option": "None",
-            },
-            "depositedAmount": 100000000000n,
-            "fundAccount": "7xraTDZ4QWgvgJ5SCZp4hyJN2XEfyGRySQjdG49iZfU8",
-            "mintedReceiptTokenAmount": 99999999997n,
-            "receiptTokenMint": "Cs29UiPhAkM2v8fZW7qCJ1UjhF1UAhgrsKj61yGGYizD",
-            "updatedUserRewardAccounts": [
-              "9XZgibwtji6havXCPHKRoqpnR7MJUYgavQKCvDWALXGR",
-            ],
-            "user": "EhxcijcPKVdQ9zTSXGeLrgSEFJjbiNiC34j9prg3St29",
-            "userFundAccount": "47srXvirv37rsKhrVxtz7JWGq4CE2Ao4vjFUvTNdvg92",
-            "userReceiptTokenAccount": "BWfL432qksE6DpBEpRsuqaq4U6GdgPz1PGXKXNQkfr8M",
-            "userVaultReceiptTokenAccount": "SdKJLWgey12UdHAjsEn6e5RzQfUZcwbfNehf5U19we7",
-            "vaultAccount": "HR1ANmDHjaEhknvsTaK48M5xZtbBiwNdXM5NTiWhAb4S",
-            "vaultReceiptTokenMint": "CkXLPfDG3cDawtUvnztq99HdGoQWhJceBZxqKYL2TUrg",
-            "walletProvider": {
-              "__option": "None",
-            },
-          },
-        },
-        "signature": "MASKED(signature)",
-        "slot": "MASKED(/[.*S|s]lots?$/)",
-        "succeeded": true,
-      }
-    `);
-
-    const fund_2 = await ctx.fund.resolveAccount(true);
-    const user1_2 = await user1.resolve(true);
-    expect(
-      fund_2?.data.restakingVaults[0].receiptTokenOperationReservedAmount! -
-        fund_1?.data.restakingVaults[0].receiptTokenOperationReservedAmount!
-    ).toEqual(assetAmount);
-    expect(user1_2?.receiptTokenAmount! - user1_1?.receiptTokenAmount!).toEqual(
-      res_1.events?.userDepositedToVault?.mintedReceiptTokenAmount
-    );
   });
 });

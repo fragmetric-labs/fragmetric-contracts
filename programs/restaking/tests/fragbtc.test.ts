@@ -36,6 +36,7 @@ import { initializeFragBTC } from './fragbtc.init';
  *  18-2. settle not occurs by timestamp threshold
  *  18-3. settle not fully occurs by max amount threshold
  *  18-4. settle occurs by all threshold conditions passed
+ * 19. deposit srt to mint rt
  */
 
 describe('restaking.fragBTC test', async () => {
@@ -67,6 +68,11 @@ describe('restaking.fragBTC test', async () => {
             signer.address,
             '3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh',
             100_000_000_000n
+          ),
+          validator.airdropToken(
+            signer.address,
+            'SoLvzL3ZVjofmNB5LYFrf94QtNhMUSea4DawFhnAau8', // srt
+            2000_0000_0000n
           ),
         ]);
         return signer;
@@ -298,7 +304,7 @@ describe('restaking.fragBTC test', async () => {
             "solAllocationCapacityAmount": 18446744073709551615n,
             "solAllocationWeight": 1n,
             "vault": "H6pGcL98Rkz2aV8pq5jDEMdtrnogAmhUM5w8RAsddeB6",
-            "vaultReceiptTokenDepositable": false,
+            "vaultReceiptTokenDepositable": true,
           },
           {
             "compoundingRewardTokens": [],
@@ -4586,5 +4592,140 @@ describe('restaking.fragBTC test', async () => {
               .pendingSupportedTokenUnrestakingAmount
         )
     ).toEqual(0n);
+  });
+
+  test('user can deposit srt and receive rt', async () => {
+    const assetMint = solv.zBTC.receiptTokenMint.address!;
+
+    // 1. deposit srt to vault
+    const user1Solv = solv.zBTC.user(signer1);
+
+    // compare expected VRT amount with actually minted amount with random amount of SRT
+    for (let i = 1n; i <= 10n; i++) {
+      const previousUser1ReceiptTokenAmount = user1Solv.vaultReceiptTokenAccount
+        .account
+        ? user1Solv.vaultReceiptTokenAccount.account.data.amount
+        : 0n;
+
+      const amountToDeposit = 12_3456_7890n * i;
+
+      await solv.zBTC.resolve(true);
+      const vaultData = solv.zBTC.account!.data;
+
+      const vrtSupply = vaultData.vrtSupply;
+
+      const netAssetValueBefore =
+        vaultData.vstOperationReservedAmount +
+        vaultData.vstOperationReceivableAmount +
+        (vaultData.srtOperationReservedAmount * vaultData.oneSrtAsMicroVst) /
+          (1_0000_0000n * 1_000_000n) +
+        (vaultData.srtOperationReceivableAmount * vaultData.oneSrtAsMicroVst) /
+          (1_0000_0000n * 1_000_000n);
+
+      const netAssetValueAfter =
+        vaultData.vstOperationReservedAmount +
+        vaultData.vstOperationReceivableAmount +
+        ((vaultData.srtOperationReservedAmount + amountToDeposit) *
+          vaultData.oneSrtAsMicroVst) /
+          (1_0000_0000n * 1_000_000n) +
+        (vaultData.srtOperationReceivableAmount * vaultData.oneSrtAsMicroVst) /
+          (1_0000_0000n * 1_000_000n);
+
+      const expectedVRTAmount =
+        ((netAssetValueAfter - netAssetValueBefore) * vrtSupply) /
+        netAssetValueBefore;
+
+      const resSolv = await user1Solv.deposit.execute(
+        {
+          srtAmount: amountToDeposit,
+        },
+        { signers: [signer1] }
+      );
+
+      await user1Solv.resolve(true);
+      const currentUser1ReceiptTokenAmount = user1Solv.vaultReceiptTokenAccount
+        .account
+        ? user1Solv.vaultReceiptTokenAccount.account.data.amount
+        : 0n;
+
+      let tokenAmountDiff =
+        currentUser1ReceiptTokenAmount - previousUser1ReceiptTokenAmount;
+
+      expect(tokenAmountDiff).toEqual(expectedVRTAmount);
+    }
+
+    // 2. deposit vrt to fund
+    const fund_1 = await ctx.fund.resolveAccount(true);
+    const user1_1 = await user1.resolve(true);
+
+    // deposit fails if tries to deposit specific amount of vault receipt token
+    await expect(
+      user1.deposit.execute(
+        { assetMint, assetAmount: 10_000_000_000n }, // 100 vrt
+        { signers: [signer1] }
+      )
+    ).rejects.toThrowError();
+
+    // deposit fails if tries to deposit non supported token nor non vault receipt token
+    await expect(
+      user1.deposit.execute(
+        { assetMint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq' },
+        { signers: [signer1] },
+      )
+    ).rejects.toThrowError();
+
+    const res_1 = await user1.deposit.execute(
+      {
+        assetMint,
+      },
+      { signers: [signer1] }
+    );
+    await expectMasked(res_1).resolves.toMatchInlineSnapshot(`
+      {
+        "args": {
+          "applyPresetComputeUnitLimit": true,
+          "assetAmount": null,
+          "assetMint": "DNLsKFnrBjTBKp1eSwt8z1iNu2T2PL3MnxZFsGEEpQCf",
+          "metadata": null,
+        },
+        "events": {
+          "unknown": [],
+          "userDepositedToVault": {
+            "contributionAccrualRate": {
+              "__option": "None",
+            },
+            "depositedAmount": 68164673500n,
+            "fundAccount": "BEpVRdWw6VhvfwfQufB9iqcJ6acf51XRP1jETCvGDBVE",
+            "mintedReceiptTokenAmount": 69654964332n,
+            "receiptTokenMint": "ExBpou3QupioUjmHbwGQxNVvWvwE3ZpfzMzyXdWZhzZz",
+            "updatedUserRewardAccounts": [
+              "8XYL5QhcGSVZFX1wCdvVatXhehd7fwx9CYY4og1Fobt9",
+            ],
+            "user": "AWb2qUvuFzbVN5Eu7tZY8gM745pus5DhTGgo8U8Bd8X2",
+            "userFundAccount": "DdVfA4rT4tSJRMi688zb5SeZitH91AcKXU79Q4A3pCHg",
+            "userReceiptTokenAccount": "31GDTcPyFTexmiwSvLTZAcY2JSxafoy3yVavK4iAYaLE",
+            "userVaultReceiptTokenAccount": "8ZDbg1SBU2BdpQ5kD8LAzGswWZSXPgvWzRjQrmmwqu6n",
+            "vaultAccount": "H6pGcL98Rkz2aV8pq5jDEMdtrnogAmhUM5w8RAsddeB6",
+            "vaultReceiptTokenMint": "DNLsKFnrBjTBKp1eSwt8z1iNu2T2PL3MnxZFsGEEpQCf",
+            "walletProvider": {
+              "__option": "None",
+            },
+          },
+        },
+        "signature": "MASKED(signature)",
+        "slot": "MASKED(/[.*S|s]lots?$/)",
+        "succeeded": true,
+      }
+    `);
+
+    const fund_2 = await ctx.fund.resolveAccount(true);
+    const user1_2 = await user1.resolve(true);
+    expect(
+      fund_2?.data.restakingVaults[0].receiptTokenOperationReservedAmount! -
+        fund_1?.data.restakingVaults[0].receiptTokenOperationReservedAmount!
+    ).toEqual(user1Solv.vaultReceiptTokenAccount.account.data.amount);
+    expect(user1_2?.receiptTokenAmount! - user1_1?.receiptTokenAmount!).toEqual(
+      res_1.events?.userDepositedToVault?.mintedReceiptTokenAmount
+    );
   });
 });

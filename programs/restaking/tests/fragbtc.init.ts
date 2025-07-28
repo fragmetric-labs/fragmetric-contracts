@@ -142,6 +142,7 @@ export function initializeFragBTC(testCtx: TestSuiteContext) {
         vault: solv.zBTC.address!,
         solAllocationCapacityAmount: MAX_U64,
         solAllocationWeight: 1n,
+        vaultReceiptTokenDepositable: true,
       }),
 
     // configure reward settings (zBTC vault)
