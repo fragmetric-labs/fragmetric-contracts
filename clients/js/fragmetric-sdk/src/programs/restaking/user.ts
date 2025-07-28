@@ -384,7 +384,10 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
                     restakingVault.receiptTokenMint.toString()
                   );
 
-                if (args.assetMint !== null && supportedTokenMints?.includes(args.assetMint)) {
+                if (
+                  args.assetMint !== null &&
+                  supportedTokenMints?.includes(args.assetMint)
+                ) {
                   return restaking.getUserDepositSupportedTokenInstructionAsync(
                     {
                       user: createNoopSigner(user),
@@ -407,7 +410,10 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
                       programAddress: self.program.address,
                     }
                   );
-                } else if (args.assetMint !== null && vaultReceiptTokenMints?.includes(args.assetMint)) {
+                } else if (
+                  args.assetMint !== null &&
+                  vaultReceiptTokenMints?.includes(args.assetMint)
+                ) {
                   if (args.assetAmount !== null) {
                     throw new Error(
                       "Vault receipt token deposit's input amount is not allowed. This always deposits total vault receipt token balance of the account."
@@ -434,7 +440,7 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
                       programAddress: self.program.address,
                     }
                   );
-                } else {
+                } else if (args.assetMint === null) {
                   return restaking.getUserDepositSolInstructionAsync(
                     {
                       user: createNoopSigner(user),
@@ -446,6 +452,10 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
                     {
                       programAddress: self.program.address,
                     }
+                  );
+                } else {
+                  throw new Error(
+                    'input assetMint is not included at both supportedTokenMints and vaultReceiptTokenMints'
                   );
                 }
               })(this);

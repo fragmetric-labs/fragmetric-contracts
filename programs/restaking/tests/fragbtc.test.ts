@@ -4666,6 +4666,14 @@ describe('restaking.fragBTC test', async () => {
       )
     ).rejects.toThrowError();
 
+    // deposit fails if tries to deposit non supported token nor non vault receipt token
+    await expect(
+      user1.deposit.execute(
+        { assetMint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq' },
+        { signers: [signer1] },
+      )
+    ).rejects.toThrowError();
+
     const res_1 = await user1.deposit.execute(
       {
         assetMint,
