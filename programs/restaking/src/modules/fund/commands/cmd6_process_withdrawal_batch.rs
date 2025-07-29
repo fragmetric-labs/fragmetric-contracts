@@ -339,19 +339,22 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                 // calculate VRT max cycle fee
                 let mut vrt_max_cycle_fee_numerator = 0u64;
                 let mut vrt_max_cycle_fee_denominator = 0u64;
-                for (i, restaking_vault) in fund_account.get_restaking_vaults_iter().enumerate() {
+                let mut i = 0;
+                for restaking_vault in fund_account.get_restaking_vaults_iter() {
                     let (numerator, denominator) = match &restaking_vault
                         .receipt_token_pricing_source
                         .try_deserialize()?
                     {
                         Some(TokenPricingSource::JitoRestakingVault { address }) => {
                             let account = restaking_vault_pricing_sources[i];
+                            i += 1;
                             require_keys_eq!(account.key(), *address);
                             JitoRestakingVaultService::get_max_cycle_fee(account)?
                         }
                         Some(TokenPricingSource::VirtualVault { .. }) => (0, 0),
                         Some(TokenPricingSource::SolvBTCVault { address }) => {
                             let account = restaking_vault_pricing_sources[i];
+                            i += 1;
                             require_keys_eq!(account.key(), *address);
                             SolvBTCVaultService::get_max_cycle_fee(account)?
                         }
@@ -381,6 +384,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         vrt_max_cycle_fee_denominator = denominator;
                     }
                 }
+                require_eq!(i, num_restaking_vault_pricing_sources);
 
                 // calculate LRT max cycle fee to ensure withdrawal fee is equal or greater than max fee expense during cash-in/out
                 let lrt_max_cycle_fee_rate = 1.0
