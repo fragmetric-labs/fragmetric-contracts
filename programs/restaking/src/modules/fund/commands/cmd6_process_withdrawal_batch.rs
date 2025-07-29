@@ -107,24 +107,17 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                 // to calculate LST cycle fee (appended)
                 for supported_token in fund_account.get_supported_tokens_iter() {
                     match &supported_token.pricing_source.try_deserialize()? {
-                        Some(TokenPricingSource::MarinadeStakePool { address }) => {
-                            required_accounts.push((*address, false));
-                        }
-                        Some(TokenPricingSource::SPLStakePool { address }) => {
-                            required_accounts.push((*address, false));
-                        }
-                        Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool {
+                        Some(TokenPricingSource::MarinadeStakePool { address })
+                        | Some(TokenPricingSource::SPLStakePool { address })
+                        | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool {
                             address,
-                        }) => {
+                        })
+                        | Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { address }) =>
+                        {
                             required_accounts.push((*address, false));
                         }
-                        Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { address }) => {
-                            required_accounts.push((*address, false));
-                        }
-                        Some(TokenPricingSource::OrcaDEXLiquidityPool { address }) => {
-                            required_accounts.push((*address, false));
-                        }
-                        Some(TokenPricingSource::PeggedToken { .. }) => {
+                        Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+                        | Some(TokenPricingSource::PeggedToken { .. }) => {
                             // noop
                         }
                         // otherwise fails
@@ -211,11 +204,9 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                             })
                             | Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool {
                                 ..
-                            })
-                            | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. }) => {
-                                Ok(count + 1)
-                            }
-                            Some(TokenPricingSource::PeggedToken { .. }) => Ok(count),
+                            }) => Ok(count + 1),
+                            Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+                            | Some(TokenPricingSource::PeggedToken { .. }) => Ok(count),
                             // otherwise fails
                             Some(TokenPricingSource::JitoRestakingVault { .. })
                             | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
