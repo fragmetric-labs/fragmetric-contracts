@@ -281,20 +281,23 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                     remaining_accounts.split_at(num_restaking_vault_pricing_sources);
 
                 // calculate LST max cycle fee
+                let mut i = 0;
                 let mut lst_max_cycle_fee_numerator = 0u64;
                 let mut lst_max_cycle_fee_denominator = 0u64;
-                for (i, supported_token) in fund_account.get_supported_tokens_iter().enumerate() {
+                for supported_token in fund_account.get_supported_tokens_iter() {
                     let (numerator, denominator) = match &supported_token
                         .pricing_source
                         .try_deserialize()?
                     {
                         Some(TokenPricingSource::MarinadeStakePool { address }) => {
                             let account = supported_token_pricing_sources[i];
+                            i += 1;
                             require_keys_eq!(account.key(), *address);
                             MarinadeStakePoolService::get_max_cycle_fee(account)?
                         }
                         Some(TokenPricingSource::SPLStakePool { address }) => {
                             let account = supported_token_pricing_sources[i];
+                            i += 1;
                             require_keys_eq!(account.key(), *address);
                             <SPLStakePoolService>::get_max_cycle_fee(account)?
                         }
@@ -302,11 +305,13 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                             address,
                         }) => {
                             let account = supported_token_pricing_sources[i];
+                            i += 1;
                             require_keys_eq!(account.key(), *address);
                             SanctumSingleValidatorSPLStakePoolService::get_max_cycle_fee(account)?
                         }
                         Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { address }) => {
                             let account = supported_token_pricing_sources[i];
+                            i += 1;
                             require_keys_eq!(account.key(), *address);
                             SanctumMultiValidatorSPLStakePoolService::get_max_cycle_fee(account)?
                         }
@@ -336,6 +341,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         lst_max_cycle_fee_denominator = denominator;
                     }
                 }
+                require_eq!(i, num_supported_token_pricing_sources);
 
                 // calculate VRT max cycle fee
                 let mut vrt_max_cycle_fee_numerator = 0u64;
