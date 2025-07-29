@@ -1,8 +1,4 @@
-import {
-  findAssociatedTokenPda,
-  TOKEN_PROGRAM_ADDRESS,
-} from '@solana-program/token';
-import { Address, getAddressDecoder } from '@solana/kit';
+import { getAddressDecoder } from '@solana/kit';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { createTestSuiteContext, expectMasked } from '../../testutil';
 import { initializeFragSOL } from './fragsol.unit.init';
@@ -1286,13 +1282,8 @@ describe('restaking.fragSOL unit test', async () => {
     await expect(
       ctx.fund.addRestakingVaultDistributingReward.execute({
         vault: fund?.data.restakingVaults[0].vault!,
-        rewardTokenMint: (
-          await findAssociatedTokenPda({
-            owner: fund?.data.reserveAccount! as unknown as Address,
-            tokenProgram: TOKEN_PROGRAM_ADDRESS,
-            mint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn' as Address,
-          })
-        )[0],
+        rewardTokenMint: ctx.fund.reserve.supportedTokens.children[0]
+          .address as string,
       })
     ).rejects.toThrowError(); // Error Code: InvalidAccountData. Error Number: 17179869184. Error Message: An account's data contents was invalid.
   });
