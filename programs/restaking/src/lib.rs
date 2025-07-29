@@ -330,9 +330,8 @@ pub mod restaking {
     }
 
     pub fn fund_manager_add_restaking_vault_compounding_reward_token(
-        ctx: Context<FundManagerFundContext>,
+        ctx: Context<FundManagerRestakingVaultRewardContext>,
         vault: Pubkey,
-        compounding_reward_token_mint: Pubkey,
     ) -> Result<()> {
         emit_cpi!(modules::fund::FundConfigurationService::new(
             &mut ctx.accounts.receipt_token_mint,
@@ -340,7 +339,7 @@ pub mod restaking {
         )?
         .process_add_restaking_vault_compounding_reward_token(
             &vault,
-            compounding_reward_token_mint,
+            ctx.accounts.reward_token_mint.key(),
         )?);
 
         Ok(())
@@ -364,9 +363,8 @@ pub mod restaking {
     }
 
     pub fn fund_manager_add_restaking_vault_distributing_reward_token(
-        ctx: Context<FundManagerFundContext>,
+        ctx: Context<FundManagerRestakingVaultRewardContext>,
         vault: Pubkey,
-        distributing_reward_token_mint: Pubkey,
     ) -> Result<()> {
         emit_cpi!(modules::fund::FundConfigurationService::new(
             &mut ctx.accounts.receipt_token_mint,
@@ -374,7 +372,7 @@ pub mod restaking {
         )?
         .process_add_restaking_vault_distributing_reward_token(
             &vault,
-            distributing_reward_token_mint,
+            ctx.accounts.reward_token_mint.key(),
         )?);
 
         Ok(())
