@@ -11,7 +11,6 @@ mod fund_manager_fund_supported_token_context;
 mod fund_manager_fund_token_swap_strategy_context;
 mod fund_manager_fund_wrapped_token_context;
 mod fund_manager_normalized_token_pool_supported_token_context;
-mod fund_manager_restaking_vault_reward_context;
 mod fund_manager_reward_context;
 
 mod operator_empty_context;
@@ -41,7 +40,6 @@ pub use fund_manager_fund_supported_token_context::*;
 pub use fund_manager_fund_token_swap_strategy_context::*;
 pub use fund_manager_fund_wrapped_token_context::*;
 pub use fund_manager_normalized_token_pool_supported_token_context::*;
-pub use fund_manager_restaking_vault_reward_context::*;
 pub use fund_manager_reward_context::*;
 
 pub use operator_empty_context::*;
