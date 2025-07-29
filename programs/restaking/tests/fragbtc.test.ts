@@ -4670,7 +4670,7 @@ describe('restaking.fragBTC test', async () => {
     await expect(
       user1.deposit.execute(
         { assetMint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq' },
-        { signers: [signer1] },
+        { signers: [signer1] }
       )
     ).rejects.toThrowError();
 

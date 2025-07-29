@@ -1,4 +1,8 @@
-import { getAddressDecoder } from '@solana/kit';
+import {
+  findAssociatedTokenPda,
+  TOKEN_PROGRAM_ADDRESS,
+} from '@solana-program/token';
+import { Address, getAddressDecoder } from '@solana/kit';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { createTestSuiteContext, expectMasked } from '../../testutil';
 import { initializeFragSOL } from './fragsol.unit.init';
@@ -1264,5 +1268,33 @@ describe('restaking.fragSOL unit test', async () => {
         },
       })
     ).rejects.toThrowError('Transaction simulation failed'); // key not match error
+  });
+
+  /** reward token mint validation at add compounding/distributing reward token */
+  test('fails to add compounding/distributing reward token if provided reward token mint is not Mint account', async () => {
+    const fund = await ctx.fund.resolve(true);
+    const fundAccount = await ctx.fund.resolveAccount(true);
+
+    // fails because rewardTokenMint is not mint account (but system account)
+    await expect(
+      ctx.fund.addRestakingVaultCompoundingReward.execute({
+        vault: fund.restakingVaultStrategies![0].vault,
+        rewardTokenMint: '11111111111111111111111111111111',
+      })
+    ).rejects.toThrowError(); // Error Code: AccountOwnedByWrongProgram. Error Number: 3007. Error Message: The given account is owned by a different program than expected.
+
+    // fails because rewardTokenMint is not mint account (but token account)
+    await expect(
+      ctx.fund.addRestakingVaultDistributingReward.execute({
+        vault: fund.restakingVaultStrategies![0].vault,
+        rewardTokenMint: (
+          await findAssociatedTokenPda({
+            owner: fundAccount?.data.reserveAccount! as unknown as Address,
+            tokenProgram: TOKEN_PROGRAM_ADDRESS,
+            mint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn' as Address,
+          })
+        )[0],
+      })
+    ).rejects.toThrowError(); // Error Code: InvalidAccountData. Error Number: 17179869184. Error Message: An account's data contents was invalid.
   });
 });
