@@ -192,40 +192,43 @@ describe('restaking.fragSOL unit test', async () => {
   });
 
   test('remove supported tokens', async () => {
+    const mockPeggedMintAddress =
+      'GR8XqhtzhVFgMjc5wPAjF2ubhmvZwJmdzoaPx59KXKoE';
+
     await expect(
       ctx.fund.addSupportedToken.execute({
-        mint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+        mint: 'BonK1YhkXEGLZzwtcvRTip3gAL9nCeQD7ppZBLXhtTs',
         pricingSource: {
-          __kind: 'OrcaDEXLiquidityPool',
-          address: '4yp9YAXCJsKWMDZq2Q4j4amktvJGXBCpr3Lmv2cYBrb8',
+          __kind: 'SanctumSingleValidatorSPLStakePool',
+          address: 'ArAQfbzsdotoKB5jJcZa3ajQrrPcWr2YQoDAEAiFxJAC',
         },
       })
     ).resolves.not.toThrow();
     await expect(
       ctx.normalizedTokenPool.addSupportedToken.execute({
-        mint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+        mint: 'BonK1YhkXEGLZzwtcvRTip3gAL9nCeQD7ppZBLXhtTs',
         pricingSource: {
-          __kind: 'OrcaDEXLiquidityPool',
-          address: '4yp9YAXCJsKWMDZq2Q4j4amktvJGXBCpr3Lmv2cYBrb8',
+          __kind: 'SanctumSingleValidatorSPLStakePool',
+          address: 'ArAQfbzsdotoKB5jJcZa3ajQrrPcWr2YQoDAEAiFxJAC',
         },
       })
     ).resolves.not.toThrow();
 
     await expect(
       ctx.fund.addSupportedToken.execute({
-        mint: 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
+        mint: mockPeggedMintAddress,
         pricingSource: {
           __kind: 'PeggedToken',
-          address: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+          address: 'BonK1YhkXEGLZzwtcvRTip3gAL9nCeQD7ppZBLXhtTs',
         },
       })
     ).resolves.not.toThrow();
     await expect(
       ctx.normalizedTokenPool.addSupportedToken.execute({
-        mint: 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
+        mint: mockPeggedMintAddress,
         pricingSource: {
           __kind: 'PeggedToken',
-          address: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+          address: 'BonK1YhkXEGLZzwtcvRTip3gAL9nCeQD7ppZBLXhtTs',
         },
       })
     ).resolves.not.toThrow();
@@ -267,7 +270,7 @@ describe('restaking.fragSOL unit test', async () => {
             "role": 0,
           },
           {
-            "address": "4yp9YAXCJsKWMDZq2Q4j4amktvJGXBCpr3Lmv2cYBrb8",
+            "address": "ArAQfbzsdotoKB5jJcZa3ajQrrPcWr2YQoDAEAiFxJAC",
             "role": 0,
           },
           {
@@ -466,41 +469,41 @@ describe('restaking.fragSOL unit test', async () => {
     // failed because used by other pegged token
     await expect(
       ctx.normalizedTokenPool.removeSupportedToken.execute({
-        mint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+        mint: 'BonK1YhkXEGLZzwtcvRTip3gAL9nCeQD7ppZBLXhtTs',
       })
     ).rejects.toThrow();
     await expect(
       ctx.fund.removeSupportedToken.execute({
-        mint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+        mint: 'BonK1YhkXEGLZzwtcvRTip3gAL9nCeQD7ppZBLXhtTs',
       })
     ).rejects.toThrow();
 
     // failed because used by ntp
     await expect(
       ctx.fund.removeSupportedToken.execute({
-        mint: 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
+        mint: mockPeggedMintAddress,
       })
     ).rejects.toThrow();
 
     // success
     await expect(
       ctx.normalizedTokenPool.removeSupportedToken.execute({
-        mint: 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
+        mint: mockPeggedMintAddress,
       })
     ).resolves.not.toThrow();
     await expect(
       ctx.fund.removeSupportedToken.execute({
-        mint: 'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij',
+        mint: mockPeggedMintAddress,
       })
     ).resolves.not.toThrow();
     await expect(
       ctx.normalizedTokenPool.removeSupportedToken.execute({
-        mint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+        mint: 'BonK1YhkXEGLZzwtcvRTip3gAL9nCeQD7ppZBLXhtTs',
       })
     ).resolves.not.toThrow();
     await expect(
       ctx.fund.removeSupportedToken.execute({
-        mint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+        mint: 'BonK1YhkXEGLZzwtcvRTip3gAL9nCeQD7ppZBLXhtTs',
       })
     ).resolves.not.toThrow();
   });
@@ -1232,7 +1235,7 @@ describe('restaking.fragSOL unit test', async () => {
   });
 
   /** pricing source validation - supported token */
-  test(`fails if trying to add wrong pricing source when adding supported token`, async () => {
+  test('fails if trying to add wrong pricing source when adding supported token', async () => {
     // stake pool pricing source
     await expect(
       ctx.fund.addSupportedToken.execute({
@@ -1264,5 +1267,56 @@ describe('restaking.fragSOL unit test', async () => {
         },
       })
     ).rejects.toThrowError('Transaction simulation failed'); // key not match error
+  });
+
+  test('Token should be pegged to non-pegging token', async () => {
+    const mockPeggedMintAddress =
+      'GR8XqhtzhVFgMjc5wPAjF2ubhmvZwJmdzoaPx59KXKoE';
+
+    await ctx.fund.addSupportedToken.execute({
+      mint: 'BonK1YhkXEGLZzwtcvRTip3gAL9nCeQD7ppZBLXhtTs',
+      pricingSource: {
+        __kind: 'SanctumSingleValidatorSPLStakePool',
+        address: 'ArAQfbzsdotoKB5jJcZa3ajQrrPcWr2YQoDAEAiFxJAC',
+      },
+    });
+
+    await ctx.fund.addSupportedToken.execute({
+      mint: 'vSoLxydx6akxyMD9XEcPvGYNGq6Nn66oqVb3UkGkei7',
+      pricingSource: {
+        __kind: 'PeggedToken',
+        address: 'BonK1YhkXEGLZzwtcvRTip3gAL9nCeQD7ppZBLXhtTs',
+      },
+    });
+
+    // cannot pegg to pegging token
+    await expect(
+      ctx.fund.addSupportedToken.execute({
+        mint: mockPeggedMintAddress,
+        pricingSource: {
+          __kind: 'PeggedToken',
+          address: 'vSoLxydx6akxyMD9XEcPvGYNGq6Nn66oqVb3UkGkei7',
+        },
+      })
+    ).rejects.toThrowError();
+
+    await ctx.fund.addSupportedToken.execute({
+      mint: mockPeggedMintAddress,
+      pricingSource: {
+        __kind: 'PeggedToken',
+        address: 'BonK1YhkXEGLZzwtcvRTip3gAL9nCeQD7ppZBLXhtTs',
+      },
+    });
+
+    // restore previous status
+    await ctx.fund.removeSupportedToken.execute({
+      mint: mockPeggedMintAddress,
+    });
+    await ctx.fund.removeSupportedToken.execute({
+      mint: 'vSoLxydx6akxyMD9XEcPvGYNGq6Nn66oqVb3UkGkei7',
+    });
+    await ctx.fund.removeSupportedToken.execute({
+      mint: 'BonK1YhkXEGLZzwtcvRTip3gAL9nCeQD7ppZBLXhtTs',
+    });
   });
 });

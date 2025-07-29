@@ -4670,7 +4670,7 @@ describe('restaking.fragBTC test', async () => {
     await expect(
       user1.deposit.execute(
         { assetMint: 'ZEUS1aR7aX8DFFJf5QjWj2ftDDdNTroMNGo8YoQm3Gq' },
-        { signers: [signer1] },
+        { signers: [signer1] }
       )
     ).rejects.toThrowError();
 
@@ -4723,9 +4723,44 @@ describe('restaking.fragBTC test', async () => {
     expect(
       fund_2?.data.restakingVaults[0].receiptTokenOperationReservedAmount! -
         fund_1?.data.restakingVaults[0].receiptTokenOperationReservedAmount!
-    ).toEqual(user1Solv.vaultReceiptTokenAccount.account.data.amount);
+    ).toEqual(user1Solv.vaultReceiptTokenAccount.account?.data.amount);
     expect(user1_2?.receiptTokenAmount! - user1_1?.receiptTokenAmount!).toEqual(
       res_1.events?.userDepositedToVault?.mintedReceiptTokenAmount
     );
+  });
+
+  test('new supported token should be pegged to registered token if pricing source of the registered one is manipulatable', async () => {
+    // when there is supported token that uses 'OrcaDEXLiquidityPool' as pricing source,
+    // pricing source of new supported token should be pegged to the token that uses 'OrcaDEXLiquidityPool'
+    await expect(
+      ctx.fund.addSupportedToken.execute({
+        mint: '6DNSN2BJsaPFdFFc1zP37kkeNe4Usc1Sqkzr9C9vPWcU',
+        pricingSource: {
+          __kind: 'OrcaDEXLiquidityPool',
+          address: '4PTzufF599o1HMtP9HCWkeo6Wk1NoVrRQp9sgf7X6rmB',
+        },
+      })
+    ).rejects.toThrowError();
+
+    await ctx.fund.addSupportedToken.execute({
+      mint: '6DNSN2BJsaPFdFFc1zP37kkeNe4Usc1Sqkzr9C9vPWcU',
+      pricingSource: {
+        __kind: 'PeggedToken',
+        address: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+      },
+    });
+
+    // sol can't be depositable if there is supported token that uses 'OrcaDEXLiquidityPool' as its pricing source
+    await expect(
+      ctx.fund.updateAssetStrategy.execute({
+        tokenMint: null,
+        solDepositable: true,
+      })
+    ).rejects.toThrowError();
+
+    // restore previous state
+    await ctx.fund.removeSupportedToken.execute({
+      mint: '6DNSN2BJsaPFdFFc1zP37kkeNe4Usc1Sqkzr9C9vPWcU',
+    });
   });
 });
