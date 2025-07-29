@@ -107,6 +107,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                 // to calculate LST cycle fee (appended)
                 for supported_token in fund_account.get_supported_tokens_iter() {
                     match &supported_token.pricing_source.try_deserialize()? {
+                        // LST supported tokens
                         Some(TokenPricingSource::MarinadeStakePool { address })
                         | Some(TokenPricingSource::SPLStakePool { address })
                         | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool {
@@ -116,10 +117,9 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         {
                             required_accounts.push((*address, false));
                         }
+                        // Non-LST supported tokens (no-op)
                         Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
-                        | Some(TokenPricingSource::PeggedToken { .. }) => {
-                            // noop
-                        }
+                        | Some(TokenPricingSource::PeggedToken { .. }) => {}
                         // otherwise fails
                         Some(TokenPricingSource::JitoRestakingVault { .. })
                         | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
@@ -142,13 +142,13 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         .receipt_token_pricing_source
                         .try_deserialize()?
                     {
+                        // restaking vaults
                         Some(TokenPricingSource::JitoRestakingVault { address })
                         | Some(TokenPricingSource::SolvBTCVault { address }) => {
                             required_accounts.push((*address, false));
                         }
-                        Some(TokenPricingSource::VirtualVault { .. }) => {
-                            // noop
-                        }
+                        // virtual vault (no-op)
+                        Some(TokenPricingSource::VirtualVault { .. }) => {}
                         // otherwise fails
                         Some(TokenPricingSource::SPLStakePool { .. })
                         | Some(TokenPricingSource::MarinadeStakePool { .. })
@@ -199,6 +199,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                     .get_supported_tokens_iter()
                     .try_fold(0usize, |count, supported_token| {
                         match &supported_token.pricing_source.try_deserialize()? {
+                            // LST supported tokens
                             Some(TokenPricingSource::MarinadeStakePool { .. })
                             | Some(TokenPricingSource::SPLStakePool { .. })
                             | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool {
@@ -207,6 +208,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                             | Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool {
                                 ..
                             }) => Ok(count + 1),
+                            // Non-LST supported tokens (no-op)
                             Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
                             | Some(TokenPricingSource::PeggedToken { .. }) => Ok(count),
                             // otherwise fails
@@ -231,8 +233,10 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                             .receipt_token_pricing_source
                             .try_deserialize()?
                         {
+                            // restaking vaults
                             Some(TokenPricingSource::JitoRestakingVault { .. })
                             | Some(TokenPricingSource::SolvBTCVault { .. }) => Ok(count + 1),
+                            // virtual vault (no-op)
                             Some(TokenPricingSource::VirtualVault { .. }) => Ok(count),
                             // otherwise fails
                             Some(TokenPricingSource::SPLStakePool { .. })
@@ -282,6 +286,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         .pricing_source
                         .try_deserialize()?
                     {
+                        // LST supported tokens
                         Some(TokenPricingSource::MarinadeStakePool { address }) => {
                             let account = supported_token_pricing_sources[i];
                             i += 1;
@@ -308,6 +313,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                             require_keys_eq!(account.key(), *address);
                             SanctumMultiValidatorSPLStakePoolService::get_max_cycle_fee(account)?
                         }
+                        // Non-LST supported tokens
                         Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
                         | Some(TokenPricingSource::PeggedToken { .. }) => (0, 0),
                         // otherwise fails
@@ -345,19 +351,21 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         .receipt_token_pricing_source
                         .try_deserialize()?
                     {
+                        // restaking vaults
                         Some(TokenPricingSource::JitoRestakingVault { address }) => {
                             let account = restaking_vault_pricing_sources[i];
                             i += 1;
                             require_keys_eq!(account.key(), *address);
                             JitoRestakingVaultService::get_max_cycle_fee(account)?
                         }
-                        Some(TokenPricingSource::VirtualVault { .. }) => (0, 0),
                         Some(TokenPricingSource::SolvBTCVault { address }) => {
                             let account = restaking_vault_pricing_sources[i];
                             i += 1;
                             require_keys_eq!(account.key(), *address);
                             SolvBTCVaultService::get_max_cycle_fee(account)?
                         }
+                        // virtual vault (no-op)
+                        Some(TokenPricingSource::VirtualVault { .. }) => (0, 0),
                         // otherwise fails
                         Some(TokenPricingSource::SPLStakePool { .. })
                         | Some(TokenPricingSource::MarinadeStakePool { .. })
