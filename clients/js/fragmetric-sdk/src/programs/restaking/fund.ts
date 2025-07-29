@@ -1865,7 +1865,7 @@ export class RestakingFundAccountContext extends AccountContext<
             restaking.getFundManagerAddRestakingVaultCompoundingRewardTokenInstructionAsync(
               {
                 vault: args.vault as Address,
-                compoundingRewardTokenMint: args.rewardTokenMint as Address,
+                rewardTokenMint: args.rewardTokenMint as Address,
                 fundManager: createNoopSigner(fundManager),
                 program: this.program.address,
                 receiptTokenMint: data.receiptTokenMint,
@@ -1956,7 +1956,7 @@ export class RestakingFundAccountContext extends AccountContext<
             restaking.getFundManagerAddRestakingVaultDistributingRewardTokenInstructionAsync(
               {
                 vault: args.vault as Address,
-                distributingRewardTokenMint: args.rewardTokenMint as Address,
+                rewardTokenMint: args.rewardTokenMint as Address,
                 fundManager: createNoopSigner(fundManager),
                 program: this.program.address,
                 receiptTokenMint: data.receiptTokenMint,

@@ -1391,6 +1391,9 @@
           }
         },
         {
+          "name": "reward_token_mint"
+        },
+        {
           "name": "event_authority",
           "pda": {
             "seeds": [
@@ -1426,10 +1429,6 @@
       "args": [
         {
           "name": "vault",
-          "type": "pubkey"
-        },
-        {
-          "name": "compounding_reward_token_mint",
           "type": "pubkey"
         }
       ]
@@ -1480,6 +1479,9 @@
           }
         },
         {
+          "name": "reward_token_mint"
+        },
+        {
           "name": "event_authority",
           "pda": {
             "seeds": [
@@ -1515,10 +1517,6 @@
       "args": [
         {
           "name": "vault",
-          "type": "pubkey"
-        },
-        {
-          "name": "distributing_reward_token_mint",
           "type": "pubkey"
         }
       ]
