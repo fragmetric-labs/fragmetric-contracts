@@ -189,8 +189,18 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
                 )?
             }
             TokenPricingSource::PeggedToken { address } => {
+                let fund_account = self.fund_account.load()?;
                 // The pegging token is already at the fund's supported token list, so this validation is meaningful.
-                self.fund_account.load()?.get_supported_token(&address)?;
+                let pegging_token = fund_account.get_supported_token(&address)?;
+                // Pegging token shouldn't be pegged again to another token
+                match pegging_token.pricing_source.try_deserialize()? {
+                    None => err!(ErrorCode::TokenPricingSourceAccountNotFoundError)?,
+                    Some(pricing_source) => {
+                        if let TokenPricingSource::PeggedToken { .. } = pricing_source {
+                            err!(ErrorCode::UnexpectedPricingSourceError)?
+                        }
+                    }
+                }
             }
             // otherwise fails
             TokenPricingSource::FragmetricNormalizedTokenPool { .. }
