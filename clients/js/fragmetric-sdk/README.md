@@ -14,7 +14,7 @@ $ pnpm i @fragmetric-labs/sdk@latest
 
 ### Documentation
 Full usage, guides, and API references:
-👉 https://docs2.fragmetric.xyz/dev/tools/sdk/offchain
+👉 https://docs.fragmetric.xyz/dev/tools/sdk/offchain
 
 ### Examples
 - [../examples/react](./examples/react) – Web app setup with ESM bundlers (e.g. Rollup, Webpack)
