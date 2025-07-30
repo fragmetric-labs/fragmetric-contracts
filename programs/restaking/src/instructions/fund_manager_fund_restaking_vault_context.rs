@@ -87,3 +87,23 @@ pub struct FundManagerFundRestakingVaultDelegationInitialContext<'info> {
     /// CHECK: will be validated by vault service
     pub vault_operator_delegation: UncheckedAccount<'info>,
 }
+
+#[event_cpi]
+#[derive(Accounts)]
+pub struct FundManagerFundRestakingVaultRewardContext<'info> {
+    #[account(address = FUND_MANAGER_PUBKEY)]
+    pub fund_manager: Signer<'info>,
+
+    pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    #[account(
+        mut,
+        seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
+        bump = fund_account.get_bump()?,
+        has_one = receipt_token_mint,
+        constraint = fund_account.load()?.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
+    )]
+    pub fund_account: AccountLoader<'info, FundAccount>,
+
+    pub reward_token_mint: Box<InterfaceAccount<'info, Mint>>,
+}
