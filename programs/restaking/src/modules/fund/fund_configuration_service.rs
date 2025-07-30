@@ -157,62 +157,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
             supported_token_mint.key()
         );
 
-        self.validate_new_pricing_source(&pricing_source)?;
-
-        match pricing_source {
-            TokenPricingSource::SPLStakePool { address }
-            | TokenPricingSource::MarinadeStakePool { address }
-            | TokenPricingSource::SanctumSingleValidatorSPLStakePool { address }
-            | TokenPricingSource::SanctumMultiValidatorSPLStakePool { address } => {
-                let pool_account_info = pricing_sources
-                    .iter()
-                    .find(|account| account.key() == address)
-                    .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundError))?;
-
-                staking::validate_pricing_source(
-                    &pricing_source,
-                    pool_account_info,
-                    supported_token_mint,
-                )?
-            }
-            TokenPricingSource::OrcaDEXLiquidityPool { address } => {
-                let pool_account_info = pricing_sources
-                    .iter()
-                    .find(|account| account.key() == address)
-                    .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundError))?;
-
-                swap::validate_pricing_source(
-                    &pricing_source,
-                    pool_account_info,
-                    &supported_token_mint.key(),
-                    &spl_token::native_mint::ID,
-                )?
-            }
-            TokenPricingSource::PeggedToken { address } => {
-                let fund_account = self.fund_account.load()?;
-                // The pegging token is already at the fund's supported token list, so this validation is meaningful.
-                let pegging_token = fund_account.get_supported_token(&address)?;
-                // Pegging token shouldn't be pegged again to another token
-                match pegging_token.pricing_source.try_deserialize()? {
-                    None => err!(ErrorCode::TokenPricingSourceAccountNotFoundError)?,
-                    Some(pricing_source) => {
-                        if let TokenPricingSource::PeggedToken { .. } = pricing_source {
-                            err!(ErrorCode::UnexpectedPricingSourceError)?
-                        }
-                    }
-                }
-            }
-            // otherwise fails
-            TokenPricingSource::FragmetricNormalizedTokenPool { .. }
-            | TokenPricingSource::FragmetricRestakingFund { .. }
-            | TokenPricingSource::JitoRestakingVault { .. }
-            | TokenPricingSource::SolvBTCVault { .. }
-            | TokenPricingSource::VirtualVault { .. } => {
-                err!(ErrorCode::UnexpectedPricingSourceError)?
-            }
-            #[cfg(all(test, not(feature = "idl-build")))]
-            TokenPricingSource::Mock { .. } => err!(ErrorCode::UnexpectedPricingSourceError)?,
-        }
+        self.validate_new_pricing_source(supported_token_mint, &pricing_source, pricing_sources)?;
 
         let mut fund_account = self.fund_account.load_mut()?;
         fund_account.add_supported_token(
@@ -486,29 +431,28 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
             let fund_account = self.fund_account.load()?;
             for supported_token in fund_account.get_supported_tokens_iter() {
                 match supported_token.pricing_source.try_deserialize()? {
+                    Some(TokenPricingSource::SPLStakePool { .. })
+                    | Some(TokenPricingSource::MarinadeStakePool { .. })
+                    | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. })
+                    | Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { .. })
+                    | Some(TokenPricingSource::PeggedToken { .. }) => {}
+                    // manipulatable pricing source
+                    Some(TokenPricingSource::OrcaDEXLiquidityPool { .. }) => {
+                        err!(ErrorCode::UnexpectedPricingSourceError)?
+                    }
+                    // otherwise fails
+                    Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+                    | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+                    | Some(TokenPricingSource::JitoRestakingVault { .. })
+                    | Some(TokenPricingSource::SolvBTCVault { .. })
+                    | Some(TokenPricingSource::VirtualVault { .. }) => {
+                        err!(ErrorCode::UnexpectedPricingSourceError)?
+                    }
+                    #[cfg(all(test, not(feature = "idl-build")))]
+                    Some(TokenPricingSource::Mock { .. }) => {
+                        err!(ErrorCode::UnexpectedPricingSourceError)?
+                    }
                     None => err!(ErrorCode::TokenPricingSourceAccountNotFoundError)?,
-                    Some(pricing_source) => match pricing_source {
-                        TokenPricingSource::OrcaDEXLiquidityPool { .. } => {
-                            err!(ErrorCode::UnexpectedPricingSourceError)?
-                        }
-                        TokenPricingSource::SPLStakePool { .. }
-                        | TokenPricingSource::MarinadeStakePool { .. }
-                        | TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. }
-                        | TokenPricingSource::SanctumMultiValidatorSPLStakePool { .. }
-                        | TokenPricingSource::PeggedToken { .. } => {}
-                        // otherwise fails
-                        TokenPricingSource::FragmetricNormalizedTokenPool { .. }
-                        | TokenPricingSource::FragmetricRestakingFund { .. }
-                        | TokenPricingSource::JitoRestakingVault { .. }
-                        | TokenPricingSource::SolvBTCVault { .. }
-                        | TokenPricingSource::VirtualVault { .. } => {
-                            err!(ErrorCode::UnexpectedPricingSourceError)?
-                        }
-                        #[cfg(all(test, not(feature = "idl-build")))]
-                        TokenPricingSource::Mock { .. } => {
-                            err!(ErrorCode::UnexpectedPricingSourceError)?
-                        }
-                    },
                 }
             }
         }
@@ -826,7 +770,12 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         self.create_fund_manager_updated_fund_event()
     }
 
-    fn validate_new_pricing_source(&self, new_pricing_source: &TokenPricingSource) -> Result<()> {
+    fn validate_new_pricing_source(
+        &self,
+        supported_token_mint: &InterfaceAccount<Mint>,
+        new_pricing_source: &TokenPricingSource,
+        pricing_sources: &'info [AccountInfo<'info>],
+    ) -> Result<()> {
         let fund_account = self.fund_account.load()?;
 
         // if registered supported token uses manipulatable pricing source (ex. OrcaDEXLiquidityPool),
@@ -863,31 +812,63 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
             }
         }
 
-        // if 'there are some registered supported tokens' or 'sol is depositable to the fund',
-        // new pricing source shouldn't be manipulatable (ex. OrcaDEXLiquidityPool).
-        if fund_account.get_supported_tokens_iter().next().is_some()
-            || fund_account.sol.depositable == 1
-        {
-            match new_pricing_source {
-                TokenPricingSource::OrcaDEXLiquidityPool { .. } => {
-                    err!(ErrorCode::UnexpectedPricingSourceError)?;
-                }
-                TokenPricingSource::SPLStakePool { .. }
-                | TokenPricingSource::MarinadeStakePool { .. }
-                | TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. }
-                | TokenPricingSource::SanctumMultiValidatorSPLStakePool { .. }
-                | TokenPricingSource::PeggedToken { .. } => {}
-                // otherwise fails
-                TokenPricingSource::FragmetricNormalizedTokenPool { .. }
-                | TokenPricingSource::FragmetricRestakingFund { .. }
-                | TokenPricingSource::JitoRestakingVault { .. }
-                | TokenPricingSource::SolvBTCVault { .. }
-                | TokenPricingSource::VirtualVault { .. } => {
+        match new_pricing_source {
+            TokenPricingSource::SPLStakePool { address }
+            | TokenPricingSource::MarinadeStakePool { address }
+            | TokenPricingSource::SanctumSingleValidatorSPLStakePool { address }
+            | TokenPricingSource::SanctumMultiValidatorSPLStakePool { address } => {
+                let pool_account_info = pricing_sources
+                    .iter()
+                    .find(|account| account.key == address)
+                    .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundError))?;
+
+                staking::validate_pricing_source(
+                    new_pricing_source,
+                    pool_account_info,
+                    supported_token_mint,
+                )?
+            }
+            TokenPricingSource::OrcaDEXLiquidityPool { address } => {
+                if fund_account.get_supported_tokens_iter().next().is_some()
+                    || fund_account.sol.depositable == 1
+                {
                     err!(ErrorCode::UnexpectedPricingSourceError)?
                 }
-                #[cfg(all(test, not(feature = "idl-build")))]
-                TokenPricingSource::Mock { .. } => err!(ErrorCode::UnexpectedPricingSourceError)?,
+
+                let pool_account_info = pricing_sources
+                    .iter()
+                    .find(|account| account.key == address)
+                    .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundError))?;
+
+                swap::validate_pricing_source(
+                    new_pricing_source,
+                    pool_account_info,
+                    &supported_token_mint.key(),
+                    &spl_token::native_mint::ID,
+                )?
             }
+            TokenPricingSource::PeggedToken { address } => {
+                // The pegging token must already exist at the fund's supported token list
+                let pegging_token = fund_account.get_supported_token(address)?;
+                // Pegging token shouldn't be pegged again to another token
+                if let TokenPricingSource::PeggedToken { .. } = pegging_token
+                    .pricing_source
+                    .try_deserialize()?
+                    .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundError))?
+                {
+                    err!(ErrorCode::UnexpectedPricingSourceError)?
+                }
+            }
+            // otherwise fails
+            TokenPricingSource::FragmetricNormalizedTokenPool { .. }
+            | TokenPricingSource::FragmetricRestakingFund { .. }
+            | TokenPricingSource::JitoRestakingVault { .. }
+            | TokenPricingSource::SolvBTCVault { .. }
+            | TokenPricingSource::VirtualVault { .. } => {
+                err!(ErrorCode::UnexpectedPricingSourceError)?
+            }
+            #[cfg(all(test, not(feature = "idl-build")))]
+            TokenPricingSource::Mock { .. } => err!(ErrorCode::UnexpectedPricingSourceError)?,
         }
 
         Ok(())
