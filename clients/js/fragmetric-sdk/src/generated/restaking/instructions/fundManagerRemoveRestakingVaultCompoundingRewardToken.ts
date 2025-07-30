@@ -56,6 +56,7 @@ export type FundManagerRemoveRestakingVaultCompoundingRewardTokenInstruction<
     | IAccountMeta<string> = '5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx',
   TAccountReceiptTokenMint extends string | IAccountMeta<string> = string,
   TAccountFundAccount extends string | IAccountMeta<string> = string,
+  TAccountRewardTokenMint extends string | IAccountMeta<string> = string,
   TAccountEventAuthority extends string | IAccountMeta<string> = string,
   TAccountProgram extends string | IAccountMeta<string> = string,
   TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
@@ -73,6 +74,9 @@ export type FundManagerRemoveRestakingVaultCompoundingRewardTokenInstruction<
       TAccountFundAccount extends string
         ? WritableAccount<TAccountFundAccount>
         : TAccountFundAccount,
+      TAccountRewardTokenMint extends string
+        ? ReadonlyAccount<TAccountRewardTokenMint>
+        : TAccountRewardTokenMint,
       TAccountEventAuthority extends string
         ? ReadonlyAccount<TAccountEventAuthority>
         : TAccountEventAuthority,
@@ -84,21 +88,16 @@ export type FundManagerRemoveRestakingVaultCompoundingRewardTokenInstruction<
   >;
 
 export type FundManagerRemoveRestakingVaultCompoundingRewardTokenInstructionData =
-  {
-    discriminator: ReadonlyUint8Array;
-    vault: Address;
-    compoundingRewardTokenMint: Address;
-  };
+  { discriminator: ReadonlyUint8Array; vault: Address };
 
 export type FundManagerRemoveRestakingVaultCompoundingRewardTokenInstructionDataArgs =
-  { vault: Address; compoundingRewardTokenMint: Address };
+  { vault: Address };
 
 export function getFundManagerRemoveRestakingVaultCompoundingRewardTokenInstructionDataEncoder(): Encoder<FundManagerRemoveRestakingVaultCompoundingRewardTokenInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
       ['vault', getAddressEncoder()],
-      ['compoundingRewardTokenMint', getAddressEncoder()],
     ]),
     (value) => ({
       ...value,
@@ -112,7 +111,6 @@ export function getFundManagerRemoveRestakingVaultCompoundingRewardTokenInstruct
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
     ['vault', getAddressDecoder()],
-    ['compoundingRewardTokenMint', getAddressDecoder()],
   ]);
 }
 
@@ -130,22 +128,24 @@ export type FundManagerRemoveRestakingVaultCompoundingRewardTokenAsyncInput<
   TAccountFundManager extends string = string,
   TAccountReceiptTokenMint extends string = string,
   TAccountFundAccount extends string = string,
+  TAccountRewardTokenMint extends string = string,
   TAccountEventAuthority extends string = string,
   TAccountProgram extends string = string,
 > = {
   fundManager?: TransactionSigner<TAccountFundManager>;
   receiptTokenMint: Address<TAccountReceiptTokenMint>;
   fundAccount?: Address<TAccountFundAccount>;
+  rewardTokenMint: Address<TAccountRewardTokenMint>;
   eventAuthority?: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
   vault: FundManagerRemoveRestakingVaultCompoundingRewardTokenInstructionDataArgs['vault'];
-  compoundingRewardTokenMint: FundManagerRemoveRestakingVaultCompoundingRewardTokenInstructionDataArgs['compoundingRewardTokenMint'];
 };
 
 export async function getFundManagerRemoveRestakingVaultCompoundingRewardTokenInstructionAsync<
   TAccountFundManager extends string,
   TAccountReceiptTokenMint extends string,
   TAccountFundAccount extends string,
+  TAccountRewardTokenMint extends string,
   TAccountEventAuthority extends string,
   TAccountProgram extends string,
   TProgramAddress extends Address = typeof RESTAKING_PROGRAM_ADDRESS,
@@ -154,6 +154,7 @@ export async function getFundManagerRemoveRestakingVaultCompoundingRewardTokenIn
     TAccountFundManager,
     TAccountReceiptTokenMint,
     TAccountFundAccount,
+    TAccountRewardTokenMint,
     TAccountEventAuthority,
     TAccountProgram
   >,
@@ -164,6 +165,7 @@ export async function getFundManagerRemoveRestakingVaultCompoundingRewardTokenIn
     TAccountFundManager,
     TAccountReceiptTokenMint,
     TAccountFundAccount,
+    TAccountRewardTokenMint,
     TAccountEventAuthority,
     TAccountProgram
   >
@@ -179,6 +181,10 @@ export async function getFundManagerRemoveRestakingVaultCompoundingRewardTokenIn
       isWritable: false,
     },
     fundAccount: { value: input.fundAccount ?? null, isWritable: true },
+    rewardTokenMint: {
+      value: input.rewardTokenMint ?? null,
+      isWritable: false,
+    },
     eventAuthority: { value: input.eventAuthority ?? null, isWritable: false },
     program: { value: input.program ?? null, isWritable: false },
   };
@@ -226,6 +232,7 @@ export async function getFundManagerRemoveRestakingVaultCompoundingRewardTokenIn
       getAccountMeta(accounts.fundManager),
       getAccountMeta(accounts.receiptTokenMint),
       getAccountMeta(accounts.fundAccount),
+      getAccountMeta(accounts.rewardTokenMint),
       getAccountMeta(accounts.eventAuthority),
       getAccountMeta(accounts.program),
     ],
@@ -238,6 +245,7 @@ export async function getFundManagerRemoveRestakingVaultCompoundingRewardTokenIn
     TAccountFundManager,
     TAccountReceiptTokenMint,
     TAccountFundAccount,
+    TAccountRewardTokenMint,
     TAccountEventAuthority,
     TAccountProgram
   >;
@@ -249,22 +257,24 @@ export type FundManagerRemoveRestakingVaultCompoundingRewardTokenInput<
   TAccountFundManager extends string = string,
   TAccountReceiptTokenMint extends string = string,
   TAccountFundAccount extends string = string,
+  TAccountRewardTokenMint extends string = string,
   TAccountEventAuthority extends string = string,
   TAccountProgram extends string = string,
 > = {
   fundManager?: TransactionSigner<TAccountFundManager>;
   receiptTokenMint: Address<TAccountReceiptTokenMint>;
   fundAccount: Address<TAccountFundAccount>;
+  rewardTokenMint: Address<TAccountRewardTokenMint>;
   eventAuthority: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
   vault: FundManagerRemoveRestakingVaultCompoundingRewardTokenInstructionDataArgs['vault'];
-  compoundingRewardTokenMint: FundManagerRemoveRestakingVaultCompoundingRewardTokenInstructionDataArgs['compoundingRewardTokenMint'];
 };
 
 export function getFundManagerRemoveRestakingVaultCompoundingRewardTokenInstruction<
   TAccountFundManager extends string,
   TAccountReceiptTokenMint extends string,
   TAccountFundAccount extends string,
+  TAccountRewardTokenMint extends string,
   TAccountEventAuthority extends string,
   TAccountProgram extends string,
   TProgramAddress extends Address = typeof RESTAKING_PROGRAM_ADDRESS,
@@ -273,6 +283,7 @@ export function getFundManagerRemoveRestakingVaultCompoundingRewardTokenInstruct
     TAccountFundManager,
     TAccountReceiptTokenMint,
     TAccountFundAccount,
+    TAccountRewardTokenMint,
     TAccountEventAuthority,
     TAccountProgram
   >,
@@ -282,6 +293,7 @@ export function getFundManagerRemoveRestakingVaultCompoundingRewardTokenInstruct
   TAccountFundManager,
   TAccountReceiptTokenMint,
   TAccountFundAccount,
+  TAccountRewardTokenMint,
   TAccountEventAuthority,
   TAccountProgram
 > {
@@ -296,6 +308,10 @@ export function getFundManagerRemoveRestakingVaultCompoundingRewardTokenInstruct
       isWritable: false,
     },
     fundAccount: { value: input.fundAccount ?? null, isWritable: true },
+    rewardTokenMint: {
+      value: input.rewardTokenMint ?? null,
+      isWritable: false,
+    },
     eventAuthority: { value: input.eventAuthority ?? null, isWritable: false },
     program: { value: input.program ?? null, isWritable: false },
   };
@@ -319,6 +335,7 @@ export function getFundManagerRemoveRestakingVaultCompoundingRewardTokenInstruct
       getAccountMeta(accounts.fundManager),
       getAccountMeta(accounts.receiptTokenMint),
       getAccountMeta(accounts.fundAccount),
+      getAccountMeta(accounts.rewardTokenMint),
       getAccountMeta(accounts.eventAuthority),
       getAccountMeta(accounts.program),
     ],
@@ -331,6 +348,7 @@ export function getFundManagerRemoveRestakingVaultCompoundingRewardTokenInstruct
     TAccountFundManager,
     TAccountReceiptTokenMint,
     TAccountFundAccount,
+    TAccountRewardTokenMint,
     TAccountEventAuthority,
     TAccountProgram
   >;
@@ -347,8 +365,9 @@ export type ParsedFundManagerRemoveRestakingVaultCompoundingRewardTokenInstructi
     fundManager: TAccountMetas[0];
     receiptTokenMint: TAccountMetas[1];
     fundAccount: TAccountMetas[2];
-    eventAuthority: TAccountMetas[3];
-    program: TAccountMetas[4];
+    rewardTokenMint: TAccountMetas[3];
+    eventAuthority: TAccountMetas[4];
+    program: TAccountMetas[5];
   };
   data: FundManagerRemoveRestakingVaultCompoundingRewardTokenInstructionData;
 };
@@ -364,7 +383,7 @@ export function parseFundManagerRemoveRestakingVaultCompoundingRewardTokenInstru
   TProgram,
   TAccountMetas
 > {
-  if (instruction.accounts.length < 5) {
+  if (instruction.accounts.length < 6) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -380,6 +399,7 @@ export function parseFundManagerRemoveRestakingVaultCompoundingRewardTokenInstru
       fundManager: getNextAccount(),
       receiptTokenMint: getNextAccount(),
       fundAccount: getNextAccount(),
+      rewardTokenMint: getNextAccount(),
       eventAuthority: getNextAccount(),
       program: getNextAccount(),
     },

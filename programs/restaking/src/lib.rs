@@ -329,57 +329,6 @@ pub mod restaking {
         Ok(())
     }
 
-    pub fn fund_manager_add_restaking_vault_compounding_reward_token(
-        ctx: Context<FundManagerFundContext>,
-        vault: Pubkey,
-        compounding_reward_token_mint: Pubkey,
-    ) -> Result<()> {
-        emit_cpi!(modules::fund::FundConfigurationService::new(
-            &mut ctx.accounts.receipt_token_mint,
-            &mut ctx.accounts.fund_account
-        )?
-        .process_add_restaking_vault_compounding_reward_token(
-            &vault,
-            compounding_reward_token_mint,
-        )?);
-
-        Ok(())
-    }
-
-    pub fn fund_manager_remove_restaking_vault_compounding_reward_token(
-        ctx: Context<FundManagerFundContext>,
-        vault: Pubkey,
-        compounding_reward_token_mint: Pubkey,
-    ) -> Result<()> {
-        emit_cpi!(modules::fund::FundConfigurationService::new(
-            &mut ctx.accounts.receipt_token_mint,
-            &mut ctx.accounts.fund_account
-        )?
-        .process_remove_restaking_vault_compounding_reward_token(
-            &vault,
-            &compounding_reward_token_mint,
-        )?);
-
-        Ok(())
-    }
-
-    pub fn fund_manager_add_restaking_vault_distributing_reward_token(
-        ctx: Context<FundManagerFundContext>,
-        vault: Pubkey,
-        distributing_reward_token_mint: Pubkey,
-    ) -> Result<()> {
-        emit_cpi!(modules::fund::FundConfigurationService::new(
-            &mut ctx.accounts.receipt_token_mint,
-            &mut ctx.accounts.fund_account
-        )?
-        .process_add_restaking_vault_distributing_reward_token(
-            &vault,
-            distributing_reward_token_mint,
-        )?);
-
-        Ok(())
-    }
-
     pub fn fund_manager_update_restaking_vault_reward_token_harvest_threshold(
         ctx: Context<FundManagerFundContext>,
         vault: Pubkey,
@@ -403,10 +352,61 @@ pub mod restaking {
         Ok(())
     }
 
-    pub fn fund_manager_remove_restaking_vault_distributing_reward_token(
-        ctx: Context<FundManagerFundContext>,
+    ////////////////////////////////////////////
+    // FundManagerFundRestakingVaultRewardContext
+    ////////////////////////////////////////////
+
+    pub fn fund_manager_add_restaking_vault_compounding_reward_token(
+        ctx: Context<FundManagerFundRestakingVaultRewardContext>,
         vault: Pubkey,
-        distributing_reward_token_mint: Pubkey,
+    ) -> Result<()> {
+        emit_cpi!(modules::fund::FundConfigurationService::new(
+            &mut ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.fund_account
+        )?
+        .process_add_restaking_vault_compounding_reward_token(
+            &vault,
+            ctx.accounts.reward_token_mint.key(),
+        )?);
+
+        Ok(())
+    }
+
+    pub fn fund_manager_remove_restaking_vault_compounding_reward_token(
+        ctx: Context<FundManagerFundRestakingVaultRewardContext>,
+        vault: Pubkey,
+    ) -> Result<()> {
+        emit_cpi!(modules::fund::FundConfigurationService::new(
+            &mut ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.fund_account
+        )?
+        .process_remove_restaking_vault_compounding_reward_token(
+            &vault,
+            &ctx.accounts.reward_token_mint.key(),
+        )?);
+
+        Ok(())
+    }
+
+    pub fn fund_manager_add_restaking_vault_distributing_reward_token(
+        ctx: Context<FundManagerFundRestakingVaultRewardContext>,
+        vault: Pubkey,
+    ) -> Result<()> {
+        emit_cpi!(modules::fund::FundConfigurationService::new(
+            &mut ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.fund_account
+        )?
+        .process_add_restaking_vault_distributing_reward_token(
+            &vault,
+            ctx.accounts.reward_token_mint.key(),
+        )?);
+
+        Ok(())
+    }
+
+    pub fn fund_manager_remove_restaking_vault_distributing_reward_token(
+        ctx: Context<FundManagerFundRestakingVaultRewardContext>,
+        vault: Pubkey,
     ) -> Result<()> {
         emit_cpi!(modules::fund::FundConfigurationService::new(
             &mut ctx.accounts.receipt_token_mint,
@@ -414,7 +414,7 @@ pub mod restaking {
         )?
         .process_remove_restaking_vault_distributing_reward_token(
             &vault,
-            &distributing_reward_token_mint
+            &ctx.accounts.reward_token_mint.key(),
         )?);
 
         Ok(())

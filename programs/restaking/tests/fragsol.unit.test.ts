@@ -1266,6 +1266,28 @@ describe('restaking.fragSOL unit test', async () => {
     ).rejects.toThrowError('Transaction simulation failed'); // key not match error
   });
 
+  /** reward token mint validation at add compounding/distributing reward token */
+  test('fails to add compounding/distributing reward token if provided reward token mint is not Mint account', async () => {
+    const fund = await ctx.fund.resolveAccount(true);
+
+    // fails because rewardTokenMint is not mint account (but system account)
+    await expect(
+      ctx.fund.addRestakingVaultCompoundingReward.execute({
+        vault: fund?.data.restakingVaults[0].vault!,
+        rewardTokenMint: '11111111111111111111111111111111',
+      })
+    ).rejects.toThrowError(); // Error Code: AccountOwnedByWrongProgram. Error Number: 3007. Error Message: The given account is owned by a different program than expected.
+
+    // fails because rewardTokenMint is not mint account (but token account)
+    await expect(
+      ctx.fund.addRestakingVaultDistributingReward.execute({
+        vault: fund?.data.restakingVaults[0].vault!,
+        rewardTokenMint: ctx.fund.reserve.supportedTokens.children[0]
+          .address as string,
+      })
+    ).rejects.toThrowError(); // Error Code: InvalidAccountData. Error Number: 17179869184. Error Message: An account's data contents was invalid.
+  });
+
   test('Token should be pegged to non-pegging token', async () => {
     await ctx.fund.addSupportedToken.execute({
       mint: 'BonK1YhkXEGLZzwtcvRTip3gAL9nCeQD7ppZBLXhtTs',
