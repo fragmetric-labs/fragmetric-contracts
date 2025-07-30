@@ -426,7 +426,9 @@ impl FundAccount {
     }
 
     #[inline(always)]
-    pub(super) fn get_supported_tokens_iter(&self) -> impl Iterator<Item = &SupportedToken> {
+    pub(super) fn get_supported_tokens_iter(
+        &self,
+    ) -> impl ExactSizeIterator<Item = &SupportedToken> {
         self.supported_tokens[..self.num_supported_tokens as usize].iter()
     }
 
