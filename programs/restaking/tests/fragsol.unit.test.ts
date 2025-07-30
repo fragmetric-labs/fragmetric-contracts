@@ -192,9 +192,6 @@ describe('restaking.fragSOL unit test', async () => {
   });
 
   test('remove supported tokens', async () => {
-    const mockPeggedMintAddress =
-      'GR8XqhtzhVFgMjc5wPAjF2ubhmvZwJmdzoaPx59KXKoE';
-
     await expect(
       ctx.fund.addSupportedToken.execute({
         mint: 'BonK1YhkXEGLZzwtcvRTip3gAL9nCeQD7ppZBLXhtTs',
@@ -216,7 +213,7 @@ describe('restaking.fragSOL unit test', async () => {
 
     await expect(
       ctx.fund.addSupportedToken.execute({
-        mint: mockPeggedMintAddress,
+        mint: 'strng7mqqc1MBJJV6vMzYbEqnwVGvKKGKedeCvtktWA',
         pricingSource: {
           __kind: 'PeggedToken',
           address: 'BonK1YhkXEGLZzwtcvRTip3gAL9nCeQD7ppZBLXhtTs',
@@ -225,7 +222,7 @@ describe('restaking.fragSOL unit test', async () => {
     ).resolves.not.toThrow();
     await expect(
       ctx.normalizedTokenPool.addSupportedToken.execute({
-        mint: mockPeggedMintAddress,
+        mint: 'strng7mqqc1MBJJV6vMzYbEqnwVGvKKGKedeCvtktWA',
         pricingSource: {
           __kind: 'PeggedToken',
           address: 'BonK1YhkXEGLZzwtcvRTip3gAL9nCeQD7ppZBLXhtTs',
@@ -481,19 +478,19 @@ describe('restaking.fragSOL unit test', async () => {
     // failed because used by ntp
     await expect(
       ctx.fund.removeSupportedToken.execute({
-        mint: mockPeggedMintAddress,
+        mint: 'strng7mqqc1MBJJV6vMzYbEqnwVGvKKGKedeCvtktWA',
       })
     ).rejects.toThrow();
 
     // success
     await expect(
       ctx.normalizedTokenPool.removeSupportedToken.execute({
-        mint: mockPeggedMintAddress,
+        mint: 'strng7mqqc1MBJJV6vMzYbEqnwVGvKKGKedeCvtktWA',
       })
     ).resolves.not.toThrow();
     await expect(
       ctx.fund.removeSupportedToken.execute({
-        mint: mockPeggedMintAddress,
+        mint: 'strng7mqqc1MBJJV6vMzYbEqnwVGvKKGKedeCvtktWA',
       })
     ).resolves.not.toThrow();
     await expect(
@@ -1270,9 +1267,6 @@ describe('restaking.fragSOL unit test', async () => {
   });
 
   test('Token should be pegged to non-pegging token', async () => {
-    const mockPeggedMintAddress =
-      'GR8XqhtzhVFgMjc5wPAjF2ubhmvZwJmdzoaPx59KXKoE';
-
     await ctx.fund.addSupportedToken.execute({
       mint: 'BonK1YhkXEGLZzwtcvRTip3gAL9nCeQD7ppZBLXhtTs',
       pricingSource: {
@@ -1292,7 +1286,7 @@ describe('restaking.fragSOL unit test', async () => {
     // cannot pegg to pegging token
     await expect(
       ctx.fund.addSupportedToken.execute({
-        mint: mockPeggedMintAddress,
+        mint: 'strng7mqqc1MBJJV6vMzYbEqnwVGvKKGKedeCvtktWA',
         pricingSource: {
           __kind: 'PeggedToken',
           address: 'vSoLxydx6akxyMD9XEcPvGYNGq6Nn66oqVb3UkGkei7',
@@ -1301,7 +1295,7 @@ describe('restaking.fragSOL unit test', async () => {
     ).rejects.toThrowError();
 
     await ctx.fund.addSupportedToken.execute({
-      mint: mockPeggedMintAddress,
+      mint: 'strng7mqqc1MBJJV6vMzYbEqnwVGvKKGKedeCvtktWA',
       pricingSource: {
         __kind: 'PeggedToken',
         address: 'BonK1YhkXEGLZzwtcvRTip3gAL9nCeQD7ppZBLXhtTs',
@@ -1310,7 +1304,7 @@ describe('restaking.fragSOL unit test', async () => {
 
     // restore previous status
     await ctx.fund.removeSupportedToken.execute({
-      mint: mockPeggedMintAddress,
+      mint: 'strng7mqqc1MBJJV6vMzYbEqnwVGvKKGKedeCvtktWA',
     });
     await ctx.fund.removeSupportedToken.execute({
       mint: 'vSoLxydx6akxyMD9XEcPvGYNGq6Nn66oqVb3UkGkei7',

@@ -786,7 +786,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
                 Some(pricing_source) => match pricing_source {
                     TokenPricingSource::OrcaDEXLiquidityPool { .. } => {
                         if let TokenPricingSource::PeggedToken { address } = new_pricing_source {
-                            require_eq!(supported_token.mint, *address);
+                            require_keys_eq!(supported_token.mint, *address);
                         } else {
                             return err!(ErrorCode::UnexpectedPricingSourceError);
                         }
@@ -829,7 +829,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
                 )?
             }
             TokenPricingSource::OrcaDEXLiquidityPool { address } => {
-                if fund_account.get_supported_tokens_iter().next().is_some()
+                if fund_account.get_supported_tokens_iter().len() > 0
                     || fund_account.sol.depositable == 1
                 {
                     err!(ErrorCode::UnexpectedPricingSourceError)?
