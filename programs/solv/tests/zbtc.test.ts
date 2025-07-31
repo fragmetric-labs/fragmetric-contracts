@@ -474,15 +474,6 @@ describe('solv.zBTC test', async () => {
       solvReceiptTokenAmount: 0n,
     });
 
-    // cannot process zero amount
-    await expect(
-      ctx.completeWithdrawalRequests.execute({
-        burntSolvReceiptTokenAmount: 0n,
-        redeemedSupportedTokenAmount: 0n,
-        oldOneSolvReceiptTokenAsMicroSupportedTokenAmount: 1_1000_0000_000000n,
-      })
-    ).rejects.toThrowError();
-
     // cannot process withdrawals with ambiguous srt amount
     await expect(
       ctx.completeWithdrawalRequests.execute({

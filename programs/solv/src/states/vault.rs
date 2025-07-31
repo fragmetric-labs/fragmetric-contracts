@@ -17,7 +17,7 @@ const SOLV_PROTOCOL_MAX_EXTRA_FEE_AMOUNT: u64 = 20_000;
 
 #[repr(C)]
 #[account(zero_copy)]
-#[cfg_attr(test, derive(Debug))]
+#[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct VaultAccount {
     // Header (offset = 0x0008)
     pub(crate) data_version: u16,
@@ -136,7 +136,7 @@ const BPS: u16 = 10_000;
 #[repr(C)]
 #[zero_copy]
 #[derive(Default)]
-#[cfg_attr(test, derive(Debug))]
+#[cfg_attr(test, derive(Debug, PartialEq))]
 struct WithdrawalRequest {
     request_id: u64,
     vrt_withdrawal_requested_amount: u64,
@@ -1118,10 +1118,13 @@ impl VaultAccount {
             vst_withdrawal_total_estimated_amount += request.vst_withdrawal_total_estimated_amount;
         }
 
-        require_gt!(vrt_withdrawal_requested_amount, 0);
-
         // Check exact amount
         require_eq!(srt_withdrawal_locked_amount, srt_amount);
+
+        // nothing to process
+        if vrt_withdrawal_requested_amount == 0 {
+            return Ok((0, 0, 0));
+        }
 
         // Apply withdrawal fee
         let vst_withdrawal_fee_amount = div_util(
@@ -2096,6 +2099,23 @@ mod tests {
 
             vault.assert_invariants().unwrap();
             vault.assert_price_increased(&old_vault).unwrap();
+        }
+
+        #[test]
+        fn test_complete_withdrawal_returns_when_nothing_to_do(
+            mut vault in vault(),
+        ) {
+            let old_vault = vault.clone();
+
+            vault
+                .complete_withdrawal_requests(0, 0, vault.one_srt_as_micro_vst, true)
+                .unwrap();
+
+            assert_eq!(old_vault, vault);
+
+            vault.assert_invariants().unwrap();
+            vault.assert_price_increased(&old_vault).unwrap();
+            vault.assert_nav_unchanged(&old_vault).unwrap();
         }
 
         #[test]
