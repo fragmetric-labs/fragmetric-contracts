@@ -1403,9 +1403,9 @@ impl HarvestRestakingYieldCommand {
     }
 
     #[inline(never)]
-    fn execute_execute_compound_vault_supported_token_command<'info>(
+    fn execute_execute_compound_vault_supported_token_command(
         &self,
-        ctx: &mut OperationCommandContext<'info, '_>,
+        ctx: &mut OperationCommandContext,
         vault: &Pubkey,
     ) -> ExecutionResult {
         let mut fund_account = ctx.fund_account.load_mut()?;
