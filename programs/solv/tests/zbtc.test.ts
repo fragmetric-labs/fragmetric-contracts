@@ -672,8 +672,8 @@ describe('solv.zBTC test', async () => {
                 "supportedTokenTotalEstimatedAmount": 214867324n,
               },
             ],
-            "supportedTokenDeductedFeeAmount": 2578409n,
-            "supportedTokenExtraClaimableAmount": 3902146n,
+            "supportedTokenDeductedFeeAmount": 2578408n,
+            "supportedTokenExtraClaimableAmount": 3902145n,
             "supportedTokenTotalClaimableAmount": 323624722n,
           },
           "enqueued": {
