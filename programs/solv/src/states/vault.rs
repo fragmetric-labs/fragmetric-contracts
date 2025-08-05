@@ -1293,8 +1293,6 @@ impl VaultAccount {
             self.vrt_withdrawal_completed_amount,
         );
 
-        // Appropriate total VST deducted fee increased.
-        self.recalculate_vst_deducted_fee()?;
         // Offset VST over deducted fee and excessive receivables with leftovers.
         let mut available_amount_to_offset = self.vst_extra_amount_to_claim;
         self.offset_vst_over_deducted_fee(&mut available_amount_to_offset)?;
