@@ -358,6 +358,14 @@ impl VaultAccount {
 
         self.solv_protocol_deposit_fee_rate_bps = fee_rate_bps;
 
+        // Appropriate VST deducted fee might increased.
+        self.recalculate_vst_deducted_fee()?;
+        // Offset VST over deducted fee and excessive receivables with leftovers.
+        let mut available_amount_to_offset = self.vst_extra_amount_to_claim;
+        self.offset_vst_over_deducted_fee(&mut available_amount_to_offset)?;
+        self.offset_vst_excessive_operation_receivables(&mut available_amount_to_offset)?;
+        self.vst_extra_amount_to_claim = available_amount_to_offset;
+
         Ok(self)
     }
 
@@ -372,6 +380,14 @@ impl VaultAccount {
         }
 
         self.solv_protocol_withdrawal_fee_rate_bps = fee_rate_bps;
+
+        // Appropriate VST deducted fee might increased.
+        self.recalculate_vst_deducted_fee()?;
+        // Offset VST over deducted fee and excessive receivables with leftovers.
+        let mut available_amount_to_offset = self.vst_extra_amount_to_claim;
+        self.offset_vst_over_deducted_fee(&mut available_amount_to_offset)?;
+        self.offset_vst_excessive_operation_receivables(&mut available_amount_to_offset)?;
+        self.vst_extra_amount_to_claim = available_amount_to_offset;
 
         Ok(self)
     }
@@ -646,6 +662,11 @@ impl VaultAccount {
             extra_vst_receivable_amount,
         );
 
+        // If there is vst_extra_amount_to_claim, offset excessive receivables
+        let mut available_amount_to_offset = self.vst_extra_amount_to_claim;
+        self.offset_vst_excessive_operation_receivables(&mut available_amount_to_offset)?;
+        self.vst_extra_amount_to_claim = available_amount_to_offset;
+
         Ok(extra_vst_receivable_amount)
     }
 
@@ -690,24 +711,52 @@ impl VaultAccount {
             srt_estimated_amount,
         );
 
+        // Due to round up/down, VST receivable rarely increases more than desired amouunt.
+        let mut available_amount_to_offset = self.vst_extra_amount_to_claim;
+        self.offset_vst_excessive_operation_receivables(&mut available_amount_to_offset)?;
+        self.vst_extra_amount_to_claim = available_amount_to_offset;
+
         Ok((
             srt_estimated_amount,
             solv_protocol_deposit_fee_amount_as_vst,
         ))
     }
 
-    /// Offset VST receivables with VST donation.
-    /// Cannot donate more than VST receivable.
-    pub(crate) fn donate_vst(&mut self, mut vst_amount: u64) -> Result<u64> {
-        vst_amount = std::cmp::min(vst_amount, self.vst_operation_receivable_amount);
+    /// Offset VST over deducted fee and receivables with VST donation.
+    /// Cannot donate more than over deducted fee + receivables.
+    pub(crate) fn donate_vst(&mut self, vst_amount: u64) -> Result<u64> {
+        let mut available_amount_to_offset = vst_amount;
 
-        self.vst_operation_reserved_amount += vst_amount;
-        self.vst_operation_receivable_amount -= vst_amount;
+        // Offset VST over deducted fee with donated amount.
+        self.offset_vst_over_deducted_fee(&mut available_amount_to_offset)?;
+        // Donation tries to offset all receivables, not only excessive portion.
+        let amount_to_offset = self
+            .vst_operation_receivable_amount
+            .min(available_amount_to_offset);
+
+        if amount_to_offset > 0 {
+            #[cfg(not(test))]
+            let old_vst_operation_receivable_amount = self.vst_operation_receivable_amount;
+
+            available_amount_to_offset -= amount_to_offset;
+            self.vst_operation_reserved_amount += amount_to_offset;
+            self.vst_operation_receivable_amount -= amount_to_offset;
+
+            #[cfg(not(test))]
+            msg!(
+                "Offset VST operation receivables: old={}, new={}, offsetted={}",
+                old_vst_operation_receivable_amount,
+                self.vst_operation_receivable_amount,
+                amount_to_offset,
+            );
+        }
+
+        let donated_amount = vst_amount - available_amount_to_offset;
 
         #[cfg(not(test))]
-        msg!("Donate VST: vst_amount={}", vst_amount);
+        msg!("Donate VST: vst_amount={}", donated_amount);
 
-        Ok(vst_amount)
+        Ok(donated_amount)
     }
 
     /// Offset VST receivables with SRT donation.
@@ -800,10 +849,47 @@ impl VaultAccount {
             solv_protocol_extra_fee_amount_as_vst,
         );
 
+        // If there is vst_extra_amount_to_claim, offset excessive receivables
+        let mut available_amount_to_offset = self.vst_extra_amount_to_claim;
+        self.offset_vst_excessive_operation_receivables(&mut available_amount_to_offset)?;
+        self.vst_extra_amount_to_claim = available_amount_to_offset;
+
         Ok((
             self.srt_operation_reserved_amount,
             solv_protocol_extra_fee_amount_as_vst,
         ))
+    }
+
+    fn offset_vst_excessive_operation_receivables(
+        &mut self,
+        available_amount_to_offset: &mut u64,
+    ) -> Result<()> {
+        let vst_excessive_operation_receivable_amount = self
+            .vst_operation_receivable_amount
+            .saturating_sub(self.get_appropriate_vst_operation_receivable_amount()?);
+        let amount_to_offset =
+            vst_excessive_operation_receivable_amount.min(*available_amount_to_offset);
+
+        if amount_to_offset == 0 {
+            return Ok(());
+        }
+
+        #[cfg(not(test))]
+        let old_vst_operation_receivable_amount = self.vst_operation_receivable_amount;
+
+        *available_amount_to_offset -= amount_to_offset;
+        self.vst_operation_receivable_amount -= amount_to_offset;
+        self.vst_operation_reserved_amount += amount_to_offset;
+
+        #[cfg(not(test))]
+        msg!(
+            "Offset VST excessive operation receivables: old={}, new={}, offsetted={}",
+            old_vst_operation_receivable_amount,
+            self.vst_operation_receivable_amount,
+            amount_to_offset,
+        );
+
+        Ok(())
     }
 
     /// Appropriate VST operation receivable amount = (NAV - VST reserved) * solv_protocol_deposit_fee_rate
@@ -1207,11 +1293,65 @@ impl VaultAccount {
             self.vrt_withdrawal_completed_amount,
         );
 
+        // Appropriate total VST deducted fee increased.
+        self.recalculate_vst_deducted_fee()?;
+        // Offset VST over deducted fee and excessive receivables with leftovers.
+        let mut available_amount_to_offset = self.vst_extra_amount_to_claim;
+        self.offset_vst_over_deducted_fee(&mut available_amount_to_offset)?;
+        self.offset_vst_excessive_operation_receivables(&mut available_amount_to_offset)?;
+        self.vst_extra_amount_to_claim = available_amount_to_offset;
+
         Ok((
             vst_reserved_amount_to_claim,
             vst_extra_amount_to_claim,
             vst_deducted_fee_amount,
         ))
+    }
+
+    /// Recalculate VST deducted fee after appropriate deducted fee amount increased.
+    /// When appropriate deducted fee is increased, it means that we can utilize that extra portion.
+    fn recalculate_vst_deducted_fee(&mut self) -> Result<()> {
+        let appropriate_vst_deducted_fee_amount = self.get_appropriate_vst_deducted_fee_amount()?;
+
+        // Current deducted fee is lower than appropriate amount
+        if self.vst_deducted_fee_amount < appropriate_vst_deducted_fee_amount {
+            let extra = appropriate_vst_deducted_fee_amount - self.vst_deducted_fee_amount;
+            self.vst_reserved_amount_to_claim -= extra;
+            self.vst_deducted_fee_amount += extra;
+            self.vst_extra_amount_to_claim += extra;
+        }
+
+        Ok(())
+    }
+
+    /// Offset VST deducted fee until appropriate amount.
+    /// Offsetted fee become VST reserved amount to claim.
+    fn offset_vst_over_deducted_fee(&mut self, available_amount_to_offset: &mut u64) -> Result<()> {
+        let vst_over_deducted_fee_amount = self
+            .vst_deducted_fee_amount
+            .saturating_sub(self.get_appropriate_vst_deducted_fee_amount()?);
+        let amount_to_offset = vst_over_deducted_fee_amount.min(*available_amount_to_offset);
+
+        if amount_to_offset == 0 {
+            return Ok(());
+        }
+
+        #[cfg(not(test))]
+        let old_vst_deducted_fee_amount = self.vst_deducted_fee_amount;
+
+        *available_amount_to_offset -= amount_to_offset;
+        self.vst_deducted_fee_amount -= amount_to_offset;
+        self.vst_reserved_amount_to_claim += amount_to_offset;
+
+        #[cfg(not(test))]
+        msg!(
+            "Offset VST over deducted fee: old={}, new={}, offsetted={}",
+            old_vst_deducted_fee_amount,
+            self.vst_deducted_fee_amount,
+            amount_to_offset,
+        );
+
+        Ok(())
     }
 
     /// Appropriate fee = VST withdrawal total estimated * withdrawal fee
@@ -1951,7 +2091,6 @@ mod tests {
 
     proptest! {
         #[test]
-        #[should_panic]
         fn test_set_solv_protocol_deposit_fee_rate_bps_increasing_offsets_vst_over_deducted_fee_and_excessive_receivables(
             mut vault in vault_with_vst_surplus_or_shortage_amount(0, 0),
         ) {
@@ -1972,7 +2111,6 @@ mod tests {
         }
 
         #[test]
-        #[should_panic]
         fn test_set_solv_protocol_deposit_fee_rate_bps_decreasing_offsets_vst_over_deducted_fee_and_excessive_receivables(
             mut vault in vault_with_vst_surplus_or_shortage_amount(0, 0),
         ) {
@@ -1993,7 +2131,6 @@ mod tests {
         }
 
         #[test]
-        #[should_panic]
         fn test_set_solv_protocol_withdrawal_fee_rate_bps_increasing_offsets_vst_over_deducted_fee_and_receivables(
             mut vault in vault_with_vst_surplus_or_shortage_amount(0, 0),
         ) {
@@ -2014,7 +2151,6 @@ mod tests {
         }
 
         #[test]
-        #[should_panic]
         fn test_set_solv_protocol_withdrawal_fee_rate_bps_decreasing_offsets_vst_over_deducted_fee_and_receivables(
             mut vault in vault_with_vst_surplus_or_shortage_amount(0, 0),
         ) {
@@ -2206,7 +2342,6 @@ mod tests {
         }
 
         #[test]
-        #[should_panic]
         fn test_adjust_srt_exchange_rate_with_extra_vst_receivables_offsets_vst_receivable(
             mut vault in vault_with_vst_surplus_or_shortage_amount(0, 0),
         ) {
@@ -2260,7 +2395,6 @@ mod tests {
         }
 
         #[test]
-        #[should_panic]
         fn test_deposit_vst_offsets_vst_receivables(
             mut vault in vault_with_vst_surplus_or_shortage_amount(0, 0),
         ) {
@@ -2300,7 +2434,6 @@ mod tests {
         }
 
         #[test]
-        #[should_panic]
         fn test_donate_vst_offsets_vst_over_deducted_fee_and_receivables(
             (mut vault, vst_amount) in vault_with_vst_surplus_or_shortage_amount(0, 0)
                 .prop_flat_map(|vault| {
@@ -2454,7 +2587,6 @@ mod tests {
         }
 
         #[test]
-        #[should_panic]
         fn test_offset_srt_receivables_offsets_vst_receivables(
             mut vault in vault_with_vst_surplus_or_shortage_amount(0, 0),
             extra_fee_amount_as_vst in 0..SOLV_PROTOCOL_MAX_EXTRA_FEE_AMOUNT / 2,
@@ -2903,7 +3035,6 @@ mod tests {
         }
 
         #[test]
-        #[should_panic]
         fn test_complete_withdrawal_request_offsets_vst_over_deducted_fee_and_receivables(
             mut vault in vault_with_vst_surplus_or_shortage_amount(4, 0),
             vst_surplus_or_shortage in -i128::from(SOLV_PROTOCOL_MAX_EXTRA_FEE_AMOUNT / 2)..=i128::from(SOLV_PROTOCOL_MAX_EXTRA_FEE_AMOUNT / 2),
@@ -2925,7 +3056,9 @@ mod tests {
             .unwrap();
             let vst_amount_without_fee =
                 vst_amount_with_fee - solv_protocol_withdrawal_fee_amount_as_vst;
-            let vst_amount = if vst_surplus_or_shortage > 0 {
+            let vst_amount = if srt_amount == 0 {
+                0
+            } else if vst_surplus_or_shortage > 0 {
                 let surplus = u64::try_from(vst_surplus_or_shortage).unwrap();
                 vst_amount_without_fee + surplus
             } else {
