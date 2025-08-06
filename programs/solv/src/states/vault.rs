@@ -901,7 +901,9 @@ impl VaultAccount {
     /// Appropriate VST operation receivable amount = (NAV - VST reserved) * solv_protocol_deposit_fee_rate
     fn get_appropriate_vst_operation_receivable_amount(&self) -> Result<u64> {
         // k = x + y && x = ceil(y * f / (1 - f)) => x = ceil(kf)
-        let nav = self.get_net_asset_value_as_vst().unwrap();
+        let nav = self
+            .get_net_asset_value_as_vst()
+            .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
         let srt_amount_as_vst =
             nav - self.vst_operation_reserved_amount - self.vst_operation_receivable_amount;
 
