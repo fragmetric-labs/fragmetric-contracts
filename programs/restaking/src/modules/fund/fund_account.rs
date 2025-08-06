@@ -1191,10 +1191,9 @@ mod tests {
             "operation_state size={}",
             std::mem::size_of::<OperationState>()
         );
-        assert_eq!(
+        assert!(
             size < solana_program::entrypoint::MAX_PERMITTED_DATA_INCREASE
-                * (FUND_ACCOUNT_CURRENT_VERSION as usize),
-            true
+                * (FUND_ACCOUNT_CURRENT_VERSION as usize)
         );
 
         assert_eq!(std::mem::size_of::<FundAccount>() % 8, 0);

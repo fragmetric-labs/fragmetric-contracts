@@ -169,7 +169,7 @@ mod tests {
                 user_last_updated_slot,
             )
             .unwrap();
-        user_last_contribution += user_total_contribution_accrual_rate as u128
+        user_last_contribution += user_total_contribution_accrual_rate
             * (current_slot - user_last_updated_slot) as u128;
         user_last_updated_slot = current_slot;
 
@@ -213,7 +213,7 @@ mod tests {
                 user_last_updated_slot,
             )
             .unwrap();
-        user_last_contribution += user_total_contribution_accrual_rate as u128
+        user_last_contribution += user_total_contribution_accrual_rate
             * (current_slot - user_last_updated_slot) as u128;
         user_last_updated_slot = current_slot;
 

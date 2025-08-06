@@ -1555,7 +1555,7 @@ mod tests {
 
         fn set_old_vault(&self) -> Self {
             self.assert_invariants().unwrap();
-            self.clone()
+            *self
         }
 
         fn srt_price_as_decimal(&self) -> Decimal {
@@ -1900,9 +1900,7 @@ mod tests {
         )
             (
                 // MIN ..= BTC_MAX_SUPPLY - ceil(min_srt_amount * srt_price)
-                vst_amount in min_vst_amount..=BTC_MAX_SUPPLY - (
-                    (min_srt_amount as u128 * one_srt_as_micro_vst as u128 + 99_999_999_999_999) / 100_000_000_000_000
-                ) as u64,
+                vst_amount in min_vst_amount..=BTC_MAX_SUPPLY - (min_srt_amount as u128 * one_srt_as_micro_vst as u128).div_ceil(100_000_000_000_000) as u64,
             )
             (
                 vst_amount in Just(vst_amount),
@@ -1937,7 +1935,7 @@ mod tests {
             (
                 vst_amount in Just(vst_amount),
                 srt_amount in Just(srt_amount),
-                vrt_amount in (nav + 1) / 2..=nav,
+                vrt_amount in nav.div_ceil(2)..=nav,
             )
         -> (u64, u64, u64)
         {
@@ -3022,7 +3020,7 @@ mod tests {
                 true,
             )
             .unwrap();
-            let old_vault = vault.clone();
+            let old_vault = vault.set_old_vault();
 
             vault
                 .complete_withdrawal_requests(
@@ -3075,7 +3073,7 @@ mod tests {
                 let shortage = u64::try_from(-vst_surplus_or_shortage).unwrap();
                 vst_amount_without_fee.saturating_sub(shortage)
             };
-            let old_vault = vault.clone();
+            let old_vault = vault.set_old_vault();
 
             vault
                 .complete_withdrawal_requests(
