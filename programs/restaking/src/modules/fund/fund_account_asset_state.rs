@@ -590,28 +590,32 @@ mod tests {
         );
         assert_eq!(
             asset
-                .get_queued_withdrawal_batches_iter().nth(1)
+                .get_queued_withdrawal_batches_iter()
+                .nth(1)
                 .unwrap()
                 .batch_id,
             2
         );
         assert_eq!(
             asset
-                .get_queued_withdrawal_batches_iter().nth(1)
+                .get_queued_withdrawal_batches_iter()
+                .nth(1)
                 .unwrap()
                 .num_requests,
             1
         );
         assert_eq!(
             asset
-                .get_queued_withdrawal_batches_iter().nth(1)
+                .get_queued_withdrawal_batches_iter()
+                .nth(1)
                 .unwrap()
                 .receipt_token_amount,
             30
         );
         assert_eq!(
             asset
-                .get_queued_withdrawal_batches_iter().nth(1)
+                .get_queued_withdrawal_batches_iter()
+                .nth(1)
                 .unwrap()
                 .enqueued_at,
             2
