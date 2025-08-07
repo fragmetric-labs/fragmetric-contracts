@@ -136,36 +136,104 @@ abstract class RestakingAbstractUserRewardAccountContext<
     return restaking.decodeUserRewardAccount(account);
   }
 
-  readonly updatePools = new TransactionTemplateContext(this, null, {
-    description:
-      'manually triggers contribution synchronization for the user reward pools',
-    anchorEventDecoders: getRestakingAnchorEventDecoders(
-      'userUpdatedRewardPool'
+  readonly updatePools = new TransactionTemplateContext(
+    this,
+    v.nullish(
+      v.object({
+        numBlocksToSettle: v.nullish(v.number()),
+      })
     ),
-    instructions: [
-      async (parent, args) => {
-        const [receiptTokenMint, user] = await Promise.all([
-          this.__globalRewardAccount.parent.resolveAddress(),
-          parent.parent.resolveAddress(true),
-        ]);
-        if (!(receiptTokenMint && user)) throw new Error('invalid context');
+    {
+      description:
+        'manually triggers contribution synchronization for the user reward pools',
+      anchorEventDecoders: getRestakingAnchorEventDecoders(
+        'userUpdatedRewardPool'
+      ),
+      instructions: [
+        async (parent, args) => {
+          const [receiptTokenMint, user] = await Promise.all([
+            this.__globalRewardAccount.parent.resolveAddress(),
+            parent.parent.resolveAddress(true),
+          ]);
+          if (!(receiptTokenMint && user)) throw new Error('invalid context');
 
-        return Promise.all([
-          computeBudget.getSetComputeUnitLimitInstruction({ units: 1_400_000 }),
-          restaking.getUserUpdateRewardPoolsInstructionAsync(
-            {
-              user: user,
-              receiptTokenMint: receiptTokenMint,
-              program: this.program.address,
-            },
-            {
-              programAddress: this.program.address,
-            }
-          ),
-        ]);
-      },
-    ],
-  });
+          return Promise.all([
+            computeBudget.getSetComputeUnitLimitInstruction({
+              units: 1_400_000,
+            }),
+            restaking.getUserUpdateRewardPoolsInstructionAsync(
+              {
+                user: user,
+                receiptTokenMint: receiptTokenMint,
+                program: this.program.address,
+                numBlocksToSettle: args?.numBlocksToSettle ?? null,
+              },
+              {
+                programAddress: this.program.address,
+              }
+            ),
+          ]);
+        },
+      ],
+    },
+    async (parent, args) => {
+      if (!args?.numBlocksToSettle) return null;
+
+      const rewardAccount = await this.__globalRewardAccount.resolveAccount(true);
+      const userRewardAccount = await parent.resolveAccount(true);
+
+      // if there are any remaining blocks from global reward pool to settle, repeatedly execute the code
+      let reaminingBlocksToSettle = 0;
+      
+      // iterate base pool
+      const globalBaseRewardPool = rewardAccount?.data.baseRewardPool;
+      const userBaseRewardPool = userRewardAccount?.data.baseUserRewardPool;
+
+      const globalBaseRewardPoolNumRewardSettlements = globalBaseRewardPool?.numRewardSettlements ?? 0;
+      for (let i = 0; i < globalBaseRewardPoolNumRewardSettlements; i++) {
+        const rewardId = globalBaseRewardPool?.rewardSettlements1[i].rewardId;
+        const userRewardSettlement = userBaseRewardPool?.rewardSettlements1.find((x) => x.rewardId == rewardId);
+        
+        if (userRewardSettlement) {
+          reaminingBlocksToSettle += globalBaseRewardPool?.rewardSettlements1[i].settlementBlocks
+            .reduce((count, block) =>
+              block.endingSlot > userRewardSettlement.lastSettledSlot ? count + 1 : count
+            , 0) ?? 0;
+        } else {
+          reaminingBlocksToSettle += globalBaseRewardPool?.rewardSettlements1[i].numSettlementBlocks ?? 0;
+        }
+      }
+
+      // iterate bonus pool
+      const globalBonusRewardPool = rewardAccount?.data.bonusRewardPool;
+      const userBonusRewardPool = userRewardAccount?.data.bonusUserRewardPool;
+
+      const globalBonusRewardPoolNumRewardSettlements = globalBonusRewardPool?.numRewardSettlements ?? 0;
+      for (let i = 0; i < globalBonusRewardPoolNumRewardSettlements; i++) {
+        const rewardId = globalBonusRewardPool?.rewardSettlements1[i].rewardId;
+        const userRewardSettlement = userBonusRewardPool?.rewardSettlements1.find((x) => x.rewardId == rewardId);
+
+        if (userRewardSettlement) {
+          reaminingBlocksToSettle += globalBonusRewardPool?.rewardSettlements1[i].settlementBlocks
+            .reduce((count, block) =>
+              block.endingSlot > userRewardSettlement.lastSettledSlot ? count + 1 : count
+            , 0) ?? 0;
+        } else {
+          reaminingBlocksToSettle += globalBonusRewardPool?.rewardSettlements1[i].numSettlementBlocks ?? 0;
+        }
+      }
+
+      if (reaminingBlocksToSettle > 0) {
+        return {
+          args: {
+            ...args,
+          }
+        }
+      }
+
+      return null;
+    }
+  );
 
   readonly initializeOrUpdateAccount = new TransactionTemplateContext(
     this,
