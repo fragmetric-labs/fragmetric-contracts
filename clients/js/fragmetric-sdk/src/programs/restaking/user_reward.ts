@@ -179,28 +179,39 @@ abstract class RestakingAbstractUserRewardAccountContext<
     async (parent, args) => {
       if (!args?.numBlocksToSettle) return null;
 
-      const rewardAccount = await this.__globalRewardAccount.resolveAccount(true);
+      const rewardAccount =
+        await this.__globalRewardAccount.resolveAccount(true);
       const userRewardAccount = await parent.resolveAccount(true);
 
       // if there are any remaining blocks from global reward pool to settle, repeatedly execute the code
       let reaminingBlocksToSettle = 0;
-      
+
       // iterate base pool
       const globalBaseRewardPool = rewardAccount?.data.baseRewardPool;
       const userBaseRewardPool = userRewardAccount?.data.baseUserRewardPool;
 
-      const globalBaseRewardPoolNumRewardSettlements = globalBaseRewardPool?.numRewardSettlements ?? 0;
+      const globalBaseRewardPoolNumRewardSettlements =
+        globalBaseRewardPool?.numRewardSettlements ?? 0;
       for (let i = 0; i < globalBaseRewardPoolNumRewardSettlements; i++) {
         const rewardId = globalBaseRewardPool?.rewardSettlements1[i].rewardId;
-        const userRewardSettlement = userBaseRewardPool?.rewardSettlements1.find((x) => x.rewardId == rewardId);
-        
+        const userRewardSettlement =
+          userBaseRewardPool?.rewardSettlements1.find(
+            (x) => x.rewardId == rewardId
+          );
+
         if (userRewardSettlement) {
-          reaminingBlocksToSettle += globalBaseRewardPool?.rewardSettlements1[i].settlementBlocks
-            .reduce((count, block) =>
-              block.endingSlot > userRewardSettlement.lastSettledSlot ? count + 1 : count
-            , 0) ?? 0;
+          reaminingBlocksToSettle +=
+            globalBaseRewardPool?.rewardSettlements1[i].settlementBlocks.reduce(
+              (count, block) =>
+                block.endingSlot > userRewardSettlement.lastSettledSlot
+                  ? count + 1
+                  : count,
+              0
+            ) ?? 0;
         } else {
-          reaminingBlocksToSettle += globalBaseRewardPool?.rewardSettlements1[i].numSettlementBlocks ?? 0;
+          reaminingBlocksToSettle +=
+            globalBaseRewardPool?.rewardSettlements1[i].numSettlementBlocks ??
+            0;
         }
       }
 
@@ -208,18 +219,30 @@ abstract class RestakingAbstractUserRewardAccountContext<
       const globalBonusRewardPool = rewardAccount?.data.bonusRewardPool;
       const userBonusRewardPool = userRewardAccount?.data.bonusUserRewardPool;
 
-      const globalBonusRewardPoolNumRewardSettlements = globalBonusRewardPool?.numRewardSettlements ?? 0;
+      const globalBonusRewardPoolNumRewardSettlements =
+        globalBonusRewardPool?.numRewardSettlements ?? 0;
       for (let i = 0; i < globalBonusRewardPoolNumRewardSettlements; i++) {
         const rewardId = globalBonusRewardPool?.rewardSettlements1[i].rewardId;
-        const userRewardSettlement = userBonusRewardPool?.rewardSettlements1.find((x) => x.rewardId == rewardId);
+        const userRewardSettlement =
+          userBonusRewardPool?.rewardSettlements1.find(
+            (x) => x.rewardId == rewardId
+          );
 
         if (userRewardSettlement) {
-          reaminingBlocksToSettle += globalBonusRewardPool?.rewardSettlements1[i].settlementBlocks
-            .reduce((count, block) =>
-              block.endingSlot > userRewardSettlement.lastSettledSlot ? count + 1 : count
-            , 0) ?? 0;
+          reaminingBlocksToSettle +=
+            globalBonusRewardPool?.rewardSettlements1[
+              i
+            ].settlementBlocks.reduce(
+              (count, block) =>
+                block.endingSlot > userRewardSettlement.lastSettledSlot
+                  ? count + 1
+                  : count,
+              0
+            ) ?? 0;
         } else {
-          reaminingBlocksToSettle += globalBonusRewardPool?.rewardSettlements1[i].numSettlementBlocks ?? 0;
+          reaminingBlocksToSettle +=
+            globalBonusRewardPool?.rewardSettlements1[i].numSettlementBlocks ??
+            0;
         }
       }
 
@@ -227,8 +250,8 @@ abstract class RestakingAbstractUserRewardAccountContext<
         return {
           args: {
             ...args,
-          }
-        }
+          },
+        };
       }
 
       return null;

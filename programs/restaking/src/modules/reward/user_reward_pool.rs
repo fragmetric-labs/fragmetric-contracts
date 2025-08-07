@@ -134,7 +134,7 @@ impl UserRewardPool {
         }
 
         // `contribution` and `updated_slot` are updated only after the user reward pool is fully settled.
-        if num_blocks_to_settle == None {
+        if num_blocks_to_settle.is_none() {
             let elapsed_slot = current_slot - self.updated_slot;
             self.contribution += elapsed_slot as u128 * total_contribution_accrual_rate;
             self.updated_slot = current_slot;
