@@ -81,21 +81,6 @@ impl UserRewardSettlement {
             num_blocks_settled += 1;
         }
 
-        if self.last_settled_slot < reward_settlement.settlement_blocks_last_slot {
-            // There is a gap after last settled block so just follow up the contribution.
-            self.add_block_settled_contribution(
-                user_reward_pool_last_contribution,
-                user_reward_pool_last_updated_slot,
-                reward_settlement.settlement_blocks_last_slot,
-                total_contribution_accrual_rate,
-            );
-        }
-
-        require_eq!(
-            self.last_settled_slot,
-            reward_settlement.settlement_blocks_last_slot,
-        );
-
         Ok(num_blocks_settled)
     }
 
