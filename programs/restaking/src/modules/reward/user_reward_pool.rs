@@ -99,7 +99,10 @@ impl UserRewardPool {
         &mut self,
         reward_pool: &mut RewardPool,
         current_slot: u64,
-    ) -> Result<()> {
+        num_blocks_to_settle: Option<u16>,
+    ) -> Result<u16> {
+        let mut num_blocks_settled = 0;
+
         let total_contribution_accrual_rate = self
             .token_allocated_amount
             .get_total_contribution_accrual_rate();
@@ -109,24 +112,35 @@ impl UserRewardPool {
         let last_updated_slot = self.updated_slot;
         let reward_pool_initial_slot = reward_pool.initial_slot;
         for reward_settlement in reward_pool.get_reward_settlements_iter_mut() {
-            self.get_or_add_reward_settlement_mut(
-                reward_settlement.reward_id,
-                reward_pool_initial_slot,
-            )?
-            .settle_reward(
-                reward_settlement,
-                total_contribution_accrual_rate,
-                last_contribution,
-                last_updated_slot,
-            )?;
+            if num_blocks_to_settle
+                .is_some_and(|num_blocks_to_settle| num_blocks_to_settle == num_blocks_settled)
+            {
+                break;
+            }
+
+            num_blocks_settled += self
+                .get_or_add_reward_settlement_mut(
+                    reward_settlement.reward_id,
+                    reward_pool_initial_slot,
+                )?
+                .settle_reward(
+                    reward_settlement,
+                    total_contribution_accrual_rate,
+                    last_contribution,
+                    last_updated_slot,
+                    num_blocks_to_settle
+                        .map(|num_blocks_to_settle| num_blocks_to_settle - num_blocks_settled),
+                )?;
         }
 
-        // Update contribution
-        let elapsed_slot = current_slot - self.updated_slot;
-        self.contribution += elapsed_slot as u128 * total_contribution_accrual_rate;
-        self.updated_slot = current_slot;
+        // `contribution` and `updated_slot` are updated only after the user reward pool is fully settled.
+        if num_blocks_to_settle == None {
+            let elapsed_slot = current_slot - self.updated_slot;
+            self.contribution += elapsed_slot as u128 * total_contribution_accrual_rate;
+            self.updated_slot = current_slot;
+        }
 
-        Ok(())
+        Ok(num_blocks_settled)
     }
 
     pub fn update_token_allocated_amount(
@@ -136,7 +150,7 @@ impl UserRewardPool {
         current_slot: u64,
     ) -> Result<Vec<TokenAllocatedAmountDelta>> {
         // First update reward pool
-        self.update_user_reward_pool(reward_pool, current_slot)?;
+        self.update_user_reward_pool(reward_pool, current_slot, None)?;
 
         // Apply deltas
         if !deltas.is_empty() {
@@ -155,7 +169,7 @@ impl UserRewardPool {
         amount: Option<u64>,
     ) -> Result<(u64, u64)> {
         // First update reward pool
-        self.update_user_reward_pool(reward_pool, current_slot)?;
+        self.update_user_reward_pool(reward_pool, current_slot, None)?;
 
         let reward_settlement = reward_pool.get_reward_settlement_mut(reward_id)?;
         let user_reward_settlement = self.get_reward_settlement_mut(reward_id)?;

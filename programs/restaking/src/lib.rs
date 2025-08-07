@@ -1341,14 +1341,17 @@ pub mod restaking {
     // UserRewardContext
     ////////////////////////////////////////////
 
-    pub fn user_update_reward_pools(ctx: Context<UserRewardContext>) -> Result<()> {
+    pub fn user_update_reward_pools(
+        ctx: Context<UserRewardContext>,
+        num_blocks_to_settle: Option<u16>,
+    ) -> Result<()> {
         emit_cpi!(modules::reward::UserRewardService::new(
             &ctx.accounts.receipt_token_mint,
             &ctx.accounts.user,
             &ctx.accounts.reward_account,
             &ctx.accounts.user_reward_account,
         )?
-        .process_update_user_reward_pools()?);
+        .process_update_user_reward_pools(num_blocks_to_settle)?);
 
         Ok(())
     }
