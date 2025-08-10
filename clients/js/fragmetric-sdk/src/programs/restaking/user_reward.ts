@@ -180,8 +180,8 @@ abstract class RestakingAbstractUserRewardAccountContext<
       if (!args?.numBlocksToSettle) return null;
 
       const calculateRemainingBlocksToSettle = (
-        globalRewardPool: restaking.RewardPool | undefined,
-        userRewardPool: restaking.UserRewardPool | undefined
+        globalRewardPool: restaking.RewardPool,
+        userRewardPool: restaking.UserRewardPool
       ): number => {
         if (!globalRewardPool || !userRewardPool) return 0;
 
@@ -214,16 +214,21 @@ abstract class RestakingAbstractUserRewardAccountContext<
       // if there are any remaining blocks from global reward pool to settle, repeatedly execute the code
       const rewardAccount =
         await this.__globalRewardAccount.resolveAccount(true);
+      if (!rewardAccount)
+        throw new Error('invalid context: reward account not found');
+
       const userRewardAccount = await parent.resolveAccount(true);
+      if (!userRewardAccount)
+        throw new Error('invalid context: user reward account not found');
 
       const remainingBlocksToSettle =
         calculateRemainingBlocksToSettle(
-          rewardAccount?.data.baseRewardPool,
-          userRewardAccount?.data.baseUserRewardPool
+          rewardAccount.data.baseRewardPool,
+          userRewardAccount.data.baseUserRewardPool
         ) +
         calculateRemainingBlocksToSettle(
-          rewardAccount?.data.bonusRewardPool,
-          userRewardAccount?.data.bonusUserRewardPool
+          rewardAccount.data.bonusRewardPool,
+          userRewardAccount.data.bonusUserRewardPool
         );
 
       if (remainingBlocksToSettle > 0) {

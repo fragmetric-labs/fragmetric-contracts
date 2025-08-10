@@ -1356,10 +1356,10 @@ describe('restaking.fragSOL unit test', async () => {
     }
 
     // user1 deposits sol to accumulate contribution
-    await validator.airdrop(user1.address!, 100_000_000_000n);
+    await validator.airdrop(user1.address!, 1_000_000_000_000n);
     await user1.deposit.execute(
       {
-        assetAmount: 1_000_000_000n,
+        assetAmount: 1_000_000_000_000n,
       },
       { signers: [signer1] }
     );
@@ -1379,11 +1379,11 @@ describe('restaking.fragSOL unit test', async () => {
       for (let j = 0; j < MAX_SETTLEMENT_BLOCK_NUM; j++) {
         await ctx.reward.settleReward.execute({
           mint: rewardAddress,
-          amount: 1_234_567_890_123n,
+          amount: 1_234_567_890_123_456n,
           isBonus: i == 0, // only settle fPoint in bonus pool
         });
 
-        await validator.skipSlots(123_456_789n);
+        await validator.skipSlots(3n);
       }
     }
 
