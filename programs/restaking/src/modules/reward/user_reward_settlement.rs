@@ -39,13 +39,11 @@ impl UserRewardSettlement {
         total_contribution_accrual_rate: u128,
         user_reward_pool_last_contribution: u128,
         user_reward_pool_last_updated_slot: u64,
-        num_blocks_to_settle: Option<u16>,
-    ) -> Result<u16> {
-        let mut num_blocks_settled = 0;
-
+        num_blocks_to_settle: &mut Option<u16>,
+    ) -> Result<()> {
         if self.last_settled_slot == reward_settlement.settlement_blocks_last_slot {
             // All settlement blocks are already settled.
-            return Ok(0);
+            return Ok(());
         }
 
         let last_settled_slot = self.last_settled_slot;
@@ -53,9 +51,7 @@ impl UserRewardSettlement {
             .get_settlement_blocks_iter_mut()
             .skip_while(|block| block.ending_slot <= last_settled_slot)
         {
-            if num_blocks_to_settle
-                .is_some_and(|num_blocks_to_settle| num_blocks_to_settle == num_blocks_settled)
-            {
+            if let Some(0) = *num_blocks_to_settle {
                 break;
             }
 
@@ -78,10 +74,13 @@ impl UserRewardSettlement {
 
             self.total_settled_amount +=
                 block.settle_user_reward(user_block_settled_contribution)?;
-            num_blocks_settled += 1;
+
+            if let Some(num_blocks_to_settle) = num_blocks_to_settle.as_mut() {
+                *num_blocks_to_settle -= 1;
+            }
         }
 
-        Ok(num_blocks_settled)
+        Ok(())
     }
 
     /// We know ending_slot >= user_reward_pool_last_updated_slot,
@@ -166,7 +165,7 @@ mod tests {
                 user_total_contribution_accrual_rate,
                 user_last_contribution,
                 user_last_updated_slot,
-                None,
+                &mut None,
             )
             .unwrap();
         user_last_contribution += user_total_contribution_accrual_rate as u128
@@ -211,7 +210,7 @@ mod tests {
                 user_total_contribution_accrual_rate,
                 user_last_contribution,
                 user_last_updated_slot,
-                None,
+                &mut None,
             )
             .unwrap();
         user_last_contribution += user_total_contribution_accrual_rate as u128
@@ -240,7 +239,7 @@ mod tests {
                 user_total_contribution_accrual_rate,
                 user_last_contribution,
                 user_last_updated_slot,
-                None,
+                &mut None,
             )
             .unwrap();
 

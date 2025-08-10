@@ -194,9 +194,9 @@ impl UserRewardAccount {
         &mut self,
         reward_account: &mut RewardAccount,
         current_slot: u64,
-        num_blocks_to_settle: Option<u16>,
+        num_blocks_to_settle: &mut Option<u16>,
     ) -> Result<()> {
-        let num_blocks_settled = self.base_user_reward_pool.update_user_reward_pool(
+        self.base_user_reward_pool.update_user_reward_pool(
             &mut reward_account.base_reward_pool,
             current_slot,
             num_blocks_to_settle,
@@ -205,8 +205,7 @@ impl UserRewardAccount {
         self.bonus_user_reward_pool.update_user_reward_pool(
             &mut reward_account.bonus_reward_pool,
             current_slot,
-            num_blocks_to_settle
-                .map(|num_blocks_to_settle| num_blocks_to_settle - num_blocks_settled),
+            num_blocks_to_settle,
         )?;
 
         Ok(())

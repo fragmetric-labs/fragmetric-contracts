@@ -65,14 +65,14 @@ impl<'a, 'info> UserRewardService<'a, 'info> {
 
     pub fn process_update_user_reward_pools(
         &self,
-        num_blocks_to_settle: Option<u16>,
+        mut num_blocks_to_settle: Option<u16>,
     ) -> Result<events::UserUpdatedRewardPool> {
         self.user_reward_account
             .load_mut()?
             .update_user_reward_pools(
                 &mut *self.reward_account.load_mut()?,
                 self.current_slot,
-                num_blocks_to_settle,
+                &mut num_blocks_to_settle,
             )?;
 
         Ok(events::UserUpdatedRewardPool {
