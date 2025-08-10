@@ -39,7 +39,7 @@ impl UserRewardSettlement {
         total_contribution_accrual_rate: u128,
         user_reward_pool_last_contribution: u128,
         user_reward_pool_last_updated_slot: u64,
-        num_blocks_to_settle: &mut Option<u16>,
+        mut num_blocks_to_settle: Option<&mut u16>,
     ) -> Result<()> {
         if self.last_settled_slot == reward_settlement.settlement_blocks_last_slot {
             // All settlement blocks are already settled.
@@ -51,7 +51,10 @@ impl UserRewardSettlement {
             .get_settlement_blocks_iter_mut()
             .skip_while(|block| block.ending_slot <= last_settled_slot)
         {
-            if let Some(0) = *num_blocks_to_settle {
+            if num_blocks_to_settle
+                .as_deref()
+                .is_some_and(|&num_blocks_to_settle| num_blocks_to_settle == 0)
+            {
                 break;
             }
 
@@ -75,7 +78,7 @@ impl UserRewardSettlement {
             self.total_settled_amount +=
                 block.settle_user_reward(user_block_settled_contribution)?;
 
-            if let Some(num_blocks_to_settle) = num_blocks_to_settle.as_mut() {
+            if let Some(num_blocks_to_settle) = num_blocks_to_settle.as_deref_mut() {
                 *num_blocks_to_settle -= 1;
             }
         }
@@ -165,7 +168,7 @@ mod tests {
                 user_total_contribution_accrual_rate,
                 user_last_contribution,
                 user_last_updated_slot,
-                &mut None,
+                None,
             )
             .unwrap();
         user_last_contribution += user_total_contribution_accrual_rate as u128
@@ -210,7 +213,7 @@ mod tests {
                 user_total_contribution_accrual_rate,
                 user_last_contribution,
                 user_last_updated_slot,
-                &mut None,
+                None,
             )
             .unwrap();
         user_last_contribution += user_total_contribution_accrual_rate as u128
@@ -239,7 +242,7 @@ mod tests {
                 user_total_contribution_accrual_rate,
                 user_last_contribution,
                 user_last_updated_slot,
-                &mut None,
+                None,
             )
             .unwrap();
 

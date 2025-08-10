@@ -72,7 +72,7 @@ impl<'a, 'info> UserRewardService<'a, 'info> {
             .update_user_reward_pools(
                 &mut *self.reward_account.load_mut()?,
                 self.current_slot,
-                &mut num_blocks_to_settle,
+                num_blocks_to_settle.as_mut(),
             )?;
 
         Ok(events::UserUpdatedRewardPool {
