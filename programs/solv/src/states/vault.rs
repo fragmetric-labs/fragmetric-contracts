@@ -13,7 +13,7 @@ pub const VAULT_ACCOUNT_CURRENT_VERSION: u16 = 2;
 pub const MAX_WITHDRAWAL_REQUESTS: usize = 60;
 pub const MAX_DELEGATED_REWARD_TOKEN_MINTS: usize = 30;
 
-const SOLV_PROTOCOL_MAX_EXTRA_FEE_AMOUNT: u64 = 20_000;
+const SOLV_PROTOCOL_MAX_EXTRA_FEE_AMOUNT: u64 = 30_000;
 
 #[repr(C)]
 #[account(zero_copy)]
