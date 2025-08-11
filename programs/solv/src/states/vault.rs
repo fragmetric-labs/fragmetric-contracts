@@ -743,9 +743,9 @@ impl VaultAccount {
         let offsetting_vst_deducted_fee_amount =
             std::cmp::min(vst_amount, vst_over_deducted_fee_amount);
 
-        vst_amount -= vst_over_deducted_fee_amount;
-        self.vst_deducted_fee_amount -= vst_over_deducted_fee_amount;
-        self.vst_reserved_amount_to_claim += vst_over_deducted_fee_amount;
+        vst_amount -= offsetting_vst_deducted_fee_amount;
+        self.vst_deducted_fee_amount -= offsetting_vst_deducted_fee_amount;
+        self.vst_reserved_amount_to_claim += offsetting_vst_deducted_fee_amount;
 
         // Offset VST receivables
         let offsetting_vst_operation_receivable_amount =
@@ -969,7 +969,7 @@ impl VaultAccount {
         )
         .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
 
-        // First, calculate fair amount of target offsetting VST receivables (will be taken as vst withdrawl fee)
+        // First, calculate fair amount of target offsetting VST receivables (will be taken as vst withdrawal fee)
         let target_vst_offsetting_receivable_amount = if net_asset_value_as_vst == 0 {
             0
         } else {
@@ -2487,13 +2487,13 @@ mod tests {
             // CHECK: offsetted amount
             let vst_operation_receivable_amount_delta =
                 old_vault.vst_operation_receivable_amount - vault.vst_operation_receivable_amount;
-            let donated_amount_as_srt = vault
+            let donated_amount_as_vst = vault
                 .get_srt_exchange_rate()
                 .get_srt_amount_as_vst(donated_amount, false)
                 .unwrap();
             // donated amount ≤ offsetted amount ≤ donated amount + 1
-            assert!(vst_operation_receivable_amount_delta >= donated_amount_as_srt);
-            assert!(vst_operation_receivable_amount_delta <= donated_amount_as_srt + 1);
+            assert!(vst_operation_receivable_amount_delta >= donated_amount_as_vst);
+            assert!(vst_operation_receivable_amount_delta <= donated_amount_as_vst + 1);
 
             vault.assert_invariants().unwrap();
             vault.assert_total_reserved_changed(&old_vault, 0, donated_amount).unwrap();
@@ -2524,13 +2524,13 @@ mod tests {
             // CHECK: offsetted amount
             let vst_operation_receivable_amount_delta =
                 old_vault.vst_operation_receivable_amount - vault.vst_operation_receivable_amount;
-            let donated_amount_as_srt = vault
+            let donated_amount_as_vst = vault
                 .get_srt_exchange_rate()
                 .get_srt_amount_as_vst(donated_amount, false)
                 .unwrap();
             // donated amount ≤ offsetted amount ≤ donated amount + 1
-            assert!(vst_operation_receivable_amount_delta >= donated_amount_as_srt);
-            assert!(vst_operation_receivable_amount_delta <= donated_amount_as_srt + 1);
+            assert!(vst_operation_receivable_amount_delta >= donated_amount_as_vst);
+            assert!(vst_operation_receivable_amount_delta <= donated_amount_as_vst + 1);
 
             vault.assert_invariants().unwrap();
             vault.assert_total_reserved_changed(&old_vault, 0, donated_amount).unwrap();
