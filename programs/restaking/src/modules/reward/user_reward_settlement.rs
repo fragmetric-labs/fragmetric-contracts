@@ -30,15 +30,16 @@ impl UserRewardSettlement {
     ///
     /// All blocks whose ending_slot <= last_settled_slot are already settled.
     /// All the other blocks are obviously created after last update,
-    /// so ending_slot >= last_updated_slot.
+    /// so ending_slot >= user_reward_pool_last_updated_slot.
     ///
     /// this operation is idempotent
     pub fn settle_reward(
         &mut self,
         reward_settlement: &mut RewardSettlement,
         total_contribution_accrual_rate: u128,
-        last_contribution: u128,
-        last_updated_slot: u64,
+        user_reward_pool_last_contribution: u128,
+        user_reward_pool_last_updated_slot: u64,
+        mut num_blocks_to_settle: Option<&mut u16>,
     ) -> Result<()> {
         if self.last_settled_slot == reward_settlement.settlement_blocks_last_slot {
             // All settlement blocks are already settled.
@@ -50,61 +51,58 @@ impl UserRewardSettlement {
             .get_settlement_blocks_iter_mut()
             .skip_while(|block| block.ending_slot <= last_settled_slot)
         {
+            if matches!(num_blocks_to_settle, Some(0)) {
+                break;
+            }
+
             if block.starting_slot > self.last_settled_slot {
                 // There is a gap between last settled block and this block so just follow up the contribution.
                 self.add_block_settled_contribution(
-                    last_contribution,
-                    last_updated_slot,
+                    user_reward_pool_last_contribution,
+                    user_reward_pool_last_updated_slot,
                     block.starting_slot,
                     total_contribution_accrual_rate,
                 );
             }
 
             let user_block_settled_contribution = self.add_block_settled_contribution(
-                last_contribution,
-                last_updated_slot,
+                user_reward_pool_last_contribution,
+                user_reward_pool_last_updated_slot,
                 block.ending_slot,
                 total_contribution_accrual_rate,
             );
+
             self.total_settled_amount +=
                 block.settle_user_reward(user_block_settled_contribution)?;
-        }
 
-        if self.last_settled_slot < reward_settlement.settlement_blocks_last_slot {
-            // There is a gap after last settled block so just follow up the contribution.
-            self.add_block_settled_contribution(
-                last_contribution,
-                last_updated_slot,
-                reward_settlement.settlement_blocks_last_slot,
-                total_contribution_accrual_rate,
-            );
+            if let Some(num_blocks_to_settle) = num_blocks_to_settle.as_deref_mut() {
+                *num_blocks_to_settle -= 1;
+            }
         }
-
-        require_eq!(
-            self.last_settled_slot,
-            reward_settlement.settlement_blocks_last_slot,
-        );
 
         Ok(())
     }
 
-    /// We know ending_slot >= last_updated_slot,
+    /// We know ending_slot >= user_reward_pool_last_updated_slot,
     /// and starting_slot = last_settled_slot.
     /// So there are only two cases:
-    /// case 1(last_updated_slot < last_settled_slot): updated...[starting...ending)
-    /// case 2(last_updated_slot >= last_settled_slot): [starting...updated...ending)
+    /// case 1(user_reward_pool_last_updated_slot < last_settled_slot): updated...[starting...ending)
+    /// case 2(user_reward_pool_last_updated_slot >= last_settled_slot): [starting...updated...ending)
     ///
     /// returns user_block_settled_contribution
     fn add_block_settled_contribution(
         &mut self,
-        last_contribution: u128,
-        last_updated_slot: u64,
+        user_reward_pool_last_contribution: u128,
+        user_reward_pool_last_updated_slot: u64,
         ending_slot: u64,
         total_contribution_accrual_rate: u128,
     ) -> u128 {
-        let user_block_settled_contribution = last_contribution
+        let user_block_settled_contribution = user_reward_pool_last_contribution
             .saturating_sub(self.total_settled_contribution)
-            + (ending_slot - self.last_settled_slot.max(last_updated_slot)) as u128
+            + (ending_slot
+                - self
+                    .last_settled_slot
+                    .max(user_reward_pool_last_updated_slot)) as u128
                 * total_contribution_accrual_rate;
 
         self.total_settled_contribution += user_block_settled_contribution;
@@ -167,6 +165,7 @@ mod tests {
                 user_total_contribution_accrual_rate,
                 user_last_contribution,
                 user_last_updated_slot,
+                None,
             )
             .unwrap();
         user_last_contribution += user_total_contribution_accrual_rate as u128
@@ -211,6 +210,7 @@ mod tests {
                 user_total_contribution_accrual_rate,
                 user_last_contribution,
                 user_last_updated_slot,
+                None,
             )
             .unwrap();
         user_last_contribution += user_total_contribution_accrual_rate as u128
@@ -239,6 +239,7 @@ mod tests {
                 user_total_contribution_accrual_rate,
                 user_last_contribution,
                 user_last_updated_slot,
+                None,
             )
             .unwrap();
 

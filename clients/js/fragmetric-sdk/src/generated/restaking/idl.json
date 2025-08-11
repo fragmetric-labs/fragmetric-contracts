@@ -9767,7 +9767,14 @@
           "name": "program"
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "num_blocks_to_settle",
+          "type": {
+            "option": "u16"
+          }
+        }
+      ]
     },
     {
       "name": "user_withdraw_sol",

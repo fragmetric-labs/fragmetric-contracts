@@ -1288,7 +1288,7 @@ describe('restaking.fragSOL unit test', async () => {
     ).rejects.toThrowError(); // Error Code: InvalidAccountData. Error Number: 17179869184. Error Message: An account's data contents was invalid.
   });
 
-  test('Token should be pegged to non-pegging token', async () => {
+  test('token should be pegged to non-pegging token', async () => {
     await ctx.fund.addSupportedToken.execute({
       mint: 'BonK1YhkXEGLZzwtcvRTip3gAL9nCeQD7ppZBLXhtTs',
       pricingSource: {
@@ -1334,5 +1334,78 @@ describe('restaking.fragSOL unit test', async () => {
     await ctx.fund.removeSupportedToken.execute({
       mint: 'BonK1YhkXEGLZzwtcvRTip3gAL9nCeQD7ppZBLXhtTs',
     });
+  });
+
+  test('user reward pool update fails when there are too many settlement blocks to synchronize', async () => {
+    const MAX_REWARD_NUM = 16;
+    const MAX_SETTLEMENT_BLOCK_NUM = 64;
+
+    let rewardAccount = await ctx.reward.resolveAccount(true);
+    const numOfAvailableReward =
+      MAX_REWARD_NUM - rewardAccount!.data.numRewards;
+
+    // add 16 rewards
+    for (let i = 0; i < numOfAvailableReward; i++) {
+      const reward = await validator.getSigner('mock reward' + i);
+      await ctx.reward.addReward.execute({
+        mint: reward.address,
+        decimals: 9,
+        name: 'mock reward' + i,
+        description: 'mock reward for test',
+      });
+    }
+
+    // user1 deposits sol to accumulate contribution
+    await validator.airdrop(user1.address!, 1_000_000_000_000n);
+    await user1.deposit.execute(
+      {
+        assetAmount: 1_000_000_000_000n,
+      },
+      { signers: [signer1] }
+    );
+
+    /*
+     * repeatedly call partial update ix to resolve DOS
+     * - settle 1024 blocks to global reward pool
+     * - user1 try to deposit and transaction exceeds maximum CU limit
+     * - repeatedly settle 192 blocks to user reward pool (64 + 32 blocks to check boundary - kind of reward changes every 64 blocks)
+     * - user1 succeeds to deposit without any error
+     */
+
+    // settle 16 * 64 blocks
+    rewardAccount = await ctx.reward.resolveAccount(true);
+    for (let i = 0; i < MAX_REWARD_NUM; i++) {
+      const rewardAddress = rewardAccount!.data.rewards1[i].mint;
+      for (let j = 0; j < MAX_SETTLEMENT_BLOCK_NUM; j++) {
+        await ctx.reward.settleReward.execute({
+          mint: rewardAddress,
+          amount: 1_234_567_890_123_456n,
+          isBonus: i == 0, // only settle fPoint in bonus pool
+        });
+
+        await validator.skipSlots(3n);
+      }
+    }
+
+    // executing deposit instruction exceeds 1,400,000 CU
+    await expect(
+      user1.deposit.execute(
+        {
+          assetAmount: 1_000_000_000n,
+        },
+        { signers: [signer1] }
+      )
+    ).rejects.toThrowError();
+
+    // repeatedly update 192 blocks
+    await user1.reward.updatePools.executeChained({ numBlocksToSettle: 192 });
+
+    // deposit succeeds after partial pool update
+    await user1.deposit.executeChained(
+      {
+        assetAmount: 1_000_000_000n,
+      },
+      { signers: [signer1] }
+    );
   });
 });

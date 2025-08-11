@@ -13,9 +13,13 @@ import {
   getAddressEncoder,
   getBytesDecoder,
   getBytesEncoder,
+  getOptionDecoder,
+  getOptionEncoder,
   getProgramDerivedAddress,
   getStructDecoder,
   getStructEncoder,
+  getU16Decoder,
+  getU16Encoder,
   transformEncoder,
   type Address,
   type Codec,
@@ -25,6 +29,8 @@ import {
   type IInstruction,
   type IInstructionWithAccounts,
   type IInstructionWithData,
+  type Option,
+  type OptionOrNullable,
   type ReadonlyAccount,
   type ReadonlyUint8Array,
   type WritableAccount,
@@ -83,13 +89,19 @@ export type UserUpdateRewardPoolsInstruction<
 
 export type UserUpdateRewardPoolsInstructionData = {
   discriminator: ReadonlyUint8Array;
+  numBlocksToSettle: Option<number>;
 };
 
-export type UserUpdateRewardPoolsInstructionDataArgs = {};
+export type UserUpdateRewardPoolsInstructionDataArgs = {
+  numBlocksToSettle: OptionOrNullable<number>;
+};
 
 export function getUserUpdateRewardPoolsInstructionDataEncoder(): Encoder<UserUpdateRewardPoolsInstructionDataArgs> {
   return transformEncoder(
-    getStructEncoder([['discriminator', fixEncoderSize(getBytesEncoder(), 8)]]),
+    getStructEncoder([
+      ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
+      ['numBlocksToSettle', getOptionEncoder(getU16Encoder())],
+    ]),
     (value) => ({
       ...value,
       discriminator: USER_UPDATE_REWARD_POOLS_DISCRIMINATOR,
@@ -100,6 +112,7 @@ export function getUserUpdateRewardPoolsInstructionDataEncoder(): Encoder<UserUp
 export function getUserUpdateRewardPoolsInstructionDataDecoder(): Decoder<UserUpdateRewardPoolsInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
+    ['numBlocksToSettle', getOptionDecoder(getU16Decoder())],
   ]);
 }
 
@@ -127,6 +140,7 @@ export type UserUpdateRewardPoolsAsyncInput<
   userRewardAccount?: Address<TAccountUserRewardAccount>;
   eventAuthority?: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
+  numBlocksToSettle: UserUpdateRewardPoolsInstructionDataArgs['numBlocksToSettle'];
 };
 
 export async function getUserUpdateRewardPoolsInstructionAsync<
@@ -181,6 +195,9 @@ export async function getUserUpdateRewardPoolsInstructionAsync<
     ResolvedAccount
   >;
 
+  // Original args.
+  const args = { ...input };
+
   // Resolve default values.
   if (!accounts.rewardAccount.value) {
     accounts.rewardAccount.value = await getProgramDerivedAddress({
@@ -232,7 +249,9 @@ export async function getUserUpdateRewardPoolsInstructionAsync<
       getAccountMeta(accounts.program),
     ],
     programAddress,
-    data: getUserUpdateRewardPoolsInstructionDataEncoder().encode({}),
+    data: getUserUpdateRewardPoolsInstructionDataEncoder().encode(
+      args as UserUpdateRewardPoolsInstructionDataArgs
+    ),
   } as UserUpdateRewardPoolsInstruction<
     TProgramAddress,
     TAccountUser,
@@ -260,6 +279,7 @@ export type UserUpdateRewardPoolsInput<
   userRewardAccount: Address<TAccountUserRewardAccount>;
   eventAuthority: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
+  numBlocksToSettle: UserUpdateRewardPoolsInstructionDataArgs['numBlocksToSettle'];
 };
 
 export function getUserUpdateRewardPoolsInstruction<
@@ -312,6 +332,9 @@ export function getUserUpdateRewardPoolsInstruction<
     ResolvedAccount
   >;
 
+  // Original args.
+  const args = { ...input };
+
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
@@ -323,7 +346,9 @@ export function getUserUpdateRewardPoolsInstruction<
       getAccountMeta(accounts.program),
     ],
     programAddress,
-    data: getUserUpdateRewardPoolsInstructionDataEncoder().encode({}),
+    data: getUserUpdateRewardPoolsInstructionDataEncoder().encode(
+      args as UserUpdateRewardPoolsInstructionDataArgs
+    ),
   } as UserUpdateRewardPoolsInstruction<
     TProgramAddress,
     TAccountUser,
