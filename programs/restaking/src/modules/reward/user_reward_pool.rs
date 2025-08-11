@@ -110,10 +110,7 @@ impl UserRewardPool {
         let last_updated_slot = self.updated_slot;
         let reward_pool_initial_slot = reward_pool.initial_slot;
         for reward_settlement in reward_pool.get_reward_settlements_iter_mut() {
-            if num_blocks_to_settle
-                .as_deref()
-                .is_some_and(|&num_blocks_to_settle| num_blocks_to_settle == 0)
-            {
+            if matches!(num_blocks_to_settle, Some(0)) {
                 break;
             }
 

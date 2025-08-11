@@ -51,10 +51,7 @@ impl UserRewardSettlement {
             .get_settlement_blocks_iter_mut()
             .skip_while(|block| block.ending_slot <= last_settled_slot)
         {
-            if num_blocks_to_settle
-                .as_deref()
-                .is_some_and(|&num_blocks_to_settle| num_blocks_to_settle == 0)
-            {
+            if matches!(num_blocks_to_settle, Some(0)) {
                 break;
             }
 

@@ -205,7 +205,7 @@ impl UserRewardAccount {
         self.bonus_user_reward_pool.update_user_reward_pool(
             &mut reward_account.bonus_reward_pool,
             current_slot,
-            num_blocks_to_settle.as_deref_mut(),
+            num_blocks_to_settle,
         )?;
 
         Ok(())
