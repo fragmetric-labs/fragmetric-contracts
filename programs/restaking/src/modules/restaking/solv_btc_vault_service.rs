@@ -366,6 +366,19 @@ impl<'info> SolvBTCVaultService<'info> {
         let deducted_supported_token_fee_amount = vault.get_vst_deducted_fee_amount();
         let claimed_supported_token_amount = vault.get_vst_total_claimable_amount();
 
+        // fee validation
+        let total_unrestaked_supported_token_amount =
+            claimed_supported_token_amount + deducted_supported_token_fee_amount;
+        let expected_supported_token_fee_amount = crate::utils::get_proportional_amount_u64(
+            total_unrestaked_supported_token_amount,
+            vault.get_withdrawal_fee_rate_bps() as u64,
+            10_000,
+        )?;
+        require_gte!(
+            1, // due to round up/down
+            expected_supported_token_fee_amount.abs_diff(deducted_supported_token_fee_amount),
+        );
+
         if claimed_supported_token_amount == 0 {
             return Ok((
                 payer_vault_supported_token_amount_before,

@@ -36,6 +36,7 @@ type-complexity = "allow"
 only-used-in-recursion = "allow"
 let-and-return = "allow"
 wildcard-enum-match-arm = "deny"
+comparison-chain = "allow"
 
 [workspace.dependencies]
 anchor-lang = { version = "0.31.1", features = ["event-cpi"] }

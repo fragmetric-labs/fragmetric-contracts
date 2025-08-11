@@ -4,7 +4,7 @@ use anchor_spl::token::Mint;
 use crate::errors::VaultError;
 use crate::states::VaultAccount;
 
-#[derive(AnchorSerialize, AnchorDeserialize)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy)]
 pub enum VaultAdminRole {
     VaultManager = 0,
     RewardManager = 1,
@@ -61,7 +61,7 @@ pub fn process_update_vault_admin_role(
                 VaultError::VaultAdminMismatchError,
             );
 
-            vault.set_reward_manager(new_vault_admin.key())?
+            vault.set_reward_manager(new_vault_admin.key())?;
         }
         VaultAdminRole::FundManager => {
             require_keys_eq!(
@@ -70,7 +70,7 @@ pub fn process_update_vault_admin_role(
                 VaultError::VaultAdminMismatchError,
             );
 
-            vault.set_fund_manager(new_vault_admin.key())?
+            vault.set_fund_manager(new_vault_admin.key())?;
         }
         VaultAdminRole::SolvManager => {
             require_keys_eq!(
@@ -79,7 +79,7 @@ pub fn process_update_vault_admin_role(
                 VaultError::VaultAdminMismatchError,
             );
 
-            vault.set_solv_manager(new_vault_admin.key())?
+            vault.set_solv_manager(new_vault_admin.key())?;
         }
     }
 

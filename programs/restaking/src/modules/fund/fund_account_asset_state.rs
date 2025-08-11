@@ -591,8 +591,7 @@ mod tests {
         assert_eq!(
             asset
                 .get_queued_withdrawal_batches_iter()
-                .skip(1)
-                .next()
+                .nth(1)
                 .unwrap()
                 .batch_id,
             2
@@ -600,8 +599,7 @@ mod tests {
         assert_eq!(
             asset
                 .get_queued_withdrawal_batches_iter()
-                .skip(1)
-                .next()
+                .nth(1)
                 .unwrap()
                 .num_requests,
             1
@@ -609,8 +607,7 @@ mod tests {
         assert_eq!(
             asset
                 .get_queued_withdrawal_batches_iter()
-                .skip(1)
-                .next()
+                .nth(1)
                 .unwrap()
                 .receipt_token_amount,
             30
@@ -618,8 +615,7 @@ mod tests {
         assert_eq!(
             asset
                 .get_queued_withdrawal_batches_iter()
-                .skip(1)
-                .next()
+                .nth(1)
                 .unwrap()
                 .enqueued_at,
             2

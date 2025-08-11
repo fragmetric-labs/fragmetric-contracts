@@ -168,8 +168,8 @@ mod tests {
                 None,
             )
             .unwrap();
-        user_last_contribution += user_total_contribution_accrual_rate as u128
-            * (current_slot - user_last_updated_slot) as u128;
+        user_last_contribution +=
+            user_total_contribution_accrual_rate * (current_slot - user_last_updated_slot) as u128;
         user_last_updated_slot = current_slot;
 
         assert_eq!(user_reward_settlement.last_settled_slot, 10);
@@ -213,8 +213,8 @@ mod tests {
                 None,
             )
             .unwrap();
-        user_last_contribution += user_total_contribution_accrual_rate as u128
-            * (current_slot - user_last_updated_slot) as u128;
+        user_last_contribution +=
+            user_total_contribution_accrual_rate * (current_slot - user_last_updated_slot) as u128;
         user_last_updated_slot = current_slot;
 
         assert_eq!(user_reward_settlement.last_settled_slot, 40);
