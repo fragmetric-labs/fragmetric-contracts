@@ -750,6 +750,10 @@ impl UnstakeLSTCommand {
             pool_token_program,
         )?;
 
+        // pricing service with updated token values
+        let mut pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+            .new_pricing_service(pricing_sources.iter().copied(), false)?;
+
         let fund_account = ctx.fund_account.load()?;
 
         // Statistics
@@ -875,10 +879,6 @@ impl UnstakeLSTCommand {
 
         drop(fund_account);
 
-        // pricing service with updated token values
-        let mut pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-            .new_pricing_service(pricing_sources.iter().copied(), false)?;
-
         // fee validation
         let total_burnt_token_amount =
             unstake_command_item.allocated_token_amount - total_token_amount_to_burn;
@@ -959,6 +959,11 @@ impl UnstakeLSTCommand {
             pool_token_program,
         )?;
 
+        let mut pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+            .new_pricing_service(pricing_sources.iter().copied(), false)?;
+        let token_amount_as_sol = pricing_service
+            .get_token_amount_as_sol(pool_token_mint.key, item.allocated_token_amount)?;
+
         let (unstaking_sol_amount, deducted_sol_fee_amount) = {
             let fund_account = ctx.fund_account.load()?;
             marinade_stake_pool_service.order_unstake(
@@ -980,19 +985,17 @@ impl UnstakeLSTCommand {
             )?
         };
 
-        // pricing service with updated token values
-        let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-            .new_pricing_service(pricing_sources.iter().copied(), true)?;
-
         // fee validation
-        let expected_sol_fee_amount = pricing_service
-            .get_token_amount_as_sol(pool_token_mint.key, item.allocated_token_amount)?
-            .saturating_sub(unstaking_sol_amount);
+        let expected_sol_fee_amount = token_amount_as_sol.saturating_sub(unstaking_sol_amount);
 
         require_gte!(
             MAX_FEE_TOLERANCE,
             expected_sol_fee_amount.abs_diff(deducted_sol_fee_amount)
         );
+
+        // pricing service with updated token values
+        FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+            .update_asset_values(&mut pricing_service, true)?;
 
         Ok(Some(UnstakeResult {
             to_sol_account_amount: fund_reserve_account.lamports(),
