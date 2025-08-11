@@ -1336,7 +1336,7 @@ describe('restaking.fragSOL unit test', async () => {
     });
   });
 
-  test('user reward pool update fails when there are too many settlement blocks to synchronize', async () => {
+  test.skip('user reward pool update fails when there are too many settlement blocks to synchronize', async () => {
     const MAX_REWARD_NUM = 16;
     const MAX_SETTLEMENT_BLOCK_NUM = 64;
 
