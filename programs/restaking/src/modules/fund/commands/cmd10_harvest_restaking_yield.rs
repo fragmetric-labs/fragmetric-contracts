@@ -5,7 +5,9 @@ use anchor_spl::token_interface::TokenAccount;
 use crate::constants::PROGRAM_REVENUE_ADDRESS;
 use crate::errors::ErrorCode;
 use crate::modules::pricing::TokenPricingSource;
-use crate::modules::restaking::VirtualVaultService;
+use crate::modules::restaking::{
+    JitoRestakingVaultService, SolvBTCVaultService, VirtualVaultService,
+};
 use crate::modules::reward::{RewardAccount, RewardService};
 use crate::modules::swap::{OrcaDEXLiquidityPoolService, TokenSwapSource};
 use crate::utils::{AccountInfoExt, PDASeeds};
@@ -226,7 +228,7 @@ impl SelfExecutable for HarvestRestakingYieldCommand {
                 self.execute_prepare_compound_vault_supported_token_command(ctx, vault)?
             }
             ExecuteCompoundVaultSupportedToken { vault } => {
-                self.execute_execute_compound_vault_supported_token_command(ctx, vault)?
+                self.execute_execute_compound_vault_supported_token_command(ctx, accounts, vault)?
             }
         };
 
@@ -907,12 +909,19 @@ impl HarvestRestakingYieldCommand {
             .try_deserialize()?;
 
         let Some(entry) = (match receipt_token_pricing_source {
-            Some(TokenPricingSource::JitoRestakingVault { .. })
-            | Some(TokenPricingSource::SolvBTCVault { .. }) => {
+            Some(TokenPricingSource::JitoRestakingVault { address }) => {
+                let required_accounts = JitoRestakingVaultService::find_accounts_to_new(address)?;
                 let command = Self {
                     state: ExecuteCompoundVaultSupportedToken { vault: *vault },
                 };
-                Some(command.without_required_accounts())
+                Some(command.with_required_accounts(required_accounts))
+            }
+            Some(TokenPricingSource::SolvBTCVault { address }) => {
+                let required_accounts = SolvBTCVaultService::find_accounts_to_new(address)?;
+                let command = Self {
+                    state: ExecuteCompoundVaultSupportedToken { vault: *vault },
+                };
+                Some(command.with_required_accounts(required_accounts))
             }
             Some(TokenPricingSource::VirtualVault { .. }) => None,
             // otherwise fails
@@ -1403,9 +1412,10 @@ impl HarvestRestakingYieldCommand {
     }
 
     #[inline(never)]
-    fn execute_execute_compound_vault_supported_token_command(
+    fn execute_execute_compound_vault_supported_token_command<'info>(
         &self,
         ctx: &mut OperationCommandContext,
+        accounts: &[&'info AccountInfo<'info>],
         vault: &Pubkey,
     ) -> ExecutionResult {
         let mut fund_account = ctx.fund_account.load_mut()?;
@@ -1416,8 +1426,54 @@ impl HarvestRestakingYieldCommand {
 
         let supported_token_mint = restaking_vault.supported_token_mint;
         let vault_supported_token_compounded_amount = match receipt_token_pricing_source {
-            Some(TokenPricingSource::JitoRestakingVault { .. })
-            | Some(TokenPricingSource::SolvBTCVault { .. }) => {
+            Some(TokenPricingSource::JitoRestakingVault { address }) => {
+                let [vault_program, vault_config, vault_account, ..] = accounts else {
+                    err!(error::ErrorCode::AccountNotEnoughKeys)?
+                };
+                require_keys_eq!(address, vault_account.key());
+
+                let vault_service =
+                    JitoRestakingVaultService::new(vault_program, vault_config, vault_account)?;
+
+                let (supported_token_amount_numerator, receipt_token_amount_denominator) =
+                    vault_service.get_supported_token_to_receipt_token_exchange_ratio()?;
+
+                restaking_vault.update_supported_token_compounded_amount(
+                    supported_token_amount_numerator,
+                    receipt_token_amount_denominator,
+                )?;
+                restaking_vault.update_supported_token_receipt_token_exchange_ratio(
+                    supported_token_amount_numerator,
+                    receipt_token_amount_denominator,
+                )?;
+
+                let vault_supported_token_compounded_amount =
+                    restaking_vault.supported_token_compounded_amount;
+
+                restaking_vault.supported_token_compounded_amount = 0;
+
+                vault_supported_token_compounded_amount
+            }
+            Some(TokenPricingSource::SolvBTCVault { address }) => {
+                let [vault_program, vault_account, ..] = accounts else {
+                    err!(error::ErrorCode::AccountNotEnoughKeys)?
+                };
+                require_keys_eq!(address, vault_account.key());
+
+                let vault_service = SolvBTCVaultService::new(vault_program, vault_account)?;
+
+                let (supported_token_amount_numerator, receipt_token_amount_denominator) =
+                    vault_service.get_supported_token_to_receipt_token_exchange_ratio()?;
+
+                restaking_vault.update_supported_token_compounded_amount(
+                    supported_token_amount_numerator,
+                    receipt_token_amount_denominator,
+                )?;
+                restaking_vault.update_supported_token_receipt_token_exchange_ratio(
+                    supported_token_amount_numerator,
+                    receipt_token_amount_denominator,
+                )?;
+
                 let vault_supported_token_compounded_amount =
                     restaking_vault.supported_token_compounded_amount;
 

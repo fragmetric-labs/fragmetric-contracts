@@ -519,10 +519,6 @@ impl ClaimUnrestakedVSTCommand {
                     &[&fund_account.get_reserve_account_seeds()],
                 )?;
 
-                if unrestaked_receipt_token_amount == 0 {
-                    return Ok(None);
-                }
-
                 drop(fund_account);
 
                 let mut fund_account = ctx.fund_account.load_mut()?;
@@ -534,6 +530,10 @@ impl ClaimUnrestakedVSTCommand {
                     supported_token_amount_numerator,
                     receipt_token_amount_denominator,
                 )?;
+
+                if unrestaked_receipt_token_amount == 0 {
+                    return Ok(None);
+                }
 
                 restaking_vault.pending_supported_token_unrestaking_amount -=
                     expected_supported_token_amount;
