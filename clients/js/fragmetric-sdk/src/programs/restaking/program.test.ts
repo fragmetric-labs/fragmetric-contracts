@@ -121,7 +121,7 @@ test('can traverse context graph', async () => {
     │   │   ├── restakingVaults                               IterativeAccount length=undefined, types=undefined
     │   │   ├── wrap                                          RestakingFundWrapAccount address=undefined, lamports=undefined
     │   │   │   ├── reward                                    RestakingFundWrapRewardAccount address=undefined
-    │   │   │   │   ├── updatePools                           TransactionTemplate args=null, events=userUpdatedRewardPool, description=manually triggers contribution synchronization for the user reward po
+    │   │   │   │   ├── updatePools                           TransactionTemplate (chained) args=null, events=userUpdatedRewardPool, description=manually triggers contribution synchronization for the user
     │   │   │   │   ├── initializeOrUpdateAccount             TransactionTemplate args=null, events=userCreatedOrUpdatedRewardAccount, description=initialize or update user reward account
     │   │   │   │   ├── claim                                 TransactionTemplate args=delegate,isBonus,mint,amount,recipient,applyPresetComputeUnitLimit, events=userClaimedReward, description=claim rewar
     │   │   │   │   ├── delegate                              TransactionTemplate args=delegate,newDelegate, events=userDelegatedRewardAccount, description=delegate user reward account
@@ -177,7 +177,7 @@ test('can traverse context graph', async () => {
     │   │   ├── fund                                          RestakingUserFundAccount address=undefined
     │   │   │   └── initializeOrUpdateAccount                 TransactionTemplate args=null, events=userCreatedOrUpdatedFundAccount, description=initialize or update user fund account
     │   │   ├── reward                                        RestakingUserRewardAccount address=undefined
-    │   │   │   ├── updatePools                               TransactionTemplate args=null, events=userUpdatedRewardPool, description=manually triggers contribution synchronization for the user reward po
+    │   │   │   ├── updatePools                               TransactionTemplate (chained) args=null, events=userUpdatedRewardPool, description=manually triggers contribution synchronization for the user
     │   │   │   ├── initializeOrUpdateAccount                 TransactionTemplate args=null, events=userCreatedOrUpdatedRewardAccount, description=initialize or update user reward account
     │   │   │   ├── claim                                     TransactionTemplate args=delegate,isBonus,mint,amount,recipient,applyPresetComputeUnitLimit, events=userClaimedReward, description=claim rewar
     │   │   │   ├── delegate                                  TransactionTemplate args=delegate,newDelegate, events=userDelegatedRewardAccount, description=delegate user reward account
@@ -207,7 +207,7 @@ test('can traverse context graph', async () => {
     │   │   ├── restakingVaults                               IterativeAccount length=undefined, types=undefined
     │   │   ├── wrap                                          RestakingFundWrapAccount address=undefined, lamports=undefined
     │   │   │   ├── reward                                    RestakingFundWrapRewardAccount address=undefined
-    │   │   │   │   ├── updatePools                           TransactionTemplate args=null, events=userUpdatedRewardPool, description=manually triggers contribution synchronization for the user reward po
+    │   │   │   │   ├── updatePools                           TransactionTemplate (chained) args=null, events=userUpdatedRewardPool, description=manually triggers contribution synchronization for the user
     │   │   │   │   ├── initializeOrUpdateAccount             TransactionTemplate args=null, events=userCreatedOrUpdatedRewardAccount, description=initialize or update user reward account
     │   │   │   │   ├── claim                                 TransactionTemplate args=delegate,isBonus,mint,amount,recipient,applyPresetComputeUnitLimit, events=userClaimedReward, description=claim rewar
     │   │   │   │   ├── delegate                              TransactionTemplate args=delegate,newDelegate, events=userDelegatedRewardAccount, description=delegate user reward account
@@ -263,7 +263,7 @@ test('can traverse context graph', async () => {
     │   │   ├── fund                                          RestakingUserFundAccount address=undefined
     │   │   │   └── initializeOrUpdateAccount                 TransactionTemplate args=null, events=userCreatedOrUpdatedFundAccount, description=initialize or update user fund account
     │   │   ├── reward                                        RestakingUserRewardAccount address=undefined
-    │   │   │   ├── updatePools                               TransactionTemplate args=null, events=userUpdatedRewardPool, description=manually triggers contribution synchronization for the user reward po
+    │   │   │   ├── updatePools                               TransactionTemplate (chained) args=null, events=userUpdatedRewardPool, description=manually triggers contribution synchronization for the user
     │   │   │   ├── initializeOrUpdateAccount                 TransactionTemplate args=null, events=userCreatedOrUpdatedRewardAccount, description=initialize or update user reward account
     │   │   │   ├── claim                                     TransactionTemplate args=delegate,isBonus,mint,amount,recipient,applyPresetComputeUnitLimit, events=userClaimedReward, description=claim rewar
     │   │   │   ├── delegate                                  TransactionTemplate args=delegate,newDelegate, events=userDelegatedRewardAccount, description=delegate user reward account
@@ -293,7 +293,7 @@ test('can traverse context graph', async () => {
     │   │   ├── restakingVaults                               IterativeAccount length=undefined, types=undefined
     │   │   ├── wrap                                          RestakingFundWrapAccount address=undefined, lamports=undefined
     │   │   │   ├── reward                                    RestakingFundWrapRewardAccount address=undefined
-    │   │   │   │   ├── updatePools                           TransactionTemplate args=null, events=userUpdatedRewardPool, description=manually triggers contribution synchronization for the user reward po
+    │   │   │   │   ├── updatePools                           TransactionTemplate (chained) args=null, events=userUpdatedRewardPool, description=manually triggers contribution synchronization for the user
     │   │   │   │   ├── initializeOrUpdateAccount             TransactionTemplate args=null, events=userCreatedOrUpdatedRewardAccount, description=initialize or update user reward account
     │   │   │   │   ├── claim                                 TransactionTemplate args=delegate,isBonus,mint,amount,recipient,applyPresetComputeUnitLimit, events=userClaimedReward, description=claim rewar
     │   │   │   │   ├── delegate                              TransactionTemplate args=delegate,newDelegate, events=userDelegatedRewardAccount, description=delegate user reward account
@@ -349,7 +349,7 @@ test('can traverse context graph', async () => {
     │   │   ├── fund                                          RestakingUserFundAccount address=undefined
     │   │   │   └── initializeOrUpdateAccount                 TransactionTemplate args=null, events=userCreatedOrUpdatedFundAccount, description=initialize or update user fund account
     │   │   ├── reward                                        RestakingUserRewardAccount address=undefined
-    │   │   │   ├── updatePools                               TransactionTemplate args=null, events=userUpdatedRewardPool, description=manually triggers contribution synchronization for the user reward po
+    │   │   │   ├── updatePools                               TransactionTemplate (chained) args=null, events=userUpdatedRewardPool, description=manually triggers contribution synchronization for the user
     │   │   │   ├── initializeOrUpdateAccount                 TransactionTemplate args=null, events=userCreatedOrUpdatedRewardAccount, description=initialize or update user reward account
     │   │   │   ├── claim                                     TransactionTemplate args=delegate,isBonus,mint,amount,recipient,applyPresetComputeUnitLimit, events=userClaimedReward, description=claim rewar
     │   │   │   ├── delegate                                  TransactionTemplate args=delegate,newDelegate, events=userDelegatedRewardAccount, description=delegate user reward account
@@ -379,7 +379,7 @@ test('can traverse context graph', async () => {
     │   │   ├── restakingVaults                               IterativeAccount length=undefined, types=undefined
     │   │   ├── wrap                                          RestakingFundWrapAccount address=undefined, lamports=undefined
     │   │   │   ├── reward                                    RestakingFundWrapRewardAccount address=undefined
-    │   │   │   │   ├── updatePools                           TransactionTemplate args=null, events=userUpdatedRewardPool, description=manually triggers contribution synchronization for the user reward po
+    │   │   │   │   ├── updatePools                           TransactionTemplate (chained) args=null, events=userUpdatedRewardPool, description=manually triggers contribution synchronization for the user
     │   │   │   │   ├── initializeOrUpdateAccount             TransactionTemplate args=null, events=userCreatedOrUpdatedRewardAccount, description=initialize or update user reward account
     │   │   │   │   ├── claim                                 TransactionTemplate args=delegate,isBonus,mint,amount,recipient,applyPresetComputeUnitLimit, events=userClaimedReward, description=claim rewar
     │   │   │   │   ├── delegate                              TransactionTemplate args=delegate,newDelegate, events=userDelegatedRewardAccount, description=delegate user reward account
@@ -435,7 +435,7 @@ test('can traverse context graph', async () => {
     │   │   ├── fund                                          RestakingUserFundAccount address=undefined
     │   │   │   └── initializeOrUpdateAccount                 TransactionTemplate args=null, events=userCreatedOrUpdatedFundAccount, description=initialize or update user fund account
     │   │   ├── reward                                        RestakingUserRewardAccount address=undefined
-    │   │   │   ├── updatePools                               TransactionTemplate args=null, events=userUpdatedRewardPool, description=manually triggers contribution synchronization for the user reward po
+    │   │   │   ├── updatePools                               TransactionTemplate (chained) args=null, events=userUpdatedRewardPool, description=manually triggers contribution synchronization for the user
     │   │   │   ├── initializeOrUpdateAccount                 TransactionTemplate args=null, events=userCreatedOrUpdatedRewardAccount, description=initialize or update user reward account
     │   │   │   ├── claim                                     TransactionTemplate args=delegate,isBonus,mint,amount,recipient,applyPresetComputeUnitLimit, events=userClaimedReward, description=claim rewar
     │   │   │   ├── delegate                                  TransactionTemplate args=delegate,newDelegate, events=userDelegatedRewardAccount, description=delegate user reward account

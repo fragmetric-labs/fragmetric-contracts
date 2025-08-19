@@ -1,6 +1,6 @@
 {
   "name": "@fragmetric-labs/sdk",
-  "version": "2.6.0",
+  "version": "2.6.1",
   "description": "The Client SDK for Fragmetric Solana programs serves both end users and operational administrators.\nIt is designed for compatibility with web browsers and Node.js environments, offering support for web browser bundles (in ESM and UMD formats) as well as Node.js bundles (in ESM formats).",
   "repository": {
     "type": "git",

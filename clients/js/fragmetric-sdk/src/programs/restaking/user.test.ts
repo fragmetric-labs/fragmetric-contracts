@@ -213,8 +213,8 @@ describe('RestakingUserContext on devnet', async () => {
         },
       });
     } catch (err: any) {
-      expect(err.cause.context.logs).toContain(
-        'Program log: AnchorError thrown in programs/restaking/src/modules/fund/user_fund_account.rs:120. Error Code: FundExceededMaxWithdrawalRequestError. Error Number: 6043. Error Message: fund: exceeded max withdrawal request per user.'
+      expect(err.cause.context.logs.join('\n')).toContain(
+        'FundExceededMaxWithdrawalRequestError'
       );
     }
   });
