@@ -45,7 +45,7 @@ export const connectCommand = new Command()
     ).catch(logger.warn);
 
     // create REPL server
-    const server = prepl.start({
+    const server = await prepl.start({
       preview: true,
       prompt: expression ? '' : `${cluster} ${endpoint} > `,
       writer: util.inspect,
