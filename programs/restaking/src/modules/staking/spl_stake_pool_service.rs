@@ -379,8 +379,40 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
             // descending order
             u64::MAX - active_stake_lamports
         });
-        for i in 0..num_validators {
-            let validator_stake_info = &validator_stake_infos[indices[i] as usize];
+
+        // first consider preferred withdraw validator
+        let mut preferred_withdraw_validator_stake_account_idx = None;
+        let pool_account_data = &Self::deserialize_pool_account(self.pool_account)?;
+        if let Some(preferred_withdraw_validator) =
+            pool_account_data.preferred_withdraw_validator_vote_address
+        {
+            if let Some((i, validator_stake_info)) = validator_stake_infos
+                .iter()
+                .enumerate()
+                .find(|(_, v)| v.vote_account_address == preferred_withdraw_validator)
+            {
+                let (stake_account_address, _) = spl_stake_pool::find_stake_program_address(
+                    self.spl_stake_pool_program.key,
+                    &validator_stake_info.vote_account_address,
+                    self.pool_account.key,
+                    NonZeroU32::new(validator_stake_info.validator_seed_suffix.into()),
+                );
+
+                validator_stake_accounts.push(stake_account_address);
+                preferred_withdraw_validator_stake_account_idx = Some(i);
+            }
+        }
+
+        for &idx in &indices {
+            if validator_stake_accounts.len() >= num_validators {
+                break;
+            }
+
+            if Some(idx as usize) == preferred_withdraw_validator_stake_account_idx {
+                continue;
+            }
+
+            let validator_stake_info = &validator_stake_infos[idx as usize];
             let (stake_account_address, _) = spl_stake_pool::find_stake_program_address(
                 self.spl_stake_pool_program.key,
                 &validator_stake_info.vote_account_address,
