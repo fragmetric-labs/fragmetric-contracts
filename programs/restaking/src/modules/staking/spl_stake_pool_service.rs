@@ -660,7 +660,6 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
 
         let pool_token_amount = Self::get_available_pool_token_amount_to_withdraw_stake(
             pool_account_data,
-            validator_stake_account,
             validator_stake_account_data,
         )?
         .min(pool_token_amount);
@@ -755,43 +754,25 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
     /// https://github.com/solana-labs/solana-program-library/blob/master/stake-pool/program/src/processor.rs#L2792
     fn get_available_pool_token_amount_to_withdraw_stake(
         pool_account_data: &StakePool,
-        validator_stake_account: &AccountInfo,
         validator_stake_account_data: &StakeStateV2,
     ) -> Result<u64> {
-        let StakeStateV2::Stake(meta, stake, _) = validator_stake_account_data else {
+        let StakeStateV2::Stake(_, stake, _) = validator_stake_account_data else {
             return Err(ProgramError::from(StakePoolError::WrongStakeStake))?;
         };
 
         let stake_minimum_delegation = solana_program::stake::tools::get_minimum_delegation()?;
-        // minimum staked sol amount = minimum delegation + rent exempt fee
-        let minimum_staked_sol_amount =
-            spl_stake_pool::minimum_stake_lamports(meta, stake_minimum_delegation);
-        let tolerance = pool_account_data
-            .get_lamports_per_pool_token()
-            .ok_or_else(|| error!(ErrorCode::CalculationArithmeticException))?;
-        let minimum_staked_sol_amount_with_tolerance =
-            minimum_staked_sol_amount.saturating_add(tolerance);
-
-        let active_stake_sol_amount = validator_stake_account.lamports();
         let available_delegation_amount = stake
             .delegation
             .stake
             .saturating_sub(stake_minimum_delegation);
 
-        // Here we just added tolerance for safety.
-        // In fact, maximum available sol amount to withdraw = active stake amount - mimimum staked sol amount
-        // https://github.com/solana-labs/solana-program-library/blob/master/stake-pool/program/src/processor.rs#L2903
-        let available_sol_amount = active_stake_sol_amount
-            .saturating_sub(minimum_staked_sol_amount_with_tolerance)
-            .min(available_delegation_amount);
-
         // New stake account must also ensure minimum delegation condition.
-        if available_sol_amount < stake_minimum_delegation {
+        if available_delegation_amount < stake_minimum_delegation {
             return Ok(0);
         }
 
         let available_pool_token_amount_to_burn = crate::utils::get_proportional_amount_u64(
-            available_sol_amount,
+            available_delegation_amount,
             pool_account_data.pool_token_supply,
             pool_account_data.total_lamports,
         )?;
@@ -799,7 +780,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
         // pool_token_amount = pool_token_burnt * (1 / 1 - f) = pool_token_burnt * (d / (d - n))
         let numerator = pool_account_data.stake_withdrawal_fee.numerator;
         let denominator = pool_account_data.stake_withdrawal_fee.denominator;
-        crate::utils::get_proportional_amount_u64(
+        crate::utils::get_proportional_amount_u64_round_up(
             available_pool_token_amount_to_burn,
             denominator,
             denominator.saturating_sub(numerator),
