@@ -734,7 +734,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
         ))
     }
 
-    /// https://github.com/solana-labs/solana-program-library/blob/master/stake-pool/program/src/processor.rs#L2792
+    /// https://github.com/solana-program/stake-pool/blob/main/program/src/processor.rs#L2709
     fn get_available_pool_token_amount_to_withdraw_stake(
         pool_account_data: &StakePool,
         validator_stake_account_data: &StakeStateV2,

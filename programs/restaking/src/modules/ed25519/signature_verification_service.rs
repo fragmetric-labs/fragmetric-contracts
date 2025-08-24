@@ -24,7 +24,7 @@ impl SignatureVerificationService {
         require_eq!(ix.accounts.len(), 0);
 
         // According to this layout used by the Ed25519Program
-        // https://github.com/solana-labs/solana-web3.js/blob/master/src/ed25519-program.ts#L33
+        // https://github.com/anza-xyz/solana-sdk/blob/master/ed25519-program/src/lib.rs#L20
         // "Deserializing" byte slices
         let expected_payload_size =
             u16::try_from(payload.len()).map_err(|_| error!(ErrorCode::InvalidSignatureError))?;
