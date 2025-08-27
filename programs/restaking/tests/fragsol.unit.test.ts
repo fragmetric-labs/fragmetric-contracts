@@ -652,12 +652,12 @@ describe('restaking.fragSOL unit test', async () => {
     ).toEqual(0n);
 
     // reset
-    const user1_stat = await user1.resolve(true);
+    const user1Stat = await user1.resolve(true);
     await resetDeposit(
       ctx,
       user1,
       'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
-      user1_stat?.receiptTokenAmount!,
+      user1Stat!.receiptTokenAmount!,
       [signer1]
     );
   });
@@ -720,12 +720,12 @@ describe('restaking.fragSOL unit test', async () => {
     `);
 
     // reset
-    const user1_stat = await user1.resolve(true);
+    const user1Stat = await user1.resolve(true);
     await resetDeposit(
       ctx,
       user1,
       'FRAGME9aN7qzxkHPmVP22tDhG87srsR9pr5SY9XdRd9R',
-      user1_stat?.receiptTokenAmount!,
+      user1Stat!.receiptTokenAmount!,
       [signer1]
     );
   });
@@ -1120,7 +1120,7 @@ describe('restaking.fragSOL unit test', async () => {
     // reset
     const user3Stat = await user3.resolve(true);
     // do reset deposit sol
-    await resetDeposit(ctx, user3, null, user3Stat?.receiptTokenAmount!, [
+    await resetDeposit(ctx, user3, null, user3Stat!.receiptTokenAmount!, [
       signer3,
     ]);
     // do reset asset strategy
@@ -1272,7 +1272,7 @@ describe('restaking.fragSOL unit test', async () => {
       ctx,
       user2,
       'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
-      user2Stat?.receiptTokenAmount!,
+      user2Stat!.receiptTokenAmount!,
       [signer2]
     );
   });
@@ -1458,11 +1458,10 @@ describe('restaking.fragSOL unit test', async () => {
 
     // reset
     const user1Stat = await user1.resolve(true);
-    await resetDeposit(ctx, user1, null, user1Stat?.receiptTokenAmount!, [
+    await resetDeposit(ctx, user1, null, user1Stat!.receiptTokenAmount!, [
       signer1,
     ]);
   });
-
 
   // reset methods
   const resetDeposit = async (
@@ -1534,12 +1533,14 @@ describe('restaking.fragSOL unit test', async () => {
     });
 
     // withdraw
-    const withdrawRes = await user.withdraw.execute(
+    const requestId =
+      requestWithdrawalRes.events?.userRequestedWithdrawalFromFund?.requestId;
+    expect(requestId).toBeDefined();
+
+    await user.withdraw.execute(
       {
         assetMint: depositedTokenMint,
-        requestId:
-          requestWithdrawalRes.events?.userRequestedWithdrawalFromFund
-            ?.requestId!,
+        requestId: requestId!,
       },
       { signers }
     );
