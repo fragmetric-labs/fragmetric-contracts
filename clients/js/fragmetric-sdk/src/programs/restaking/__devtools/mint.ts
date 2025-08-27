@@ -63,5 +63,38 @@ export function createTokenTool(program: RestakingProgram) {
         ],
       }
     ),
+    setMintAuthorityToAdmin: new TransactionTemplateContext(
+      program,
+      v.object({
+        mint: v.string(),
+      }),
+      {
+        description: 'transfer mint authority to admin account',
+        instructions: [
+          async (parent, args, overrides) => {
+            const [mint, payer] = await Promise.all([
+              token.fetchMint(program.runtime.rpc, args.mint as Address),
+              transformAddressResolverVariant(
+                overrides.feePayer ??
+                  program.runtime.options.transaction.feePayer ??
+                  (() => Promise.resolve(null))
+              )(program),
+            ]);
+            if (!(mint && payer)) throw new Error('invalid context');
+            const admin = program.knownAddresses.admin;
+
+            const ix = token.getSetAuthorityInstruction({
+              owned: mint.address,
+              owner: isSome(mint.data.mintAuthority)
+                ? createNoopSigner(mint.data.mintAuthority.value)
+                : ('' as Address),
+              authorityType: token.AuthorityType.MintTokens,
+              newAuthority: admin,
+            });
+            return Promise.all([ix]);
+          },
+        ],
+      }
+    ),
   };
 }
