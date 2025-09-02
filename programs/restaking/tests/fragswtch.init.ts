@@ -75,7 +75,7 @@ export async function initializeFragSwitch(testCtx: TestSuiteContext) {
     // initialize virtual vault
     () =>
       ctx.fund.addRestakingVault.execute({
-        vault: '9oDtsX1hoKCG31VAVKCEmTEEbjgDa6fq6vVHyWAVzWV4', // devnet: HfA2hk1cYDXbaMMMhaSGGhXXKgEBmbdvX9jQGS319mng
+        vault: '9oDtsX1hoKCG31VAVKCEmTEEbjgDa6fq6vVHyWAVzWV4', // devnet: HfA2hk1cYDXbaMMMhaSGGhXXKgEBmbdvX9jQGS319mng, mainnet: GXF239aCGiuJmWk6J6scnWMaGJpNbNXdYR1spguT5jQo
         pricingSource: {
           __kind: 'VirtualVault',
           address: '9oDtsX1hoKCG31VAVKCEmTEEbjgDa6fq6vVHyWAVzWV4',

@@ -140,23 +140,15 @@ describe('restaking.fragSWTCH test', async () => {
           {
             "compoundingRewardTokens": [
               {
-                "harvestThresholdIntervalSeconds": 0n,
-                "harvestThresholdMaxAmount": 18446744073709551615n,
-                "harvestThresholdMinAmount": 0n,
+                "harvestThresholdIntervalSeconds": 1n,
+                "harvestThresholdMaxAmount": 1000000000000n,
+                "harvestThresholdMinAmount": 1000000000n,
                 "lastHarvestedAt": 0n,
                 "mint": "SW1TCHLmRGTfW5xZknqQdpdarB8PD95sJYWpNp9TbFx",
               },
             ],
             "delegations": [],
-            "distributingRewardTokens": [
-              {
-                "harvestThresholdIntervalSeconds": 1n,
-                "harvestThresholdMaxAmount": 1000000000000n,
-                "harvestThresholdMinAmount": 1000000000n,
-                "lastHarvestedAt": 0n,
-                "mint": "FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF",
-              },
-            ],
+            "distributingRewardTokens": [],
             "pricingSource": {
               "__kind": "VirtualVault",
               "address": "9oDtsX1hoKCG31VAVKCEmTEEbjgDa6fq6vVHyWAVzWV4",
@@ -181,38 +173,7 @@ describe('restaking.fragSWTCH test', async () => {
           "contribution": "MASKED(/[.*C|c]ontribution?$/)",
           "customContributionAccrualRateEnabled": false,
           "initialSlot": "MASKED(/[.*S|s]lots?$/)",
-          "settlements": [
-            {
-              "blocks": [
-                {
-                  "amount": 0n,
-                  "endingContribution": "MASKED(/[.*C|c]ontribution?$/)",
-                  "endingSlot": "MASKED(/[.*S|s]lots?$/)",
-                  "settledContribution": "MASKED(/[.*C|c]ontribution?$/)",
-                  "settledSlots": "MASKED(/[.*S|s]lots?$/)",
-                  "startingContribution": "MASKED(/[.*C|c]ontribution?$/)",
-                  "startingSlot": "MASKED(/[.*S|s]lots?$/)",
-                  "userSettledAmount": 0n,
-                  "userSettledContribution": "MASKED(/[.*C|c]ontribution?$/)",
-                },
-              ],
-              "claimedAmount": 0n,
-              "claimedAmountUpdatedSlot": "MASKED(/[.*S|s]lots?$/)",
-              "remainingAmount": 0n,
-              "reward": {
-                "claimable": true,
-                "decimals": 9,
-                "description": "Governance vote distribution",
-                "id": 0,
-                "mint": "FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF",
-                "name": "FVT",
-                "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
-              },
-              "settledAmount": 0n,
-              "settlementBlocksLastRewardPoolContribution": "MASKED(/[.*C|c]ontribution?$/)",
-              "settlementBlocksLastSlot": "MASKED(/[.*S|s]lots?$/)",
-            },
-          ],
+          "settlements": [],
           "tokenAllocatedAmount": {
             "records": [],
             "totalAmount": 0n,
@@ -230,18 +191,8 @@ describe('restaking.fragSWTCH test', async () => {
           },
           "updatedSlot": "MASKED(/[.*S|s]lots?$/)",
         },
-        "receiptTokenMint": "DCoj5m7joWjP9T3iPH22q7bDBoGkgUX4ffoL1eQZstwk",
-        "rewards": [
-          {
-            "claimable": true,
-            "decimals": 9,
-            "description": "Governance vote distribution",
-            "id": 0,
-            "mint": "FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF",
-            "name": "FVT",
-            "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
-          },
-        ],
+        "receiptTokenMint": "DB1mkPYhGBfBKpYMJ3Z4ST4d7oDfQqg3WfnMugCC3fmm",
+        "rewards": [],
       }
     `);
   });
@@ -269,38 +220,38 @@ describe('restaking.fragSWTCH test', async () => {
           "userCreatedOrUpdatedFundAccount": {
             "created": true,
             "receiptTokenAmount": 0n,
-            "receiptTokenMint": "DCoj5m7joWjP9T3iPH22q7bDBoGkgUX4ffoL1eQZstwk",
-            "user": "FrhgfmDgXvzCmx2zpoYkJN2Xmx3djpQji8eZNzpZEWYY",
-            "userFundAccount": "GygWDNHDXdAnbQaDDBTrEK3jfKZ3TzPBZykmvLQkSwkf",
+            "receiptTokenMint": "DB1mkPYhGBfBKpYMJ3Z4ST4d7oDfQqg3WfnMugCC3fmm",
+            "user": "Gy54dp65Lk6yhb5njt89kE2LxBFUARSB6M6DR3fxpSL6",
+            "userFundAccount": "A9H93BGNpLMMEUswpvuJkuZtLsSvq4FH8YCgosYZw7T4",
           },
           "userCreatedOrUpdatedRewardAccount": {
             "created": true,
             "receiptTokenAmount": 0n,
-            "receiptTokenMint": "DCoj5m7joWjP9T3iPH22q7bDBoGkgUX4ffoL1eQZstwk",
-            "user": "FrhgfmDgXvzCmx2zpoYkJN2Xmx3djpQji8eZNzpZEWYY",
-            "userRewardAccount": "EQn7pu4AaD8anmMHuzMxDnuTxUYGY98cfEBzosGMu9SJ",
+            "receiptTokenMint": "DB1mkPYhGBfBKpYMJ3Z4ST4d7oDfQqg3WfnMugCC3fmm",
+            "user": "Gy54dp65Lk6yhb5njt89kE2LxBFUARSB6M6DR3fxpSL6",
+            "userRewardAccount": "46kZ3aJPPzM1BGCt4xUYXoVu85gT58Cy9K4HeRNeNqeV",
           },
           "userDepositedToFund": {
             "contributionAccrualRate": {
               "__option": "None",
             },
             "depositedAmount": 5000000000n,
-            "fundAccount": "4aQn7zN3sAYYbTjaJPRv9i9v2UipV2Lc49yYCW4Da5BZ",
+            "fundAccount": "2KmQDnhrWiNovV2qqv6qxx7tAPA9uT5k6qSw5nq8HXPW",
             "mintedReceiptTokenAmount": 5000000000n,
-            "receiptTokenMint": "DCoj5m7joWjP9T3iPH22q7bDBoGkgUX4ffoL1eQZstwk",
+            "receiptTokenMint": "DB1mkPYhGBfBKpYMJ3Z4ST4d7oDfQqg3WfnMugCC3fmm",
             "supportedTokenMint": {
               "__option": "Some",
               "value": "SW1TCHLmRGTfW5xZknqQdpdarB8PD95sJYWpNp9TbFx",
             },
             "updatedUserRewardAccounts": [
-              "EQn7pu4AaD8anmMHuzMxDnuTxUYGY98cfEBzosGMu9SJ",
+              "46kZ3aJPPzM1BGCt4xUYXoVu85gT58Cy9K4HeRNeNqeV",
             ],
-            "user": "FrhgfmDgXvzCmx2zpoYkJN2Xmx3djpQji8eZNzpZEWYY",
-            "userFundAccount": "GygWDNHDXdAnbQaDDBTrEK3jfKZ3TzPBZykmvLQkSwkf",
-            "userReceiptTokenAccount": "H8zqWqrcdyTaBcpegwQCFPAgKUz2jnJfWn4NH2XW5sJE",
+            "user": "Gy54dp65Lk6yhb5njt89kE2LxBFUARSB6M6DR3fxpSL6",
+            "userFundAccount": "A9H93BGNpLMMEUswpvuJkuZtLsSvq4FH8YCgosYZw7T4",
+            "userReceiptTokenAccount": "3AF5ExYAK89diHwLBfQFu81Qfo58mpvYiLuf7a8sTmdt",
             "userSupportedTokenAccount": {
               "__option": "Some",
-              "value": "FKhVzVa7V7LABtY91H9tiYrKgKPZi4NZBh4nXGxj8PoW",
+              "value": "85ZTYhBaamjq96kayQg5GorLhWPPTe6uDrrq8Hsqfvgh",
             },
             "walletProvider": {
               "__option": "None",
@@ -322,7 +273,7 @@ describe('restaking.fragSWTCH test', async () => {
         "lamports": 99962596960n,
         "maxWithdrawalRequests": 4,
         "receiptTokenAmount": 5000000000n,
-        "receiptTokenMint": "DCoj5m7joWjP9T3iPH22q7bDBoGkgUX4ffoL1eQZstwk",
+        "receiptTokenMint": "DB1mkPYhGBfBKpYMJ3Z4ST4d7oDfQqg3WfnMugCC3fmm",
         "supportedAssets": [
           {
             "amount": 95000000000n,
@@ -333,7 +284,7 @@ describe('restaking.fragSWTCH test', async () => {
             "withdrawable": true,
           },
         ],
-        "user": "FrhgfmDgXvzCmx2zpoYkJN2Xmx3djpQji8eZNzpZEWYY",
+        "user": "Gy54dp65Lk6yhb5njt89kE2LxBFUARSB6M6DR3fxpSL6",
         "withdrawalRequests": [],
         "wrappedTokenAmount": 0n,
         "wrappedTokenMint": null,
@@ -345,7 +296,7 @@ describe('restaking.fragSWTCH test', async () => {
         "__lookupTableAddress": "MASKED(__lookupTableAddress)",
         "__pricingSources": [
           {
-            "address": "4YH3gwg84qRHrPabYj4f7NMVawG5Wd6gM7ZDciuCckTo",
+            "address": "6urvuvb6XxjqVgCzEaHMTVJ8PkS2PQ91at455Vgt89ME",
             "role": 0,
           },
           {
@@ -356,9 +307,9 @@ describe('restaking.fragSWTCH test', async () => {
         "depositResidualMicroReceiptTokenAmount": 0n,
         "metadata": null,
         "normalizedToken": null,
-        "oneReceiptTokenAsSOL": 1203870769n,
+        "oneReceiptTokenAsSOL": 2777777n,
         "receiptTokenDecimals": 9,
-        "receiptTokenMint": "DCoj5m7joWjP9T3iPH22q7bDBoGkgUX4ffoL1eQZstwk",
+        "receiptTokenMint": "DB1mkPYhGBfBKpYMJ3Z4ST4d7oDfQqg3WfnMugCC3fmm",
         "receiptTokenSupply": 5000000000n,
         "restakingVaultReceiptTokens": [
           {
@@ -378,7 +329,7 @@ describe('restaking.fragSWTCH test', async () => {
             "depositable": true,
             "mint": "SW1TCHLmRGTfW5xZknqQdpdarB8PD95sJYWpNp9TbFx",
             "oneTokenAsReceiptToken": 1000000000n,
-            "oneTokenAsSol": 1203870769n,
+            "oneTokenAsSol": 2777777n,
             "operationReceivableAmount": 0n,
             "operationReservedAmount": 5000000000n,
             "operationTotalAmount": 5000000000n,
@@ -490,7 +441,7 @@ describe('restaking.fragSWTCH test', async () => {
         "__lookupTableAddress": "MASKED(__lookupTableAddress)",
         "__pricingSources": [
           {
-            "address": "4YH3gwg84qRHrPabYj4f7NMVawG5Wd6gM7ZDciuCckTo",
+            "address": "6urvuvb6XxjqVgCzEaHMTVJ8PkS2PQ91at455Vgt89ME",
             "role": 0,
           },
           {
@@ -501,9 +452,9 @@ describe('restaking.fragSWTCH test', async () => {
         "depositResidualMicroReceiptTokenAmount": 0n,
         "metadata": null,
         "normalizedToken": null,
-        "oneReceiptTokenAsSOL": 1504838461n,
+        "oneReceiptTokenAsSOL": 3472222n,
         "receiptTokenDecimals": 9,
-        "receiptTokenMint": "DCoj5m7joWjP9T3iPH22q7bDBoGkgUX4ffoL1eQZstwk",
+        "receiptTokenMint": "DB1mkPYhGBfBKpYMJ3Z4ST4d7oDfQqg3WfnMugCC3fmm",
         "receiptTokenSupply": 4000000000n,
         "restakingVaultReceiptTokens": [
           {
@@ -523,7 +474,7 @@ describe('restaking.fragSWTCH test', async () => {
             "depositable": true,
             "mint": "SW1TCHLmRGTfW5xZknqQdpdarB8PD95sJYWpNp9TbFx",
             "oneTokenAsReceiptToken": 799999999n,
-            "oneTokenAsSol": 1203870769n,
+            "oneTokenAsSol": 2777777n,
             "operationReceivableAmount": 0n,
             "operationReservedAmount": 5000000001n,
             "operationTotalAmount": 5000000001n,
@@ -532,7 +483,7 @@ describe('restaking.fragSWTCH test', async () => {
             "withdrawable": true,
             "withdrawableValueAsReceiptTokenAmount": 4000000000n,
             "withdrawalLastBatchProcessedAt": "MASKED(/.*At?$/)",
-            "withdrawalResidualMicroAssetAmount": 999999n,
+            "withdrawalResidualMicroAssetAmount": 999936n,
             "withdrawalUserReservedAmount": 0n,
           },
         ],
