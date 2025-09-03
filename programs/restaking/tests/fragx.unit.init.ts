@@ -30,10 +30,10 @@ export async function initializeFragX(
     () =>
       ctx.initializeMint.execute(
         {
-          name: 'Fragmetric Restaked SOL',
-          symbol: 'fragSOL',
+          name: 'Fragmetric Restaked X',
+          symbol: 'fragX',
           uri: 'https://quicknode.quicknode-ipfs.com/ipfs/QmcueajXkNzoYRhcCv323PMC8VVGiDvXaaVXkMyYcyUSRw',
-          description: `fragSOL is Solana's first native LRT that provides optimized restaking rewards.`,
+          description: `fragX is Solana's first native LRT that provides optimized restaking rewards.`,
           decimals: 9,
         },
         {

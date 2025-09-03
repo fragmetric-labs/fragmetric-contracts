@@ -9,9 +9,9 @@ import {
 } from 'vitest';
 import { RestakingReceiptTokenMintAccountContext } from '../../../clients/js/fragmetric-sdk/dist/programs/restaking/receipt_token_mint';
 import { createTestSuiteContext, expectMasked } from '../../testutil';
-import { initializeFragX } from './fragsol.unit.init';
+import { initializeFragX } from './fragx.unit.init';
 
-describe('restaking.fragSOL unit test', async () => {
+describe('restaking.fragX unit test', async () => {
   let testCtx: Awaited<ReturnType<typeof initializeFragX>>;
   let validator: Awaited<ReturnType<typeof initializeFragX>>['validator'];
   let feePayer: Awaited<ReturnType<typeof initializeFragX>>['feePayer'];
