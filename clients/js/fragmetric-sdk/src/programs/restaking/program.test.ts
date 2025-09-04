@@ -453,6 +453,92 @@ test('can traverse context graph', async () => {
     │   │   └── transfer                                      TransactionTemplate args=receiptTokenAmount,recipient,applyPresetComputeUnitLimit, events=userTransferredReceiptToken, description=transfer re
     │   ├── initializeMint                                    TransactionTemplate args=name,symbol,uri,description,decimals, events=undefined, description=initialize receipt token mint
     │   └── initializeOrUpdateExtraAccountMetaList            TransactionTemplate args=null, events=undefined, description=initialize or update extra account meta list
+    ├── fragSWTCH                                             RestakingReceiptTokenMintAccount address=undefined, supply=undefined, decimals=undefined
+    │   ├── metadata                                          FragmetricMetadata address=undefined
+    │   ├── fund                                              RestakingFundAccount address=undefined
+    │   │   ├── reserve                                       RestakingFundReserveAccount address=undefined, lamports=undefined
+    │   │   │   ├── supportedTokens                           IterativeAccount length=undefined, types=undefined
+    │   │   │   ├── normalizedToken                           TokenAccount address=undefined, amount=undefined, mint=undefined
+    │   │   │   └── restakingVaultReceiptTokens               IterativeAccount length=undefined, types=undefined
+    │   │   ├── lockedReceiptToken                            TokenAccount address=undefined, amount=undefined, mint=undefined
+    │   │   ├── latestWithdrawalBatches                       IterativeAccount length=undefined, types=undefined
+    │   │   ├── restakingVaults                               IterativeAccount length=undefined, types=undefined
+    │   │   ├── wrap                                          RestakingFundWrapAccount address=undefined, lamports=undefined
+    │   │   │   ├── reward                                    RestakingFundWrapRewardAccount address=undefined
+    │   │   │   │   ├── updatePools                           TransactionTemplate (chained) args=null, events=userUpdatedRewardPool, description=manually triggers contribution synchronization for the user
+    │   │   │   │   ├── initializeOrUpdateAccount             TransactionTemplate args=null, events=userCreatedOrUpdatedRewardAccount, description=initialize or update user reward account
+    │   │   │   │   ├── claim                                 TransactionTemplate args=delegate,isBonus,mint,amount,recipient,applyPresetComputeUnitLimit, events=userClaimedReward, description=claim rewar
+    │   │   │   │   ├── delegate                              TransactionTemplate args=delegate,newDelegate, events=userDelegatedRewardAccount, description=delegate user reward account
+    │   │   │   │   └── resetDelegate                         TransactionTemplate args=null, events=userDelegatedRewardAccount, description=reset delegate of reward account (in case of either fund wrap or
+    │   │   │   ├── receiptToken                              TokenAccount address=undefined, amount=undefined, mint=undefined
+    │   │   │   └── holders                                   IterativeAccount length=undefined, types=undefined
+    │   │   ├── treasury                                      RestakingFundTreasuryAccount address=undefined, lamports=undefined
+    │   │   │   └── supportedTokens                           IterativeAccount length=undefined, types=undefined
+    │   │   ├── addressLookupTable                            RestakingFundAddressLookupTableAccount address=undefined, length=undefined, lastExtendedSlot=undefined
+    │   │   │   └── initializeOrUpdateAccount                 TransactionTemplate (chained) args=addresses, events=undefined, description=initialize or update address lookup table
+    │   │   ├── updatePrices                                  TransactionTemplate args=null, events=operatorUpdatedFundPrices, description=manually triggers price updates for the receipt token and underly
+    │   │   ├── donate                                        TransactionTemplate args=assetMint,assetAmount,offsetReceivable,applyPresetComputeUnitLimit, events=operatorDonatedToFund, description=donate 
+    │   │   ├── runCommand                                    TransactionTemplate (chained) args=null, events=operatorRanFundCommand, description=execute the next fund command to circulate assets
+    │   │   ├── initializeOrUpdateAccount                     TransactionTemplate (chained) args=targetVersion, events=undefined, description=initialize or update fund account
+    │   │   ├── updateGeneralStrategy                         TransactionTemplate args=depositEnabled,donationEnabled,transferEnabled,withdrawalEnabled,operationEnabled,withdrawalBatchThresholdSeconds,wit
+    │   │   ├── addSupportedToken                             TransactionTemplate args=mint,program,pricingSource, events=fundManagerUpdatedFund, description=add a new supported token
+    │   │   ├── removeSupportedToken                          TransactionTemplate args=mint, events=fundManagerUpdatedFund, description=remove unused supported token
+    │   │   ├── updateAssetStrategy                           TransactionTemplate args=null, events=fundManagerUpdatedFund, description=update asset strategy of the fund
+    │   │   ├── addTokenSwapStrategy                          TransactionTemplate args=fromTokenMint,toTokenMint,swapSource, events=fundManagerUpdatedFund, description=add a new token swap strategy
+    │   │   ├── removeTokenSwapStrategy                       TransactionTemplate args=fromTokenMint,toTokenMint,swapSource, events=fundManagerUpdatedFund, description=remove a token swap strategy
+    │   │   ├── addRestakingVault                             TransactionTemplate args=vault,pricingSource, events=fundManagerUpdatedFund, description=add a new restaking vault
+    │   │   ├── addRestakingVaultDelegation                   TransactionTemplate args=vault,operator, events=fundManagerUpdatedFund, description=add a new operator delegation to a restaking vault
+    │   │   ├── updateRestakingVaultStrategy                  TransactionTemplate (chained) args=null, events=fundManagerUpdatedFund, description=update restaking vault strategy of the fund
+    │   │   ├── addRestakingVaultCompoundingReward            TransactionTemplate args=vault,rewardTokenMint, events=fundManagerUpdatedFund, description=add a new compounding reward to a restaking vault
+    │   │   ├── removeRestakingVaultCompoundingReward         TransactionTemplate args=vault,rewardTokenMint, events=fundManagerUpdatedFund, description=remove a compounding reward from a restaking vault
+    │   │   ├── addRestakingVaultDistributingReward           TransactionTemplate args=vault,rewardTokenMint, events=fundManagerUpdatedFund, description=add a new distributing reward to a restaking vault
+    │   │   ├── updateRestakingVaultRewardHarvestThreshold    TransactionTemplate args=vault,rewardTokenMint,harvestThresholdMinAmount,harvestThresholdMaxAmount,harvestThresholdIntervalSeconds, events=fun
+    │   │   ├── removeRestakingVaultDistributingReward        TransactionTemplate args=vault,rewardTokenMint, events=fundManagerUpdatedFund, description=remove a distributing reward from a restaking vault
+    │   │   ├── initializeNormalizedToken                     TransactionTemplate args=mint, events=fundManagerUpdatedFund, description=initialize normalized token pool account and enable
+    │   │   ├── initializeWrappedToken                        TransactionTemplate args=mint, events=fundManagerUpdatedFund, description=enable wrapped token
+    │   │   └── initializeWrappedTokenHolder                  TransactionTemplate args=wrappedTokenAccount, events=userCreatedOrUpdatedRewardAccount,fundManagerUpdatedFund, description=add new wrapped tok
+    │   ├── reward                                            RestakingRewardAccount address=undefined
+    │   │   ├── reserve                                       RestakingRewardReserveAccount address=undefined, lamports=undefined
+    │   │   │   └── rewardTokens                              IterativeAccount length=undefined, types=undefined
+    │   │   ├── updatePools                                   TransactionTemplate args=null, events=operatorUpdatedRewardPools, description=manually triggers contribution synchronization for the global re
+    │   │   ├── initializeOrUpdateAccount                     TransactionTemplate (chained) args=targetVersion, events=undefined, description=initialize or update reward account
+    │   │   ├── addReward                                     TransactionTemplate args=mint,program,decimals,name,description, events=fundManagerUpdatedRewardPool, description=register a new reward (non-c
+    │   │   ├── updateReward                                  TransactionTemplate args=mint,newMint,newProgram,newDecimals,claimable, events=fundManagerUpdatedRewardPool, description=update a non-claimabl
+    │   │   ├── settleReward                                  TransactionTemplate args=isBonus,mint,amount, events=fundManagerUpdatedRewardPool, description=settle a reward
+    │   │   └── claimRemainingReward                          TransactionTemplate args=mint, events=undefined, description=claim remaining reward to program revenue account
+    │   ├── normalizedTokenMint                               RestakingNormalizedTokenMintAccount address=undefined, supply=undefined, decimals=undefined
+    │   │   ├── metadata                                      FragmetricMetadata address=undefined
+    │   │   └── initializeMint                                TransactionTemplate args=mint,name,symbol,uri,description,decimals, events=undefined, description=initialize normalized token mint
+    │   ├── normalizedTokenPool                               RestakingNormalizedTokenPoolAccount address=undefined
+    │   │   ├── supportedTokens                               IterativeAccount length=undefined, types=undefined
+    │   │   ├── updatePrices                                  TransactionTemplate args=null, events=operatorUpdatedNormalizedTokenPoolPrices, description=manually triggers price updates for the normalized
+    │   │   ├── addSupportedToken                             TransactionTemplate args=mint,program,pricingSource, events=undefined, description=add a new supported token to the normalized token pool
+    │   │   └── removeSupportedToken                          TransactionTemplate args=mint,program, events=undefined, description=remove an unused and unfunded supported token
+    │   ├── wrappedTokenMint                                  RestakingWrappedTokenMintAccount address=undefined, supply=undefined, decimals=undefined
+    │   │   ├── metadata                                      FragmetricMetadata address=undefined
+    │   │   └── initializeMint                                TransactionTemplate args=mint,name,symbol,uri,description,decimals, events=undefined, description=initialize wrapped token mint
+    │   ├── payer                                             RestakingUserAccount address=undefined, lamports=undefined
+    │   │   ├── fund                                          RestakingUserFundAccount address=undefined
+    │   │   │   └── initializeOrUpdateAccount                 TransactionTemplate args=null, events=userCreatedOrUpdatedFundAccount, description=initialize or update user fund account
+    │   │   ├── reward                                        RestakingUserRewardAccount address=undefined
+    │   │   │   ├── updatePools                               TransactionTemplate (chained) args=null, events=userUpdatedRewardPool, description=manually triggers contribution synchronization for the user
+    │   │   │   ├── initializeOrUpdateAccount                 TransactionTemplate args=null, events=userCreatedOrUpdatedRewardAccount, description=initialize or update user reward account
+    │   │   │   ├── claim                                     TransactionTemplate args=delegate,isBonus,mint,amount,recipient,applyPresetComputeUnitLimit, events=userClaimedReward, description=claim rewar
+    │   │   │   ├── delegate                                  TransactionTemplate args=delegate,newDelegate, events=userDelegatedRewardAccount, description=delegate user reward account
+    │   │   │   └── resetDelegate                             TransactionTemplate args=null, events=userDelegatedRewardAccount, description=reset delegate of reward account (in case of either fund wrap or
+    │   │   ├── receiptToken                                  TokenAccount address=undefined, amount=undefined, mint=undefined
+    │   │   ├── wrappedToken                                  TokenAccount address=undefined, amount=undefined, mint=undefined
+    │   │   ├── supportedTokens                               IterativeAccount length=undefined, types=undefined
+    │   │   ├── rewardTokens                                  IterativeAccount length=undefined, types=undefined
+    │   │   ├── deposit                                       TransactionTemplate args=assetMint,assetAmount,metadata,applyPresetComputeUnitLimit, events=userDepositedToFund,userCreatedOrUpdatedFundAccoun
+    │   │   ├── requestWithdrawal                             TransactionTemplate args=assetMint,receiptTokenAmount,applyPresetComputeUnitLimit, events=userRequestedWithdrawalFromFund,userCreatedOrUpdated
+    │   │   ├── cancelWithdrawalRequest                       TransactionTemplate args=assetMint,requestId,applyPresetComputeUnitLimit, events=userCanceledWithdrawalRequestFromFund,userCreatedOrUpdatedFun
+    │   │   ├── withdraw                                      TransactionTemplate args=assetMint,requestId,applyPresetComputeUnitLimit, events=userWithdrewFromFund,userCreatedOrUpdatedFundAccount,userCrea
+    │   │   ├── wrap                                          TransactionTemplate args=receiptTokenAmount,receiptTokenAmountAsTargetBalance,applyPresetComputeUnitLimit, events=userWrappedReceiptToken, des
+    │   │   ├── unwrap                                        TransactionTemplate args=wrappedTokenAmount,applyPresetComputeUnitLimit, events=userUnwrappedReceiptToken, description=convert wrapped tokens 
+    │   │   └── transfer                                      TransactionTemplate args=receiptTokenAmount,recipient,applyPresetComputeUnitLimit, events=userTransferredReceiptToken, description=transfer re
+    │   ├── initializeMint                                    TransactionTemplate args=name,symbol,uri,description,decimals, events=undefined, description=initialize receipt token mint
+    │   └── initializeOrUpdateExtraAccountMetaList            TransactionTemplate args=null, events=undefined, description=initialize or update extra account meta list
     └── parent                                                Runtime type=svm, cluster=devnet"
   `);
 });

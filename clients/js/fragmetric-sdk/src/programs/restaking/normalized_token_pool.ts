@@ -170,7 +170,7 @@ export class RestakingNormalizedTokenPoolAccountContext extends AccountContext<
         async (parent, args, overrides) => {
           const [data, ntp, payer] = await Promise.all([
             parent.parent.resolve(true),
-            parent.resolveAccount(),
+            parent.resolveAccount(true),
             transformAddressResolverVariant(
               overrides.feePayer ??
                 this.runtime.options.transaction.feePayer ??
@@ -232,7 +232,7 @@ export class RestakingNormalizedTokenPoolAccountContext extends AccountContext<
         async (parent, args, overrides) => {
           const [data, ntp] = await Promise.all([
             parent.parent.resolve(true),
-            parent.resolveAccount(),
+            parent.resolveAccount(true),
           ]);
           if (!(data && ntp)) throw new Error('invalid context');
           const fundManager = (this.program as RestakingProgram).knownAddresses
