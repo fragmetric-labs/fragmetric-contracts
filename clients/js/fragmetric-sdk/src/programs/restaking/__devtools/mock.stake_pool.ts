@@ -1,26 +1,26 @@
 import {
   Address,
   Decoder,
+  Encoder,
   fixDecoderSize,
+  fixEncoderSize,
   getAddressDecoder,
+  getAddressEncoder,
   getArrayDecoder,
-  getStructDecoder,
   getBytesDecoder,
-  getU8Decoder,
+  getBytesEncoder,
+  getOptionDecoder,
+  getOptionEncoder,
+  getProgramDerivedAddress,
+  getStructDecoder,
+  getStructEncoder,
   getU32Decoder,
   getU64Decoder,
-  getOptionDecoder,
-  Option,
-  Encoder,
-  fixEncoderSize,
-  getAddressEncoder,
-  getStructEncoder,
-  getBytesEncoder,
-  getU8Encoder,
   getU64Encoder,
-  getOptionEncoder,
+  getU8Decoder,
+  getU8Encoder,
+  Option,
   ReadonlyUint8Array,
-  getProgramDerivedAddress,
 } from '@solana/kit';
 
 // ref: https://github.com/solana-foundation/anchor/blob/master/ts/packages/spl-stake-pool/idl.json
@@ -39,14 +39,16 @@ export type StakePool = {
   totalLamports: bigint;
   poolTokenSupply: bigint;
   lastUpdateEpoch: bigint;
-  lockUp: ReadonlyUint8Array,
-  epochFee: ReadonlyUint8Array,
-  nextEpochFee: ReadonlyUint8Array,
-  preferredDepositValidatorVoteAddress: Option<Address>,
-  preferredWithdrawValidatorVoteAddress: Option<Address>,
-  raw: ReadonlyUint8Array; 
+  lockUp: ReadonlyUint8Array;
+  epochFee: ReadonlyUint8Array;
+  nextEpochFee: ReadonlyUint8Array;
+  preferredDepositValidatorVoteAddress: Option<Address>;
+  preferredWithdrawValidatorVoteAddress: Option<Address>;
+  raw: ReadonlyUint8Array;
 };
 
+// TODO: Decoder & Encoder assumes variant field like 'nextEpochFee' as fixed size.
+// 'nextEpochFee' can be either 1 byte of 17 bytes as StakePool derives borshSerialize/borshDeserialize
 export function getStakePoolDecoder(): Decoder<StakePool> {
   return getStructDecoder([
     ['accountType', fixDecoderSize(getBytesDecoder(), 1)],
@@ -64,10 +66,16 @@ export function getStakePoolDecoder(): Decoder<StakePool> {
     ['lastUpdateEpoch', getU64Decoder()],
     ['lockUp', fixDecoderSize(getBytesDecoder(), 48)],
     ['epochFee', fixDecoderSize(getBytesDecoder(), 16)],
-    ['nextEpochFee', fixDecoderSize(getBytesDecoder(), 24)],
-    ['preferredDepositValidatorVoteAddress', getOptionDecoder(getAddressDecoder())],
-    ['preferredWithdrawValidatorVoteAddress', getOptionDecoder(getAddressDecoder())],
-    ['raw', fixDecoderSize(getBytesDecoder(), 175)],
+    ['nextEpochFee', fixDecoderSize(getBytesDecoder(), 1)],
+    [
+      'preferredDepositValidatorVoteAddress',
+      getOptionDecoder(getAddressDecoder()),
+    ],
+    [
+      'preferredWithdrawValidatorVoteAddress',
+      getOptionDecoder(getAddressDecoder()),
+    ],
+    ['raw', fixDecoderSize(getBytesDecoder(), 220)],
   ]);
 }
 
@@ -88,10 +96,16 @@ export function getStakePoolEncoder(): Encoder<StakePool> {
     ['lastUpdateEpoch', getU64Encoder()],
     ['lockUp', fixEncoderSize(getBytesEncoder(), 48)],
     ['epochFee', fixEncoderSize(getBytesEncoder(), 16)],
-    ['nextEpochFee', fixEncoderSize(getBytesEncoder(), 24)],
-    ['preferredDepositValidatorVoteAddress', getOptionEncoder(getAddressEncoder())],
-    ['preferredWithdrawValidatorVoteAddress', getOptionEncoder(getAddressEncoder())],
-    ['raw', fixEncoderSize(getBytesEncoder(), 175)],
+    ['nextEpochFee', fixEncoderSize(getBytesEncoder(), 1)],
+    [
+      'preferredDepositValidatorVoteAddress',
+      getOptionEncoder(getAddressEncoder()),
+    ],
+    [
+      'preferredWithdrawValidatorVoteAddress',
+      getOptionEncoder(getAddressEncoder()),
+    ],
+    ['raw', fixEncoderSize(getBytesEncoder(), 220)],
   ]);
 }
 
