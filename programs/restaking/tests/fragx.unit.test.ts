@@ -1,3 +1,4 @@
+import { MAX_U64 } from '@fragmetric-labs/sdk';
 import { getAddressDecoder, KeyPairSigner } from '@solana/kit';
 import {
   afterAll,
@@ -1451,6 +1452,169 @@ describe('restaking.fragX unit test', () => {
     await user1.deposit.executeChained(
       {
         assetAmount: 1_000_000_000n,
+      },
+      { signers: [signer1] }
+    );
+  });
+
+  test('during unstake lst command execution, program should first withdraw stake from stake account whose vote account is preferred withdraw validator', async () => {
+    /*
+     * modified dynosol spl-stake-pool set 5th most lamport owned stake account's vote account as preferred validator
+     * stake account1 : J9k2Epx9iftqxWrZJYE3AGYXhX6rp62zLxhcz6qmPn4Y, 25,423,208,013,321 active stake lamports
+     * stake account2 : Cc7ge7LdGQoWS2u3YjJPD9czLaZFhMf42Tn4auCDpVHX, 25,401,409,690,850 active stake lamports
+     * stake account3 : 6HjNQfjHErw3QPoYg4sg48R6t8ZpE3F48QhcLajc4uGQ, 20,423,570,527,132 active stake lamports
+     * stake account4 : ENKZgg8HQYxpXya2WcetByHRQ9Vqg7zDSfxtJuG1JwFh, 20,423,509,088,968 active stake lamports
+     * stake account5 : FtTUgU1ZG5QMXiCog1p7jVpb5PWK4vQGwd3qa2HKJfwk, 7,816,341,028,418 active stake lamports <== this stake account's vote account is set as preferred withdraw validator
+     */
+    await ctx.fund.addSupportedToken.execute({
+      mint: 'DYNoyS3x5qgbccZg7RPXagm4xQzfnm5iwd9o8pMyJtdE',
+      pricingSource: {
+        __kind: 'SPLStakePool',
+        address: 'DpooSqZRL3qCmiq82YyB4zWmLfH3iEqx2gy8f2B6zjru',
+      },
+    });
+
+    await ctx.fund.updateAssetStrategy.execute({
+      tokenMint: 'DYNoyS3x5qgbccZg7RPXagm4xQzfnm5iwd9o8pMyJtdE',
+      tokenDepositable: true,
+      solAllocationWeight: 1n,
+      tokenAccumulatedDepositCapacityAmount: MAX_U64,
+    });
+
+    await validator.airdropToken(
+      signer1.address,
+      'DYNoyS3x5qgbccZg7RPXagm4xQzfnm5iwd9o8pMyJtdE',
+      10_000_000_000_000n
+    );
+
+    await user1.deposit.execute(
+      {
+        assetMint: 'DYNoyS3x5qgbccZg7RPXagm4xQzfnm5iwd9o8pMyJtdE',
+        assetAmount: 10_000_000_000_000n,
+      },
+      { signers: [signer1] }
+    );
+
+    const user1ReceiptToken1 = await user1.receiptToken.resolve(true);
+
+    const res1 = await user1.requestWithdrawal.execute(
+      {
+        receiptTokenAmount: user1ReceiptToken1?.amount!,
+      },
+      { signers: [signer1] }
+    );
+    const requestId1 = res1.events!.userRequestedWithdrawalFromFund!.requestId;
+
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'EnqueueWithdrawalBatch',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    await expectMasked(
+      ctx.fund.runCommand.executeChained({
+        forceResetCommand: 'UnstakeLST',
+        operator: restaking.knownAddresses.fundManager,
+      })
+    ).resolves.toMatchInlineSnapshot(`
+      {
+        "args": {
+          "forceResetCommand": null,
+          "operator": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx",
+        },
+        "events": {
+          "operatorRanFundCommand": {
+            "command": {
+              "__kind": "UnstakeLST",
+              "fields": [
+                {
+                  "state": {
+                    "__kind": "Execute",
+                    "items": [
+                      {
+                        "allocatedTokenAmount": 10000000000000n,
+                        "tokenMint": "DYNoyS3x5qgbccZg7RPXagm4xQzfnm5iwd9o8pMyJtdE",
+                      },
+                    ],
+                    "withdrawSol": true,
+                    "withdrawStakeItems": [
+                      {
+                        "fundStakeAccount": "BH8QMcB2ZHouc6SqDmQgQzibJ28ZrkaSNhRwrQPMJ9eL",
+                        "fundStakeAccountIndex": 0,
+                        "validatorStakeAccount": "FtTUgU1ZG5QMXiCog1p7jVpb5PWK4vQGwd3qa2HKJfwk",
+                      },
+                      {
+                        "fundStakeAccount": "8KLjBZpFGHhRrKmwwhfwNcVu7VbjQWJLfT7gPfMXFNj6",
+                        "fundStakeAccountIndex": 1,
+                        "validatorStakeAccount": "J9k2Epx9iftqxWrZJYE3AGYXhX6rp62zLxhcz6qmPn4Y",
+                      },
+                      {
+                        "fundStakeAccount": "Cy7MNv7Kb2EQkxg8Zna3Kq4Q8MoTfUvmcZdSREf9K4bu",
+                        "fundStakeAccountIndex": 2,
+                        "validatorStakeAccount": "Cc7ge7LdGQoWS2u3YjJPD9czLaZFhMf42Tn4auCDpVHX",
+                      },
+                      {
+                        "fundStakeAccount": "DJymWtoT3MCVAgnavAS7GjyvemnBPF2sKz3uRQDwohG",
+                        "fundStakeAccountIndex": 3,
+                        "validatorStakeAccount": "6HjNQfjHErw3QPoYg4sg48R6t8ZpE3F48QhcLajc4uGQ",
+                      },
+                      {
+                        "fundStakeAccount": "4x2snJw5Fj9TjwCeh5HUBoexScmj9R3b4zGx8kHmJgu9",
+                        "fundStakeAccountIndex": 4,
+                        "validatorStakeAccount": "ENKZgg8HQYxpXya2WcetByHRQ9Vqg7zDSfxtJuG1JwFh",
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+            "fundAccount": "5nsRAb7faaGoVkMovx4eSkHk3fcsBnHRhLZxzPawVk87",
+            "nextSequence": 0,
+            "numOperated": 6n,
+            "receiptTokenMint": "5TdWCgeGM4J9equWEF426F3eYLtuNcRUnMK2YSRRJCBD",
+            "result": {
+              "__option": "Some",
+              "value": {
+                "__kind": "UnstakeLST",
+                "fields": [
+                  {
+                    "burntTokenAmount": 10000000000000n,
+                    "deductedSolFeeAmount": 10164109114n,
+                    "operationReceivableSolAmount": 9774422301958n,
+                    "operationReservedSolAmount": 389686810808n,
+                    "operationReservedTokenAmount": 0n,
+                    "tokenMint": "DYNoyS3x5qgbccZg7RPXagm4xQzfnm5iwd9o8pMyJtdE",
+                    "totalUnstakingSolAmount": 9764258192844n,
+                    "unstakedSolAmount": 389686810808n,
+                    "unstakingSolAmount": 9764258192844n,
+                  },
+                ],
+              },
+            },
+          },
+          "unknown": [],
+        },
+        "signature": "MASKED(signature)",
+        "slot": "MASKED(/[.*S|s]lots?$/)",
+        "succeeded": true,
+      }
+    `);
+
+    await validator.skipEpoch();
+    await validator.skipEpoch();
+
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'ClaimUnstakedSOL',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'ProcessWithdrawalBatch',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    await user1.withdraw.execute(
+      {
+        requestId: requestId1,
       },
       { signers: [signer1] }
     );
