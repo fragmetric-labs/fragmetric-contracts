@@ -1,4 +1,4 @@
-import { getAddressDecoder } from '@solana/kit';
+import { getAddressDecoder, KeyPairSigner } from '@solana/kit';
 import {
   afterAll,
   beforeAll,
@@ -8,10 +8,11 @@ import {
   test,
 } from 'vitest';
 import { RestakingReceiptTokenMintAccountContext } from '../../../clients/js/fragmetric-sdk/dist/programs/restaking/receipt_token_mint';
+import { RestakingUserAccountContext } from '../../../clients/js/fragmetric-sdk/dist/programs/restaking/user';
 import { createTestSuiteContext, expectMasked } from '../../testutil';
 import { initializeFragX } from './fragx.unit.init';
 
-describe('restaking.fragX unit test', async () => {
+describe('restaking.fragX unit test', () => {
   let testCtx: Awaited<ReturnType<typeof initializeFragX>>;
   let validator: Awaited<ReturnType<typeof initializeFragX>>['validator'];
   let feePayer: Awaited<ReturnType<typeof initializeFragX>>['feePayer'];
@@ -22,8 +23,10 @@ describe('restaking.fragX unit test', async () => {
   let ctx: RestakingReceiptTokenMintAccountContext;
   let testSuiteCtx: Awaited<ReturnType<typeof createTestSuiteContext>>;
 
-  let signer1: any, signer2: any, signer3: any;
-  let user1: any, user2: any, user3: any;
+  let signer1: KeyPairSigner, signer2: KeyPairSigner, signer3: KeyPairSigner;
+  let user1: RestakingUserAccountContext,
+    user2: RestakingUserAccountContext,
+    user3: RestakingUserAccountContext;
 
   let index = 0;
 
@@ -1399,6 +1402,7 @@ describe('restaking.fragX unit test', async () => {
     }
 
     // user1 deposits sol to accumulate contribution
+    await user1.resolveAddress(true);
     await validator.airdrop(user1.address!, 1_234_567_890_123n);
     await user1.deposit.execute(
       {
