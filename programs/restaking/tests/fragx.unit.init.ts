@@ -463,7 +463,7 @@ export async function initializeFragX(
               name: 'Normalized Liquid Staked Solana',
               symbol: 'nSOL',
               uri: 'https://quicknode.quicknode-ipfs.com/ipfs/QmR5pP6Zo65XWCEXgixY8UtZjWbYPKmYHcyxzUq4p1KZt5',
-              description: `fragSOL is Solana's first native LRT that provides optimized restaking rewards.`,
+              description: `nSOL is a Normalized Liquid Staked Token that represents LSTs pooled in the Normalized Token Pool.`,
               decimals: 9,
             }),
 
@@ -705,10 +705,10 @@ export async function initializeFragX(
       ctx.wrappedTokenMint.initializeMint.execute(
         {
           mint: fragXWrappedReceiptTokenSigner.address,
-          name: 'Wrapped Fragmetric Restaked SOL',
-          symbol: 'wfragSOL',
+          name: 'Wrapped Fragmetric Restaked X',
+          symbol: 'wfragX',
           uri: 'https://quicknode.quicknode-ipfs.com/ipfs/QmaTVVmyvbJXs2Rqcqs76N5UiuPZ2iKCKrb5BpyB13vwzU',
-          description: `wfragSOL is Solana's SPL token version of fragSOL that maximizes DeFi support and composability.`,
+          description: `wfragX is Solana's SPL token version of fragX that maximizes DeFi support and composability.`,
           decimals: 9,
         },
         {
@@ -749,7 +749,7 @@ export async function initializeFragX(
     //   }),
 
     // configure operator delegations
-    ...(index === 0
+    ...(index == 0
       ? [
           () =>
             ctx.fund.addRestakingVaultDelegation.execute({
