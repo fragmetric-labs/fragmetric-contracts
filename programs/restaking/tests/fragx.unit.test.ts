@@ -26,7 +26,7 @@ describe('restaking.fragX unit test', async () => {
 
   beforeEach(async () => {
     testCtx = await initializeFragX(testSuiteCtx, index++);
-    testCtx.initializationTasks;
+    await testCtx.initializationTasks;
 
     ({ validator, feePayer, restaking, initializationTasks, ctx } = testCtx);
 
