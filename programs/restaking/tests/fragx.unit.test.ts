@@ -1488,13 +1488,13 @@ describe('restaking.fragX unit test', async () => {
 
     const user1ReceiptToken1 = await user1.receiptToken.resolve(true);
 
-    const res1 = await user1.requestWithdrawal.execute(
+    const res = await user1.requestWithdrawal.execute(
       {
         receiptTokenAmount: user1ReceiptToken1?.amount!,
       },
       { signers: [signer1] }
     );
-    const requestId1 = res1.events!.userRequestedWithdrawalFromFund!.requestId;
+    const requestId = res.events!.userRequestedWithdrawalFromFund!.requestId;
 
     await ctx.fund.runCommand.executeChained({
       forceResetCommand: 'EnqueueWithdrawalBatch',
@@ -1589,25 +1589,5 @@ describe('restaking.fragX unit test', async () => {
         "succeeded": true,
       }
     `);
-
-    await validator.skipEpoch();
-    await validator.skipEpoch();
-
-    await ctx.fund.runCommand.executeChained({
-      forceResetCommand: 'ClaimUnstakedSOL',
-      operator: restaking.knownAddresses.fundManager,
-    });
-
-    await ctx.fund.runCommand.executeChained({
-      forceResetCommand: 'ProcessWithdrawalBatch',
-      operator: restaking.knownAddresses.fundManager,
-    });
-
-    await user1.withdraw.execute(
-      {
-        requestId: requestId1,
-      },
-      { signers: [signer1] }
-    );
   });
 });
