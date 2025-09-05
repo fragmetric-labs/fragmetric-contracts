@@ -1538,27 +1538,27 @@ describe('restaking.fragX unit test', () => {
                     "withdrawSol": true,
                     "withdrawStakeItems": [
                       {
-                        "fundStakeAccount": "BH8QMcB2ZHouc6SqDmQgQzibJ28ZrkaSNhRwrQPMJ9eL",
+                        "fundStakeAccount": "Arz6vs8cC6N46nYFR2utcrvh7ZyoZNkCyJ86A121Eo9t",
                         "fundStakeAccountIndex": 0,
                         "validatorStakeAccount": "FtTUgU1ZG5QMXiCog1p7jVpb5PWK4vQGwd3qa2HKJfwk",
                       },
                       {
-                        "fundStakeAccount": "8KLjBZpFGHhRrKmwwhfwNcVu7VbjQWJLfT7gPfMXFNj6",
+                        "fundStakeAccount": "8FjqGGNUyEEayyT7sLcKxr8Yr78BUP2aJSGGDfWCNdDb",
                         "fundStakeAccountIndex": 1,
                         "validatorStakeAccount": "J9k2Epx9iftqxWrZJYE3AGYXhX6rp62zLxhcz6qmPn4Y",
                       },
                       {
-                        "fundStakeAccount": "Cy7MNv7Kb2EQkxg8Zna3Kq4Q8MoTfUvmcZdSREf9K4bu",
+                        "fundStakeAccount": "5Ezv3ytgPTJv2bnFtNvV9wNmomYCwjtimwioq8kndu8x",
                         "fundStakeAccountIndex": 2,
                         "validatorStakeAccount": "Cc7ge7LdGQoWS2u3YjJPD9czLaZFhMf42Tn4auCDpVHX",
                       },
                       {
-                        "fundStakeAccount": "DJymWtoT3MCVAgnavAS7GjyvemnBPF2sKz3uRQDwohG",
+                        "fundStakeAccount": "6jN5rCxvwKTM8FYiVVFtnzJjSt19CkML6gDDhSjrd34A",
                         "fundStakeAccountIndex": 3,
                         "validatorStakeAccount": "6HjNQfjHErw3QPoYg4sg48R6t8ZpE3F48QhcLajc4uGQ",
                       },
                       {
-                        "fundStakeAccount": "4x2snJw5Fj9TjwCeh5HUBoexScmj9R3b4zGx8kHmJgu9",
+                        "fundStakeAccount": "DYekvpKbCRD86pwavvFADBXJWeEbmvdBLhD24SXzLsVE",
                         "fundStakeAccountIndex": 4,
                         "validatorStakeAccount": "ENKZgg8HQYxpXya2WcetByHRQ9Vqg7zDSfxtJuG1JwFh",
                       },
@@ -1567,10 +1567,10 @@ describe('restaking.fragX unit test', () => {
                 },
               ],
             },
-            "fundAccount": "5nsRAb7faaGoVkMovx4eSkHk3fcsBnHRhLZxzPawVk87",
+            "fundAccount": "7GyrFmKHXzKQupjFHVmCLdSqJwTFKf1BRAJux7BMgPpC",
             "nextSequence": 0,
             "numOperated": 6n,
-            "receiptTokenMint": "5TdWCgeGM4J9equWEF426F3eYLtuNcRUnMK2YSRRJCBD",
+            "receiptTokenMint": "9BRhJGuAZpefyy54pLu6N1dofCCp5XDjqTHXN1CBSPaT",
             "result": {
               "__option": "Some",
               "value": {
