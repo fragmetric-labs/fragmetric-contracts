@@ -84,6 +84,24 @@ pub fn get_proportional_amount_u64(amount: u64, numerator: u64, denominator: u64
         .map_err(|_| error!(errors::ErrorCode::CalculationArithmeticException))
 }
 
+/// rounds-up.
+/// when both numerator and denominator are zero, returns `amount`.
+pub fn get_proportional_amount_u64_round_up(
+    amount: u64,
+    numerator: u64,
+    denominator: u64,
+) -> Result<u64> {
+    if numerator == denominator || denominator == 0 && amount == 0 {
+        return Ok(amount);
+    }
+    if amount == denominator {
+        return Ok(numerator);
+    }
+
+    u64::try_from((amount as u128 * numerator as u128).div_ceil(denominator as u128))
+        .map_err(|_| error!(errors::ErrorCode::CalculationArithmeticException))
+}
+
 /// This is for precise calculation.
 pub fn get_proportional_amount_u128(
     amount: u128,
