@@ -1,28 +1,21 @@
 import { MAX_U64 } from '@fragmetric-labs/sdk';
 import { getAddressDecoder, KeyPairSigner } from '@solana/kit';
-import {
-  afterAll,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  test,
-} from 'vitest';
-import { RestakingReceiptTokenMintAccountContext } from '../../../clients/js/fragmetric-sdk/dist/programs/restaking/receipt_token_mint';
+import { afterAll, beforeEach, describe, expect, test } from 'vitest';
 import { RestakingUserAccountContext } from '../../../clients/js/fragmetric-sdk/dist/programs/restaking/user';
 import { createTestSuiteContext, expectMasked } from '../../testutil';
 import { initializeFragX } from './fragx.unit.init';
 
-describe('restaking.fragX unit test', () => {
-  let testCtx: Awaited<ReturnType<typeof initializeFragX>>;
-  let validator: Awaited<ReturnType<typeof initializeFragX>>['validator'];
-  let feePayer: Awaited<ReturnType<typeof initializeFragX>>['feePayer'];
-  let restaking: Awaited<ReturnType<typeof initializeFragX>>['restaking'];
-  let initializationTasks: Awaited<
-    ReturnType<typeof initializeFragX>
-  >['initializationTasks'];
-  let ctx: RestakingReceiptTokenMintAccountContext;
-  let testSuiteCtx: Awaited<ReturnType<typeof createTestSuiteContext>>;
+describe('restaking.fragX unit test', async () => {
+  const testSuiteCtx = await createTestSuiteContext();
+
+  type FragXTestCtx = Awaited<ReturnType<typeof initializeFragX>>;
+
+  let testCtx: FragXTestCtx;
+  let validator: FragXTestCtx['validator'];
+  let feePayer: FragXTestCtx['feePayer'];
+  let restaking: FragXTestCtx['restaking'];
+  let initializationTasks: FragXTestCtx['initializationTasks'];
+  let ctx: FragXTestCtx['ctx'];
 
   let signer1: KeyPairSigner, signer2: KeyPairSigner, signer3: KeyPairSigner;
   let user1: RestakingUserAccountContext,
@@ -31,11 +24,9 @@ describe('restaking.fragX unit test', () => {
 
   let index = 0;
 
-  beforeAll(async () => (testSuiteCtx = await createTestSuiteContext()));
   beforeEach(async () => {
-    testCtx = await initializeFragX(testSuiteCtx, index);
-    index += 1;
-    await testCtx.initializationTasks;
+    testCtx = await initializeFragX(testSuiteCtx, index++);
+    testCtx.initializationTasks;
 
     ({ validator, feePayer, restaking, initializationTasks, ctx } = testCtx);
 
