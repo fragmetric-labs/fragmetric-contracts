@@ -769,7 +769,7 @@ impl UnrestakeVRTCommand {
 
                 let (supported_token_amount_numerator, receipt_token_amount_denominator) =
                     vault_service.get_supported_token_to_receipt_token_exchange_ratio()?;
-                restaking_vault.update_supported_token_compounded_amount(
+                restaking_vault.update_supported_token_receipt_token_exchange_ratio(
                     supported_token_amount_numerator,
                     receipt_token_amount_denominator,
                 )?;
