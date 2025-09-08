@@ -388,7 +388,7 @@ impl RestakingVault {
             .ok_or_else(|| error!(ErrorCode::FundRestakingVaultOperatorNotFoundError))
     }
 
-    pub fn update_supported_token_compounded_amount(
+    pub fn update_supported_token_compounded_amount_and_token_exchange_ratio(
         &mut self,
         supported_token_amount_numerator: u64,
         receipt_token_amount_denominator: u64,
@@ -406,23 +406,17 @@ impl RestakingVault {
         )?;
 
         // calculate supported token amount based on current vault receipt token price
-        let supported_token_amount = crate::utils::get_proportional_amount_u64(
+        let supported_token_amount_after = crate::utils::get_proportional_amount_u64(
             receipt_token_amount,
             supported_token_amount_numerator,
             receipt_token_amount_denominator,
         )?;
 
+        // update supported token compounded amount
         self.supported_token_compounded_amount +=
-            supported_token_amount as i128 - supported_token_amount_before as i128;
+            supported_token_amount_after as i128 - supported_token_amount_before as i128;
 
-        Ok(())
-    }
-
-    pub fn update_supported_token_receipt_token_exchange_ratio(
-        &mut self,
-        supported_token_amount_numerator: u64,
-        receipt_token_amount_denominator: u64,
-    ) -> Result<()> {
+        // update token exchange ratio
         self.supported_token_to_receipt_token_exchange_ratio = TokenExchangeRatio {
             numerator: supported_token_amount_numerator,
             denominator: receipt_token_amount_denominator,
