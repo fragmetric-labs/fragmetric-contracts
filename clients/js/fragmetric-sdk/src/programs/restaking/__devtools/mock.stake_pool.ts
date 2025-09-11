@@ -9,6 +9,8 @@ import {
   getArrayDecoder,
   getBytesDecoder,
   getBytesEncoder,
+  getDiscriminatedUnionDecoder,
+  getDiscriminatedUnionEncoder,
   getOptionDecoder,
   getOptionEncoder,
   getProgramDerivedAddress,
@@ -19,6 +21,8 @@ import {
   getU64Encoder,
   getU8Decoder,
   getU8Encoder,
+  getUnitDecoder,
+  getUnitEncoder,
   Option,
   ReadonlyUint8Array,
 } from '@solana/kit';
@@ -41,14 +45,54 @@ export type StakePool = {
   lastUpdateEpoch: bigint;
   lockUp: ReadonlyUint8Array;
   epochFee: ReadonlyUint8Array;
-  nextEpochFee: ReadonlyUint8Array;
+  nextEpochFee: FutureEpoch;
   preferredDepositValidatorVoteAddress: Option<Address>;
   preferredWithdrawValidatorVoteAddress: Option<Address>;
-  raw: ReadonlyUint8Array;
+  stakeDepositFee: ReadonlyUint8Array;
+  stakeWithdrawalFee: ReadonlyUint8Array;
+  nextStakeWithdrawalFee: FutureEpoch;
+  stakeReferralFee: number;
+  solDepositAuthority: Option<Address>;
+  solDepositFee: ReadonlyUint8Array;
+  solReferralFee: number;
+  solWithdrawAuthority: Option<Address>;
+  solWithdrawalFee: ReadonlyUint8Array;
+  nextSolWithdrawalFee: FutureEpoch;
+  lastEpochPoolTokenSupply: bigint;
+  lastEpochTotalLamports: bigint;
 };
 
-// TODO: Decoder & Encoder assumes variant field like 'nextEpochFee' as fixed size.
-// 'nextEpochFee' can be either 1 byte of 17 bytes as StakePool derives borshSerialize/borshDeserialize
+export type FutureEpoch =
+  | { __kind: 'None' }
+  | { __kind: 'One'; fields: ReadonlyUint8Array }
+  | { __kind: 'Two'; fields: ReadonlyUint8Array };
+
+const getFutureEpochDecoder = (): Decoder<FutureEpoch> =>
+  getDiscriminatedUnionDecoder([
+    ['None', getUnitDecoder()],
+    [
+      'One',
+      getStructDecoder([['fields', fixDecoderSize(getBytesDecoder(), 16)]]),
+    ],
+    [
+      'Two',
+      getStructDecoder([['fields', fixDecoderSize(getBytesDecoder(), 16)]]),
+    ],
+  ]);
+
+const getFutureEpochEncoder = (): Encoder<FutureEpoch> =>
+  getDiscriminatedUnionEncoder([
+    ['None', getUnitEncoder()],
+    [
+      'One',
+      getStructEncoder([['fields', fixEncoderSize(getBytesEncoder(), 16)]]),
+    ],
+    [
+      'Two',
+      getStructEncoder([['fields', fixEncoderSize(getBytesEncoder(), 16)]]),
+    ],
+  ]);
+
 export function getStakePoolDecoder(): Decoder<StakePool> {
   return getStructDecoder([
     ['accountType', fixDecoderSize(getBytesDecoder(), 1)],
@@ -66,7 +110,7 @@ export function getStakePoolDecoder(): Decoder<StakePool> {
     ['lastUpdateEpoch', getU64Decoder()],
     ['lockUp', fixDecoderSize(getBytesDecoder(), 48)],
     ['epochFee', fixDecoderSize(getBytesDecoder(), 16)],
-    ['nextEpochFee', fixDecoderSize(getBytesDecoder(), 1)],
+    ['nextEpochFee', getFutureEpochDecoder()],
     [
       'preferredDepositValidatorVoteAddress',
       getOptionDecoder(getAddressDecoder()),
@@ -75,7 +119,18 @@ export function getStakePoolDecoder(): Decoder<StakePool> {
       'preferredWithdrawValidatorVoteAddress',
       getOptionDecoder(getAddressDecoder()),
     ],
-    ['raw', fixDecoderSize(getBytesDecoder(), 220)],
+    ['stakeDepositFee', fixDecoderSize(getBytesDecoder(), 16)],
+    ['stakeWithdrawalFee', fixDecoderSize(getBytesDecoder(), 16)],
+    ['nextStakeWithdrawalFee', getFutureEpochDecoder()],
+    ['stakeReferralFee', getU8Decoder()],
+    ['solDepositAuthority', getOptionDecoder(getAddressDecoder())],
+    ['solDepositFee', fixDecoderSize(getBytesDecoder(), 16)],
+    ['solReferralFee', getU8Decoder()],
+    ['solWithdrawAuthority', getOptionDecoder(getAddressDecoder())],
+    ['solWithdrawalFee', fixDecoderSize(getBytesDecoder(), 16)],
+    ['nextSolWithdrawalFee', getFutureEpochDecoder()],
+    ['lastEpochPoolTokenSupply', getU64Decoder()],
+    ['lastEpochTotalLamports', getU64Decoder()],
   ]);
 }
 
@@ -96,7 +151,7 @@ export function getStakePoolEncoder(): Encoder<StakePool> {
     ['lastUpdateEpoch', getU64Encoder()],
     ['lockUp', fixEncoderSize(getBytesEncoder(), 48)],
     ['epochFee', fixEncoderSize(getBytesEncoder(), 16)],
-    ['nextEpochFee', fixEncoderSize(getBytesEncoder(), 1)],
+    ['nextEpochFee', getFutureEpochEncoder()],
     [
       'preferredDepositValidatorVoteAddress',
       getOptionEncoder(getAddressEncoder()),
@@ -105,7 +160,18 @@ export function getStakePoolEncoder(): Encoder<StakePool> {
       'preferredWithdrawValidatorVoteAddress',
       getOptionEncoder(getAddressEncoder()),
     ],
-    ['raw', fixEncoderSize(getBytesEncoder(), 220)],
+    ['stakeDepositFee', fixEncoderSize(getBytesEncoder(), 16)],
+    ['stakeWithdrawalFee', fixEncoderSize(getBytesEncoder(), 16)],
+    ['nextStakeWithdrawalFee', getFutureEpochEncoder()],
+    ['stakeReferralFee', getU8Encoder()],
+    ['solDepositAuthority', getOptionEncoder(getAddressEncoder())],
+    ['solDepositFee', fixEncoderSize(getBytesEncoder(), 16)],
+    ['solReferralFee', getU8Encoder()],
+    ['solWithdrawAuthority', getOptionEncoder(getAddressEncoder())],
+    ['solWithdrawalFee', fixEncoderSize(getBytesEncoder(), 16)],
+    ['nextSolWithdrawalFee', getFutureEpochEncoder()],
+    ['lastEpochPoolTokenSupply', getU64Encoder()],
+    ['lastEpochTotalLamports', getU64Encoder()],
   ]);
 }
 
