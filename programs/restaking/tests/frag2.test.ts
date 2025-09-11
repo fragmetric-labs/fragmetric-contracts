@@ -1131,12 +1131,12 @@ describe('restaking.frag2 test', async () => {
         })
       );
 
-    const MAX_REWARD_COMMISSION_RATE_BPS = 2500;
+    const MAX_REWARD_COMMISSION_RATE_BPS = 10000;
 
     for (
       let rewardCommissionRateBps = 0;
       rewardCommissionRateBps <= MAX_REWARD_COMMISSION_RATE_BPS;
-      rewardCommissionRateBps += 130
+      rewardCommissionRateBps += 520
     ) {
       await ctx.fund.runCommand.executeChained({
         forceResetCommand: 'HarvestRestakingYield',
