@@ -5,7 +5,7 @@ use crate::errors::ErrorCode;
 use crate::modules::pricing::{TokenPricingSource, TokenPricingSourcePod};
 
 pub const FUND_ACCOUNT_MAX_RESTAKING_VAULT_DELEGATIONS: usize = 30;
-pub const FUND_ACCOUNT_MAX_REWARD_COMMISSION_RATE_BPS: usize = 2_500;
+pub const FUND_ACCOUNT_MAX_REWARD_COMMISSION_RATE_BPS: usize = 10_000;
 pub const FUND_ACCOUNT_MAX_RESTAKING_VAULT_COMPOUNDING_REWARD_TOKENS: usize = 4;
 pub const FUND_ACCOUNT_MAX_RESTAKING_VAULT_DISTRIBUTING_REWARD_TOKENS: usize = 30;
 
