@@ -1131,12 +1131,12 @@ describe('restaking.frag2 test', async () => {
         })
       );
 
-    const MAX_REWARD_COMMISSION_RATE_BPS = 2500;
+    const MAX_REWARD_COMMISSION_RATE_BPS = 10000;
 
     for (
       let rewardCommissionRateBps = 0;
       rewardCommissionRateBps <= MAX_REWARD_COMMISSION_RATE_BPS;
-      rewardCommissionRateBps += 130
+      rewardCommissionRateBps += 520
     ) {
       await ctx.fund.runCommand.executeChained({
         forceResetCommand: 'HarvestRestakingYield',
@@ -1266,7 +1266,7 @@ describe('restaking.frag2 test', async () => {
       ).toEqual(123_456_789_987_654_321n);
     }
 
-    // hard limit test (reward commission bps <= 10%)
+    // hard limit test (reward commission bps <= 100%)
     await expect(
       ctx.fund.updateRestakingVaultStrategy.execute({
         vault: '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
