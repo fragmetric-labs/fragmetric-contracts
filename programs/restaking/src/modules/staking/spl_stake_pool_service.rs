@@ -1,4 +1,4 @@
-use std::num::NonZeroU32;
+use core::num::NonZeroU32;
 
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program;
@@ -31,7 +31,7 @@ where
     pool_account: &'info AccountInfo<'info>, // deserialize on-demand
     pool_token_mint: &'info AccountInfo<'info>,
     pool_token_program: &'info AccountInfo<'info>,
-    _marker: std::marker::PhantomData<T>,
+    _marker: core::marker::PhantomData<T>,
 }
 
 impl<T: SPLStakePoolInterface> ValidateStakePool for SPLStakePoolService<'_, T> {

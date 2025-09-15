@@ -78,8 +78,8 @@ pub enum HarvestRestakingYieldState {
 
 use HarvestRestakingYieldState::*;
 
-impl std::fmt::Debug for HarvestRestakingYieldState {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Debug for HarvestRestakingYieldState {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::New => write!(f, "New"),
             Self::NewCompoundReward => write!(f, "NewCompoundReward"),

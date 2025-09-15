@@ -44,7 +44,7 @@ impl PDASeeds<3> for NormalizedTokenPoolAccount {
         [
             Self::SEED,
             self.normalized_token_mint.as_ref(),
-            std::slice::from_ref(&self.bump),
+            core::slice::from_ref(&self.bump),
         ]
     }
 }

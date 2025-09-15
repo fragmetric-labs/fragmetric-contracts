@@ -5,7 +5,7 @@ use crate::modules::pricing::{Asset, TokenValue, TokenValueProvider};
 use super::{SPLStakePool, SPLStakePoolInterface, SPLStakePoolService};
 
 pub struct SPLStakePoolValueProvider<T: SPLStakePoolInterface = SPLStakePool> {
-    _marker: std::marker::PhantomData<T>,
+    _marker: core::marker::PhantomData<T>,
 }
 
 impl<T: SPLStakePoolInterface> Default for SPLStakePoolValueProvider<T> {

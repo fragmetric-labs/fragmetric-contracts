@@ -62,7 +62,7 @@ impl Reward {
     }
 
     pub fn get_name(&self) -> Result<&str> {
-        Ok(std::str::from_utf8(&self.name)
+        Ok(core::str::from_utf8(&self.name)
             .map_err(|_| ErrorCode::UTF8DecodingException)?
             .trim_matches('\0'))
     }

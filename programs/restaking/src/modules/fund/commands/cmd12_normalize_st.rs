@@ -1,4 +1,4 @@
-use std::ops::Neg;
+use core::ops::Neg;
 
 use anchor_lang::prelude::*;
 use anchor_spl::token::Token;
@@ -20,8 +20,8 @@ pub struct NormalizeSTCommandItem {
     allocated_token_amount: u64,
 }
 
-impl std::fmt::Debug for NormalizeSTCommandItem {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Debug for NormalizeSTCommandItem {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(
             f,
             "{}({})",
@@ -48,8 +48,8 @@ pub enum NormalizeSTCommandState {
     },
 }
 
-impl std::fmt::Debug for NormalizeSTCommandState {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Debug for NormalizeSTCommandState {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::New => f.write_str("New"),
             Self::Prepare { items } => {

@@ -172,7 +172,7 @@ impl VaultAccount {
     pub const SEED: &'static [u8] = b"vault";
 
     pub const fn get_size() -> usize {
-        8 + std::mem::size_of::<Self>()
+        8 + core::mem::size_of::<Self>()
     }
 
     pub fn is_initialized(&self) -> bool {
@@ -191,7 +191,7 @@ impl VaultAccount {
         [
             Self::SEED,
             self.vault_receipt_token_mint.as_ref(),
-            std::slice::from_ref(&self.bump),
+            core::slice::from_ref(&self.bump),
         ]
     }
 
@@ -741,7 +741,7 @@ impl VaultAccount {
             .saturating_sub(self.get_appropriate_vst_deducted_fee_amount()?);
 
         let offsetting_vst_deducted_fee_amount =
-            std::cmp::min(vst_amount, vst_over_deducted_fee_amount);
+            core::cmp::min(vst_amount, vst_over_deducted_fee_amount);
 
         vst_amount -= offsetting_vst_deducted_fee_amount;
         self.vst_deducted_fee_amount -= offsetting_vst_deducted_fee_amount;
@@ -749,7 +749,7 @@ impl VaultAccount {
 
         // Offset VST receivables
         let offsetting_vst_operation_receivable_amount =
-            std::cmp::min(vst_amount, self.vst_operation_receivable_amount);
+            core::cmp::min(vst_amount, self.vst_operation_receivable_amount);
 
         self.vst_operation_reserved_amount += offsetting_vst_operation_receivable_amount;
         self.vst_operation_receivable_amount -= offsetting_vst_operation_receivable_amount;
@@ -777,7 +777,7 @@ impl VaultAccount {
         let maximum_possible_srt_donation_amount = srt_exchange_rate
             .get_vst_amount_as_srt(self.vst_operation_receivable_amount, false)
             .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?;
-        srt_amount = std::cmp::min(srt_amount, maximum_possible_srt_donation_amount);
+        srt_amount = core::cmp::min(srt_amount, maximum_possible_srt_donation_amount);
 
         let srt_operation_reserved_amount_as_vst = srt_exchange_rate
             .get_srt_amount_as_vst(self.srt_operation_reserved_amount, false)
@@ -945,7 +945,7 @@ impl VaultAccount {
             )
             .ok_or_else(|| error!(VaultError::CalculationArithmeticException))?
         };
-        vrt_amount = std::cmp::min(vrt_amount, maximum_possible_vst_withdrawal_amount);
+        vrt_amount = core::cmp::min(vrt_amount, maximum_possible_vst_withdrawal_amount);
 
         // Ignore empty request
         if vrt_amount == 0 {
@@ -982,7 +982,7 @@ impl VaultAccount {
         };
 
         // Then, pay with VST reserved as much as possible, in order to avoid solv protocol withdrawal fee
-        let vst_withdrawal_locked_amount = std::cmp::min(
+        let vst_withdrawal_locked_amount = core::cmp::min(
             self.vst_operation_reserved_amount,
             target_vst_withdrawal_amount - target_vst_offsetting_receivable_amount,
         );
@@ -1044,7 +1044,7 @@ impl VaultAccount {
             let net_asset_value_decreased_amount_by_srt_withdrawal =
                 srt_operation_reserved_amount_as_vst - post_srt_operation_reserved_amount_as_vst;
             let diff = insufficient_vst_amount - net_asset_value_decreased_amount_by_srt_withdrawal;
-            vst_offsetting_receivable_amount = std::cmp::min(
+            vst_offsetting_receivable_amount = core::cmp::min(
                 self.vst_operation_receivable_amount,
                 target_vst_offsetting_receivable_amount + diff,
             );
@@ -1321,7 +1321,7 @@ impl VaultAccount {
             let vst_over_deducted_fee_amount =
                 self.vst_deducted_fee_amount - appropriate_vst_deducted_fee_amount;
             let amount_to_offset =
-                std::cmp::min(vst_over_deducted_fee_amount, self.vst_extra_amount_to_claim);
+                core::cmp::min(vst_over_deducted_fee_amount, self.vst_extra_amount_to_claim);
 
             // Offset over deducted fee
             self.vst_extra_amount_to_claim -= amount_to_offset;

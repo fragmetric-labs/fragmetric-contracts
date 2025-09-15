@@ -227,7 +227,7 @@ where
     T: ZeroCopy + Owner + Clone,
 {
     fn as_account_info(&self) -> &'info AccountInfo<'info> {
-        unsafe { std::mem::transmute::<&AccountInfo, _>(self.as_ref()) }
+        unsafe { core::mem::transmute::<&AccountInfo, _>(self.as_ref()) }
     }
 }
 
@@ -236,7 +236,7 @@ where
     T: AccountSerialize + AccountDeserialize + Clone,
 {
     fn as_account_info(&self) -> &'info AccountInfo<'info> {
-        unsafe { std::mem::transmute::<&AccountInfo, _>(self.as_ref()) }
+        unsafe { core::mem::transmute::<&AccountInfo, _>(self.as_ref()) }
     }
 }
 
@@ -245,25 +245,25 @@ where
     T: AccountSerialize + AccountDeserialize + Clone,
 {
     fn as_account_info(&self) -> &'info AccountInfo<'info> {
-        unsafe { std::mem::transmute::<&AccountInfo, _>(self.as_ref()) }
+        unsafe { core::mem::transmute::<&AccountInfo, _>(self.as_ref()) }
     }
 }
 
 impl<'info, T> AsAccountInfo<'info> for Program<'info, T> {
     fn as_account_info(&self) -> &'info AccountInfo<'info> {
-        unsafe { std::mem::transmute::<&AccountInfo, _>(self.as_ref()) }
+        unsafe { core::mem::transmute::<&AccountInfo, _>(self.as_ref()) }
     }
 }
 
 impl<'info, T> AsAccountInfo<'info> for Interface<'info, T> {
     fn as_account_info(&self) -> &'info AccountInfo<'info> {
-        unsafe { std::mem::transmute::<&AccountInfo, _>(self.as_ref()) }
+        unsafe { core::mem::transmute::<&AccountInfo, _>(self.as_ref()) }
     }
 }
 
 impl<'info> AsAccountInfo<'info> for UncheckedAccount<'info> {
     fn as_account_info(&self) -> &'info AccountInfo<'info> {
-        unsafe { std::mem::transmute::<&AccountInfo, _>(self.as_ref()) }
+        unsafe { core::mem::transmute::<&AccountInfo, _>(self.as_ref()) }
     }
 }
 
@@ -414,7 +414,7 @@ impl<'info> SystemProgramExt<'info> for Program<'info, System> {
                 msg!("realloc account lamports: added={}", required_lamports);
             }
 
-            let increase = std::cmp::min(
+            let increase = core::cmp::min(
                 required_realloc_size,
                 entrypoint::MAX_PERMITTED_DATA_INCREASE,
             );

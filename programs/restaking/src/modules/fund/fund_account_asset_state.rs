@@ -224,7 +224,7 @@ impl AssetState {
         }
 
         let next_batch_id = self.withdrawal_pending_batch.batch_id + 1;
-        let mut pending_batch = std::mem::take(&mut self.withdrawal_pending_batch);
+        let mut pending_batch = core::mem::take(&mut self.withdrawal_pending_batch);
         self.withdrawal_pending_batch.initialize(next_batch_id);
         pending_batch.enqueued_at = current_timestamp;
 
@@ -250,7 +250,7 @@ impl AssetState {
         self.withdrawal_last_batch_processed_at = current_timestamp;
         // take `count` batches from front
         let processing_batches = (0..count)
-            .map(|i| std::mem::take(&mut self.withdrawal_queued_batches[i]))
+            .map(|i| core::mem::take(&mut self.withdrawal_queued_batches[i]))
             .collect();
         // then shift to left
         self.withdrawal_queued_batches[..self.withdrawal_num_queued_batches as usize]

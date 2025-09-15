@@ -51,7 +51,7 @@ impl PDASeeds<3> for RewardAccount {
         [
             Self::SEED,
             self.receipt_token_mint.as_ref(),
-            std::slice::from_ref(&self.bump),
+            core::slice::from_ref(&self.bump),
         ]
     }
 }
@@ -142,7 +142,7 @@ impl RewardAccount {
     pub(super) fn get_reserve_account_seeds(&self) -> [&[u8]; 3] {
         let mut seeds = <[_; 3]>::default();
         seeds[..2].copy_from_slice(&self.get_reserve_account_seed_phrase());
-        seeds[2] = std::slice::from_ref(&self.reserve_account_bump);
+        seeds[2] = core::slice::from_ref(&self.reserve_account_bump);
         seeds
     }
 
