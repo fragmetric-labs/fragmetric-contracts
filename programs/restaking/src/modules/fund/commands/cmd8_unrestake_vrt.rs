@@ -1,5 +1,5 @@
-use std::iter::Peekable;
-use std::ops::Neg;
+use core::iter::Peekable;
+use core::ops::Neg;
 
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token;

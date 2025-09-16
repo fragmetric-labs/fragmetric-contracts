@@ -36,9 +36,9 @@ pub struct AdminFundAccountInitialContext<'info> {
         payer = payer,
         seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
         bump,
-        space = std::cmp::min(
+        space = core::cmp::min(
             solana_program::entrypoint::MAX_PERMITTED_DATA_INCREASE,
-            8 + std::mem::size_of::<FundAccount>(),
+            8 + core::mem::size_of::<FundAccount>(),
         ),
     )]
     pub fund_account: AccountLoader<'info, FundAccount>,

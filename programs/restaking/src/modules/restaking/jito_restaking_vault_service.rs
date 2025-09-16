@@ -105,7 +105,7 @@ impl<'info> JitoRestakingVaultService<'info> {
     #[inline(always)]
     fn borrow_account_data<'a, 'b>(
         account: &'a AccountInfo<'b>,
-    ) -> Result<std::cell::Ref<'a, &'b mut [u8]>> {
+    ) -> Result<core::cell::Ref<'a, &'b mut [u8]>> {
         require_keys_eq!(*account.owner, JITO_VAULT_PROGRAM_ID);
         Ok(account
             .data
@@ -115,7 +115,7 @@ impl<'info> JitoRestakingVaultService<'info> {
 
     #[inline(always)]
     fn deserialize_account_data<'a, T: jito_bytemuck::AccountDeserialize>(
-        data: &'a std::cell::Ref<&mut [u8]>,
+        data: &'a core::cell::Ref<&mut [u8]>,
     ) -> Result<&'a T> {
         Ok(T::try_from_slice_unchecked(data)?)
     }
@@ -650,7 +650,7 @@ impl<'info> JitoRestakingVaultService<'info> {
         ))?;
 
         // pay withdrawal ticket rent
-        let required_space = 8 + std::mem::size_of::<VaultUpdateStateTracker>();
+        let required_space = 8 + core::mem::size_of::<VaultUpdateStateTracker>();
 
         let current_lamports = withdrawal_ticket_account.get_lamports();
         let required_lamports = Rent::get()?

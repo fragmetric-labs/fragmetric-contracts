@@ -40,7 +40,7 @@ impl PDASeeds<4> for NormalizedTokenWithdrawalAccount {
             Self::SEED,
             self.normalized_token_mint.as_ref(),
             self.withdrawal_authority.as_ref(),
-            std::slice::from_ref(&self.bump),
+            core::slice::from_ref(&self.bump),
         ]
     }
 }

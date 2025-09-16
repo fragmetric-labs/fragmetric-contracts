@@ -37,7 +37,7 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
         delegate: Option<Pubkey>,
         desired_account_size: Option<u32>,
     ) -> Result<Option<events::UserCreatedOrUpdatedRewardAccount>> {
-        let min_account_size = 8 + std::mem::size_of::<UserRewardAccount>();
+        let min_account_size = 8 + core::mem::size_of::<UserRewardAccount>();
         let new_account_size = if self.user_reward_account.is_initialized() {
             let user_reward_account =
                 AccountLoader::<UserRewardAccount>::try_from(self.user_reward_account)?;
@@ -59,9 +59,9 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
                 None,
             )?
         } else {
-            let new_account_size = std::cmp::min(
+            let new_account_size = core::cmp::min(
                 solana_program::entrypoint::MAX_PERMITTED_DATA_INCREASE,
-                8 + std::mem::size_of::<UserRewardAccount>(),
+                8 + core::mem::size_of::<UserRewardAccount>(),
             );
 
             system_program.initialize_account(

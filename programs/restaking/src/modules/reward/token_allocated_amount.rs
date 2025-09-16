@@ -266,7 +266,7 @@ enum OneOrManyDeltas<T: IntoIterator<Item = TokenAllocatedAmountDelta>> {
 }
 
 enum OneOrManyDeltasIter<T: Iterator<Item = TokenAllocatedAmountDelta>> {
-    One(std::option::IntoIter<TokenAllocatedAmountDelta>),
+    One(core::option::IntoIter<TokenAllocatedAmountDelta>),
     Many(T),
 }
 
@@ -303,7 +303,7 @@ mod tests {
         let mut amount = TokenAllocatedAmount::zeroed();
         amount.total_amount = 400;
         amount.num_records = 10;
-        amount.records = std::array::from_fn(|i| {
+        amount.records = core::array::from_fn(|i| {
             let mut record = TokenAllocatedAmountRecord::zeroed();
             record.contribution_accrual_rate = 100 + i as u16 * 10;
             record.amount = non_empty.contains(&i).then_some(100).unwrap_or_default();

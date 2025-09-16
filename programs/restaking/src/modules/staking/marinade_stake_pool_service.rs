@@ -307,7 +307,7 @@ impl<'info> MarinadeStakePoolService<'info> {
             new_withdrawal_ticket_account,
             new_withdrawal_ticket_account_rent_payer, // payer is already signer so we don't need signer seeds
             new_withdrawal_ticket_account_seeds,
-            8 + std::mem::size_of::<TicketAccountData>(),
+            8 + core::mem::size_of::<TicketAccountData>(),
             None,
             &marinade_cpi::marinade::ID,
         )?;

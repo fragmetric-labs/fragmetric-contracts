@@ -208,7 +208,7 @@ impl<'info> PricingService<'info> {
 
         // expand supported tokens recursively
         // due to ownership, first we take numerator and return it back after recursion
-        let assets = std::mem::take(&mut self.token_values[token_index].numerator);
+        let assets = core::mem::take(&mut self.token_values[token_index].numerator);
         for asset in &assets {
             if let Asset::Token(token_mint, Some(token_pricing_source), _) = asset {
                 self.resolve_token_pricing_source_rec(

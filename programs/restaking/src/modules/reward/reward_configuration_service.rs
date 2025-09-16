@@ -27,7 +27,7 @@ impl<'a, 'info> RewardConfigurationService<'a, 'info> {
     }
 
     pub fn process_initialize_reward_account(&mut self, reward_account_bump: u8) -> Result<()> {
-        if self.reward_account.as_ref().data_len() < 8 + std::mem::size_of::<RewardAccount>() {
+        if self.reward_account.as_ref().data_len() < 8 + core::mem::size_of::<RewardAccount>() {
             self.reward_account
                 .initialize_zero_copy_header(reward_account_bump)
         } else {
@@ -45,9 +45,9 @@ impl<'a, 'info> RewardConfigurationService<'a, 'info> {
         system_program: &Program<'info, System>,
         desired_account_size: Option<u32>,
     ) -> Result<()> {
-        let min_account_size = 8 + std::mem::size_of::<RewardAccount>();
+        let min_account_size = 8 + core::mem::size_of::<RewardAccount>();
         let target_account_size = desired_account_size
-            .map(|size| std::cmp::max(size as usize, min_account_size))
+            .map(|size| core::cmp::max(size as usize, min_account_size))
             .unwrap_or(min_account_size);
 
         let new_account_size = system_program.expand_account_size_if_needed(

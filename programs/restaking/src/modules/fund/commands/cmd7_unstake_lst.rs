@@ -19,8 +19,8 @@ pub struct UnstakeLSTCommandItem {
     allocated_token_amount: u64,
 }
 
-impl std::fmt::Debug for UnstakeLSTCommandItem {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Debug for UnstakeLSTCommandItem {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}({})", self.token_mint, self.allocated_token_amount)
     }
 }
@@ -53,8 +53,8 @@ pub enum UnstakeLSTCommandState {
     },
 }
 
-impl std::fmt::Debug for UnstakeLSTCommandState {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Debug for UnstakeLSTCommandState {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::New => f.write_str("New"),
             Self::Prepare { items } => {

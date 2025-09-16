@@ -1,4 +1,4 @@
-use std::ops::Neg;
+use core::ops::Neg;
 
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::spl_associated_token_account;
@@ -116,7 +116,7 @@ impl PDASeeds<3> for FundAccount {
         [
             Self::SEED,
             self.receipt_token_mint.as_ref(),
-            std::slice::from_ref(&self.bump),
+            core::slice::from_ref(&self.bump),
         ]
     }
 }
@@ -214,7 +214,7 @@ impl FundAccount {
     pub(super) fn get_reserve_account_seeds(&self) -> [&[u8]; 3] {
         let mut seeds = <[_; 3]>::default();
         seeds[..2].copy_from_slice(&self.get_reserve_account_seed_phrase());
-        seeds[2] = std::slice::from_ref(&self.reserve_account_bump);
+        seeds[2] = core::slice::from_ref(&self.reserve_account_bump);
         seeds
     }
 
@@ -235,7 +235,7 @@ impl FundAccount {
     pub(super) fn get_treasury_account_seeds(&self) -> [&[u8]; 3] {
         let mut seeds = <[_; 3]>::default();
         seeds[..2].copy_from_slice(&self.get_treasury_account_seed_phrase());
-        seeds[2] = std::slice::from_ref(&self.treasury_account_bump);
+        seeds[2] = core::slice::from_ref(&self.treasury_account_bump);
         seeds
     }
 
@@ -256,7 +256,7 @@ impl FundAccount {
     pub(super) fn get_wrap_account_seeds(&self) -> [&[u8]; 3] {
         let mut seeds = <[_; 3]>::default();
         seeds[..2].copy_from_slice(&self.get_wrap_account_seed_phrase());
-        seeds[2] = std::slice::from_ref(&self.wrap_account_bump);
+        seeds[2] = core::slice::from_ref(&self.wrap_account_bump);
         seeds
     }
 
@@ -830,14 +830,14 @@ impl FundAccount {
     }
 
     pub(super) fn get_asset_states_iter(&self) -> impl Iterator<Item = &AssetState> {
-        std::iter::once(&self.sol).chain(self.get_supported_tokens_iter().map(|v| &v.token))
+        core::iter::once(&self.sol).chain(self.get_supported_tokens_iter().map(|v| &v.token))
     }
 
     pub(super) fn get_asset_states_iter_mut(&mut self) -> impl Iterator<Item = &mut AssetState> {
         let tokens = self.supported_tokens[..self.num_supported_tokens as usize]
             .iter_mut()
             .map(|v| &mut v.token);
-        std::iter::once(&mut self.sol).chain(tokens)
+        core::iter::once(&mut self.sol).chain(tokens)
     }
 
     /// returns [deposited_amount]
@@ -1040,13 +1040,13 @@ impl<'a> FundStakeAccountAddress<'a> {
         [
             self.fund_account.as_ref(),
             self.pool_account.as_ref(),
-            std::slice::from_ref(&self.index),
-            std::slice::from_ref(&self.bump),
+            core::slice::from_ref(&self.index),
+            core::slice::from_ref(&self.bump),
         ]
     }
 }
 
-impl std::ops::Deref for FundStakeAccountAddress<'_> {
+impl core::ops::Deref for FundStakeAccountAddress<'_> {
     type Target = Pubkey;
 
     fn deref(&self) -> &Self::Target {
@@ -1095,13 +1095,13 @@ impl<'a> FundUnstakingTicketAddress<'a> {
             Self::SEED,
             self.fund_account.as_ref(),
             self.pool_account.as_ref(),
-            std::slice::from_ref(&self.index),
-            std::slice::from_ref(&self.bump),
+            core::slice::from_ref(&self.index),
+            core::slice::from_ref(&self.bump),
         ]
     }
 }
 
-impl std::ops::Deref for FundUnstakingTicketAddress<'_> {
+impl core::ops::Deref for FundUnstakingTicketAddress<'_> {
     type Target = Pubkey;
 
     fn deref(&self) -> &Self::Target {
@@ -1150,13 +1150,13 @@ impl<'a> FundUnrestakingTicketAddress<'a> {
             Self::SEED,
             self.fund_account.as_ref(),
             self.vault_account.as_ref(),
-            std::slice::from_ref(&self.index),
-            std::slice::from_ref(&self.bump),
+            core::slice::from_ref(&self.index),
+            core::slice::from_ref(&self.bump),
         ]
     }
 }
 
-impl std::ops::Deref for FundUnrestakingTicketAddress<'_> {
+impl core::ops::Deref for FundUnrestakingTicketAddress<'_> {
     type Target = Pubkey;
 
     fn deref(&self) -> &Self::Target {
@@ -1178,45 +1178,45 @@ mod tests {
 
     #[test]
     fn size_fund_account() {
-        let size = 8 + std::mem::size_of::<FundAccount>();
+        let size = 8 + core::mem::size_of::<FundAccount>();
         println!(
             "\nfund account size={}, version={}",
             size, FUND_ACCOUNT_CURRENT_VERSION
         );
         println!(
             "supported_token size={}",
-            std::mem::size_of::<SupportedToken>()
+            core::mem::size_of::<SupportedToken>()
         );
         println!(
             "operation_state size={}",
-            std::mem::size_of::<OperationState>()
+            core::mem::size_of::<OperationState>()
         );
         assert!(
             size < solana_program::entrypoint::MAX_PERMITTED_DATA_INCREASE
                 * (FUND_ACCOUNT_CURRENT_VERSION as usize)
         );
 
-        assert_eq!(std::mem::size_of::<FundAccount>() % 8, 0);
-        assert_eq!(std::mem::align_of::<FundAccount>(), 8);
+        assert_eq!(core::mem::size_of::<FundAccount>() % 8, 0);
+        assert_eq!(core::mem::align_of::<FundAccount>(), 8);
 
-        assert_eq!(std::mem::size_of::<WithdrawalBatch>() % 8, 0);
-        assert_eq!(std::mem::align_of::<WithdrawalBatch>(), 8);
+        assert_eq!(core::mem::size_of::<WithdrawalBatch>() % 8, 0);
+        assert_eq!(core::mem::align_of::<WithdrawalBatch>(), 8);
 
-        assert_eq!(std::mem::size_of::<SupportedToken>() % 8, 0);
-        assert_eq!(std::mem::align_of::<SupportedToken>(), 8);
+        assert_eq!(core::mem::size_of::<SupportedToken>() % 8, 0);
+        assert_eq!(core::mem::align_of::<SupportedToken>(), 8);
 
-        assert_eq!(std::mem::size_of::<NormalizedToken>() % 8, 0);
-        assert_eq!(std::mem::align_of::<NormalizedToken>(), 8);
+        assert_eq!(core::mem::size_of::<NormalizedToken>() % 8, 0);
+        assert_eq!(core::mem::align_of::<NormalizedToken>(), 8);
 
-        assert_eq!(std::mem::size_of::<RestakingVault>() % 8, 0);
-        assert_eq!(std::mem::align_of::<RestakingVault>(), 8);
+        assert_eq!(core::mem::size_of::<RestakingVault>() % 8, 0);
+        assert_eq!(core::mem::align_of::<RestakingVault>(), 8);
 
-        assert_eq!(std::mem::size_of::<OperationState>() % 8, 0);
-        assert_eq!(std::mem::align_of::<OperationState>(), 8);
+        assert_eq!(core::mem::size_of::<OperationState>() % 8, 0);
+        assert_eq!(core::mem::align_of::<OperationState>(), 8);
     }
 
     fn create_initialized_fund_account() -> FundAccount {
-        let buffer = [0u8; 8 + std::mem::size_of::<FundAccount>()];
+        let buffer = [0u8; 8 + core::mem::size_of::<FundAccount>()];
         let mut fund = FundAccount::try_deserialize_unchecked(&mut &buffer[..]).unwrap();
         fund.migrate(0, Pubkey::new_unique(), 9, 0).unwrap();
         fund

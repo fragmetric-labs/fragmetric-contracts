@@ -68,7 +68,7 @@ impl FundWithdrawalBatchAccount {
     ) -> Vec<Vec<u8>> {
         let seed_phrase = Self::get_seed_phrase(receipt_token_mint, supported_token_mint, batch_id);
         let bump = Pubkey::find_program_address(
-            &std::array::from_fn::<_, 4, _>(|i| seed_phrase[i].as_slice()),
+            &core::array::from_fn::<_, 4, _>(|i| seed_phrase[i].as_slice()),
             &crate::ID,
         )
         .1;
@@ -86,7 +86,7 @@ impl FundWithdrawalBatchAccount {
     ) -> (Pubkey, u8) {
         let seed_phrase = Self::get_seed_phrase(receipt_token_mint, supported_token_mint, batch_id);
         Pubkey::find_program_address(
-            &std::array::from_fn::<_, 4, _>(|i| seed_phrase[i].as_slice()),
+            &core::array::from_fn::<_, 4, _>(|i| seed_phrase[i].as_slice()),
             &crate::ID,
         )
     }

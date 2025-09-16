@@ -25,9 +25,9 @@ pub struct AdminRewardAccountInitialContext<'info> {
         payer = payer,
         seeds = [RewardAccount::SEED, receipt_token_mint.key().as_ref()],
         bump,
-        space = std::cmp::min(
+        space = core::cmp::min(
             solana_program::entrypoint::MAX_PERMITTED_DATA_INCREASE,
-            8 + std::mem::size_of::<RewardAccount>(),
+            8 + core::mem::size_of::<RewardAccount>(),
         ),
     )]
     pub reward_account: AccountLoader<'info, RewardAccount>,

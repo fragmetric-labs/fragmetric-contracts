@@ -38,7 +38,7 @@ impl PDASeeds<4> for UserFundAccount {
             Self::SEED,
             self.receipt_token_mint.as_ref(),
             self.user.as_ref(),
-            std::slice::from_ref(&self.bump),
+            core::slice::from_ref(&self.bump),
         ]
     }
 }

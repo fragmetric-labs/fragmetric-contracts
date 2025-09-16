@@ -65,8 +65,8 @@ pub enum OperationCommand {
     DelegateVST(DelegateVSTCommand),
 }
 
-impl std::fmt::Debug for OperationCommand {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Debug for OperationCommand {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             OperationCommand::Initialize(command) => command.fmt(f),
             OperationCommand::EnqueueWithdrawalBatch(command) => command.fmt(f),
@@ -395,8 +395,8 @@ impl From<(Pubkey, bool)> for OperationCommandAccountMeta {
     }
 }
 
-impl std::fmt::Debug for OperationCommandAccountMeta {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Debug for OperationCommandAccountMeta {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         self.pubkey.fmt(f)?;
         if self.is_writable {
             f.write_str("(W)")?;
@@ -563,11 +563,11 @@ pub(super) trait SelfExecutable: Into<OperationCommand> {
 }
 
 trait DebugStructExt {
-    fn field_first_element<T: std::fmt::Debug>(&mut self, name: &str, values: &[T]) -> &mut Self;
+    fn field_first_element<T: core::fmt::Debug>(&mut self, name: &str, values: &[T]) -> &mut Self;
 }
 
-impl DebugStructExt for std::fmt::DebugStruct<'_, '_> {
-    fn field_first_element<T: std::fmt::Debug>(&mut self, name: &str, values: &[T]) -> &mut Self {
+impl DebugStructExt for core::fmt::DebugStruct<'_, '_> {
+    fn field_first_element<T: core::fmt::Debug>(&mut self, name: &str, values: &[T]) -> &mut Self {
         if values.is_empty() {
             self
         } else {

@@ -78,7 +78,7 @@ impl<'a> VirtualVaultAddress<'a> {
             Self::SEED,
             self.vault_receipt_token_mint.as_ref(),
             self.fund_account.as_ref(),
-            std::slice::from_ref(&self.bump),
+            core::slice::from_ref(&self.bump),
         ]
     }
 }
