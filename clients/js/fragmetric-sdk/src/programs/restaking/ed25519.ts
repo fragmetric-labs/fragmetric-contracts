@@ -78,7 +78,11 @@ export async function signMessageWithEd25519Keypair(
       await crypto.subtle.exportKey('raw', keypair.publicKey)
     ),
     signature: new Uint8Array(
-      await crypto.subtle.sign('Ed25519', keypair.privateKey, new Uint8Array(data).buffer)
+      await crypto.subtle.sign(
+        'Ed25519',
+        keypair.privateKey,
+        new Uint8Array(data).buffer
+      )
     ),
   };
 }

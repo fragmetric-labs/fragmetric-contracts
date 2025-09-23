@@ -425,7 +425,10 @@ describe.each([
     ).rejects.toThrowError('simulation failed');
     await expect(
       program.runtime.rpc
-        .getTransaction(sig3, { maxSupportedTransactionVersion: 0, encoding: 'base64' })
+        .getTransaction(sig3, {
+          maxSupportedTransactionVersion: 0,
+          encoding: 'base64',
+        })
         .send()
     ).resolves.toMatchObject({
       meta: {

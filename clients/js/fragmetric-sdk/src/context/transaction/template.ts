@@ -3,6 +3,7 @@ import {
   Address,
   addSignersToTransactionMessage,
   appendTransactionMessageInstructions,
+  assertIsTransactionWithinSizeLimit,
   Blockhash,
   Commitment,
   compressTransactionMessageUsingAddressLookupTables,
@@ -18,8 +19,8 @@ import {
   getSignatureFromTransaction,
   getTransactionDecoder,
   Instruction,
-  isTransactionMessageWithBlockhashLifetime,
   isSolanaError,
+  isTransactionMessageWithBlockhashLifetime,
   isTransactionSendingSigner,
   isTransactionSigner,
   Nonce,
@@ -35,10 +36,9 @@ import {
   Slot,
   SOLANA_ERROR__INVALID_NONCE,
   SolanaError,
+  TransactionMessageWithSigners,
   TransactionSendingSigner,
   TransactionSigner,
-  TransactionMessageWithSigners,
-  assertIsTransactionWithinSizeLimit,
 } from '@solana/kit';
 import * as v from 'valibot';
 import { ObjectSchema } from 'valibot';
@@ -721,7 +721,10 @@ export class TransactionTemplateContext<
               }) ?? [],
           };
         });
-        const assembledTrasaction = appendTransactionMessageInstructions(sanitizedInstructions, tx);
+        const assembledTrasaction = appendTransactionMessageInstructions(
+          sanitizedInstructions,
+          tx
+        );
 
         // set address lookup table
         const altAddresses = (

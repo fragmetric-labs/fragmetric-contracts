@@ -8,8 +8,11 @@ import {
   blockhash,
   createJsonRpcApi,
   createRpc,
+  Endian,
+  getAddressEncoder,
   getBase58Decoder,
   getBase58Encoder,
+  getU64Encoder,
   lamports,
   Lamports,
   RpcTransport,
@@ -62,6 +65,11 @@ function assertBase64Encoding(
 
 function createLiteSVMRPC(svm: LiteSVM): RuntimeRPC {
   const transactionsMap = new Map<Signature, Base64EncodedDataResponse>();
+  const slotHashesAddress = web3Compat.toPublicKey(
+    'SysvarS1otHashes111111111111111111111111111'
+  );
+  const slotHashesAccount = svm.getAccount(slotHashesAddress)!;
+  const slotHashesBuffer = new SlotHashesBuffer();
 
   const rpcMethods: RuntimeRPCMethods & RuntimeRPCOptionalMethods = {
     getAccountInfo(address, config) {
@@ -229,7 +237,8 @@ function createLiteSVMRPC(svm: LiteSVM): RuntimeRPC {
             })
             .flat(),
           logs: result.meta().logs(),
-          replacementBlockhash: undefined as unknown as TransactionBlockhashLifetime,
+          replacementBlockhash:
+            undefined as unknown as TransactionBlockhashLifetime,
           returnData: {
             programId: getBase58Decoder().decode(
               result.meta().returnData().programId()
@@ -318,7 +327,13 @@ function createLiteSVMRPC(svm: LiteSVM): RuntimeRPC {
       };
     },
     getSlot(config) {
-      return svm.getClock().slot;
+      const slot = svm.getClock().slot;
+
+      // implicitly memorize current slot in recent slot hashes to pass validation during ALT creation
+      slotHashesBuffer.push(slot, svm.latestBlockhash() as Address);
+      slotHashesBuffer.flush(slotHashesAccount.data);
+      svm.setAccount(slotHashesAddress, slotHashesAccount);
+      return slot;
     },
     getSignatureStatuses(signatures) {
       return {
@@ -354,4 +369,72 @@ function createLiteSVMRPC(svm: LiteSVM): RuntimeRPC {
       return rpcMethods[args.payload.method].apply(null, args.payload.params);
     },
   });
+}
+
+export class SlotHashesBuffer {
+  // private readonly codec = combineCodec(
+  //   getStructEncoder([
+  //     ['length', getU64Encoder({ endian: Endian.Little })],
+  //     [
+  //       'items',
+  //       getArrayEncoder(
+  //         getStructEncoder([
+  //           ['slot', getU64Encoder({ endian: Endian.Little })],
+  //           ['hash', getAddressEncoder()],
+  //         ]),
+  //         { size: 'remainder' }
+  //       ),
+  //     ],
+  //   ]),
+  //   getStructDecoder([
+  //     ['length', getU64Decoder({ endian: Endian.Little })],
+  //     [
+  //       'items',
+  //       getArrayDecoder(
+  //         getStructDecoder([
+  //           ['slot', getU64Decoder({ endian: Endian.Little })],
+  //           ['hash', getAddressDecoder()],
+  //         ]),
+  //         { size: 'remainder' }
+  //       ),
+  //     ],
+  //   ])
+  // );
+
+  private readonly u64leEncoder = getU64Encoder({ endian: Endian.Little });
+  private readonly addrEncoder = getAddressEncoder();
+
+  private readonly cap: number;
+  private head = 0;
+  private len = 0;
+  private readonly buf: ({ slot: bigint; hash: Address } | undefined)[];
+
+  constructor(cap = 100) {
+    if (cap > 512) {
+      throw new Error(`SlotHashesBuffer cap=${cap} > 512`);
+    }
+    this.cap = cap;
+    this.buf = new Array(cap);
+  }
+
+  push(slot: bigint, hash: Address): void {
+    this.buf[this.head] = { slot, hash };
+    this.head = (this.head + 1) % this.cap;
+    if (this.len < this.cap) this.len++;
+  }
+
+  flush(dst: Uint8Array): Uint8Array {
+    this.u64leEncoder.write(BigInt(this.len), dst, 0);
+
+    for (let i = 0; i < this.len; i++) {
+      const index = (this.head - 1 - i + this.cap) % this.cap;
+      const item = this.buf[index]!;
+      const base = 8 + i * 40;
+
+      this.u64leEncoder.write(item.slot, dst, base);
+      this.addrEncoder.write(item.hash, dst, base + 8);
+    }
+
+    return dst;
+  }
 }

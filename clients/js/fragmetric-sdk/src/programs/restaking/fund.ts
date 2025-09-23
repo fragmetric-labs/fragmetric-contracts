@@ -4,6 +4,7 @@ import * as token from '@solana-program/token';
 import * as token2022 from '@solana-program/token-2022';
 import {
   Account,
+  AccountMeta,
   AccountRole,
   Address,
   createNoopSigner,
@@ -12,7 +13,6 @@ import {
   getBytesEncoder,
   getProgramDerivedAddress,
   getU8Encoder,
-  AccountMeta,
   ReadonlyUint8Array,
 } from '@solana/kit';
 import * as v from 'valibot';
