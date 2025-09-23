@@ -26,13 +26,6 @@ pub struct UserFundService<'a, 'info> {
     current_timestamp: i64,
 }
 
-impl Drop for UserFundService<'_, '_> {
-    fn drop(&mut self) {
-        self.fund_account.exit(&crate::ID).unwrap();
-        self.user_fund_account.exit(&crate::ID).unwrap();
-    }
-}
-
 impl<'a, 'info> UserFundService<'a, 'info> {
     pub fn new(
         receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,

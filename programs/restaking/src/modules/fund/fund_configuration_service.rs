@@ -23,12 +23,6 @@ pub struct FundConfigurationService<'a, 'info> {
     fund_account: &'a mut AccountLoader<'info, FundAccount>,
 }
 
-impl Drop for FundConfigurationService<'_, '_> {
-    fn drop(&mut self) {
-        self.fund_account.exit(&crate::ID).unwrap();
-    }
-}
-
 impl<'a, 'info> FundConfigurationService<'a, 'info> {
     pub fn new(
         receipt_token_mint: &'a mut InterfaceAccount<'info, Mint>,

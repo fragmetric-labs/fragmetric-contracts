@@ -21,9 +21,7 @@ pub struct FundService<'a, 'info> {
 }
 
 impl Drop for FundService<'_, '_> {
-    fn drop(&mut self) {
-        self.fund_account.exit(&crate::ID).unwrap();
-    }
+    fn drop(&mut self) {}
 }
 
 impl<'a, 'info> FundService<'a, 'info> {

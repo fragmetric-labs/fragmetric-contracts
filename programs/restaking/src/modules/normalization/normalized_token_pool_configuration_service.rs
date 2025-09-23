@@ -13,12 +13,6 @@ pub struct NormalizedTokenPoolConfigurationService<'a, 'info> {
     normalized_token_program: &'a Program<'info, Token>,
 }
 
-impl Drop for NormalizedTokenPoolConfigurationService<'_, '_> {
-    fn drop(&mut self) {
-        self.normalized_token_pool_account.exit(&crate::ID).unwrap();
-    }
-}
-
 impl<'a, 'info> NormalizedTokenPoolConfigurationService<'a, 'info> {
     pub fn new(
         normalized_token_pool_account: &'a mut Account<'info, NormalizedTokenPoolAccount>,
