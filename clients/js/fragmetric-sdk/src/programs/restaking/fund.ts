@@ -12,7 +12,7 @@ import {
   getBytesEncoder,
   getProgramDerivedAddress,
   getU8Encoder,
-  IAccountMeta,
+  AccountMeta,
   ReadonlyUint8Array,
 } from '@solana/kit';
 import * as v from 'valibot';
@@ -529,7 +529,7 @@ export class RestakingFundAccountContext extends AccountContext<
               // prepare accounts according to the current state of operation.
               // - can add 58 accounts out of 64 with reserved 6 accounts.
               // - order doesn't matter, no need to put duplicate.
-              const requiredAccounts: Map<Address, IAccountMeta> = new Map();
+              const requiredAccounts: Map<Address, AccountMeta> = new Map();
 
               // add pricing sources
               for (const accountMeta of data.__pricingSources) {
@@ -561,7 +561,7 @@ export class RestakingFundAccountContext extends AccountContext<
               }
 
               for (const accountMeta of requiredAccounts.values()) {
-                (ix.accounts as IAccountMeta[]).push(accountMeta);
+                (ix.accounts as AccountMeta[]).push(accountMeta);
               }
 
               return ix;

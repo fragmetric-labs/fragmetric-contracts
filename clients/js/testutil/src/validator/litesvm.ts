@@ -45,7 +45,7 @@ export class LiteSVMValidator extends TestValidator<'litesvm'> {
     instanceNo: number,
     options: TestValidatorOptions<'litesvm'>
   ) {
-    const svm = new LiteSVM().withSysvars().withBuiltins().withSplPrograms();
+    const svm = new LiteSVM().withSysvars().withBuiltins().withDefaultPrograms();
 
     if (options.mock) {
       function resolvePath(p: string) {
@@ -195,7 +195,7 @@ export class LiteSVMValidator extends TestValidator<'litesvm'> {
           slot: clock.slot,
           hash: svm.latestBlockhash() as Address,
         });
-        slotHashes.items = slotHashes.items.slice(0, 100);
+        slotHashes.items = slotHashes.items.slice(0, 1000);
         slotHashes.length = BigInt(slotHashes.items.length);
         slotHashesAccount.data = slotHashesAccountCodec.encode(
           slotHashes

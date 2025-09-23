@@ -15,6 +15,7 @@ import {
   RpcTransport,
   Signature,
   SolanaRpcResponse,
+  TransactionBlockhashLifetime,
   TransactionError,
   TransactionVersion,
   UnixTimestamp,
@@ -228,7 +229,7 @@ function createLiteSVMRPC(svm: LiteSVM): RuntimeRPC {
             })
             .flat(),
           logs: result.meta().logs(),
-          replacementBlockhash: undefined,
+          replacementBlockhash: undefined as unknown as TransactionBlockhashLifetime,
           returnData: {
             programId: getBase58Decoder().decode(
               result.meta().returnData().programId()
