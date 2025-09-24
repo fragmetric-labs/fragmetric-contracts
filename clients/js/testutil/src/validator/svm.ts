@@ -154,6 +154,11 @@ export class SVMValidator extends TestValidator<'svm'> {
         const cmdString = `${cmd} ${args.join(' ')}`;
         logger(cmdString);
 
+        // create a local wallet if does not exits
+        child_process.execSync(
+          `cat ~/.config/solana/id.json >/dev/null 2>&1 || { mkdir -p ~/.config/solana && solana-keygen new --no-bip39-passphrase -o ~/.config/solana/id.json; }`
+        );
+
         const childProcess = child_process.spawn(cmd, args, {
           detached: false,
           stdio: ['ignore', 'pipe', 'pipe'],
