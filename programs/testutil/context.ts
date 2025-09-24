@@ -32,7 +32,7 @@ export async function createTestSuiteContext(config?: {
 
   const resolvedConfig = {
     slotsPerEpoch: 432000n,
-    ticksPerSlot: 64 / 32,
+    ticksPerSlot: 64 / 32, // x32 faster than default
     validator: validatorByEnvVar,
     debug: !!process.env.DEBUG,
     useDistSDK: !!process.env.CI,

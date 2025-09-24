@@ -18,7 +18,7 @@ env:
   ANCHOR_VERSION: v0.31.1
   NODE_VERSION: 20.19.0
   CI: true
-  DEBUG: true
+  #DEBUG: true
   RUNTIME: ${{(github.ref_name == 'main' || github.ref_name == 'dev' ||
     (github.event_name == 'push' && contains(github.event.head_commit.message, '[svm]')) ||
     (github.event_name == 'pull_request' && contains(github.event.pull_request.title, '[svm]'))) && 'svm' || 'litesvm' }}
