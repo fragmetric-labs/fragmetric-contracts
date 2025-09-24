@@ -321,7 +321,7 @@ export class SVMValidator extends TestValidator<'svm'> {
         clearTimeout(timeoutTimer);
 
         let retryOnSlowBalanceUpdate = 0;
-        while (retryOnSlowBalanceUpdate < 100) {
+        while (retryOnSlowBalanceUpdate < 5) {
           const currentLamports = (
             await this.rpc.getBalance(pubkey as Address).send()
           ).value;
