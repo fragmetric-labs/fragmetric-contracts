@@ -1,6 +1,6 @@
 {
   "name": "@fragmetric-labs/sdk",
-  "version": "2.6.3",
+  "version": "3.0.0",
   "description": "The Client SDK for Fragmetric Solana programs serves both end users and operational administrators.\nIt is designed for compatibility with web browsers and Node.js environments, offering support for web browser bundles (in ESM and UMD formats) as well as Node.js bundles (in ESM formats).",
   "repository": {
     "type": "git",
@@ -43,23 +43,24 @@
     "dev": "./src/cli/cli.executable.ts"
   },
   "dependencies": {
-    "@solana-program/address-lookup-table": "0.7.0",
-    "@solana-program/compute-budget": "0.7.0",
-    "@solana-program/system": "0.7.0",
-    "@solana-program/token": "0.5.1",
-    "@solana-program/token-2022": "0.4.1",
-    "@solana/compat": "2.1.1",
-    "@solana/kit": "2.1.1",
+    "@solana-program/address-lookup-table": "0.8.0",
+    "@solana-program/compute-budget": "0.9.0",
+    "@solana-program/system": "0.8.0",
+    "@solana-program/token": "0.6.0",
+    "@solana-program/token-2022": "0.5.0",
+    "@solana/codecs-numbers":  "3.0.3",
+    "@solana/compat": "3.0.3",
+    "@solana/kit": "3.0.3",
     "@solana/spl-token-metadata": "0.1.6",
-    "@solana/webcrypto-ed25519-polyfill": "2.1.1",
+    "@solana/webcrypto-ed25519-polyfill": "3.0.3",
     "chalk": "4.1.2",
     "consola": "3.4.2",
     "dataloader": "2.2.3",
-    "lru-cache": "11.1.0",
+    "lru-cache": "11.2.1",
     "rpc-websockets": "10.0.0",
     "strip-ansi": "6.0.1",
     "valibot": "1.1.0",
-    "ws": "8.18.2"
+    "ws": "8.18.3"
   },
   "optionalDependencies": {
     "@ledgerhq/hw-app-solana": "7.2.4",
@@ -74,20 +75,20 @@
     "@metaplex-foundation/mpl-token-metadata": "^3.4.0",
     "@metaplex-foundation/umi": "^1.1.1",
     "@metaplex-foundation/umi-bundle-defaults": "^1.1.1",
-    "@orca-so/whirlpools-client": "^1.0.5",
+    "@orca-so/whirlpools-client": "^1.0.7",
     "@rollup/plugin-alias": "^5.1.1",
-    "@rollup/plugin-commonjs": "^28.0.3",
+    "@rollup/plugin-commonjs": "^28.0.6",
     "@rollup/plugin-json": "^6.1.0",
     "@rollup/plugin-node-resolve": "^16.0.1",
     "@rollup/plugin-replace": "^6.0.2",
-    "@solana/web3.js": "^1.98.0",
-    "litesvm": "^0.2.0",
-    "rollup": "^4.29.1",
+    "@solana/web3.js": "1.98.4",
+    "litesvm": "^0.3.3",
+    "rollup": "^4.52.1",
     "rollup-plugin-delete": "^3.0.1",
     "rollup-plugin-esbuild": "^6.2.1",
     "rollup-plugin-polyfill-node": "^0.13.0",
-    "tsx": "^4.19.3",
-    "typescript": "^5.8.3",
-    "vitest": "^3.0.8"
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
   }
 }

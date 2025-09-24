@@ -3,8 +3,8 @@ import {
   getStructCodec,
   getU16Codec,
   getU8Codec,
-  type IInstruction,
-  type IInstructionWithData,
+  type Instruction,
+  type InstructionWithData,
   ReadonlyUint8Array,
 } from '@solana/kit';
 import * as polyfill from '@solana/webcrypto-ed25519-polyfill';
@@ -26,7 +26,7 @@ export async function getEd25519Instruction(input: {
   message: ReadonlyUint8Array;
   signature: ReadonlyUint8Array;
   instructionIndex?: number;
-}): Promise<IInstruction & IInstructionWithData<ReadonlyUint8Array>> {
+}): Promise<Instruction & InstructionWithData<ReadonlyUint8Array>> {
   const { publicKey, signature, message, instructionIndex = 0xffff } = input;
 
   const PUBKEY_OFFSET = 16;
@@ -78,7 +78,11 @@ export async function signMessageWithEd25519Keypair(
       await crypto.subtle.exportKey('raw', keypair.publicKey)
     ),
     signature: new Uint8Array(
-      await crypto.subtle.sign('Ed25519', keypair.privateKey, data)
+      await crypto.subtle.sign(
+        'Ed25519',
+        keypair.privateKey,
+        new Uint8Array(data).buffer
+      )
     ),
   };
 }

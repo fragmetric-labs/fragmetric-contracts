@@ -48,22 +48,12 @@ const codegenConfig: {
       javascript: true,
       visitors: [jitoProgramsVisitor],
     },
-    // 'jito-vault-client/src/generated': {
-    //   idlFilePath: './idls/jito-vault.json',
-    //   rust: false,
-    // },
-    // 'jito-restaking-client/src/generated': {
-    //   idlFilePath: './idls/jito-restaking.json',
-    //   rust: false,
-    // },
-    // 'marinade-client/src/generated': {
-    //   idlFilePath: './idls/marinade.json',
-    //   rust: false,
-    // },
-    // 'whirlpool-client/src/generated': {
-    //   idlFilePath: './idls/whirlpool.json',
-    //   rust: false,
-    // },
+    'fragmetric-sdk/src/generated/jito_restaking': {
+      idlFilePath: './idls/jito-restaking.json',
+      rust: false,
+      javascript: true,
+      visitors: [jitoProgramsVisitor],
+    },
   },
 };
 

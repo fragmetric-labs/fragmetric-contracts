@@ -1,8 +1,9 @@
 import {
-  CompilableTransactionMessage,
   GetTransactionApi,
   ReadonlyUint8Array,
   Signature,
+  TransactionMessage,
+  TransactionMessageWithFeePayer,
 } from '@solana/kit';
 import { ProgramDerivedContext } from '../program';
 import { TransactionTemplateContext } from './template';
@@ -16,7 +17,7 @@ const narrowedGetTransactionAPI = (api: GetTransactionApi) =>
 export type ExecutedTransactionResult = Exclude<
   ReturnType<typeof narrowedGetTransactionAPI>,
   'transaction'
-> & { transaction: CompilableTransactionMessage };
+> & { transaction: TransactionMessage & TransactionMessageWithFeePayer };
 
 export type ExecutedTransactionEvents<EVENTS extends Record<string, any>> =
   Partial<EVENTS> & { unknown: ReadonlyUint8Array[] };

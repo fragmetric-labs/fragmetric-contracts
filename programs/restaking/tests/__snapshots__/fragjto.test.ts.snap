@@ -825,8 +825,10 @@ exports[`restaking.fragJTO test > restaking.fragJTO initializationTasks snapshot
     "Program ComputeBudget111111111111111111111111111111 invoke [1]",
     "Program ComputeBudget111111111111111111111111111111 success",
     "Program AddressLookupTab1e1111111111111111111111111 invoke [1]",
+    "Program log: Instruction: ExtendLookupTable",
     "Program 11111111111111111111111111111111 invoke [2]",
     "Program 11111111111111111111111111111111 success",
+    "MASKED(/^Program \\w{32,44} consumed \\d+ of \\d+ compute units$/)",
     "Program AddressLookupTab1e1111111111111111111111111 success",
   ],
 ]

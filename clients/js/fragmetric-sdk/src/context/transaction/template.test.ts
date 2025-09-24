@@ -45,7 +45,7 @@ describe('can parse transaction result and events', async () => {
     'frag9zfFME5u1SNhUYGa4cXLzMKgZXF3xwZ2Y1KCYTQ'
   );
 
-  const svm = new LiteSVM().withBuiltins().withSysvars().withSplPrograms();
+  const svm = new LiteSVM().withBuiltins().withSysvars().withDefaultPrograms();
 
   test('can sign transaction with default signers', async () => {
     const program = ProgramContext.connect({
@@ -202,7 +202,7 @@ describe('can parse transaction result and events', async () => {
 });
 
 describe('default signer works', async () => {
-  const svm = new LiteSVM().withBuiltins().withSysvars().withSplPrograms();
+  const svm = new LiteSVM().withBuiltins().withSysvars().withDefaultPrograms();
 
   test('can sign transaction with default signers', async () => {
     const program = ProgramContext.connect(
@@ -249,7 +249,7 @@ describe.each([
     'litesvm',
     ProgramContext.connect({
       type: 'litesvm',
-      svm: new LiteSVM().withBuiltins().withSysvars().withSplPrograms(),
+      svm: new LiteSVM().withBuiltins().withSysvars().withDefaultPrograms(),
     }),
   ],
   ['devnet', ProgramContext.devnet(process.env.SOLANA_RPC_DEVNET)],
@@ -425,7 +425,10 @@ describe.each([
     ).rejects.toThrowError('simulation failed');
     await expect(
       program.runtime.rpc
-        .getTransaction(sig3, { maxSupportedTransactionVersion: 0 })
+        .getTransaction(sig3, {
+          maxSupportedTransactionVersion: 0,
+          encoding: 'base64',
+        })
         .send()
     ).resolves.toMatchObject({
       meta: {

@@ -10,7 +10,7 @@ import { TransactionTemplateContext } from './template';
 describe('various signer impl', async () => {
   const program = ProgramContext.connect({
     type: 'litesvm',
-    svm: new LiteSVM().withBuiltins().withSysvars().withSplPrograms(),
+    svm: new LiteSVM().withBuiltins().withSysvars().withDefaultPrograms(),
   });
 
   const ledgerSignerResolver = createLedgerSignerResolver();

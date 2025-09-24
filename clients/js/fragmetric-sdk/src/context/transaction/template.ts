@@ -3,6 +3,7 @@ import {
   Address,
   addSignersToTransactionMessage,
   appendTransactionMessageInstructions,
+  assertIsTransactionWithinSizeLimit,
   Blockhash,
   Commitment,
   compressTransactionMessageUsingAddressLookupTables,
@@ -17,9 +18,9 @@ import {
   getProgramDerivedAddress,
   getSignatureFromTransaction,
   getTransactionDecoder,
-  IInstruction,
-  isDurableNonceTransaction,
+  Instruction,
   isSolanaError,
+  isTransactionMessageWithBlockhashLifetime,
   isTransactionSendingSigner,
   isTransactionSigner,
   Nonce,
@@ -35,6 +36,7 @@ import {
   Slot,
   SOLANA_ERROR__INVALID_NONCE,
   SolanaError,
+  TransactionMessageWithSigners,
   TransactionSendingSigner,
   TransactionSigner,
 } from '@solana/kit';
@@ -57,7 +59,7 @@ export type InstructionsResolver<P extends ProgramDerivedContext<any>, ARGS> = (
   parent: P,
   args: ARGS,
   overrides: TransactionTemplateOverrides<P, ARGS>
-) => Promise<(IInstruction | null)[]>;
+) => Promise<(Instruction | null)[]>;
 
 export type TransactionTemplateExecutionHook<
   P extends ProgramDerivedContext<any>,
@@ -117,7 +119,7 @@ export type TransactionTemplateConfig<
 
   addressLookupTables?: (string | AccountAddressResolver<P>)[];
 
-  instructions?: (null | IInstruction | InstructionsResolver<P, ARGS>)[];
+  instructions?: (null | Instruction | InstructionsResolver<P, ARGS>)[];
 
   signers?: (TransactionSigner | TransactionSignerResolver)[];
 
@@ -402,13 +404,14 @@ export class TransactionTemplateContext<
     const { transaction } = await this.__assemble(args, overrides);
 
     try {
-      if (isDurableNonceTransaction(transaction)) {
+      if (!isTransactionMessageWithBlockhashLifetime(transaction)) {
         const serializedTransaction =
           await signTransactionMessageWithSigners(transaction);
         signature = getSignatureFromTransaction(serializedTransaction);
 
         if (this.runtime.sendAndConfirmDurableNonceTransaction) {
           try {
+            assertIsTransactionWithinSizeLimit(serializedTransaction);
             await this.runtime.sendAndConfirmDurableNonceTransaction(
               serializedTransaction,
               {
@@ -455,6 +458,7 @@ export class TransactionTemplateContext<
         signature = getSignatureFromTransaction(serializedTransaction);
 
         if (this.runtime.sendAndConfirmTransaction) {
+          assertIsTransactionWithinSizeLimit(serializedTransaction);
           await this.runtime.sendAndConfirmTransaction(serializedTransaction, {
             commitment: this.runtime.options.transaction.confirmationCommitment,
             // encoding: 'base64',
@@ -628,7 +632,7 @@ export class TransactionTemplateContext<
   async assemble(
     args: ARGS_INPUT,
     overrides?: TransactionTemplateOverrides<P, ARGS>
-  ) {
+  ): Promise<TransactionMessageWithSigners> {
     return this.__assemble(args, overrides).then((res) => res.transaction);
   }
 
@@ -717,7 +721,10 @@ export class TransactionTemplateContext<
               }) ?? [],
           };
         });
-        tx = appendTransactionMessageInstructions(sanitizedInstructions, tx);
+        const assembledTransaction = appendTransactionMessageInstructions(
+          sanitizedInstructions,
+          tx
+        );
 
         // set address lookup table
         const altAddresses = (
@@ -735,16 +742,16 @@ export class TransactionTemplateContext<
           .flat()
           .filter((address) => !!address) as string[];
 
-        if (altAddresses.length > 0) {
-          const addressesMap =
-            await this.runtime.fetchMultipleAddressLookupTables(altAddresses);
-          tx = compressTransactionMessageUsingAddressLookupTables(
-            tx,
-            addressesMap
-          );
+        if (altAddresses.length == 0) {
+          return assembledTransaction;
         }
 
-        return tx;
+        const addressesMap =
+          await this.runtime.fetchMultipleAddressLookupTables(altAddresses);
+        return compressTransactionMessageUsingAddressLookupTables(
+          assembledTransaction,
+          addressesMap
+        );
       },
 
       // set fee payer
