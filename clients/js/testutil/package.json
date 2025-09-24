@@ -13,11 +13,11 @@
     }
   },
   "devDependencies": {
-    "@solana-program/token": "0.5.1",
-    "@solana/kit": "2.1.1",
-    "@solana/web3.js": "^1.98.0",
-    "litesvm": "^0.2.0",
-    "vitest": "^3.0.9",
-    "ws": "^8.18.1"
+    "@solana-program/token": "0.6.0",
+    "@solana/kit": "3.0.3",
+    "@solana/web3.js": "1.98.4",
+    "litesvm": "0.3.3",
+    "vitest": "^3.1.1",
+    "ws": "^8.18.3"
   }
 }

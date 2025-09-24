@@ -7,7 +7,7 @@ import {
   AccountRole,
   Address,
   createNoopSigner,
-  IInstruction,
+  Instruction,
 } from '@solana/kit';
 import * as v from 'valibot';
 import {
@@ -51,7 +51,7 @@ export function createMintTransactionTemplate<
             umi.signerIdentity(umi.createNoopSigner(payer as any))
           );
 
-          const ixs: IInstruction[] = mpl
+          const ixs: Instruction[] = mpl
             .createV1(umiInstance, {
               mint: umi.createNoopSigner(args.mint as any),
               authority: umi.createNoopSigner(admin as any),

@@ -5,6 +5,7 @@ import {
   AccountInfoWithPubkey,
   Address,
   appendTransactionMessageInstructions,
+  assertIsTransactionMessageWithinSizeLimit,
   Base64EncodedBytes,
   Blockhash,
   createKeyPairSignerFromBytes,
@@ -353,7 +354,11 @@ export abstract class TestValidator<T extends TestValidatorType> {
             );
           }
         },
-        async (tx) => signTransactionMessageWithSigners(await tx)
+        async (tx) => {
+          const sizedTx = await tx;
+          assertIsTransactionMessageWithinSizeLimit(sizedTx);
+          return signTransactionMessageWithSigners(sizedTx);
+        }
       );
     };
 

@@ -2,18 +2,8 @@ import {
   AccountInfoBase,
   AccountInfoWithBase64EncodedData,
   AccountInfoWithPubkey,
-  Address,
   address,
   Base64EncodedDataResponse,
-  combineCodec,
-  getAddressDecoder,
-  getAddressEncoder,
-  getArrayDecoder,
-  getArrayEncoder,
-  getStructDecoder,
-  getStructEncoder,
-  getU64Decoder,
-  getU64Encoder,
   lamports,
 } from '@solana/kit';
 import * as web3 from '@solana/web3.js';
@@ -45,7 +35,10 @@ export class LiteSVMValidator extends TestValidator<'litesvm'> {
     instanceNo: number,
     options: TestValidatorOptions<'litesvm'>
   ) {
-    const svm = new LiteSVM().withSysvars().withBuiltins().withSplPrograms();
+    const svm = new LiteSVM()
+      .withSysvars()
+      .withBuiltins()
+      .withDefaultPrograms();
 
     if (options.mock) {
       function resolvePath(p: string) {
@@ -144,63 +137,16 @@ export class LiteSVMValidator extends TestValidator<'litesvm'> {
       schedule.leaderScheduleSlotOffset = 0n;
       svm.setEpochSchedule(schedule);
     }
-    // here, it uses a timer to incompletely simulate behavior of clock and slot hashes.
-    const slotHashesAccountCodec = combineCodec(
-      getStructEncoder([
-        ['length', getU64Encoder()],
-        [
-          'items',
-          getArrayEncoder(
-            getStructEncoder([
-              ['slot', getU64Encoder()],
-              ['hash', getAddressEncoder()],
-            ]),
-            { size: 'remainder' }
-          ),
-        ],
-      ]),
-      getStructDecoder([
-        ['length', getU64Decoder()],
-        [
-          'items',
-          getArrayDecoder(
-            getStructDecoder([
-              ['slot', getU64Decoder()],
-              ['hash', getAddressDecoder()],
-            ]),
-            { size: 'remainder' }
-          ),
-        ],
-      ])
-    );
 
+    // advance clock and epoch
+    const schedule = svm.getEpochSchedule();
     const clockTimeout = setInterval(
       () => {
-        // advance clock and epoch
         const clock = svm.getClock();
-        const schedule = svm.getEpochSchedule();
         clock.slot++;
         clock.epoch = clock.slot / schedule.slotsPerEpoch;
         clock.unixTimestamp = BigInt(Math.floor(Date.now() / 1000));
         svm.setClock(clock);
-
-        // store new slot hash
-        const slotHashesAccount = svm.getAccount(
-          web3.SYSVAR_SLOT_HASHES_PUBKEY
-        )!;
-        const slotHashes = slotHashesAccountCodec.decode(
-          slotHashesAccount.data
-        );
-        slotHashes.items.unshift({
-          slot: clock.slot,
-          hash: svm.latestBlockhash() as Address,
-        });
-        slotHashes.items = slotHashes.items.slice(0, 100);
-        slotHashes.length = BigInt(slotHashes.items.length);
-        slotHashesAccount.data = slotHashesAccountCodec.encode(
-          slotHashes
-        ) as any;
-        svm.setAccount(web3.SYSVAR_SLOT_HASHES_PUBKEY, slotHashesAccount);
       },
       (400 / 64) * options.ticksPerSlot
     );
