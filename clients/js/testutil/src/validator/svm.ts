@@ -69,8 +69,9 @@ export class SVMValidator extends TestValidator<'svm'> {
         const cmd = 'solana-test-validator';
         const argsBuilder = [
           ['--ledger', ledgerPath],
-          ['--rpc-port', (18900 + (instanceNo - 1) * 3).toString()],
-          ['--faucet-port', (18900 + (instanceNo - 1) * 3 + 2).toString()],
+          ['--rpc-port', (18900 + (instanceNo - 1) * 4).toString()],
+          ['--faucet-port', (18900 + (instanceNo - 1) * 4 + 2).toString()],
+          ['--gossip-port', (18900 + (instanceNo - 1) * 4 + 3).toString()],
         ].concat(
           !options.warpSlot
             ? [
@@ -176,7 +177,7 @@ export class SVMValidator extends TestValidator<'svm'> {
         stdout = childProcess.stdout.on('data', async (data) => {
           const logs = data.toString().trim().split('\n');
           for (const log of logs) {
-            if (log.startsWith('Error: ')) {
+            if (log.startsWith('Error') || log.startsWith('Notice')) {
               logger(log);
               stderr.destroy();
               stdout?.destroy();
@@ -310,6 +311,7 @@ export class SVMValidator extends TestValidator<'svm'> {
             abortController.abort();
             throw res.value.err;
           }
+          break;
         }
         clearTimeout(timeoutTimer);
 

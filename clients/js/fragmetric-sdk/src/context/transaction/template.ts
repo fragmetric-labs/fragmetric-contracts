@@ -721,7 +721,7 @@ export class TransactionTemplateContext<
               }) ?? [],
           };
         });
-        const assembledTrasaction = appendTransactionMessageInstructions(
+        const assembledTransaction = appendTransactionMessageInstructions(
           sanitizedInstructions,
           tx
         );
@@ -743,13 +743,13 @@ export class TransactionTemplateContext<
           .filter((address) => !!address) as string[];
 
         if (altAddresses.length == 0) {
-          return assembledTrasaction;
+          return assembledTransaction;
         }
 
         const addressesMap =
           await this.runtime.fetchMultipleAddressLookupTables(altAddresses);
         return compressTransactionMessageUsingAddressLookupTables(
-          assembledTrasaction,
+          assembledTransaction,
           addressesMap
         );
       },
