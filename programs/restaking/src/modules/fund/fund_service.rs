@@ -550,7 +550,7 @@ impl<'a, 'info> FundService<'a, 'info> {
         Ok((num_withdrawal_batches, accounts))
     }
 
-    /// returns [processed_receipt_token_amount, processed_batch_accounts, required_asset_amount, reserved_asset_user_amount, deducted_asset_fee_amount, offsetted_asset_receivables]
+    /// returns [processed_receipt_token_amount, processed_batch_accounts, required_asset_amount, reserved_asset_user_amount, deducted_asset_fee_amount, offset_asset_receivables]
     pub(super) fn process_withdrawal_batches(
         &mut self,
         operator: &Signer<'info>,
@@ -760,7 +760,7 @@ impl<'a, 'info> FundService<'a, 'info> {
         let receipt_token_amount_processed = receipt_token_amount_processing;
         let asset_user_amount_reserved = asset_user_amount_processing;
         let asset_fee_amount_deducted = asset_fee_amount_processing;
-        let mut offsetted_asset_receivables = Vec::<(Option<Pubkey>, u64)>::new();
+        let mut offset_asset_receivables = Vec::<(Option<Pubkey>, u64)>::new();
 
         let mut processed_batch_accounts = vec![];
         if processing_batch_count > 0 {
@@ -876,27 +876,30 @@ impl<'a, 'info> FundService<'a, 'info> {
             require_gte!(processing_batch_count as u64, asset_user_amount_processing);
 
             // pay the treasury debt now
-            let (transferred_asset_amount, offsetted_asset_amount, offsetted_asset_receivables2) =
-                self.pay_treasury_debt_with_receivables(
-                    system_program,
-                    // for SOL
-                    fund_reserve_account,
-                    fund_treasury_account,
-                    // for supported token
-                    &supported_token_mint,
-                    &supported_token_program,
-                    &fund_supported_token_reserve_account,
-                    &fund_supported_token_treasury_account,
-                    asset_fee_amount_processing,
-                    total_operation_receivable_amount_as_asset,
-                    pricing_service,
-                )?;
+            let (
+                transferred_asset_amount,
+                offset_asset_receivable_amount,
+                offset_asset_receivables2,
+            ) = self.pay_treasury_debt_with_receivables(
+                system_program,
+                // for SOL
+                fund_reserve_account,
+                fund_treasury_account,
+                // for supported token
+                &supported_token_mint,
+                &supported_token_program,
+                &fund_supported_token_reserve_account,
+                &fund_supported_token_treasury_account,
+                asset_fee_amount_processing,
+                total_operation_receivable_amount_as_asset,
+                pricing_service,
+            )?;
 
             require_eq!(
-                transferred_asset_amount + offsetted_asset_amount,
+                transferred_asset_amount + offset_asset_receivable_amount,
                 asset_fee_amount_processing
             );
-            offsetted_asset_receivables.extend(offsetted_asset_receivables2);
+            offset_asset_receivables.extend(offset_asset_receivables2);
             asset_fee_amount_processing = 0;
         }
 
@@ -925,13 +928,13 @@ impl<'a, 'info> FundService<'a, 'info> {
             asset_amount_required,
             asset_user_amount_reserved,
             asset_fee_amount_deducted,
-            offsetted_asset_receivables,
+            offset_asset_receivables,
         ))
     }
 
     /// at first, it adds given [asset_amount] to the operation reserved,
     /// then offset receivables as much as possible, then transfer remaining assets to the treasury account
-    /// returns [transferred_asset_revenue_amount, offsetted_asset_amount, offsetted_asset_receivables]
+    /// returns [transferred_asset_revenue_amount, offset_asset_receivable_amount, offset_asset_receivables]
     pub(super) fn offset_receivables(
         &mut self,
         system_program: &Program<'info, System>,
@@ -985,30 +988,33 @@ impl<'a, 'info> FundService<'a, 'info> {
         asset.operation_reserved_amount += asset_amount;
         drop(fund_account);
 
-        let (transferred_asset_revenue_amount, offsetted_asset_amount, offsetted_asset_receivables) =
-            self.pay_treasury_debt_with_receivables(
-                system_program,
-                // for SOL
-                fund_reserve_account,
-                fund_treasury_account,
-                // for supported token
-                &supported_token_mint,
-                &supported_token_program,
-                &fund_supported_token_reserve_account,
-                &fund_supported_token_treasury_account,
-                asset_amount,
-                total_operation_receivable_amount_as_asset,
-                pricing_service,
-            )?;
+        let (
+            transferred_asset_revenue_amount,
+            offset_asset_receivable_amount,
+            offset_asset_receivables,
+        ) = self.pay_treasury_debt_with_receivables(
+            system_program,
+            // for SOL
+            fund_reserve_account,
+            fund_treasury_account,
+            // for supported token
+            &supported_token_mint,
+            &supported_token_program,
+            &fund_supported_token_reserve_account,
+            &fund_supported_token_treasury_account,
+            asset_amount,
+            total_operation_receivable_amount_as_asset,
+            pricing_service,
+        )?;
 
         Ok((
             transferred_asset_revenue_amount,
-            offsetted_asset_amount,
-            offsetted_asset_receivables,
+            offset_asset_receivable_amount,
+            offset_asset_receivables,
         ))
     }
 
-    /// returns [transferred_asset_revenue_amount, offsetted_asset_amount, offsetted_asset_receivables]
+    /// returns [transferred_asset_revenue_amount, offset_asset_receivable_amount, offset_asset_receivables]
     fn pay_treasury_debt_with_receivables(
         &mut self,
         system_program: &Program<'info, System>,
@@ -1037,7 +1043,7 @@ impl<'a, 'info> FundService<'a, 'info> {
         let asset = fund_account.get_asset_state_mut(supported_token_mint_key)?;
 
         // pay with receivable of current asset first.
-        let mut offsetted_asset_receivables = Vec::<(Option<Pubkey>, u64)>::new();
+        let mut offset_asset_receivables = Vec::<(Option<Pubkey>, u64)>::new();
         let receivable_amount_processing_for_current_asset = asset
             .operation_receivable_amount
             .min(asset_receivable_amount_processing);
@@ -1045,7 +1051,7 @@ impl<'a, 'info> FundService<'a, 'info> {
         asset_debt_amount_processing -= receivable_amount_processing_for_current_asset;
         asset_receivable_amount_processing -= receivable_amount_processing_for_current_asset;
         if receivable_amount_processing_for_current_asset > 0 {
-            offsetted_asset_receivables.push((
+            offset_asset_receivables.push((
                 asset.get_token_mint_and_program().unzip().0,
                 receivable_amount_processing_for_current_asset,
             ));
@@ -1094,7 +1100,7 @@ impl<'a, 'info> FundService<'a, 'info> {
                         receivable_amount_processing_as_other_asset_for_other_asset;
                     receivable_amount_processing_as_sol -=
                         receivable_amount_processing_as_sol_for_other_asset;
-                    offsetted_asset_receivables.push((
+                    offset_asset_receivables.push((
                         other_asset.get_token_mint_and_program().unzip().0,
                         receivable_amount_processing_as_other_asset_for_other_asset,
                     ));
@@ -1175,7 +1181,7 @@ impl<'a, 'info> FundService<'a, 'info> {
         Ok((
             transferred_asset_amount,
             asset_debt_amount - transferred_asset_amount,
-            offsetted_asset_receivables,
+            offset_asset_receivables,
         ))
     }
 
@@ -1458,11 +1464,12 @@ impl<'a, 'info> FundService<'a, 'info> {
         }
 
         // transfer operator asset to the fund
-        let (deposited_amount, offsetted_receivable_amount) = self
-            .fund_account
-            .load_mut()?
-            .donate(supported_token_mint_key, asset_amount, offset_receivable)?;
-        let donated_amount = deposited_amount + offsetted_receivable_amount;
+        let (deposited_amount, offset_receivable_amount) = self.fund_account.load_mut()?.donate(
+            supported_token_mint_key,
+            asset_amount,
+            offset_receivable,
+        )?;
+        let donated_amount = deposited_amount + offset_receivable_amount;
         assert_eq!(asset_amount, donated_amount);
 
         match supported_token_mint {
@@ -1507,7 +1514,7 @@ impl<'a, 'info> FundService<'a, 'info> {
             supported_token_mint: supported_token_mint_key,
             donated_amount,
             deposited_amount,
-            offsetted_receivable_amount,
+            offset_receivable_amount,
         })
     }
 }

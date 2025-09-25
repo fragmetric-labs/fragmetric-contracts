@@ -295,7 +295,7 @@ impl<'info> SolvBTCVaultService<'info> {
         let total_unrestaking_vault_receipt_token_amount = self
             .vault_account
             .load()?
-            .get_vrt_withdrawal_incompleted_amount();
+            .get_vrt_withdrawal_incomplete_amount();
 
         let expected_supported_token_amount = if enqueued_vault_receipt_token_amount > 0 {
             self.vault_account
@@ -362,7 +362,7 @@ impl<'info> SolvBTCVaultService<'info> {
         let expected_supported_token_amount =
             vault.get_vst_total_estimated_amount_from_completed_withdrawal_requests();
         let total_unrestaking_vault_receipt_token_amount =
-            vault.get_vrt_withdrawal_incompleted_amount();
+            vault.get_vrt_withdrawal_incomplete_amount();
         let deducted_supported_token_fee_amount = vault.get_vst_deducted_fee_amount();
         let claimed_supported_token_amount = vault.get_vst_total_claimable_amount();
 

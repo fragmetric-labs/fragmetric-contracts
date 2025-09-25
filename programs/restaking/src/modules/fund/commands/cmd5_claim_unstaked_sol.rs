@@ -80,9 +80,9 @@ pub struct ClaimUnstakedSOLCommandResult {
     pub claimed_sol_amount: u64,
     pub total_unstaking_sol_amount: u64,
     pub transferred_sol_revenue_amount: u64,
-    pub offsetted_sol_receivable_amount: u64,
+    pub offset_sol_receivable_amount: u64,
     #[max_len(FUND_ACCOUNT_MAX_SUPPORTED_TOKENS)]
-    pub offsetted_asset_receivables: Vec<ClaimUnstakedSOLCommandResultAssetReceivable>,
+    pub offset_asset_receivables: Vec<ClaimUnstakedSOLCommandResultAssetReceivable>,
     pub operation_reserved_sol_amount: u64,
     pub operation_receivable_sol_amount: u64,
 }
@@ -516,8 +516,8 @@ impl ClaimUnstakedSOLCommand {
 
             let (
                 transferred_sol_revenue_amount,
-                offsetted_sol_receivable_amount,
-                offsetted_asset_receivables,
+                offset_sol_receivable_amount,
+                offset_asset_receivables,
             ) = fund_service.offset_receivables(
                 ctx.system_program,
                 fund_reserve_account,
@@ -550,8 +550,8 @@ impl ClaimUnstakedSOLCommand {
                     claimed_sol_amount,
                     total_unstaking_sol_amount: supported_token.pending_unstaking_amount_as_sol,
                     transferred_sol_revenue_amount,
-                    offsetted_sol_receivable_amount,
-                    offsetted_asset_receivables: offsetted_asset_receivables
+                    offset_sol_receivable_amount,
+                    offset_asset_receivables: offset_asset_receivables
                         .into_iter()
                         .map(|(asset_token_mint, asset_amount)| {
                             ClaimUnstakedSOLCommandResultAssetReceivable {

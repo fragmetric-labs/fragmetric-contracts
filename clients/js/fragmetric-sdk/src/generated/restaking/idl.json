@@ -12078,7 +12078,7 @@
     {
       "code": 6064,
       "name": "FundOperationUnauthorizedCommandError",
-      "msg": "fund: unauhorized operation command"
+      "msg": "fund: unauthorized operation command"
     },
     {
       "code": 6065,
@@ -12538,11 +12538,11 @@
             "type": "u64"
           },
           {
-            "name": "offsetted_supported_token_receivable_amount",
+            "name": "offset_supported_token_receivable_amount",
             "type": "u64"
           },
           {
-            "name": "offsetted_asset_receivables",
+            "name": "offset_asset_receivables",
             "type": {
               "vec": {
                 "defined": {
@@ -12647,11 +12647,11 @@
             "type": "u64"
           },
           {
-            "name": "offsetted_sol_receivable_amount",
+            "name": "offset_sol_receivable_amount",
             "type": "u64"
           },
           {
-            "name": "offsetted_asset_receivables",
+            "name": "offset_asset_receivables",
             "type": {
               "vec": {
                 "defined": {
@@ -14808,7 +14808,7 @@
             "type": "u64"
           },
           {
-            "name": "offsetted_receivable_amount",
+            "name": "offset_receivable_amount",
             "type": "u64"
           }
         ]
@@ -14962,7 +14962,7 @@
             "type": "u64"
           },
           {
-            "name": "offsetted_asset_receivables",
+            "name": "offset_asset_receivables",
             "type": {
               "vec": {
                 "defined": {

@@ -955,7 +955,7 @@ describe('restaking.fragX unit test', async () => {
                   "fields": [
                     {
                       "claimedSolAmount": 100034339172n,
-                      "offsettedAssetReceivables": [
+                      "offsetAssetReceivables": [
                         {
                           "assetAmount": 100034339172n,
                           "assetTokenMint": {
@@ -963,7 +963,7 @@ describe('restaking.fragX unit test', async () => {
                           },
                         },
                       ],
-                      "offsettedSolReceivableAmount": 100034339172n,
+                      "offsetSolReceivableAmount": 100034339172n,
                       "operationReceivableSolAmount": 100134473n,
                       "operationReservedSolAmount": 100034339172n,
                       "tokenMint": "jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v",
@@ -1025,7 +1025,7 @@ describe('restaking.fragX unit test', async () => {
                         "__option": "None",
                       },
                       "deductedAssetFeeAmount": 200268947n,
-                      "offsettedAssetReceivables": [
+                      "offsetAssetReceivables": [
                         {
                           "assetAmount": 100134473n,
                           "assetTokenMint": {

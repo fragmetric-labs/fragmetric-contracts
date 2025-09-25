@@ -58,7 +58,7 @@ export type OperatorDonatedToFund = {
   supportedTokenMint: Option<Address>;
   donatedAmount: bigint;
   depositedAmount: bigint;
-  offsettedReceivableAmount: bigint;
+  offsetReceivableAmount: bigint;
 };
 
 export type OperatorDonatedToFundArgs = {
@@ -68,7 +68,7 @@ export type OperatorDonatedToFundArgs = {
   supportedTokenMint: OptionOrNullable<Address>;
   donatedAmount: number | bigint;
   depositedAmount: number | bigint;
-  offsettedReceivableAmount: number | bigint;
+  offsetReceivableAmount: number | bigint;
 };
 
 export function getOperatorDonatedToFundEncoder(): Encoder<OperatorDonatedToFundArgs> {
@@ -80,7 +80,7 @@ export function getOperatorDonatedToFundEncoder(): Encoder<OperatorDonatedToFund
       ['supportedTokenMint', getOptionEncoder(getAddressEncoder())],
       ['donatedAmount', getU64Encoder()],
       ['depositedAmount', getU64Encoder()],
-      ['offsettedReceivableAmount', getU64Encoder()],
+      ['offsetReceivableAmount', getU64Encoder()],
     ]),
     (value) => ({
       ...value,
@@ -98,7 +98,7 @@ export function getOperatorDonatedToFundDecoder(): Decoder<OperatorDonatedToFund
     ['supportedTokenMint', getOptionDecoder(getAddressDecoder())],
     ['donatedAmount', getU64Decoder()],
     ['depositedAmount', getU64Decoder()],
-    ['offsettedReceivableAmount', getU64Decoder()],
+    ['offsetReceivableAmount', getU64Decoder()],
   ]);
 }
 

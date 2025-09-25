@@ -142,7 +142,7 @@ export const RESTAKING_ERROR__FUND_EXCEEDED_MAX_RESTAKING_VAULT_DELEGATIONS_ERRO
 export const RESTAKING_ERROR__FUND_RESTAKING_VAULT_COMPOUNDING_REWARD_TOKEN_ALREADY_REGISTERED_ERROR = 0x17ae; // 6062
 /** FundExceededMaxRestakingVaultCompoundingRewardTokensError: fund: exceeded max restaking vault compounding reward tokens */
 export const RESTAKING_ERROR__FUND_EXCEEDED_MAX_RESTAKING_VAULT_COMPOUNDING_REWARD_TOKENS_ERROR = 0x17af; // 6063
-/** FundOperationUnauthorizedCommandError: fund: unauhorized operation command */
+/** FundOperationUnauthorizedCommandError: fund: unauthorized operation command */
 export const RESTAKING_ERROR__FUND_OPERATION_UNAUTHORIZED_COMMAND_ERROR = 0x17b0; // 6064
 /** FundOperationCommandAccountComputationException: fund: failed to compute required accounts for the operation command */
 export const RESTAKING_ERROR__FUND_OPERATION_COMMAND_ACCOUNT_COMPUTATION_EXCEPTION = 0x17b1; // 6065
@@ -344,7 +344,7 @@ if (process.env.NODE_ENV !== 'production') {
     [RESTAKING_ERROR__FUND_OPERATION_COMMAND_ACCOUNT_COMPUTATION_EXCEPTION]: `fund: failed to compute required accounts for the operation command`,
     [RESTAKING_ERROR__FUND_OPERATION_COMMAND_EXECUTION_FAILED_EXCEPTION]: `fund: failed to execute the operation command`,
     [RESTAKING_ERROR__FUND_OPERATION_DISABLED_ERROR]: `fund: operation is disabled`,
-    [RESTAKING_ERROR__FUND_OPERATION_UNAUTHORIZED_COMMAND_ERROR]: `fund: unauhorized operation command`,
+    [RESTAKING_ERROR__FUND_OPERATION_UNAUTHORIZED_COMMAND_ERROR]: `fund: unauthorized operation command`,
     [RESTAKING_ERROR__FUND_RESTAKING_NOT_SUPPORTED_VAULT_ERROR]: `fund: not supported restaking vault`,
     [RESTAKING_ERROR__FUND_RESTAKING_VAULT_ALREADY_REGISTERED_ERROR]: `fund: restaking vault already registered`,
     [RESTAKING_ERROR__FUND_RESTAKING_VAULT_COMPOUNDING_REWARD_TOKEN_ALREADY_REGISTERED_ERROR]: `fund: restaking vault compounding reward token already registered`,
