@@ -871,7 +871,7 @@ impl FundAccount {
         Ok(vault_receipt_token_amount)
     }
 
-    /// returns [deposited_amount, offsetted_receivable_amount]
+    /// returns [deposited_amount, offset_receivable_amount]
     pub(super) fn donate(
         &mut self,
         supported_token_mint: Option<Pubkey>,

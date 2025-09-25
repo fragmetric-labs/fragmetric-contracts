@@ -262,7 +262,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
             from_sol_account.key,
             &to_pool_token_account.key(),
             manager_fee_account.key,
-            &to_pool_token_account.key(), // referer pool token account
+            &to_pool_token_account.key(), // referrer pool token account
             &self.pool_token_mint.key(),
             self.pool_token_program.key,
             sol_amount,

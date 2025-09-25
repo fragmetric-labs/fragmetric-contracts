@@ -44,7 +44,7 @@ pub struct ProcessWithdrawalBatchCommandResult {
     pub required_asset_amount: u64,
     pub reserved_asset_user_amount: u64,
     pub deducted_asset_fee_amount: u64,
-    pub offsetted_asset_receivables: Vec<ProcessWithdrawalBatchCommandResultAssetReceivable>,
+    pub offset_asset_receivables: Vec<ProcessWithdrawalBatchCommandResultAssetReceivable>,
     pub transferred_asset_revenue_amount: u64,
     pub withdrawal_fee_rate_bps: u16,
 }
@@ -423,7 +423,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                     required_asset_amount,
                     reserved_asset_user_amount,
                     deducted_asset_fee_amount,
-                    offsetted_asset_receivables,
+                    offset_asset_receivables,
                     transferred_asset_revenue_amount,
                 ) = {
                     let mut fund_service =
@@ -438,7 +438,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         required_asset_amount,
                         reserved_asset_user_amount,
                         deducted_asset_fee_amount,
-                        offsetted_asset_receivables,
+                        offset_asset_receivables,
                     ) = fund_service.process_withdrawal_batches(
                         ctx.operator,
                         ctx.system_program,
@@ -481,7 +481,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         required_asset_amount,
                         reserved_asset_user_amount,
                         deducted_asset_fee_amount,
-                        offsetted_asset_receivables,
+                        offset_asset_receivables,
                         transferred_asset_revenue_amount,
                     )
                 };
@@ -495,7 +495,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         required_asset_amount,
                         reserved_asset_user_amount,
                         deducted_asset_fee_amount,
-                        offsetted_asset_receivables: offsetted_asset_receivables
+                        offset_asset_receivables: offset_asset_receivables
                             .into_iter()
                             .map(|(asset_token_mint, asset_amount)| {
                                 ProcessWithdrawalBatchCommandResultAssetReceivable {

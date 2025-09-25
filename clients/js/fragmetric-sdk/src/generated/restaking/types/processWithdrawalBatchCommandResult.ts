@@ -42,7 +42,7 @@ export type ProcessWithdrawalBatchCommandResult = {
   requiredAssetAmount: bigint;
   reservedAssetUserAmount: bigint;
   deductedAssetFeeAmount: bigint;
-  offsettedAssetReceivables: Array<ProcessWithdrawalBatchCommandResultAssetReceivable>;
+  offsetAssetReceivables: Array<ProcessWithdrawalBatchCommandResultAssetReceivable>;
   transferredAssetRevenueAmount: bigint;
   withdrawalFeeRateBps: number;
 };
@@ -55,7 +55,7 @@ export type ProcessWithdrawalBatchCommandResultArgs = {
   requiredAssetAmount: number | bigint;
   reservedAssetUserAmount: number | bigint;
   deductedAssetFeeAmount: number | bigint;
-  offsettedAssetReceivables: Array<ProcessWithdrawalBatchCommandResultAssetReceivableArgs>;
+  offsetAssetReceivables: Array<ProcessWithdrawalBatchCommandResultAssetReceivableArgs>;
   transferredAssetRevenueAmount: number | bigint;
   withdrawalFeeRateBps: number;
 };
@@ -70,7 +70,7 @@ export function getProcessWithdrawalBatchCommandResultEncoder(): Encoder<Process
     ['reservedAssetUserAmount', getU64Encoder()],
     ['deductedAssetFeeAmount', getU64Encoder()],
     [
-      'offsettedAssetReceivables',
+      'offsetAssetReceivables',
       getArrayEncoder(
         getProcessWithdrawalBatchCommandResultAssetReceivableEncoder()
       ),
@@ -90,7 +90,7 @@ export function getProcessWithdrawalBatchCommandResultDecoder(): Decoder<Process
     ['reservedAssetUserAmount', getU64Decoder()],
     ['deductedAssetFeeAmount', getU64Decoder()],
     [
-      'offsettedAssetReceivables',
+      'offsetAssetReceivables',
       getArrayDecoder(
         getProcessWithdrawalBatchCommandResultAssetReceivableDecoder()
       ),

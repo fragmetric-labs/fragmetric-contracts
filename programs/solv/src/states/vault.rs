@@ -415,7 +415,7 @@ impl VaultAccount {
     }
 
     /// ENQUEUED + PROCESSING
-    pub fn get_vrt_withdrawal_incompleted_amount(&self) -> u64 {
+    pub fn get_vrt_withdrawal_incomplete_amount(&self) -> u64 {
         self.vrt_withdrawal_enqueued_amount + self.vrt_withdrawal_processing_amount
     }
 

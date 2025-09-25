@@ -37,8 +37,8 @@ export type ClaimUnrestakedVSTCommandResult = {
   supportedTokenMint: Address;
   claimedSupportedTokenAmount: bigint;
   transferredSupportedTokenRevenueAmount: bigint;
-  offsettedSupportedTokenReceivableAmount: bigint;
-  offsettedAssetReceivables: Array<ClaimUnrestakedVSTCommandResultAssetReceivable>;
+  offsetSupportedTokenReceivableAmount: bigint;
+  offsetAssetReceivables: Array<ClaimUnrestakedVSTCommandResultAssetReceivable>;
   operationReservedSupportedTokenAmount: bigint;
   operationReceivableSupportedTokenAmount: bigint;
 };
@@ -52,8 +52,8 @@ export type ClaimUnrestakedVSTCommandResultArgs = {
   supportedTokenMint: Address;
   claimedSupportedTokenAmount: number | bigint;
   transferredSupportedTokenRevenueAmount: number | bigint;
-  offsettedSupportedTokenReceivableAmount: number | bigint;
-  offsettedAssetReceivables: Array<ClaimUnrestakedVSTCommandResultAssetReceivableArgs>;
+  offsetSupportedTokenReceivableAmount: number | bigint;
+  offsetAssetReceivables: Array<ClaimUnrestakedVSTCommandResultAssetReceivableArgs>;
   operationReservedSupportedTokenAmount: number | bigint;
   operationReceivableSupportedTokenAmount: number | bigint;
 };
@@ -68,9 +68,9 @@ export function getClaimUnrestakedVSTCommandResultEncoder(): Encoder<ClaimUnrest
     ['supportedTokenMint', getAddressEncoder()],
     ['claimedSupportedTokenAmount', getU64Encoder()],
     ['transferredSupportedTokenRevenueAmount', getU64Encoder()],
-    ['offsettedSupportedTokenReceivableAmount', getU64Encoder()],
+    ['offsetSupportedTokenReceivableAmount', getU64Encoder()],
     [
-      'offsettedAssetReceivables',
+      'offsetAssetReceivables',
       getArrayEncoder(
         getClaimUnrestakedVSTCommandResultAssetReceivableEncoder()
       ),
@@ -90,9 +90,9 @@ export function getClaimUnrestakedVSTCommandResultDecoder(): Decoder<ClaimUnrest
     ['supportedTokenMint', getAddressDecoder()],
     ['claimedSupportedTokenAmount', getU64Decoder()],
     ['transferredSupportedTokenRevenueAmount', getU64Decoder()],
-    ['offsettedSupportedTokenReceivableAmount', getU64Decoder()],
+    ['offsetSupportedTokenReceivableAmount', getU64Decoder()],
     [
-      'offsettedAssetReceivables',
+      'offsetAssetReceivables',
       getArrayDecoder(
         getClaimUnrestakedVSTCommandResultAssetReceivableDecoder()
       ),

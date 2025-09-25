@@ -22,7 +22,7 @@ pub(in crate::modules) struct PricingService<'info> {
     token_mints: Vec<Pubkey>,
     token_pricing_sources: Vec<TokenPricingSource>,
     token_values: Vec<TokenValue>,
-    token_value_as_mirco_lamports: Vec<OnceCell<(u128, u128)>>,
+    token_value_as_micro_lamports: Vec<OnceCell<(u128, u128)>>,
 }
 
 impl<'info> PricingService<'info> {
@@ -37,7 +37,7 @@ impl<'info> PricingService<'info> {
             token_mints: Vec::with_capacity(PRICING_SERVICE_EXPECTED_TOKENS_SIZE),
             token_pricing_sources: Vec::with_capacity(PRICING_SERVICE_EXPECTED_TOKENS_SIZE),
             token_values: Vec::with_capacity(PRICING_SERVICE_EXPECTED_TOKENS_SIZE),
-            token_value_as_mirco_lamports: Vec::with_capacity(PRICING_SERVICE_EXPECTED_TOKENS_SIZE),
+            token_value_as_micro_lamports: Vec::with_capacity(PRICING_SERVICE_EXPECTED_TOKENS_SIZE),
         }
     }
 
@@ -92,7 +92,7 @@ impl<'info> PricingService<'info> {
             }
 
             // clear cache
-            self.token_value_as_mirco_lamports[index].take();
+            self.token_value_as_micro_lamports[index].take();
 
             index
         } else {
@@ -101,7 +101,7 @@ impl<'info> PricingService<'info> {
                 .push(token_pricing_source.clone());
             // First we just push dummy TokenValue, and it will be updated soon!!
             self.token_values.push(TokenValue::default());
-            self.token_value_as_mirco_lamports.push(OnceCell::new());
+            self.token_value_as_micro_lamports.push(OnceCell::new());
             self.token_mints.len() - 1
         };
         *updated_token_values_index_bitmap |= 1 << token_index;
@@ -224,12 +224,12 @@ impl<'info> PricingService<'info> {
     }
 
     /// returns the token value in (numerator_as_micro_lamports, denominator_as_micro_token)
-    fn get_token_value_as_mirco_lamports(&self, token_mint: &Pubkey) -> Result<(u128, u128)> {
+    fn get_token_value_as_micro_lamports(&self, token_mint: &Pubkey) -> Result<(u128, u128)> {
         let token_index = self
             .get_token_index(token_mint)
             .ok_or_else(|| error!(ErrorCode::TokenPricingSourceAccountNotFoundError))?;
 
-        self.token_value_as_mirco_lamports[token_index]
+        self.token_value_as_micro_lamports[token_index]
             .get_or_try_init(|| -> Result<(u128, u128)> {
                 let token_value = self.get_token_value(token_mint)?;
                 let mut micro_lamports = 0u128;
@@ -241,7 +241,7 @@ impl<'info> PricingService<'info> {
                         }
                         Asset::Token(nested_token_mint, _, nested_token_amount) => {
                             let (numerator_as_micro_lamports, denominator_as_micro_token) =
-                                self.get_token_value_as_mirco_lamports(nested_token_mint)?;
+                                self.get_token_value_as_micro_lamports(nested_token_mint)?;
                             micro_lamports += crate::utils::get_proportional_amount_u128(
                                 (*nested_token_amount as u128) * 1_000_000,
                                 numerator_as_micro_lamports,
@@ -280,7 +280,7 @@ impl<'info> PricingService<'info> {
                     Some(to_token_mint) => {
                         let from_micro_lamports = (from_asset_amount as u128) * 1_000_000;
                         let (to_numerator_as_micro_lamports, to_denominator_as_micro_token) =
-                            self.get_token_value_as_mirco_lamports(to_token_mint)?;
+                            self.get_token_value_as_micro_lamports(to_token_mint)?;
                         let mut to_micro_token = crate::utils::get_proportional_amount_u128(
                             from_micro_lamports,
                             to_denominator_as_micro_token,
@@ -303,7 +303,7 @@ impl<'info> PricingService<'info> {
             }
             Some(from_token_mint) => {
                 let (from_numerator_as_micro_lamports, from_denominator_as_micro_token) =
-                    self.get_token_value_as_mirco_lamports(from_token_mint)?;
+                    self.get_token_value_as_micro_lamports(from_token_mint)?;
 
                 match to_asset_mint {
                     None => {
@@ -335,7 +335,7 @@ impl<'info> PricingService<'info> {
                         }
 
                         let (to_numerator_as_micro_lamports, to_denominator_as_micro_token) =
-                            self.get_token_value_as_mirco_lamports(to_token_mint)?;
+                            self.get_token_value_as_micro_lamports(to_token_mint)?;
 
                         let micro_micro_numerator = U256::from(from_numerator_as_micro_lamports)
                             .checked_mul(U256::from(to_denominator_as_micro_token))
@@ -442,7 +442,7 @@ impl<'info> PricingService<'info> {
         from_token_decimals: u8,
     ) -> Result<Option<u64>> {
         let (_, denominator_as_micro_token) =
-            self.get_token_value_as_mirco_lamports(from_token_mint)?;
+            self.get_token_value_as_micro_lamports(from_token_mint)?;
         Ok(if denominator_as_micro_token == 0 {
             None
         } else {
@@ -462,9 +462,9 @@ impl<'info> PricingService<'info> {
         to_token_mint: &Pubkey,
     ) -> Result<Option<u64>> {
         let (_, denominator_as_micro_token_from) =
-            self.get_token_value_as_mirco_lamports(from_token_mint)?;
+            self.get_token_value_as_micro_lamports(from_token_mint)?;
         let (_, denominator_as_micro_token_to) =
-            self.get_token_value_as_mirco_lamports(to_token_mint)?;
+            self.get_token_value_as_micro_lamports(to_token_mint)?;
         Ok(
             if denominator_as_micro_token_from == 0 || denominator_as_micro_token_to == 0 {
                 None
@@ -806,12 +806,12 @@ mod tests {
             .flatten_token_value(&root_token_mint, &mut root_token_value)
             .unwrap();
 
-        let mut pegged_token_vaule = TokenValue::default();
+        let mut pegged_token_value = TokenValue::default();
         pricing_service
-            .flatten_token_value(&pegged_token_mint, &mut pegged_token_vaule)
+            .flatten_token_value(&pegged_token_mint, &mut pegged_token_value)
             .unwrap();
 
-        assert_eq!(root_token_value, pegged_token_vaule);
+        assert_eq!(root_token_value, pegged_token_value);
 
         let basket_token_mint = Pubkey::new_unique();
         pricing_service
@@ -1067,7 +1067,7 @@ mod tests {
             .flatten_token_value(&basket_mint_49_10, &mut token_value_as_atomic)
             .unwrap();
         let token_value_as_micro_lamports = pricing_service
-            .get_token_value_as_mirco_lamports(&basket_mint_49_10)
+            .get_token_value_as_micro_lamports(&basket_mint_49_10)
             .unwrap();
 
         assert_eq!(
@@ -1119,7 +1119,7 @@ mod tests {
             .flatten_token_value(&basket_mint_88_10, &mut token_value_as_atomic)
             .unwrap();
         let token_value_as_micro_lamports = pricing_service
-            .get_token_value_as_mirco_lamports(&basket_mint_88_10)
+            .get_token_value_as_micro_lamports(&basket_mint_88_10)
             .unwrap();
 
         assert_eq!(

@@ -34,8 +34,8 @@ pub struct ClaimUnrestakedVSTCommandResult {
     pub supported_token_mint: Pubkey,
     pub claimed_supported_token_amount: u64,
     pub transferred_supported_token_revenue_amount: u64,
-    pub offsetted_supported_token_receivable_amount: u64,
-    pub offsetted_asset_receivables: Vec<ClaimUnrestakedVSTCommandResultAssetReceivable>,
+    pub offset_supported_token_receivable_amount: u64,
+    pub offset_asset_receivables: Vec<ClaimUnrestakedVSTCommandResultAssetReceivable>,
     pub operation_reserved_supported_token_amount: u64,
     pub operation_receivable_supported_token_amount: u64,
 }
@@ -453,8 +453,8 @@ impl ClaimUnrestakedVSTCommand {
                             supported_token_mint,
                             claimed_supported_token_amount: result_claimed_supported_token_amount,
                             transferred_supported_token_revenue_amount: 0,
-                            offsetted_supported_token_receivable_amount: 0,
-                            offsetted_asset_receivables: vec![],
+                            offset_supported_token_receivable_amount: 0,
+                            offset_asset_receivables: vec![],
                             operation_reserved_supported_token_amount:
                                 result_operation_reserved_supported_token_amount,
                             operation_receivable_supported_token_amount:
@@ -539,8 +539,8 @@ impl ClaimUnrestakedVSTCommand {
 
                 let (
                     transferred_supported_token_revenue_amount,
-                    offsetted_supported_token_receivable_amount,
-                    offsetted_asset_receivables,
+                    offset_supported_token_receivable_amount,
+                    offset_asset_receivables,
                 ) = fund_service.offset_receivables(
                     ctx.system_program,
                     fund_reserve,
@@ -575,8 +575,8 @@ impl ClaimUnrestakedVSTCommand {
                         supported_token_mint,
                         claimed_supported_token_amount,
                         transferred_supported_token_revenue_amount,
-                        offsetted_supported_token_receivable_amount,
-                        offsetted_asset_receivables: offsetted_asset_receivables
+                        offset_supported_token_receivable_amount,
+                        offset_asset_receivables: offset_asset_receivables
                             .into_iter()
                             .map(|(asset_token_mint, asset_amount)| {
                                 ClaimUnrestakedVSTCommandResultAssetReceivable {
