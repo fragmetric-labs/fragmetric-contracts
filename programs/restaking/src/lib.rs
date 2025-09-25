@@ -186,6 +186,7 @@ pub mod restaking {
         .process_create_user_reward_account_idempotent(
             &ctx.accounts.system_program,
             &ctx.accounts.payer,
+            &ctx.accounts.user,
             ctx.bumps.user_reward_account,
             Some(FUND_MANAGER_PUBKEY),
             desired_account_size,
@@ -1324,6 +1325,7 @@ pub mod restaking {
         )?
         .process_create_user_reward_account_idempotent(
             &ctx.accounts.system_program,
+            &ctx.accounts.user,
             &ctx.accounts.user,
             ctx.bumps.user_reward_account,
             None,
