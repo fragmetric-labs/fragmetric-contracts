@@ -79,6 +79,9 @@ pub fn get_proportional_amount_u64(amount: u64, numerator: u64, denominator: u64
     if amount == denominator {
         return Ok(numerator);
     }
+    if denominator == 0 {
+        return Err(error!(errors::ErrorCode::CalculationArithmeticException));
+    }
 
     u64::try_from(amount as u128 * numerator as u128 / denominator as u128)
         .map_err(|_| error!(errors::ErrorCode::CalculationArithmeticException))
@@ -96,6 +99,9 @@ pub fn get_proportional_amount_u64_round_up(
     }
     if amount == denominator {
         return Ok(numerator);
+    }
+    if denominator == 0 {
+        return Err(error!(errors::ErrorCode::CalculationArithmeticException));
     }
 
     u64::try_from((amount as u128 * numerator as u128).div_ceil(denominator as u128))
