@@ -105,7 +105,7 @@ impl<'info> MarinadeStakePoolService<'info> {
     /// * (2) pool_token_mint(writable)
     /// * (3) pool_token_program
     /// * (4) liq_pool_sol_leg(writable)
-    /// * (5) liq_pool_mint_leg(wirtable)
+    /// * (5) liq_pool_mint_leg(writable)
     /// * (6) liq_pool_mint_leg_authority
     /// * (7) pool_reserve_account(writable)
     /// * (8) pool_token_mint_authority

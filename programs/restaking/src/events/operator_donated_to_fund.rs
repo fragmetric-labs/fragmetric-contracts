@@ -7,5 +7,5 @@ pub struct OperatorDonatedToFund {
     pub supported_token_mint: Option<Pubkey>,
     pub donated_amount: u64,
     pub deposited_amount: u64,
-    pub offsetted_receivable_amount: u64,
+    pub offset_receivable_amount: u64,
 }

@@ -201,7 +201,7 @@ pub enum ErrorCode {
     #[msg("fund: exceeded max restaking vault compounding reward tokens")]
     FundExceededMaxRestakingVaultCompoundingRewardTokensError,
 
-    #[msg("fund: unauhorized operation command")]
+    #[msg("fund: unauthorized operation command")]
     FundOperationUnauthorizedCommandError,
 
     #[msg("fund: failed to compute required accounts for the operation command")]

@@ -146,7 +146,7 @@ impl AssetState {
         Ok(asset_amount)
     }
 
-    /// returns [deposited_amount, offsetted_receivable_amount]
+    /// returns [deposited_amount, offset_receivable_amount]
     pub fn donate(&mut self, asset_amount: u64, offset_receivable: bool) -> Result<(u64, u64)> {
         // offset receivable first if requested
         let offsetting_receivable_amount = offset_receivable

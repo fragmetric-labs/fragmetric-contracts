@@ -726,7 +726,7 @@ impl<'info> JitoRestakingVaultService<'info> {
                 let data = &Self::borrow_account_data(withdrawal_ticket)?;
                 let ticket = Self::deserialize_account_data::<VaultStakerWithdrawalTicket>(data)?;
                 let claimable = ticket.is_withdrawable(self.current_slot, self.epoch_length)?;
-                msg!("CHECK_UNRESTAKED#jito: ticket={}, current_epoch={} ({}), unstaked_epoch={} ({}), withdrawalble={}", withdrawal_ticket.key, self.current_slot / self.epoch_length, self.current_slot, ticket.slot_unstaked() / self.epoch_length, ticket.slot_unstaked(), claimable);
+                msg!("CHECK_UNRESTAKED#jito: ticket={}, current_epoch={} ({}), unstaked_epoch={} ({}), withdrawable={}", withdrawal_ticket.key, self.current_slot / self.epoch_length, self.current_slot, ticket.slot_unstaked() / self.epoch_length, ticket.slot_unstaked(), claimable);
                 claimable
             } else {
                 false

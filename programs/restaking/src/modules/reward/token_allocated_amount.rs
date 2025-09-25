@@ -259,7 +259,7 @@ impl TokenAllocatedAmountDelta {
     }
 }
 
-/// Auxillary type for better code - represents either a single delta or multiple deltas
+/// Auxiliary type for better code - represents either a single delta or multiple deltas
 enum OneOrManyDeltas<T: IntoIterator<Item = TokenAllocatedAmountDelta>> {
     One(TokenAllocatedAmountDelta),
     Many(T),

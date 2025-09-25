@@ -33,8 +33,8 @@ export type ClaimUnstakedSOLCommandResult = {
   claimedSolAmount: bigint;
   totalUnstakingSolAmount: bigint;
   transferredSolRevenueAmount: bigint;
-  offsettedSolReceivableAmount: bigint;
-  offsettedAssetReceivables: Array<ClaimUnstakedSOLCommandResultAssetReceivable>;
+  offsetSolReceivableAmount: bigint;
+  offsetAssetReceivables: Array<ClaimUnstakedSOLCommandResultAssetReceivable>;
   operationReservedSolAmount: bigint;
   operationReceivableSolAmount: bigint;
 };
@@ -44,8 +44,8 @@ export type ClaimUnstakedSOLCommandResultArgs = {
   claimedSolAmount: number | bigint;
   totalUnstakingSolAmount: number | bigint;
   transferredSolRevenueAmount: number | bigint;
-  offsettedSolReceivableAmount: number | bigint;
-  offsettedAssetReceivables: Array<ClaimUnstakedSOLCommandResultAssetReceivableArgs>;
+  offsetSolReceivableAmount: number | bigint;
+  offsetAssetReceivables: Array<ClaimUnstakedSOLCommandResultAssetReceivableArgs>;
   operationReservedSolAmount: number | bigint;
   operationReceivableSolAmount: number | bigint;
 };
@@ -56,9 +56,9 @@ export function getClaimUnstakedSOLCommandResultEncoder(): Encoder<ClaimUnstaked
     ['claimedSolAmount', getU64Encoder()],
     ['totalUnstakingSolAmount', getU64Encoder()],
     ['transferredSolRevenueAmount', getU64Encoder()],
-    ['offsettedSolReceivableAmount', getU64Encoder()],
+    ['offsetSolReceivableAmount', getU64Encoder()],
     [
-      'offsettedAssetReceivables',
+      'offsetAssetReceivables',
       getArrayEncoder(getClaimUnstakedSOLCommandResultAssetReceivableEncoder()),
     ],
     ['operationReservedSolAmount', getU64Encoder()],
@@ -72,9 +72,9 @@ export function getClaimUnstakedSOLCommandResultDecoder(): Decoder<ClaimUnstaked
     ['claimedSolAmount', getU64Decoder()],
     ['totalUnstakingSolAmount', getU64Decoder()],
     ['transferredSolRevenueAmount', getU64Decoder()],
-    ['offsettedSolReceivableAmount', getU64Decoder()],
+    ['offsetSolReceivableAmount', getU64Decoder()],
     [
-      'offsettedAssetReceivables',
+      'offsetAssetReceivables',
       getArrayDecoder(getClaimUnstakedSOLCommandResultAssetReceivableDecoder()),
     ],
     ['operationReservedSolAmount', getU64Decoder()],
