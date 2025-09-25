@@ -1,9 +1,10 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program;
+use anchor_spl::token::spl_token;
 use anchor_spl::token_interface::{Mint, TokenAccount};
 
-use crate::events;
 use crate::utils::*;
+use crate::{events, modules};
 
 use super::*;
 
@@ -33,10 +34,31 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
         &self,
         system_program: &Program<'info, System>,
         payer: &Signer<'info>,
+        user: &AccountInfo<'info>,
         user_reward_account_bump: u8,
         delegate: Option<Pubkey>,
         desired_account_size: Option<u32>,
     ) -> Result<Option<events::UserCreatedOrUpdatedRewardAccount>> {
+        // validate delegation capability
+        if delegate.is_some() {
+            let user_owner = user.owner.key();
+
+            // only the fund_wrap_account can be delegated on creation among system-owned accounts
+            if user_owner == solana_program::system_program::id() {
+                let (fund_wrap_account_address, _bump) = Pubkey::find_program_address(
+                    &[
+                        modules::fund::FundAccount::WRAP_SEED,
+                        self.receipt_token_mint.key().as_ref(),
+                    ],
+                    &crate::id(),
+                );
+                require_keys_eq!(user.key(), fund_wrap_account_address);
+            } else {
+                // wrapped token accounts (SPL Token PDA) may be delegated for DeFi wrapped token tracking
+                require_keys_eq!(user_owner, spl_token::id());
+            }
+        }
+
         let min_account_size = 8 + core::mem::size_of::<UserRewardAccount>();
         let new_account_size = if self.user_reward_account.is_initialized() {
             let user_reward_account =
