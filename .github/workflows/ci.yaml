@@ -15,10 +15,10 @@ env:
   RUSTUP_TOOLCHAIN_VERSION: stable
   RUSTUP_PERMIT_COPY_RENAME: 1
   SOLANA_VERSION: stable
-  ANCHOR_VERSION: v0.31.1
+  ANCHOR_VERSION: 0.31.1
   NODE_VERSION: 20.19.0
   CI: true
-  #DEBUG: true
+  DEBUG: false
   RUNTIME: ${{(github.ref_name == 'main' || github.ref_name == 'dev' ||
     (github.event_name == 'push' && contains(github.event.head_commit.message, '[svm]')) ||
     (github.event_name == 'pull_request' && contains(github.event.pull_request.title, '[svm]'))) && 'svm' || 'litesvm' }}
@@ -81,13 +81,15 @@ jobs:
           locked: true
       - uses: baptiste0928/cargo-install@v3
         with:
-          crate: anchor-cli
-          git: https://github.com/solana-foundation/anchor
-          tag: ${{ env.ANCHOR_VERSION }}
+          crate: avm
+          git: https://github.com/coral-xyz/anchor
           locked: true
       - uses: baptiste0928/cargo-install@v3
         with:
           crate: solana-verify
+
+      # activate anchor version
+      - run: avm install ${{ env.ANCHOR_VERSION }} && avm use ${{ env.ANCHOR_VERSION }}
 
       # lint Rust codes and audit dependencies
       - run: cargo audit --ignore RUSTSEC-2022-0093 --ignore RUSTSEC-2024-0344 --ignore RUSTSEC-2024-0421 --ignore RUSTSEC-2025-0022
