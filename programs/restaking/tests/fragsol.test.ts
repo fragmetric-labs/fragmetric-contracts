@@ -8,10 +8,10 @@ describe('restaking.fragSOL test', async () => {
   beforeAll(() => testCtx.initializationTasks);
   afterAll(() => testCtx.validator.quit());
 
-  const { validator, feePayer, restaking, initializationTasks } = testCtx;
+  const { validator, feePayer, restaking, initializationTasks, sdk } = testCtx;
   const ctx = restaking.fragSOL;
 
-  const [signer1, signer2, signer3] = await Promise.all([
+  const [signer1, signer2, signer3, signer4] = await Promise.all([
     validator
       .newSigner('fragSOLDepositTestSigner1', 100_000_000_000n)
       .then(async (signer) => {
@@ -37,11 +37,13 @@ describe('restaking.fragSOL test', async () => {
         ]);
         return signer;
       }),
+    validator.newSigner('fragSOLDepositTestSigner4', 0n),
     validator.airdrop(restaking.knownAddresses.fundManager, 100_000_000_000n),
   ]);
   const user1 = ctx.user(signer1);
   const user2 = ctx.user(signer2);
   const user3 = ctx.user(signer3);
+  const user4 = ctx.user(signer4);
 
   /** 1. configuration **/
   test(`restaking.fragSOL initializationTasks snapshot`, async () => {
@@ -2139,4 +2141,434 @@ describe('restaking.fragSOL test', async () => {
       operator: restaking.knownAddresses.fundManager,
     });
   });
+
+  /**
+   * There is no slashing feature in JitoRestaking program yet, so we just virtually mint nSOL to test nSOL redemption of slasher.
+   */
+  test.runIf(validator.canDangerouslyAirdropNonMintableToken)(
+    'slasher can redeem normalized tokens for supported assets',
+    async () => {
+      const normalizedTokenPool = await ctx.normalizedTokenPool.resolve(true);
+      expect(normalizedTokenPool).toBeDefined();
+      const beforeOneNormalizedTokenAsSOL =
+        normalizedTokenPool!.oneNormalizedTokenAsSol;
+      const normalizedTokenAmount = 100_000_000_000n;
+
+      await validator.dangerouslyAirdropNonMintableToken(
+        signer4.address!,
+        normalizedTokenPool!.normalizedTokenMint,
+        normalizedTokenAmount
+      );
+
+      const slasher = ctx.normalizedTokenPool.slasher(signer4);
+      await expectMasked(slasher.resolve(true)).resolves.toMatchInlineSnapshot(`
+        {
+          "claimable": false,
+          "lamports": 1000000n,
+          "normalizedTokenAmount": 100000000000n,
+          "slasher": "ETGs2gHwARjFo3oQnzpT3x8h6HB5weFyRBivAb47iUSy",
+          "supportedTokens": [
+            {
+              "amount": 0n,
+              "claimableAmount": 0n,
+              "decimals": 9,
+              "mint": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+            {
+              "amount": 0n,
+              "claimableAmount": 0n,
+              "decimals": 9,
+              "mint": "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+            {
+              "amount": 0n,
+              "claimableAmount": 0n,
+              "decimals": 9,
+              "mint": "BNso1VUJnh4zcfpZa6986Ea66P6TCp59hvtNJ8b1X85",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+            {
+              "amount": 0n,
+              "claimableAmount": 0n,
+              "decimals": 9,
+              "mint": "Bybit2vBJGhPF52GBdNaQfUJ6ZpThSgHBobjWZpLPb4B",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+            {
+              "amount": 0n,
+              "claimableAmount": 0n,
+              "decimals": 9,
+              "mint": "jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+            {
+              "amount": 0n,
+              "claimableAmount": 0n,
+              "decimals": 9,
+              "mint": "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+            {
+              "amount": 0n,
+              "claimableAmount": 0n,
+              "decimals": 9,
+              "mint": "Dso1bDeDjCQxTrWHqUUi63oBvV7Mdm6WaobLbQ7gnPQ",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+            {
+              "amount": 0n,
+              "claimableAmount": 0n,
+              "decimals": 9,
+              "mint": "FRAGME9aN7qzxkHPmVP22tDhG87srsR9pr5SY9XdRd9R",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+            {
+              "amount": 0n,
+              "claimableAmount": 0n,
+              "decimals": 9,
+              "mint": "he1iusmfkpAdwvxLNGV8Y1iSbj4rUy6yMhEA3fotn9A",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+            {
+              "amount": 0n,
+              "claimableAmount": 0n,
+              "decimals": 9,
+              "mint": "roxDFxTFHufJBFy3PgzZcgz6kwkQNPZpi9RfpcAv4bu",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+            {
+              "amount": 0n,
+              "claimableAmount": 0n,
+              "decimals": 9,
+              "mint": "sctmadV2fcLtrxjzYhTZzwAGjXUXKtYSBrrM36EtdcY",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+            {
+              "amount": 0n,
+              "claimableAmount": 0n,
+              "decimals": 9,
+              "mint": "BonK1YhkXEGLZzwtcvRTip3gAL9nCeQD7ppZBLXhtTs",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+            {
+              "amount": 0n,
+              "claimableAmount": 0n,
+              "decimals": 9,
+              "mint": "vSoLxydx6akxyMD9XEcPvGYNGq6Nn66oqVb3UkGkei7",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+            {
+              "amount": 0n,
+              "claimableAmount": 0n,
+              "decimals": 9,
+              "mint": "HUBsveNpjo5pWqNkH57QzxjQASdTVXcSK7bVKTSZtcSX",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+            {
+              "amount": 0n,
+              "claimableAmount": 0n,
+              "decimals": 9,
+              "mint": "picobAEvs6w7QEknPce34wAE4gknZA9v5tTonnmHYdX",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+            {
+              "amount": 0n,
+              "claimableAmount": 0n,
+              "decimals": 9,
+              "mint": "strng7mqqc1MBJJV6vMzYbEqnwVGvKKGKedeCvtktWA",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+          ],
+        }
+      `);
+
+      await slasher.initializeWithdrawal.execute(null, {
+        signers: [signer4],
+      });
+      await expectMasked(slasher.resolve(true)).resolves.toMatchInlineSnapshot(`
+        {
+          "claimable": true,
+          "lamports": 1000000n,
+          "normalizedTokenAmount": 0n,
+          "slasher": "ETGs2gHwARjFo3oQnzpT3x8h6HB5weFyRBivAb47iUSy",
+          "supportedTokens": [
+            {
+              "amount": 0n,
+              "claimableAmount": 216960508n,
+              "decimals": 9,
+              "mint": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+            {
+              "amount": 0n,
+              "claimableAmount": 5529564865n,
+              "decimals": 9,
+              "mint": "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+            {
+              "amount": 0n,
+              "claimableAmount": 6133143187n,
+              "decimals": 9,
+              "mint": "BNso1VUJnh4zcfpZa6986Ea66P6TCp59hvtNJ8b1X85",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+            {
+              "amount": 0n,
+              "claimableAmount": 6043636008n,
+              "decimals": 9,
+              "mint": "Bybit2vBJGhPF52GBdNaQfUJ6ZpThSgHBobjWZpLPb4B",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+            {
+              "amount": 0n,
+              "claimableAmount": 5964947143n,
+              "decimals": 9,
+              "mint": "jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+            {
+              "amount": 0n,
+              "claimableAmount": 5694652713n,
+              "decimals": 9,
+              "mint": "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+            {
+              "amount": 0n,
+              "claimableAmount": 5952867974n,
+              "decimals": 9,
+              "mint": "Dso1bDeDjCQxTrWHqUUi63oBvV7Mdm6WaobLbQ7gnPQ",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+            {
+              "amount": 0n,
+              "claimableAmount": 6305405724n,
+              "decimals": 9,
+              "mint": "FRAGME9aN7qzxkHPmVP22tDhG87srsR9pr5SY9XdRd9R",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+            {
+              "amount": 0n,
+              "claimableAmount": 6012238075n,
+              "decimals": 9,
+              "mint": "he1iusmfkpAdwvxLNGV8Y1iSbj4rUy6yMhEA3fotn9A",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+            {
+              "amount": 0n,
+              "claimableAmount": 5718604875n,
+              "decimals": 9,
+              "mint": "roxDFxTFHufJBFy3PgzZcgz6kwkQNPZpi9RfpcAv4bu",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+            {
+              "amount": 0n,
+              "claimableAmount": 6242493082n,
+              "decimals": 9,
+              "mint": "sctmadV2fcLtrxjzYhTZzwAGjXUXKtYSBrrM36EtdcY",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+            {
+              "amount": 0n,
+              "claimableAmount": 5970131144n,
+              "decimals": 9,
+              "mint": "BonK1YhkXEGLZzwtcvRTip3gAL9nCeQD7ppZBLXhtTs",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+            {
+              "amount": 0n,
+              "claimableAmount": 6032933548n,
+              "decimals": 9,
+              "mint": "vSoLxydx6akxyMD9XEcPvGYNGq6Nn66oqVb3UkGkei7",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+            {
+              "amount": 0n,
+              "claimableAmount": 5977655195n,
+              "decimals": 9,
+              "mint": "HUBsveNpjo5pWqNkH57QzxjQASdTVXcSK7bVKTSZtcSX",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+            {
+              "amount": 0n,
+              "claimableAmount": 5930934902n,
+              "decimals": 9,
+              "mint": "picobAEvs6w7QEknPce34wAE4gknZA9v5tTonnmHYdX",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+            {
+              "amount": 0n,
+              "claimableAmount": 5975586406n,
+              "decimals": 9,
+              "mint": "strng7mqqc1MBJJV6vMzYbEqnwVGvKKGKedeCvtktWA",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+          ],
+        }
+      `);
+
+      await slasher.withdraw.executeChained(null, {
+        signers: [signer4],
+      });
+      await expectMasked(slasher.resolve(true)).resolves.toMatchInlineSnapshot(`
+        {
+          "claimable": false,
+          "lamports": 11126800n,
+          "normalizedTokenAmount": 0n,
+          "slasher": "ETGs2gHwARjFo3oQnzpT3x8h6HB5weFyRBivAb47iUSy",
+          "supportedTokens": [
+            {
+              "amount": 216960508n,
+              "claimableAmount": 0n,
+              "decimals": 9,
+              "mint": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+            {
+              "amount": 5529564865n,
+              "claimableAmount": 0n,
+              "decimals": 9,
+              "mint": "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+            {
+              "amount": 6133143187n,
+              "claimableAmount": 0n,
+              "decimals": 9,
+              "mint": "BNso1VUJnh4zcfpZa6986Ea66P6TCp59hvtNJ8b1X85",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+            {
+              "amount": 6043636008n,
+              "claimableAmount": 0n,
+              "decimals": 9,
+              "mint": "Bybit2vBJGhPF52GBdNaQfUJ6ZpThSgHBobjWZpLPb4B",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+            {
+              "amount": 5964947143n,
+              "claimableAmount": 0n,
+              "decimals": 9,
+              "mint": "jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+            {
+              "amount": 5694652713n,
+              "claimableAmount": 0n,
+              "decimals": 9,
+              "mint": "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+            {
+              "amount": 5952867974n,
+              "claimableAmount": 0n,
+              "decimals": 9,
+              "mint": "Dso1bDeDjCQxTrWHqUUi63oBvV7Mdm6WaobLbQ7gnPQ",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+            {
+              "amount": 6305405724n,
+              "claimableAmount": 0n,
+              "decimals": 9,
+              "mint": "FRAGME9aN7qzxkHPmVP22tDhG87srsR9pr5SY9XdRd9R",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+            {
+              "amount": 6012238075n,
+              "claimableAmount": 0n,
+              "decimals": 9,
+              "mint": "he1iusmfkpAdwvxLNGV8Y1iSbj4rUy6yMhEA3fotn9A",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+            {
+              "amount": 5718604875n,
+              "claimableAmount": 0n,
+              "decimals": 9,
+              "mint": "roxDFxTFHufJBFy3PgzZcgz6kwkQNPZpi9RfpcAv4bu",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+            {
+              "amount": 6242493082n,
+              "claimableAmount": 0n,
+              "decimals": 9,
+              "mint": "sctmadV2fcLtrxjzYhTZzwAGjXUXKtYSBrrM36EtdcY",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+            {
+              "amount": 5970131144n,
+              "claimableAmount": 0n,
+              "decimals": 9,
+              "mint": "BonK1YhkXEGLZzwtcvRTip3gAL9nCeQD7ppZBLXhtTs",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+            {
+              "amount": 6032933548n,
+              "claimableAmount": 0n,
+              "decimals": 9,
+              "mint": "vSoLxydx6akxyMD9XEcPvGYNGq6Nn66oqVb3UkGkei7",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+            {
+              "amount": 5977655195n,
+              "claimableAmount": 0n,
+              "decimals": 9,
+              "mint": "HUBsveNpjo5pWqNkH57QzxjQASdTVXcSK7bVKTSZtcSX",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+            {
+              "amount": 5930934902n,
+              "claimableAmount": 0n,
+              "decimals": 9,
+              "mint": "picobAEvs6w7QEknPce34wAE4gknZA9v5tTonnmHYdX",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+            {
+              "amount": 5975586406n,
+              "claimableAmount": 0n,
+              "decimals": 9,
+              "mint": "strng7mqqc1MBJJV6vMzYbEqnwVGvKKGKedeCvtktWA",
+              "program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            },
+          ],
+        }
+      `);
+
+      const oneNormalizedTokenAsSOL = await ctx.normalizedTokenPool
+        .resolve(true)
+        .then((pool) => pool?.oneNormalizedTokenAsSol);
+      expect(oneNormalizedTokenAsSOL).to.equal(
+        beforeOneNormalizedTokenAsSOL,
+        'nSOL value should not change during withdrawal'
+      );
+
+      // flooring
+      const totalValueAsSOL =
+        (oneNormalizedTokenAsSOL! * normalizedTokenAmount) /
+        BigInt(10 ** normalizedTokenPool!.normalizedTokenDecimals);
+      const claimedTotalValueAsSOL = await slasher
+        .resolve(true)
+        .then((state) => {
+          return state!.supportedTokens.reduce((total, item) => {
+            // ceiling
+            const supportedTokenAmountAsSOL =
+              (item.amount *
+                normalizedTokenPool!.supportedTokens.find(
+                  (v) => v.mint == item.mint
+                )!.oneTokenAsSol +
+                BigInt(10 ** item.decimals - 1)) /
+              BigInt(10 ** item.decimals);
+            return total + supportedTokenAmountAsSOL;
+          }, 0n);
+        });
+
+      expect(totalValueAsSOL - claimedTotalValueAsSOL).to.gte(0);
+      expect(totalValueAsSOL - claimedTotalValueAsSOL).to.lte(
+        normalizedTokenPool!.supportedTokens.length * 4,
+        'slashers should be able to redeem equal value, with the total tolerance limited to 64 lamports'
+      );
+    }
+  );
 });

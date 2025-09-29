@@ -296,6 +296,15 @@ export abstract class TestValidator<T extends TestValidatorType> {
     }
   }
 
+  // this method virtually update a token account to test non-mintable token situation, only works with liteSVM
+  abstract readonly canDangerouslyAirdropNonMintableToken: boolean;
+
+  abstract dangerouslyAirdropNonMintableToken(
+    pubkey: string,
+    mockMint: string,
+    amount: bigint
+  ): Promise<void>;
+
   async airdropToken(pubkey: string, mockMint: string, amount: bigint) {
     // transfer token from tokenFaucet to pubkey
     const tokenFaucetAddress = TestValidator.tokenFaucetAddress;

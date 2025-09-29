@@ -420,4 +420,16 @@ export class SVMValidator extends TestValidator<'svm'> {
 
     this.process = newInstance.process;
   }
+
+  readonly canDangerouslyAirdropNonMintableToken = false;
+
+  async dangerouslyAirdropNonMintableToken(
+    pubkey: string,
+    mockMint: string,
+    amount: bigint
+  ) {
+    throw new Error(
+      'dangerouslyAirdropNonMintableToken: unsupported runtime type'
+    );
+  }
 }

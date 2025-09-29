@@ -1,7 +1,9 @@
+import * as token from '@solana-program/token';
 import {
   AccountInfoBase,
   AccountInfoWithBase64EncodedData,
   AccountInfoWithPubkey,
+  Address,
   address,
   Base64EncodedDataResponse,
   lamports,
@@ -231,5 +233,35 @@ export class LiteSVMValidator extends TestValidator<'litesvm'> {
           space: BigInt(account.data.length),
         }
       : null;
+  }
+
+  readonly canDangerouslyAirdropNonMintableToken = true;
+
+  async dangerouslyAirdropNonMintableToken(
+    pubkey: string,
+    mockMint: string,
+    amount: bigint
+  ) {
+    const [tokenAccountAddress, _] = await token.findAssociatedTokenPda({
+      owner: pubkey as Address,
+      mint: mockMint as Address,
+      tokenProgram: token.TOKEN_PROGRAM_ADDRESS,
+    });
+    const tokenAccountData = token.getTokenEncoder().encode({
+      owner: pubkey as Address,
+      mint: mockMint as Address,
+      amount: amount,
+      closeAuthority: null,
+      delegate: null,
+      delegatedAmount: 0,
+      isNative: null,
+      state: token.AccountState.Initialized,
+    });
+    this.svm.setAccount(new web3.PublicKey(tokenAccountAddress), {
+      data: tokenAccountData as Uint8Array,
+      executable: false,
+      lamports: Number(1_000_000_000n),
+      owner: new web3.PublicKey(token.TOKEN_PROGRAM_ADDRESS),
+    });
   }
 }
