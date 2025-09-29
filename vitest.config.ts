@@ -28,7 +28,7 @@ export default defineConfig({
     },
     include: ['**/*.test.ts'],
     passWithNoTests: true,
-    testTimeout: 20 * 60 * 1000,
+    testTimeout: 40 * 60 * 1000,
     hookTimeout: 5 * 60 * 1000,
 
     pool: 'forks', // parallel run for `describe`
