@@ -9,6 +9,7 @@ import {
 } from '@solana/kit';
 import * as v from 'valibot';
 import {
+  AccountAddressResolverVariant,
   AccountContext,
   IterativeAccountContext,
   TokenAccountContext,
@@ -17,6 +18,7 @@ import {
 } from '../../context';
 import * as restaking from '../../generated/restaking';
 import { getRestakingAnchorEventDecoders } from './events';
+import { RestakingSlasherAccountContext } from './normalized_token_pool_slasher';
 import { RestakingProgram } from './program';
 import { RestakingReceiptTokenMintAccountContext } from './receipt_token_mint';
 
@@ -92,6 +94,12 @@ export class RestakingNormalizedTokenPoolAccountContext extends AccountContext<
       return new TokenAccountContext(parent, address);
     }
   );
+
+  slasher(
+    addressResolver: AccountAddressResolverVariant<RestakingNormalizedTokenPoolAccountContext>
+  ) {
+    return new RestakingSlasherAccountContext(this, addressResolver);
+  }
 
   private __resolveAddressLookupTable = (parent: this) =>
     parent.parent.resolve().then((data) => data?.__lookupTableAddress ?? null);

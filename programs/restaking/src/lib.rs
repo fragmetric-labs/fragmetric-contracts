@@ -941,7 +941,6 @@ pub mod restaking {
     // SlasherNormalizedTokenWithdrawalAccountInitialContext
     ////////////////////////////////////////////
 
-    // TODO: untested
     pub fn slasher_initialize_normalized_token_withdrawal_account<'info>(
         ctx: Context<
             '_,
@@ -973,7 +972,6 @@ pub mod restaking {
     // SlasherNormalizedTokenWithdrawContext
     ////////////////////////////////////////////
 
-    // TODO: untested
     pub fn slasher_withdraw_normalized_token(
         ctx: Context<SlasherNormalizedTokenWithdrawContext>,
     ) -> Result<()> {
