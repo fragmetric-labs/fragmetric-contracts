@@ -3290,8 +3290,8 @@ describe('restaking.fragBTC test', async () => {
 
     // 1) VRT Price remains same
     // 1-1) VRT Amount remains same
-    await expectMasked(ctx.fund.restakingVaults[2].resolve(true)).resolves
-      .toMatchInlineSnapshot(`
+    await expectMasked(ctx.fund.restakingVaults.children[2].resolve(true))
+      .resolves.toMatchInlineSnapshot(`
       {
         "admin": {
           "fundManager": "BEpVRdWw6VhvfwfQufB9iqcJ6acf51XRP1jETCvGDBVE",
@@ -3395,8 +3395,8 @@ describe('restaking.fragBTC test', async () => {
       operator: restaking.knownAddresses.fundManager,
     });
 
-    await expectMasked(ctx.fund.restakingVaults[2].resolve(true)).resolves
-      .toMatchInlineSnapshot(`
+    await expectMasked(ctx.fund.restakingVaults.children[2].resolve(true))
+      .resolves.toMatchInlineSnapshot(`
       {
         "admin": {
           "fundManager": "BEpVRdWw6VhvfwfQufB9iqcJ6acf51XRP1jETCvGDBVE",
@@ -3491,8 +3491,8 @@ describe('restaking.fragBTC test', async () => {
 
     await ctx.fund.runCommand.executeChained(null);
 
-    await expectMasked(ctx.fund.restakingVaults[2].resolve(true)).resolves
-      .toMatchInlineSnapshot(`
+    await expectMasked(ctx.fund.restakingVaults.children[2].resolve(true))
+      .resolves.toMatchInlineSnapshot(`
       {
         "admin": {
           "fundManager": "BEpVRdWw6VhvfwfQufB9iqcJ6acf51XRP1jETCvGDBVE",
@@ -3595,8 +3595,8 @@ describe('restaking.fragBTC test', async () => {
     );
     await solv.wBTC.setSolvProtocolWallet.execute({ address: feePayer });
 
-    await expectMasked(ctx.fund.restakingVaults[2].resolve(true)).resolves
-      .toMatchInlineSnapshot(`
+    await expectMasked(ctx.fund.restakingVaults.children[2].resolve(true))
+      .resolves.toMatchInlineSnapshot(`
       {
         "admin": {
           "fundManager": "BEpVRdWw6VhvfwfQufB9iqcJ6acf51XRP1jETCvGDBVE",
@@ -3674,8 +3674,8 @@ describe('restaking.fragBTC test', async () => {
       operator: restaking.knownAddresses.fundManager,
     });
 
-    await expectMasked(ctx.fund.restakingVaults[2].resolve(true)).resolves
-      .toMatchInlineSnapshot(`
+    await expectMasked(ctx.fund.restakingVaults.children[2].resolve(true))
+      .resolves.toMatchInlineSnapshot(`
       {
         "admin": {
           "fundManager": "BEpVRdWw6VhvfwfQufB9iqcJ6acf51XRP1jETCvGDBVE",
@@ -3741,8 +3741,8 @@ describe('restaking.fragBTC test', async () => {
 
     await solv.wBTC.confirmDeposits.execute(null);
 
-    await expectMasked(ctx.fund.restakingVaults[2].resolve(true)).resolves
-      .toMatchInlineSnapshot(`
+    await expectMasked(ctx.fund.restakingVaults.children[2].resolve(true))
+      .resolves.toMatchInlineSnapshot(`
       {
         "admin": {
           "fundManager": "BEpVRdWw6VhvfwfQufB9iqcJ6acf51XRP1jETCvGDBVE",
@@ -3866,8 +3866,8 @@ describe('restaking.fragBTC test', async () => {
       10_0000_0000n
     );
 
-    await expectMasked(ctx.fund.restakingVaults[1].resolve(true)).resolves
-      .toMatchInlineSnapshot(`
+    await expectMasked(ctx.fund.restakingVaults.children[1].resolve(true))
+      .resolves.toMatchInlineSnapshot(`
       {
         "admin": {
           "fundManager": "BEpVRdWw6VhvfwfQufB9iqcJ6acf51XRP1jETCvGDBVE",
@@ -3955,8 +3955,8 @@ describe('restaking.fragBTC test', async () => {
       operator: restaking.knownAddresses.fundManager,
     });
 
-    await expectMasked(ctx.fund.restakingVaults[1].resolve(true)).resolves
-      .toMatchInlineSnapshot(`
+    await expectMasked(ctx.fund.restakingVaults.children[1].resolve(true))
+      .resolves.toMatchInlineSnapshot(`
       {
         "admin": {
           "fundManager": "BEpVRdWw6VhvfwfQufB9iqcJ6acf51XRP1jETCvGDBVE",
@@ -4026,8 +4026,8 @@ describe('restaking.fragBTC test', async () => {
       3_0000_0000n
     );
 
-    await expectMasked(ctx.fund.restakingVaults[1].resolve(true)).resolves
-      .toMatchInlineSnapshot(`
+    await expectMasked(ctx.fund.restakingVaults.children[1].resolve(true))
+      .resolves.toMatchInlineSnapshot(`
       {
         "admin": {
           "fundManager": "BEpVRdWw6VhvfwfQufB9iqcJ6acf51XRP1jETCvGDBVE",
@@ -4110,8 +4110,8 @@ describe('restaking.fragBTC test', async () => {
       1_0000_0000n
     );
 
-    await expectMasked(ctx.fund.restakingVaults[1].resolve(true)).resolves
-      .toMatchInlineSnapshot(`
+    await expectMasked(ctx.fund.restakingVaults.children[1].resolve(true))
+      .resolves.toMatchInlineSnapshot(`
       {
         "admin": {
           "fundManager": "BEpVRdWw6VhvfwfQufB9iqcJ6acf51XRP1jETCvGDBVE",
@@ -4192,8 +4192,8 @@ describe('restaking.fragBTC test', async () => {
       operator: restaking.knownAddresses.fundManager,
     });
 
-    await expectMasked(ctx.fund.restakingVaults[1].resolve(true)).resolves
-      .toMatchInlineSnapshot(`
+    await expectMasked(ctx.fund.restakingVaults.children[1].resolve(true))
+      .resolves.toMatchInlineSnapshot(`
       {
         "admin": {
           "fundManager": "BEpVRdWw6VhvfwfQufB9iqcJ6acf51XRP1jETCvGDBVE",
@@ -4263,8 +4263,8 @@ describe('restaking.fragBTC test', async () => {
       operator: restaking.knownAddresses.fundManager,
     });
 
-    await expectMasked(ctx.fund.restakingVaults[1].resolve(true)).resolves
-      .toMatchInlineSnapshot(`
+    await expectMasked(ctx.fund.restakingVaults.children[1].resolve(true))
+      .resolves.toMatchInlineSnapshot(`
       {
         "admin": {
           "fundManager": "BEpVRdWw6VhvfwfQufB9iqcJ6acf51XRP1jETCvGDBVE",
@@ -4353,8 +4353,8 @@ describe('restaking.fragBTC test', async () => {
           .fields[0] as restakingTypes.UnrestakeVRTCommandResult)
       : null;
 
-    await expectMasked(ctx.fund.restakingVaults[1].resolve(true)).resolves
-      .toMatchInlineSnapshot(`
+    await expectMasked(ctx.fund.restakingVaults.children[1].resolve(true))
+      .resolves.toMatchInlineSnapshot(`
       {
         "admin": {
           "fundManager": "BEpVRdWw6VhvfwfQufB9iqcJ6acf51XRP1jETCvGDBVE",
@@ -4442,8 +4442,8 @@ describe('restaking.fragBTC test', async () => {
     await solv.cbBTC.setSolvProtocolWallet.execute({ address: feePayer });
     await solv.cbBTC.confirmWithdrawalRequests.execute(null);
 
-    await expectMasked(ctx.fund.restakingVaults[1].resolve(true)).resolves
-      .toMatchInlineSnapshot(`
+    await expectMasked(ctx.fund.restakingVaults.children[1].resolve(true))
+      .resolves.toMatchInlineSnapshot(`
       {
         "admin": {
           "fundManager": "BEpVRdWw6VhvfwfQufB9iqcJ6acf51XRP1jETCvGDBVE",
@@ -4527,8 +4527,8 @@ describe('restaking.fragBTC test', async () => {
       operator: restaking.knownAddresses.fundManager,
     });
 
-    await expectMasked(ctx.fund.restakingVaults[1].resolve(true)).resolves
-      .toMatchInlineSnapshot(`
+    await expectMasked(ctx.fund.restakingVaults.children[1].resolve(true))
+      .resolves.toMatchInlineSnapshot(`
       {
         "admin": {
           "fundManager": "BEpVRdWw6VhvfwfQufB9iqcJ6acf51XRP1jETCvGDBVE",
