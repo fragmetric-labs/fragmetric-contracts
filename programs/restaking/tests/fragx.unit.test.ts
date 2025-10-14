@@ -1590,4 +1590,664 @@ describe('restaking.fragX unit test', async () => {
       }
     `);
   });
+
+  /** verify impact on global reward account by the state changes of the user_reward_accounts */
+
+  // 1. deposit
+  test('reward impact on deposit', async () => {
+    const depositAmount = 10_000_000_000n; // 10 sol
+
+    // first deposit
+    await user1.deposit.execute(
+      {
+        assetAmount: depositAmount,
+      },
+      { signers: [signer1] }
+    );
+
+    const reward_1 = await ctx.reward.resolve(true);
+    const user1Reward_1 = await user1.reward.resolve(true);
+
+    // operator updates reward pools
+    await ctx.reward.updatePools.execute({});
+
+    const reward_2 = await ctx.reward.resolve(true);
+    const user1Reward_2 = await user1.reward.resolve(true);
+
+    let rewardElapsedSlots =
+      reward_2!.basePool.updatedSlot - reward_1!.basePool.updatedSlot;
+    let rewardTotalContributionAccrualRate =
+      reward_1!.basePool.tokenAllocatedAmount.records.reduce(
+        (sum, cur) =>
+          sum + cur.amount * BigInt(cur.contributionAccrualRate) * 100n,
+        0n
+      );
+
+    expect(reward_2!.basePool.contribution).toEqual(
+      rewardElapsedSlots * rewardTotalContributionAccrualRate
+    );
+    expect(reward_2!.basePool.tokenAllocatedAmount.totalAmount).toEqual(
+      depositAmount
+    );
+    expect(reward_2!.basePool.tokenAllocatedAmount.records[0].amount).toEqual(
+      depositAmount
+    );
+
+    expect(user1Reward_2!.basePool.contribution).toEqual(0n);
+    expect(user1Reward_2!.basePool.tokenAllocatedAmount.totalAmount).toEqual(
+      depositAmount
+    );
+    expect(
+      user1Reward_2!.basePool.tokenAllocatedAmount.records[0].amount
+    ).toEqual(depositAmount);
+
+    // second deposit
+    await user1.deposit.execute(
+      {
+        assetAmount: depositAmount,
+      },
+      { signers: [signer1] }
+    );
+
+    const reward_3 = await ctx.reward.resolve(true);
+    const user1Reward_3 = await user1.reward.resolve(true);
+
+    rewardElapsedSlots =
+      reward_3!.basePool.updatedSlot - reward_2!.basePool.updatedSlot;
+    rewardTotalContributionAccrualRate =
+      reward_2!.basePool.tokenAllocatedAmount.records.reduce(
+        (sum, cur) =>
+          sum + cur.amount * BigInt(cur.contributionAccrualRate) * 100n,
+        0n
+      );
+
+    expect(reward_3!.basePool.contribution).toEqual(
+      reward_2!.basePool.contribution +
+        rewardElapsedSlots * rewardTotalContributionAccrualRate
+    );
+    expect(reward_3!.basePool.tokenAllocatedAmount.totalAmount).toEqual(
+      depositAmount * 2n
+    );
+    expect(reward_3!.basePool.tokenAllocatedAmount.records[0].amount).toEqual(
+      depositAmount * 2n
+    );
+
+    let user1RewardElapsedSlots =
+      user1Reward_3!.basePool.updatedSlot - user1Reward_1!.basePool.updatedSlot;
+    let user1RewardTotalContributionAccrualRate =
+      user1Reward_1!.basePool.tokenAllocatedAmount.records.reduce(
+        (sum, cur) =>
+          sum + cur.amount * BigInt(cur.contributionAccrualRate) * 100n,
+        0n
+      );
+
+    expect(user1Reward_3!.basePool.contribution).toEqual(
+      user1RewardElapsedSlots * user1RewardTotalContributionAccrualRate
+    );
+    expect(user1Reward_3!.basePool.tokenAllocatedAmount.totalAmount).toEqual(
+      depositAmount * 2n
+    );
+    expect(
+      user1Reward_3!.basePool.tokenAllocatedAmount.records[0].amount
+    ).toEqual(depositAmount * 2n);
+  });
+
+  // 2. transfer
+  // 2.a. user1 (reward_account o) -> user2 (reward_account o)
+  // 2.b. user1 (reward_account o) -> user2 (reward_account x)
+  // 2.c. user1 (reward_account x) -> user2 (reward_account o)
+  // 2.d. user1 (reward_account x) -> user2 (reward_account x)
+
+  // 2.a. user1 (reward_account o) -> user2 (reward_account o)
+  test('reward impact on transfer, user1 (reward_account o) -> user2 (reward_account o)', async () => {
+    const depositAmount = 1_000_000_000n; // 1 sol
+
+    // user1 creates user_reward_account
+    await user1.deposit.execute(
+      { assetAmount: depositAmount },
+      { signers: [signer1] }
+    );
+
+    // user2 creates user_reward_account
+    await user2.deposit.execute(
+      { assetAmount: depositAmount },
+      { signers: [signer2] }
+    );
+
+    const reward_1 = await ctx.reward.resolve(true);
+    const user1Reward_1 = await user1.reward.resolve(true);
+    const user2Reward_1 = await user2.reward.resolve(true);
+
+    expect(user1Reward_1!.basePool.tokenAllocatedAmount.totalAmount).toEqual(
+      depositAmount
+    );
+    expect(user2Reward_1!.basePool.tokenAllocatedAmount.totalAmount).toEqual(
+      depositAmount
+    );
+    expect(reward_1!.basePool.tokenAllocatedAmount.totalAmount).toEqual(
+      depositAmount * 2n
+    );
+
+    const user1_1 = await user1.resolve(true);
+    const user2_1 = await user2.resolve(true);
+
+    // user1 -> user2
+    await user1.transfer.execute(
+      {
+        receiptTokenAmount: user1_1!.receiptTokenAmount,
+        recipient: user2.address!,
+      },
+      { signers: [signer1] }
+    );
+
+    const reward_2 = await ctx.reward.resolve(true);
+    const user1Reward_2 = await user1.reward.resolve(true);
+    const user2Reward_2 = await user2.reward.resolve(true);
+
+    // user1 reward's tokenAllocatedAmount moved to user2 reward
+    expect(user1Reward_2!.basePool.tokenAllocatedAmount.totalAmount).toEqual(
+      0n
+    );
+    expect(user2Reward_2!.basePool.tokenAllocatedAmount.totalAmount).toEqual(
+      depositAmount * 2n
+    );
+
+    // global reward's tokenAllocatedAmount remains same
+    expect(reward_2!.basePool.tokenAllocatedAmount.totalAmount).toEqual(
+      reward_1!.basePool.tokenAllocatedAmount.totalAmount
+    );
+
+    // because both user1 and user2 have user_reward_account, so global reward's contribution is sum of these two's
+    expect(reward_2!.basePool.contribution).toEqual(
+      user1Reward_2!.basePool.contribution +
+        user2Reward_2!.basePool.contribution
+    );
+  });
+
+  // 2.b. user1 (reward_account o) -> user2 (reward_account x)
+  test('reward impact on transfer, user1 (reward_account o) -> user2 (reward_account x)', async () => {
+    const depositAmount = 1_000_000_000n; // 1 sol
+
+    // user1 creates user_reward_account
+    await user1.deposit.execute(
+      { assetAmount: depositAmount },
+      { signers: [signer1] }
+    );
+
+    const reward_1 = await ctx.reward.resolve(true);
+    const user1Reward_1 = await user1.reward.resolve(true);
+
+    expect(user1Reward_1!.basePool.tokenAllocatedAmount.totalAmount).toEqual(
+      depositAmount
+    );
+    expect(reward_1!.basePool.tokenAllocatedAmount.totalAmount).toEqual(
+      depositAmount
+    );
+
+    const user1_1 = await user1.resolve(true);
+    const user2_1 = await user2.resolve(true);
+
+    // user2 doesn't create user_reward_account
+    // user1 -> user2
+    await user1.transfer.execute(
+      {
+        receiptTokenAmount: user1_1!.receiptTokenAmount,
+        recipient: user2.address!,
+      },
+      { signers: [signer1] }
+    );
+
+    const reward_2 = await ctx.reward.resolve(true);
+    const user1Reward_2 = await user1.reward.resolve(true);
+
+    // user1 reward's tokenAllocatedAmount moved away
+    expect(user1Reward_2!.basePool.tokenAllocatedAmount.totalAmount).toEqual(
+      0n
+    );
+
+    // global reward's tokenAllocatedAmount moved away too
+    expect(reward_2!.basePool.tokenAllocatedAmount.totalAmount).toEqual(0n);
+
+    // because user2 reward account doesn't exist, global reward's contribution is equal to user1 reward's contribution
+    expect(reward_2!.basePool.contribution).toEqual(
+      user1Reward_2!.basePool.contribution
+    );
+  });
+
+  // 2.c. user1 (reward_account x) -> user2 (reward_account o)
+  test('reward impact on transfer, user1 (reward_account x) -> user2 (reward_account o)', async () => {
+    const depositAmount = 1_000_000_000n; // 1 sol
+
+    // user2 creates user_reward_account
+    await user2.deposit.execute(
+      { assetAmount: depositAmount },
+      { signers: [signer2] }
+    );
+
+    const reward_1 = await ctx.reward.resolve(true);
+    const user2Reward_1 = await user2.reward.resolve(true);
+
+    const user1_1 = await user1.resolve(true);
+    const user2_1 = await user2.resolve(true);
+
+    // user1 doesn't create user_reward_account
+    // user2 just transfers receipt token to user1 to airdrop receipt token to user1
+    await user2.transfer.execute(
+      {
+        receiptTokenAmount: user2_1!.receiptTokenAmount,
+        recipient: user1.address!,
+      },
+      { signers: [signer2] }
+    );
+
+    const user1_2 = await user1.resolve(true);
+    const user2_2 = await user2.resolve(true);
+
+    // now user1 (reward_account x) -> user2 (reward_account o)
+    await user1.transfer.execute(
+      {
+        receiptTokenAmount: user1_2!.receiptTokenAmount,
+        recipient: user2.address!,
+      },
+      { signers: [signer1] }
+    );
+
+    const reward_2 = await ctx.reward.resolve(true);
+    const user2Reward_2 = await user2.reward.resolve(true);
+
+    // user2 reward's tokenAllocatedAmount doesn't change because it's returned back from user1
+    expect(user2Reward_2!.basePool.tokenAllocatedAmount.totalAmount).toEqual(
+      user2Reward_1!.basePool.tokenAllocatedAmount.totalAmount
+    );
+
+    // global reward's tokenAllocatedAmount doesn't change,
+    // because user1 reward account doesn't exist,
+    // so user1's action doesn't give an impact on the global reward.
+    expect(reward_2!.basePool.tokenAllocatedAmount.totalAmount).toEqual(
+      reward_1!.basePool.tokenAllocatedAmount.totalAmount
+    );
+
+    // global reward's contribution is equal to user2 reward's contribution,
+    // because user1's action doesn't give an impact on the global reward.
+    expect(reward_2!.basePool.contribution).toEqual(
+      user2Reward_2!.basePool.contribution
+    );
+  });
+
+  test('reward impact on transfer, user1 (reward_account x) -> user2 (reward_account x)', async () => {
+    const depositAmount = 1_000_000_000n; // 1 sol
+
+    // user3 creates user_reward_account
+    await user3.deposit.execute(
+      { assetAmount: depositAmount },
+      { signers: [signer3] }
+    );
+
+    const reward_1 = await ctx.reward.resolve(true);
+    const user3_1 = await user3.resolve(true);
+    const user1_1 = await user1.resolve(true);
+
+    // user3 transfers receipt token to user1
+    await user3.transfer.execute(
+      {
+        receiptTokenAmount: user3_1!.receiptTokenAmount,
+        recipient: user1.address!,
+      },
+      { signers: [signer3] }
+    );
+
+    const reward_2 = await ctx.reward.resolve(true);
+
+    const user1_2 = await user1.resolve(true);
+    const user2_1 = await user2.resolve(true);
+
+    // now user1 (reward_accoount x) -> user2 (reward_account x)
+    await user1.transfer.execute(
+      {
+        receiptTokenAmount: user1_2!.receiptTokenAmount,
+        recipient: user2.address!,
+      },
+      { signers: [signer1] }
+    );
+
+    const reward_3 = await ctx.reward.resolve(true);
+
+    // global reward's tokenAllocatedAmount moved away
+    expect(reward_3!.basePool.tokenAllocatedAmount.totalAmount).toEqual(0n);
+    expect(reward_3!.basePool.tokenAllocatedAmount.totalAmount).toEqual(
+      reward_2!.basePool.tokenAllocatedAmount.totalAmount
+    );
+
+    // global reward's contribution accumulation has been stopped after user3 transferred his receipt token amount to user1.
+    let rewardElapsedSlots =
+      reward_2!.basePool.updatedSlot - reward_1!.basePool.updatedSlot;
+    let rewardTotalContributionAccrualRate =
+      reward_1!.basePool.tokenAllocatedAmount.records.reduce(
+        (sum, cur) =>
+          sum + cur.amount * BigInt(cur.contributionAccrualRate) * 100n,
+        0n
+      );
+
+    expect(reward_3!.basePool.contribution).toEqual(
+      rewardElapsedSlots * rewardTotalContributionAccrualRate
+    );
+  });
+
+  // 3. request withdrawal
+  test('reward impact on request withdrawal', async () => {
+    // user1 deposits first
+    const depositAmount = 1_000_000_000n; // 1 sol
+
+    await user1.deposit.execute(
+      { assetAmount: depositAmount },
+      { signers: [signer1] }
+    );
+
+    const reward_1 = await ctx.reward.resolve(true);
+    const user1Fund_1 = await user1.fund.resolve(true);
+    const user1Reward_1 = await user1.reward.resolve(true);
+    const user1_1 = await user1.resolve(true);
+
+    expect(user1Reward_1!.basePool.tokenAllocatedAmount.totalAmount).toEqual(
+      user1_1!.receiptTokenAmount
+    );
+    expect(reward_1!.basePool.tokenAllocatedAmount.totalAmount).toEqual(
+      user1_1!.receiptTokenAmount
+    );
+
+    // user1 requests withdrawal
+    await user1.requestWithdrawal.execute(
+      { receiptTokenAmount: user1_1!.receiptTokenAmount },
+      { signers: [signer1] }
+    );
+
+    const reward_2 = await ctx.reward.resolve(true);
+    const user1Fund_2 = await user1.fund.resolve(true);
+    const user1Reward_2 = await user1.reward.resolve(true);
+    const user1_2 = await user1.resolve(true);
+
+    // withdrawal requested receipt token amount is written at the user's fund_account
+    expect(user1Fund_2!.withdrawalRequests[0].receiptTokenAmount).toEqual(
+      user1_1!.receiptTokenAmount
+    );
+
+    expect(user1Reward_2!.basePool.tokenAllocatedAmount.totalAmount).toEqual(
+      0n
+    );
+    expect(user1Reward_2!.basePool.tokenAllocatedAmount.totalAmount).toEqual(
+      user1Reward_1!.basePool.tokenAllocatedAmount.totalAmount -
+        user1_1!.receiptTokenAmount
+    );
+
+    expect(reward_2!.basePool.tokenAllocatedAmount.totalAmount).toEqual(0n);
+    expect(reward_2!.basePool.tokenAllocatedAmount.totalAmount).toEqual(
+      reward_1!.basePool.tokenAllocatedAmount.totalAmount -
+        user1_1!.receiptTokenAmount
+    );
+
+    expect(user1_2!.receiptTokenAmount).toEqual(0n);
+
+    // operator updates reward pools
+    await ctx.reward.updatePools.execute({});
+
+    // user1 updates reward pools
+    await user1.reward.updatePools.execute({});
+
+    const reward_3 = await ctx.reward.resolve(true);
+    const user1Reward_3 = await user1.reward.resolve(true);
+
+    // global reward's contribution has been stopped increasing after user1 requested withdrawal
+    expect(reward_3!.basePool.contribution).toEqual(
+      reward_2!.basePool.contribution
+    );
+
+    // user1 reward's contribution has been stopped increasing after user1 requested withdrawal
+    expect(user1Reward_3!.basePool.contribution).toEqual(
+      user1Reward_2!.basePool.contribution
+    );
+  });
+
+  // 4. cancel withdrawal request
+  test('reward impact on cancel withdrawal request', async () => {
+    // user1 deposits first
+    const depositAmount = 1_000_000_000n; // 1 sol
+
+    await user1.deposit.execute(
+      { assetAmount: depositAmount },
+      { signers: [signer1] }
+    );
+
+    const reward_1 = await ctx.reward.resolve(true);
+    const user1Fund_1 = await user1.fund.resolve(true);
+    const user1Reward_1 = await user1.reward.resolve(true);
+    const user1_1 = await user1.resolve(true);
+
+    // user1 requests withdrawal
+    await user1.requestWithdrawal.execute(
+      { receiptTokenAmount: user1_1!.receiptTokenAmount },
+      { signers: [signer1] }
+    );
+
+    const reward_2 = await ctx.reward.resolve(true);
+    const user1Fund_2 = await user1.fund.resolve(true);
+    const user1Reward_2 = await user1.reward.resolve(true);
+    const user1_2 = await user1.resolve(true);
+
+    // operator updates reward pools
+    await ctx.reward.updatePools.execute({});
+
+    const reward_3 = await ctx.reward.resolve(true);
+
+    // global reward's contribution doesn't change because user1 requested withdrawal
+    expect(reward_3!.basePool.contribution).toEqual(
+      reward_2!.basePool.contribution
+    );
+
+    // user1 cancels withdrawal request
+    await user1.cancelWithdrawalRequest.execute(
+      { requestId: user1Fund_2!.withdrawalRequests[0].requestId },
+      { signers: [signer1] }
+    );
+
+    const reward_4 = await ctx.reward.resolve(true);
+    const user1Fund_3 = await user1.fund.resolve(true);
+    const user1Reward_3 = await user1.reward.resolve(true);
+    const user1_3 = await user1.resolve(true);
+
+    expect(user1Reward_3!.basePool.tokenAllocatedAmount.totalAmount).toEqual(
+      user1_1!.receiptTokenAmount
+    );
+
+    expect(reward_4!.basePool.tokenAllocatedAmount.totalAmount).toEqual(
+      user1Reward_3!.basePool.tokenAllocatedAmount.totalAmount
+    );
+
+    expect(user1_3!.receiptTokenAmount).toEqual(user1_1!.receiptTokenAmount);
+
+    // operator updates reward pools
+    await ctx.reward.updatePools.execute({});
+
+    // user1 updates reward pools
+    await user1.reward.updatePools.execute({});
+
+    const reward_5 = await ctx.reward.resolve(true);
+    const user1Reward_4 = await user1.reward.resolve(true);
+
+    // global reward's contribution would increase again
+    expect(reward_5!.basePool.contribution).toBeGreaterThan(
+      reward_4!.basePool.contribution
+    );
+
+    // user1 reward's contribution would increase again
+    expect(user1Reward_4!.basePool.contribution).toBeGreaterThan(
+      user1Reward_3!.basePool.contribution
+    );
+  });
+
+  // 5. withdraw
+  test('reward impact on withdraw', async () => {
+    const depositAmount = 1_000_000_000n; // 1 sol
+
+    // user1 deposits first
+    await user1.deposit.execute(
+      { assetAmount: depositAmount },
+      { signers: [signer1] }
+    );
+
+    const reward_1 = await ctx.reward.resolve(true);
+    const user1_1 = await user1.resolve(true);
+
+    // user1 requests withdrawal
+    await user1.requestWithdrawal.execute(
+      { receiptTokenAmount: user1_1!.receiptTokenAmount },
+      { signers: [signer1] }
+    );
+
+    const reward_2 = await ctx.reward.resolve(true);
+    const user1Fund_2 = await user1.fund.resolve(true);
+
+    // operator runs withdrawal batch commands
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'EnqueueWithdrawalBatch',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'ProcessWithdrawalBatch',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    // user1 withdraws
+    await user1.withdraw.execute(
+      { requestId: user1Fund_2!.withdrawalRequests[0].requestId },
+      { signers: [signer1] }
+    );
+
+    const reward_3 = await ctx.reward.resolve(true);
+
+    // global reward's contribution counting has been stopped after user1 requested withdrawal
+    expect(reward_3!.basePool.contribution).toEqual(
+      reward_2!.basePool.contribution
+    );
+  });
+
+  // 6. wrap
+  test('reward impact on wrap', async () => {
+    const depositAmount = 1_000_000_000n; // 1 sol
+
+    // user1 deposits first
+    await user1.deposit.execute(
+      { assetAmount: depositAmount },
+      { signers: [signer1] }
+    );
+
+    const reward_1 = await ctx.reward.resolve(true);
+    const user1Reward_1 = await user1.reward.resolve(true);
+    const user1_1 = await user1.resolve(true);
+    const fund_1 = await ctx.fund.resolveAccount(true);
+
+    // user1 wraps receipt token
+    await user1.wrap.execute(
+      { receiptTokenAmount: user1_1!.receiptTokenAmount },
+      { signers: [signer1] }
+    );
+
+    const reward_2 = await ctx.reward.resolve(true);
+    const user1Reward_2 = await user1.reward.resolve(true);
+    const user1_2 = await user1.resolve(true);
+    const fund_2 = await ctx.fund.resolveAccount(true);
+
+    expect(fund_2!.data.wrappedToken.supply).toEqual(
+      fund_1!.data.wrappedToken.supply + user1_1!.receiptTokenAmount
+    );
+    expect(fund_2!.data.wrappedToken.retainedAmount).toEqual(
+      fund_2!.data.wrappedToken.supply
+    );
+
+    expect(user1_2!.wrappedTokenAmount).toEqual(user1_1!.receiptTokenAmount);
+    expect(user1_2!.receiptTokenAmount).toEqual(0n);
+
+    // operator updates reward pools
+    await ctx.reward.updatePools.execute({});
+
+    // user1 updates reward pools
+    await user1.reward.updatePools.execute({});
+
+    const reward_3 = await ctx.reward.resolve(true);
+    const user1Reward_3 = await user1.reward.resolve(true);
+
+    // global reward's contribution keeps increasing because fund wrap account reward account's contribution increases
+    expect(reward_3!.basePool.contribution).toBeGreaterThan(
+      reward_2!.basePool.contribution
+    );
+
+    // user1 reward's contribution has been stopped increasing after user wrapped his receipt token
+    expect(user1Reward_3!.basePool.contribution).toEqual(
+      user1Reward_2!.basePool.contribution
+    );
+  });
+
+  // 7. unwrap
+  test('reward impact on unwrap', async () => {
+    const depositAmount = 1_000_000_000n; // 1 sol
+
+    // user1 deposits first
+    await user1.deposit.execute(
+      { assetAmount: depositAmount },
+      { signers: [signer1] }
+    );
+
+    const reward_1 = await ctx.reward.resolve(true);
+    const user1Reward_1 = await user1.reward.resolve(true);
+    const user1_1 = await user1.resolve(true);
+
+    // user1 wraps receipt token
+    await user1.wrap.execute(
+      { receiptTokenAmount: user1_1!.receiptTokenAmount },
+      { signers: [signer1] }
+    );
+
+    const reward_2 = await ctx.reward.resolve(true);
+    const user1Reward_2 = await user1.reward.resolve(true);
+    const user1_2 = await user1.resolve(true);
+    const fund_2 = await ctx.fund.resolveAccount(true);
+
+    // user1 unwraps receipt token
+    await user1.unwrap.execute(
+      { wrappedTokenAmount: user1_2!.wrappedTokenAmount },
+      { signers: [signer1] }
+    );
+
+    const reward_3 = await ctx.reward.resolve(true);
+    const user1Reward_3 = await user1.reward.resolve(true);
+    const user1_3 = await user1.resolve(true);
+    const fund_3 = await ctx.fund.resolveAccount(true);
+
+    expect(fund_3!.data.wrappedToken.supply).toEqual(0n);
+    expect(fund_3!.data.wrappedToken.retainedAmount).toEqual(
+      fund_3!.data.wrappedToken.supply
+    );
+
+    expect(user1_3!.wrappedTokenAmount).toEqual(0n);
+    expect(user1_3!.receiptTokenAmount).toEqual(user1_1!.receiptTokenAmount);
+
+    // operator updates reward pools
+    await ctx.reward.updatePools.execute({});
+
+    // user1 updates reward pools
+    await user1.reward.updatePools.execute({});
+
+    const reward_4 = await ctx.reward.resolve(true);
+    const user1Reward_4 = await user1.reward.resolve(true);
+
+    // global reward's contribution keeps increasing because user1's reward contribution increases
+    expect(reward_4!.basePool.contribution).toBeGreaterThan(
+      reward_3!.basePool.contribution
+    );
+
+    // user1 reward's contribution starts to increase again after user1 unwrapped his wrapped token
+    expect(user1Reward_4!.basePool.contribution).toBeGreaterThan(
+      user1Reward_3!.basePool.contribution
+    );
+  });
 });
