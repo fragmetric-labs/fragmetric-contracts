@@ -8,14 +8,14 @@ import { initializeFragX } from './fragx.unit.init';
 describe('restaking.fragX unit test', async () => {
   const testSuiteCtx = await createTestSuiteContext();
 
-  type FragXTestCtx = Awaited<ReturnType<typeof initializeFragX>>;
+  type FragXTestContext = Awaited<ReturnType<typeof initializeFragX>>;
 
-  let testCtx: FragXTestCtx;
-  let validator: FragXTestCtx['validator'];
-  let feePayer: FragXTestCtx['feePayer'];
-  let restaking: FragXTestCtx['restaking'];
-  let initializationTasks: FragXTestCtx['initializationTasks'];
-  let ctx: FragXTestCtx['ctx'];
+  let testCtx: FragXTestContext;
+  let validator: FragXTestContext['validator'];
+  let feePayer: FragXTestContext['feePayer'];
+  let restaking: FragXTestContext['restaking'];
+  let initializationTasks: FragXTestContext['initializationTasks'];
+  let ctx: FragXTestContext['ctx'];
 
   let signer1: KeyPairSigner, signer2: KeyPairSigner, signer3: KeyPairSigner;
   let user1: RestakingUserAccountContext,
