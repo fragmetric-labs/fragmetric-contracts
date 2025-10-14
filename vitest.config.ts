@@ -28,10 +28,11 @@ export default defineConfig({
     },
     include: ['**/*.test.ts'],
     passWithNoTests: true,
-    testTimeout: 40 * 60 * 1000,
+    testTimeout: 30 * 60 * 1000,
     hookTimeout: 5 * 60 * 1000,
+    slowTestThreshold: 10 * 1000,
 
-    pool: 'forks', // parallel run for `describe`
+    pool: 'threads', // parallel run for `describe`
     minWorkers: 1,
     sequence: {
       concurrent: false, // sequential run for `test`

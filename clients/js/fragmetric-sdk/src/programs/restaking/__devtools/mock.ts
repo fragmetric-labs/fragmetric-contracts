@@ -111,6 +111,28 @@ export function createMockTool(program: RestakingProgram) {
           ],
         },
       };
+    } else if (key == 'jito_vault_config_x100') {
+      const cfg = await jitoVault.fetchConfig(
+        program.runtime.rpc,
+        'UwuSgAq4zByffCGCrWH87DsjfsewYjuqHfJEpzw1Jq3' as Address
+      );
+      cfg.data.epochLength = 4320n; // 432000 by default
+      account = {
+        pubkey: cfg.address,
+        account: {
+          owner: cfg.programAddress,
+          executable: cfg.executable,
+          lamports: cfg.lamports,
+          rentEpoch: MAX_U64,
+          space: cfg.space,
+          data: [
+            getBase64Decoder().decode(
+              jitoVault.getConfigCodec().encode(cfg.data)
+            ) as Base64EncodedBytes,
+            'base64',
+          ],
+        },
+      };
     } else if (key == 'fragsol_jito_nsol_vrt_mint') {
       const src = await token.fetchMint(
         program.runtime.rpc,
