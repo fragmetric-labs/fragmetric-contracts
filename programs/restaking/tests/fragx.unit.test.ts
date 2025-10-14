@@ -660,9 +660,8 @@ describe('restaking.fragX unit test', async () => {
         user1Reward_2?.basePool.tokenAllocatedAmount.records[0].amount! *
         BigInt(
           user1Reward_2?.basePool.tokenAllocatedAmount.records[0]
-            .contributionAccrualRate!
-        ) *
-        100n
+            .contributionAccrualRate! * 100
+        )
     );
     expect(
       user1Reward_2?.basePool.settlements[0].settledAmount,
@@ -1619,7 +1618,7 @@ describe('restaking.fragX unit test', async () => {
     let rewardTotalContributionAccrualRate =
       reward_1!.basePool.tokenAllocatedAmount.records.reduce(
         (sum, cur) =>
-          sum + cur.amount * BigInt(cur.contributionAccrualRate) * 100n,
+          sum + cur.amount * BigInt(cur.contributionAccrualRate * 100),
         0n
       );
 
@@ -1657,7 +1656,7 @@ describe('restaking.fragX unit test', async () => {
     rewardTotalContributionAccrualRate =
       reward_2!.basePool.tokenAllocatedAmount.records.reduce(
         (sum, cur) =>
-          sum + cur.amount * BigInt(cur.contributionAccrualRate) * 100n,
+          sum + cur.amount * BigInt(cur.contributionAccrualRate * 100),
         0n
       );
 
@@ -1677,7 +1676,7 @@ describe('restaking.fragX unit test', async () => {
     let user1RewardTotalContributionAccrualRate =
       user1Reward_1!.basePool.tokenAllocatedAmount.records.reduce(
         (sum, cur) =>
-          sum + cur.amount * BigInt(cur.contributionAccrualRate) * 100n,
+          sum + cur.amount * BigInt(cur.contributionAccrualRate * 100),
         0n
       );
 
@@ -1924,7 +1923,7 @@ describe('restaking.fragX unit test', async () => {
     let rewardTotalContributionAccrualRate =
       reward_1!.basePool.tokenAllocatedAmount.records.reduce(
         (sum, cur) =>
-          sum + cur.amount * BigInt(cur.contributionAccrualRate) * 100n,
+          sum + cur.amount * BigInt(cur.contributionAccrualRate * 100),
         0n
       );
 
