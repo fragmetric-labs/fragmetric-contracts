@@ -31,7 +31,7 @@ export async function createTestSuiteContext(config?: {
       : ('litesvm' as const);
 
   const resolvedConfig = {
-    slotsPerEpoch: 4320n, // x100 faster than default
+    slotsPerEpoch: 43200n, // x10 faster than default
     ticksPerSlot: 64 / 32, // x32 faster than default
     limitLedgerSize: 1, // slots
     validator: validatorByEnvVar,
