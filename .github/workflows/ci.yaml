@@ -18,7 +18,7 @@ env:
   ANCHOR_VERSION: 0.31.1
   NODE_VERSION: 20.19.0
   CI: true
-  DEBUG: false
+  DEBUG: true
   RUNTIME: ${{(github.ref_name == 'main' || github.ref_name == 'dev' ||
     (github.event_name == 'push' && contains(github.event.head_commit.message, '[svm]')) ||
     (github.event_name == 'pull_request' && contains(github.event.pull_request.title, '[svm]'))) && 'svm' || 'litesvm' }}
@@ -38,7 +38,10 @@ jobs:
   ci:
     if: ${{ github.event_name != 'workflow_dispatch' && !contains(github.event.head_commit.message, '[skip ci]') }}
     name: build and test
-    runs-on: macos-latest-xlarge # arch: arm64 (M1)
+#    runs-on: macos-latest-xlarge
+    runs-on: ${{(github.ref_name == 'main' || github.ref_name == 'dev' ||
+      (github.event_name == 'push' && contains(github.event.head_commit.message, '[svm]')) ||
+      (github.event_name == 'pull_request' && contains(github.event.pull_request.title, '[svm]'))) && 'ubuntu-latest-32core-x86' || 'macos-latest-xlarge' }}
     steps:
       # checkout
       - uses: actions/checkout@v4
@@ -63,6 +66,16 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
           #cache-dependency-path: ./pnpm-lock.yaml
+
+      # setup Ubuntu deps
+      - run: |
+          if [[ "$(uname -s)" == "Linux" ]]; then
+            echo "Detected Ubuntu/Linux — installing libudev deps"
+            sudo apt-get update
+            sudo apt-get install -y pkg-config libudev-dev libusb-1.0-0-dev build-essential
+          else
+            echo "Not Linux, skipping libudev install"
+          fi
 
       # setup Rust and Solana runtime
       - run: |

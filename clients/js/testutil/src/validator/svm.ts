@@ -99,7 +99,10 @@ export class SVMValidator extends TestValidator<'svm'> {
               ['--ticks-per-slot', options.ticksPerSlot.toString()],
               ['--reset'],
             ]
-          : [['--warp-slot', options.warpSlot.toString()]]
+          : [
+            ['--warp-slot', options.warpSlot.toString()],
+            // ['--log'],
+          ]
       );
 
       if (options.mock && !options.warpSlot) {
@@ -193,46 +196,51 @@ export class SVMValidator extends TestValidator<'svm'> {
       let resolved = false;
       let processingDebugLogPrintCount = 0;
       stdout = childProcess.stdout.on('data', async (data) => {
-        const logs = data.toString().trim().split('\n');
-        for (const log of logs) {
-          if (log.startsWith('Error') || log.startsWith('Notice')) {
-            console.error(log);
-            stderr.destroy();
-            stdout?.destroy();
-            reject(new Error(`${cmdString}\n${data.toString()}`));
-            break;
-          } else if (log.startsWith(rpcURLPrefix)) {
-            logger(log);
-            rpcURL = log.substring(rpcURLPrefix.length).trim();
-          } else if (log.includes(rpcSubscriptionsURLPrefix)) {
-            logger(log);
-            rpcSubscriptionsURL = log
-              .substring(rpcSubscriptionsURLPrefix.length)
-              .trim();
-          } else if (log.includes(processingLogPrefix)) {
-            if (!resolved) {
+        try {
+          const logs = data.toString().trim().split('\n');
+          for (const log of logs) {
+            if (log.startsWith('Error') || log.startsWith('Notice')) {
+              console.error(log);
+              stderr.destroy();
+              stdout?.destroy();
+              reject(new Error(`${cmdString}\n${data.toString()}`));
+              break;
+            } else if (log.startsWith(rpcURLPrefix)) {
               logger(log);
-
-              resolve({
-                process: childProcess,
-                ledgerPath,
-                rpcURL,
-                rpcSubscriptionsURL,
-              });
-              resolved = true;
-              await new Promise((resolve) => setTimeout(resolve, 5000));
-
-              if (stderr) stderr.pause();
-              if (!options.debug) {
-                stdout?.pause();
-                break;
-              }
-            } else {
-              if (processingDebugLogPrintCount++ % 16 == 0) {
+              rpcURL = log.substring(rpcURLPrefix.length).trim();
+            } else if (log.includes(rpcSubscriptionsURLPrefix)) {
+              logger(log);
+              rpcSubscriptionsURL = log
+                .substring(rpcSubscriptionsURLPrefix.length)
+                .trim();
+            } else if (log.includes(processingLogPrefix)) {
+              if (!resolved) {
                 logger(log);
+
+                resolve({
+                  process: childProcess,
+                  ledgerPath,
+                  rpcURL,
+                  rpcSubscriptionsURL,
+                });
+                await new Promise((resolve) => setTimeout(resolve, 1000));
+                resolved = true;
+
+                if (stderr) stderr.pause();
+                if (!options.debug) {
+                  stdout?.pause();
+                  break;
+                }
+              } else {
+                if (processingDebugLogPrintCount++ % 16 == 0) {
+                  logger(log);
+                }
               }
             }
           }
+        } catch (err) {
+          console.error(err);
+          reject(err);
         }
       });
     });
@@ -280,28 +288,42 @@ export class SVMValidator extends TestValidator<'svm'> {
     };
   }
 
+
+  private quitting: Promise<void> | null = null;
+
   async quit() {
-    return new Promise<void>((resolve) => {
+    if (this.quitting) {
+      return this.quitting;
+    }
+
+    return this.quitting = new Promise<void>((resolve, reject) => {
       let i = 0;
-      let reporter: NodeJS.Timeout | undefined;
-      this.process.once('exit', () => {
+      let exited = false;
+      const process = this.process;
+      process.once('exit', () => {
         this.logger('STOPPED VALIDATOR');
-        clearInterval(reporter!);
-        setTimeout(resolve, 10000);
+        exited = true;
       });
-      reporter = setInterval(() => {
-        if (i == 60) {
-          this.logger(`NO EXIT EVENT FROM VALIDATOR... (${i})`);
-          clearInterval(reporter!);
-          setTimeout(resolve, 10000);
+      const reporter = setInterval(() => {
+        if (exited) {
+          clearInterval(reporter);
+          setTimeout(resolve, 1000);
+          return;
         }
         try {
           this.logger(`STOPPING VALIDATOR... (${++i})`);
-          this.process.kill('SIGTERM');
+          process.kill('SIGTERM');
         } catch (err) {
           console.error(err);
         }
+        if (i == 12) {
+          this.logger(`NO EXIT EVENT FROM VALIDATOR... (${i})`);
+          clearInterval(reporter!);
+          reject('stopping validator timed out');
+        }
       }, 1000);
+    }).finally(() => {
+      this.quitting = null;
     });
   }
 
@@ -353,7 +375,7 @@ export class SVMValidator extends TestValidator<'svm'> {
           );
           retryOnSlowBalanceUpdate++;
           await new Promise((resolve) =>
-            setTimeout(resolve, Math.floor(Math.random() * 5000) + 1000)
+            setTimeout(resolve, Math.floor(Math.random() * 2000) + 500)
           );
         }
       } catch (err) {
@@ -368,7 +390,7 @@ export class SVMValidator extends TestValidator<'svm'> {
             );
             retriesOnBlockErrors++;
             await new Promise((resolve) =>
-              setTimeout(resolve, Math.floor(Math.random() * 5000) + 1000)
+              setTimeout(resolve, Math.floor(Math.random() * 2000) + 500)
             );
             continue;
           }
@@ -416,21 +438,24 @@ export class SVMValidator extends TestValidator<'svm'> {
         [this.getSlot({ commitment: 'processed' }), this.getFullSnapshotSlot()]
       );
 
-      // with ticksPerSlot=64: 1 slot ~= 400ms, so we can take 10 slot (4s) as a buffer of quiting
-      // with ticksPerSlot=16: 1 slot ~= 100ms, so we can take 40 slot (4s) as a buffer of quiting
-      // so "10 * 64 / ticksPerSlot" slots as a buffer
-      if (slot - currentProcessedSlot < (10 * 64) / this.options.ticksPerSlot) {
+      if (slot <= currentProcessedSlot) {
         this.logger(`NO NEED TO WARP TO SLOT ${slot}`);
         return;
+      } else if (
+        // Preferring halting to restarting, takes 150 slot (60s with ticksPerSlot=64: 1 slot ~= 400ms)
+        // So use "160 * 64 / ticksPerSlot" slots as a buffer
+        slot - currentProcessedSlot <
+        (150 * 64) / this.options.ticksPerSlot
+      ) {
+        this.logger(`NO NEED TO WARP TO SLOT ${slot} (WAITING)`);
+        continue;
       } else if (currentFullSnapshotSlot >= targetSnapshotSlot) {
         this.logger(`FULL SNAPSHOT TAKEN AT SLOT ${currentFullSnapshotSlot}`);
         break;
       }
-      // if (this.options.debug) {
       this.logger(
         `WAIT UNTIL TAKING FULL SNAPSHOT AFTER SLOT ${targetSnapshotSlot}`
       );
-      // }
     }
 
     await this.quit();
