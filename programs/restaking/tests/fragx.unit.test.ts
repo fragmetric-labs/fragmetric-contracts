@@ -2249,4 +2249,143 @@ describe('restaking.fragX unit test', async () => {
       user1Reward_3!.basePool.contribution
     );
   });
+
+  /** user fund/reward account to UncheckedAccount */
+
+  // 1. deposit_sol/supported_token
+  // 1.a. user_fund_account o, user_reward_account x
+  // 1.b. user_fund_account x, user_reward_account o
+  // 1.c. user_fund_account x, user_reward_account x
+
+  // 1.a. user_fund_account o, user_reward_account x
+  test('deposit_sol/supported_token (user_fund_account o, user_reward_account x)', async () => {
+    const depositAmount = 1_000_000_000n; // 1 sol
+
+    // user1 deposits sol
+    await user1.deposit.execute(
+      {
+        assetAmount: depositAmount,
+        createUserRewardAccount: false,
+      },
+      { signers: [signer1] }
+    );
+
+    const user1Fund_1 = await user1.fund.resolve(true);
+    const user1Reward_1 = await user1.reward.resolve(true);
+    const user1_1 = await user1.resolve(true);
+
+    expect(user1Fund_1!.receiptTokenAmountRecorded).toEqual(
+      user1_1!.receiptTokenAmount
+    );
+    expect(user1Reward_1).toEqual(null);
+
+    // user1 deposits supported token
+    await user1.deposit.execute(
+      {
+        assetMint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+        assetAmount: depositAmount,
+        createUserRewardAccount: false,
+      },
+      { signers: [signer1] }
+    );
+
+    const user1Fund_2 = await user1.fund.resolve(true);
+    const user1_2 = await user1.resolve(true);
+
+    expect(user1Fund_2!.receiptTokenAmountRecorded).toEqual(
+      user1_2!.receiptTokenAmount
+    );
+  });
+
+  // 1.b. user_fund_account x, user_reward_account o
+  test('deposit_sol (user_fund_account x, user_reward_account o)', async () => {
+    const depositAmount = 1_000_000_000n; // 1 sol
+
+    // user1 deposits
+    await user1.deposit.execute(
+      {
+        assetAmount: depositAmount,
+        createUserFundAccount: false,
+      },
+      { signers: [signer1] }
+    );
+
+    const user1Fund_1 = await user1.fund.resolve(true);
+    const user1Reward_1 = await user1.reward.resolve(true);
+
+    expect(user1Fund_1).toEqual(null);
+    expect(user1Reward_1!.basePool.tokenAllocatedAmount.totalAmount).toEqual(
+      depositAmount
+    );
+  });
+
+  // 1.c. user_fund_account x, user_reward_account x
+  test('deposit_sol (user_fund_account x, user_reward_account x)', async () => {
+    const depositAmount = 1_000_000_000n; // 1 sol
+
+    // user1 deposits
+    await user1.deposit.execute(
+      {
+        assetAmount: depositAmount,
+        createUserFundAccount: false,
+        createUserRewardAccount: false,
+      },
+      { signers: [signer1] }
+    );
+
+    const user1Fund_1 = await user1.fund.resolve(true);
+    const user1Reward_1 = await user1.reward.resolve(true);
+
+    expect(user1Fund_1).toEqual(null);
+    expect(user1Reward_1).toEqual(null);
+  });
+
+  // 2. request withdrawal
+  test('request withdrawal (user_reward_account x)', async () => {
+    const depositAmount = 1_000_000_000n; // 1 sol
+
+    // user1 deposits
+    await user1.deposit.execute(
+      {
+        assetAmount: depositAmount,
+        createUserFundAccount: false,
+        createUserRewardAccount: false,
+      },
+      { signers: [signer1] }
+    );
+
+    const user1Fund_1 = await user1.fund.resolve(true);
+    const user1Reward_1 = await user1.reward.resolve(true);
+    const user1_1 = await user1.resolve(true);
+
+    expect(user1Fund_1).toMatchInlineSnapshot(`null`);
+
+    // this should fail because request_withdrawal instruction requires user_fund_account
+    await expect(
+      user1.requestWithdrawal.execute(
+        {
+          receiptTokenAmount: user1_1!.receiptTokenAmount,
+          createUserFundAccount: false,
+          createUserRewardAccount: false,
+        },
+        { signers: [signer1] }
+      )
+    ).rejects.toThrow();
+
+    // user1 requests withdrawal
+    await user1.requestWithdrawal.execute(
+      {
+        receiptTokenAmount: user1_1!.receiptTokenAmount,
+        createUserRewardAccount: false,
+      },
+      { signers: [signer1] },
+    );
+
+    const user1Fund_2 = await user1.fund.resolve(true);
+    const user1Reward_2 = await user1.reward.resolve(true);
+
+    expect(user1Fund_2!.receiptTokenAmountRecorded).toEqual(0n);
+    expect(user1Fund_2!.withdrawalRequests[0].receiptTokenAmount).toEqual(user1_1!.receiptTokenAmount);
+    expect(user1Reward_2).toEqual(null);
+  });
 });
