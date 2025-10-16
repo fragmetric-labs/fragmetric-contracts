@@ -1025,7 +1025,7 @@ pub mod restaking {
     ////////////////////////////////////////////
 
     pub fn user_deposit_sol<'info>(
-        ctx: Context<'_, '_, 'info, 'info, UserFundContext<'info>>,
+        ctx: Context<'_, '_, 'info, 'info, UserFundDepositContext<'info>>,
         amount: u64,
         metadata: Option<modules::fund::DepositMetadata>,
     ) -> Result<()> {
@@ -1036,7 +1036,7 @@ pub mod restaking {
             &mut ctx.accounts.reward_account,
             &ctx.accounts.user,
             &mut ctx.accounts.user_receipt_token_account,
-            &mut ctx.accounts.user_fund_account,
+            ctx.accounts.user_fund_account.as_account_info(),
             &mut ctx.accounts.user_reward_account,
         )?
         .process_deposit_sol(
@@ -1064,7 +1064,7 @@ pub mod restaking {
             &mut ctx.accounts.reward_account,
             &ctx.accounts.user,
             &mut ctx.accounts.user_receipt_token_account,
-            &mut ctx.accounts.user_fund_account,
+            ctx.accounts.user_fund_account.as_account_info(),
             &mut ctx.accounts.user_reward_account,
         )?
         .process_request_withdrawal(
@@ -1089,7 +1089,7 @@ pub mod restaking {
             &mut ctx.accounts.reward_account,
             &ctx.accounts.user,
             &mut ctx.accounts.user_receipt_token_account,
-            &mut ctx.accounts.user_fund_account,
+            ctx.accounts.user_fund_account.as_account_info(),
             &mut ctx.accounts.user_reward_account,
         )?
         .process_cancel_withdrawal_request(
@@ -1114,7 +1114,7 @@ pub mod restaking {
             &mut ctx.accounts.reward_account,
             &ctx.accounts.user,
             &mut ctx.accounts.user_receipt_token_account,
-            &mut ctx.accounts.user_fund_account,
+            ctx.accounts.user_fund_account.as_account_info(),
             &mut ctx.accounts.user_reward_account,
         )?
         .process_withdraw_sol(
@@ -1144,7 +1144,7 @@ pub mod restaking {
             &mut ctx.accounts.reward_account,
             &ctx.accounts.user,
             &mut ctx.accounts.user_receipt_token_account,
-            &mut ctx.accounts.user_fund_account,
+            ctx.accounts.user_fund_account.as_account_info(),
             &mut ctx.accounts.user_reward_account,
         )?
         .process_deposit_supported_token(
@@ -1174,7 +1174,7 @@ pub mod restaking {
             &mut ctx.accounts.reward_account,
             &ctx.accounts.user,
             &mut ctx.accounts.user_receipt_token_account,
-            &mut ctx.accounts.user_fund_account,
+            ctx.accounts.user_fund_account.as_account_info(),
             &mut ctx.accounts.user_reward_account,
         )?
         .process_withdraw_supported_token(
@@ -1207,7 +1207,7 @@ pub mod restaking {
             &mut ctx.accounts.reward_account,
             &ctx.accounts.user,
             &mut ctx.accounts.user_receipt_token_account,
-            &mut ctx.accounts.user_fund_account,
+            ctx.accounts.user_fund_account.as_account_info(),
             &mut ctx.accounts.user_reward_account,
         )?
         .process_deposit_vault_receipt_token(

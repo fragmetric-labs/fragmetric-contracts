@@ -99,15 +99,87 @@ pub struct UserFundContext<'info> {
     )]
     pub reward_account: AccountLoader<'info, RewardAccount>,
 
+    /// CHECK: user might not have reward account...
     #[account(
         mut,
         seeds = [UserRewardAccount::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
-        bump = user_reward_account.get_bump()?,
-        has_one = receipt_token_mint,
-        has_one = user,
-        constraint = user_reward_account.load()?.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
+        bump,
     )]
-    pub user_reward_account: AccountLoader<'info, UserRewardAccount>,
+    pub user_reward_account: UncheckedAccount<'info>,
+
+    /// CHECK: This is safe that checks it's ID
+    #[account(address = instructions_sysvar::ID)]
+    pub instructions_sysvar: UncheckedAccount<'info>,
+}
+
+#[event_cpi]
+#[derive(Accounts)]
+pub struct UserFundDepositContext<'info> {
+    pub user: Signer<'info>,
+
+    pub system_program: Program<'info, System>,
+
+    pub receipt_token_program: Program<'info, Token2022>,
+
+    #[account(mut)]
+    pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    #[account(
+        mut,
+        associated_token::mint = receipt_token_mint,
+        associated_token::authority = fund_account,
+        associated_token::token_program = receipt_token_program,
+    )]
+    pub receipt_token_lock_account: Box<InterfaceAccount<'info, TokenAccount>>,
+
+    #[account(
+        mut,
+        associated_token::mint = receipt_token_mint,
+        associated_token::authority = user,
+        associated_token::token_program = receipt_token_program,
+    )]
+    pub user_receipt_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
+
+    #[account(
+        mut,
+        seeds = [FundAccount::SEED, receipt_token_mint.key().as_ref()],
+        bump = fund_account.get_bump()?,
+        has_one = receipt_token_mint,
+        constraint = fund_account.load()?.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
+    )]
+    pub fund_account: AccountLoader<'info, FundAccount>,
+
+    #[account(
+        mut,
+        seeds = [FundAccount::RESERVE_SEED, receipt_token_mint.key().as_ref()],
+        bump,
+    )]
+    pub fund_reserve_account: SystemAccount<'info>,
+
+    /// CHECK: user might not have fund account...
+    #[account(
+        mut,
+        seeds = [UserFundAccount::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
+        bump,
+    )]
+    pub user_fund_account: UncheckedAccount<'info>,
+
+    #[account(
+        mut,
+        seeds = [RewardAccount::SEED, receipt_token_mint.key().as_ref()],
+        bump = reward_account.get_bump()?,
+        has_one = receipt_token_mint,
+        constraint = reward_account.load()?.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
+    )]
+    pub reward_account: AccountLoader<'info, RewardAccount>,
+
+    /// CHECK: user might not have reward account...
+    #[account(
+        mut,
+        seeds = [UserRewardAccount::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
+        bump,
+    )]
+    pub user_reward_account: UncheckedAccount<'info>,
 
     /// CHECK: This is safe that checks it's ID
     #[account(address = instructions_sysvar::ID)]
@@ -185,12 +257,10 @@ pub struct UserFundWithdrawContext<'info> {
     )]
     pub reward_account: AccountLoader<'info, RewardAccount>,
 
+    /// CHECK: user might not have reward account...
     #[account(
         seeds = [UserRewardAccount::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
-        bump = user_reward_account.get_bump()?,
-        has_one = receipt_token_mint,
-        has_one = user,
-        constraint = user_reward_account.load()?.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
+        bump,
     )]
-    pub user_reward_account: AccountLoader<'info, UserRewardAccount>,
+    pub user_reward_account: UncheckedAccount<'info>,
 }

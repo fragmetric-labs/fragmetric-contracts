@@ -33,15 +33,13 @@ pub struct UserFundVaultReceiptTokenContext<'info> {
     )]
     pub fund_reserve_account: SystemAccount<'info>,
 
+    /// CHECK: user might not have fund account...
     #[account(
         mut,
         seeds = [UserFundAccount::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
-        bump = user_fund_account.get_bump(),
-        has_one = receipt_token_mint,
-        has_one = user,
-        constraint = user_fund_account.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
+        bump,
     )]
-    pub user_fund_account: Box<Account<'info, UserFundAccount>>,
+    pub user_fund_account: UncheckedAccount<'info>,
 
     #[account(mut)]
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
@@ -81,15 +79,13 @@ pub struct UserFundVaultReceiptTokenContext<'info> {
     )]
     pub reward_account: AccountLoader<'info, RewardAccount>,
 
+    /// CHECK: user might not have reward account...
     #[account(
         mut,
         seeds = [UserRewardAccount::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
-        bump = user_reward_account.get_bump()?,
-        has_one = receipt_token_mint,
-        has_one = user,
-        constraint = user_reward_account.load()?.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
+        bump,
     )]
-    pub user_reward_account: AccountLoader<'info, UserRewardAccount>,
+    pub user_reward_account: UncheckedAccount<'info>,
 
     /// CHECK: This is safe that checks it's ID
     #[account(address = instructions_sysvar::ID)]

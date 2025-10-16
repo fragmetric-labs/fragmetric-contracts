@@ -6,7 +6,7 @@ use anchor_spl::{token_2022, token_interface};
 
 use crate::modules::fund::{DepositMetadata, FundAccount, FundService, UserFundAccount};
 use crate::modules::reward::{RewardAccount, RewardService, UserRewardAccount};
-use crate::utils::PDASeeds;
+use crate::utils::{AccountInfoExt, AsAccountInfo, PDASeeds};
 use crate::{errors, events};
 
 use super::FundWithdrawalBatchAccount;
@@ -19,8 +19,8 @@ pub struct UserFundService<'a, 'info> {
 
     user: &'a Signer<'info>,
     user_receipt_token_account: &'a mut InterfaceAccount<'info, TokenAccount>,
-    user_fund_account: &'a mut Account<'info, UserFundAccount>,
-    user_reward_account: &'a mut AccountLoader<'info, UserRewardAccount>,
+    user_fund_account: &'info AccountInfo<'info>,
+    user_reward_account: &'a mut UncheckedAccount<'info>,
 
     _current_slot: u64,
     current_timestamp: i64,
@@ -29,7 +29,7 @@ pub struct UserFundService<'a, 'info> {
 impl Drop for UserFundService<'_, '_> {
     fn drop(&mut self) {
         self.fund_account.exit(&crate::ID).unwrap();
-        self.user_fund_account.exit(&crate::ID).unwrap();
+        self.user_fund_account.exit(&crate::ID).unwrap(); // TODO: now does this work?
     }
 }
 
@@ -41,8 +41,8 @@ impl<'a, 'info> UserFundService<'a, 'info> {
         reward_account: &'a mut AccountLoader<'info, RewardAccount>,
         user: &'a Signer<'info>,
         user_receipt_token_account: &'a mut InterfaceAccount<'info, TokenAccount>,
-        user_fund_account: &'a mut Account<'info, UserFundAccount>,
-        user_reward_account: &'a mut AccountLoader<'info, UserRewardAccount>,
+        user_fund_account: &'info AccountInfo<'info>,
+        user_reward_account: &'a mut UncheckedAccount<'info>,
     ) -> Result<Self> {
         let clock = Clock::get()?;
         Ok(Self {
@@ -136,15 +136,24 @@ impl<'a, 'info> UserFundService<'a, 'info> {
             receipt_token_mint_amount,
         )?;
 
-        self.user_fund_account
-            .reload_receipt_token_amount(self.user_receipt_token_account)?;
+        if self.user_fund_account.is_initialized() {
+            let mut user_fund_account =
+                Account::<UserFundAccount>::try_from(self.user_fund_account)?;
+
+            user_fund_account.reload_receipt_token_amount(self.user_receipt_token_account)?;
+            user_fund_account.exit(&crate::ID)?;
+        }
 
         // increase user's reward accrual rate
+        let user_reward_account_option = self
+            .user_reward_account
+            .as_account_info()
+            .parse_optional_account_loader::<UserRewardAccount>()?;
         let updated_user_reward_accounts =
             RewardService::new(self.receipt_token_mint, self.reward_account)?
                 .update_reward_pools_token_allocation(
                     None,
-                    Some(self.user_reward_account),
+                    user_reward_account_option.as_ref(),
                     receipt_token_mint_amount,
                     contribution_accrual_rate,
                 )?;
@@ -204,6 +213,7 @@ impl<'a, 'info> UserFundService<'a, 'info> {
 
             user: self.user.key(),
             user_receipt_token_account: self.user_receipt_token_account.key(),
+            // TODO: should think about if this field is needed when it's not initialized though
             user_fund_account: self.user_fund_account.key(),
             user_supported_token_account: user_supported_token_account
                 .map(|token_account| token_account.key()),
@@ -323,15 +333,24 @@ impl<'a, 'info> UserFundService<'a, 'info> {
             receipt_token_mint_amount,
         )?;
 
-        self.user_fund_account
-            .reload_receipt_token_amount(self.user_receipt_token_account)?;
+        if self.user_fund_account.is_initialized() {
+            let mut user_fund_account =
+                Account::<UserFundAccount>::try_from(self.user_fund_account)?;
+
+            user_fund_account.reload_receipt_token_amount(self.user_receipt_token_account)?;
+            user_fund_account.exit(&crate::ID)?;
+        }
 
         // increase user's reward accrual rate
+        let user_reward_account_option = self
+            .user_reward_account
+            .as_account_info()
+            .parse_optional_account_loader::<UserRewardAccount>()?;
         let updated_user_reward_accounts =
             RewardService::new(self.receipt_token_mint, self.reward_account)?
                 .update_reward_pools_token_allocation(
                     None,
-                    Some(self.user_reward_account),
+                    user_reward_account_option.as_ref(),
                     receipt_token_mint_amount,
                     contribution_accrual_rate,
                 )?;
@@ -425,8 +444,14 @@ impl<'a, 'info> UserFundService<'a, 'info> {
         let receipt_token_amount = withdrawal_request.receipt_token_amount;
         let batch_id = withdrawal_request.batch_id;
         let request_id = withdrawal_request.request_id;
-        self.user_fund_account
-            .push_withdrawal_request(withdrawal_request)?;
+
+        require!(
+            self.user_fund_account.is_initialized(),
+            errors::ErrorCode::FundUserFundAccountNotInitializedException
+        );
+        let mut user_fund_account = Account::<UserFundAccount>::try_from(self.user_fund_account)?;
+
+        user_fund_account.push_withdrawal_request(withdrawal_request)?;
 
         // lock requested user receipt token amount
         // first, burn user receipt token (use burn/mint instead of transfer to avoid circular CPI through transfer hook)
@@ -456,20 +481,23 @@ impl<'a, 'info> UserFundService<'a, 'info> {
             receipt_token_amount,
         )?;
 
-        // receipt_token_lock_account.reload()?;
-
         self.fund_account
             .load_mut()?
             .reload_receipt_token_supply(self.receipt_token_mint)?;
 
-        self.user_fund_account
-            .reload_receipt_token_amount(self.user_receipt_token_account)?;
+        user_fund_account.reload_receipt_token_amount(self.user_receipt_token_account)?;
+        user_fund_account.exit(&crate::ID)?;
+
+        let user_reward_account_option = self
+            .user_reward_account
+            .as_account_info()
+            .parse_optional_account_loader::<UserRewardAccount>()?;
 
         // reduce user's reward accrual rate
         let updated_user_reward_accounts =
             RewardService::new(self.receipt_token_mint, self.reward_account)?
                 .update_reward_pools_token_allocation(
-                    Some(self.user_reward_account),
+                    user_reward_account_option.as_ref(),
                     None,
                     receipt_token_amount,
                     None,
@@ -499,10 +527,15 @@ impl<'a, 'info> UserFundService<'a, 'info> {
         request_id: u64,
         supported_token_mint: Option<Pubkey>,
     ) -> Result<events::UserCanceledWithdrawalRequestFromFund> {
+        require!(
+            self.user_fund_account.is_initialized(),
+            errors::ErrorCode::FundUserFundAccountNotInitializedException
+        );
+        let mut user_fund_account = Account::<UserFundAccount>::try_from(self.user_fund_account)?;
+
         // clear pending amount from both user fund account and global fund account
-        let withdrawal_request = self
-            .user_fund_account
-            .pop_withdrawal_request(request_id, supported_token_mint)?;
+        let withdrawal_request =
+            user_fund_account.pop_withdrawal_request(request_id, supported_token_mint)?;
         let receipt_token_amount = withdrawal_request.receipt_token_amount;
         self.fund_account
             .load_mut()?
@@ -547,15 +580,19 @@ impl<'a, 'info> UserFundService<'a, 'info> {
             .load_mut()?
             .reload_receipt_token_supply(self.receipt_token_mint)?;
 
-        self.user_fund_account
-            .reload_receipt_token_amount(self.user_receipt_token_account)?;
+        user_fund_account.reload_receipt_token_amount(self.user_receipt_token_account)?;
+        user_fund_account.exit(&crate::ID)?;
 
         // increase user's reward accrual rate
+        let user_reward_account_option = self
+            .user_reward_account
+            .as_account_info()
+            .parse_optional_account_loader::<UserRewardAccount>()?;
         let updated_user_reward_accounts =
             RewardService::new(self.receipt_token_mint, self.reward_account)?
                 .update_reward_pools_token_allocation(
                     None,
-                    Some(self.user_reward_account),
+                    user_reward_account_option.as_ref(),
                     receipt_token_amount,
                     None,
                 )?;
@@ -594,11 +631,17 @@ impl<'a, 'info> UserFundService<'a, 'info> {
         fund_withdrawal_batch_account: &mut Account<'info, FundWithdrawalBatchAccount>,
         request_id: u64,
     ) -> Result<events::UserWithdrewFromFund> {
+        require!(
+            self.user_fund_account.is_initialized(),
+            errors::ErrorCode::FundUserFundAccountNotInitializedException
+        );
+        let mut user_fund_account = Account::<UserFundAccount>::try_from(self.user_fund_account)?;
+
         // calculate asset amounts and mark withdrawal request as claimed withdrawal fee is already paid.
         let supported_token_mint_key = supported_token_mint.map(|mint| mint.key());
-        let withdrawal_request = self
-            .user_fund_account
-            .pop_withdrawal_request(request_id, supported_token_mint_key)?;
+        let withdrawal_request =
+            user_fund_account.pop_withdrawal_request(request_id, supported_token_mint_key)?;
+        user_fund_account.exit(&crate::ID)?;
 
         let (asset_user_amount, asset_fee_amount, receipt_token_amount) =
             fund_withdrawal_batch_account.settle_withdrawal_request(&withdrawal_request)?;

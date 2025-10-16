@@ -308,4 +308,7 @@ pub enum ErrorCode {
 
     #[msg("unexpected pricing source")]
     UnexpectedPricingSourceError,
+
+    #[msg("fund: user fund account should be initialized")]
+    FundUserFundAccountNotInitializedException,
 }
