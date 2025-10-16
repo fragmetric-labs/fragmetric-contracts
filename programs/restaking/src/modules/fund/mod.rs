@@ -15,7 +15,9 @@ mod fund_service;
 mod fund_withdrawal_batch_account;
 mod user_fund_account;
 mod user_fund_configuration_service;
+mod user_fund_deposit_service;
 mod user_fund_service;
+mod user_fund_withdraw_service;
 mod user_fund_wrap_service;
 mod weighted_allocation_strategy;
 
@@ -35,6 +37,8 @@ pub use fund_service::*;
 pub use fund_withdrawal_batch_account::*;
 pub use user_fund_account::*;
 pub use user_fund_configuration_service::*;
+pub use user_fund_deposit_service::*;
 pub use user_fund_service::*;
+pub use user_fund_withdraw_service::*;
 pub use user_fund_wrap_service::*;
 pub use weighted_allocation_strategy::*;

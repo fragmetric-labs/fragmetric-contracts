@@ -586,61 +586,63 @@ describe('restaking.fragX unit test', async () => {
         { signers: [signer1] }
       )
     ).resolves.toMatchInlineSnapshot(`
-        {
-          "args": {
-            "applyPresetComputeUnitLimit": true,
-            "assetAmount": 10000000000n,
-            "assetMint": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
-            "metadata": null,
+      {
+        "args": {
+          "applyPresetComputeUnitLimit": true,
+          "assetAmount": 10000000000n,
+          "assetMint": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
+          "createUserFundAccount": true,
+          "createUserRewardAccount": true,
+          "metadata": null,
+        },
+        "events": {
+          "unknown": [],
+          "userCreatedOrUpdatedFundAccount": {
+            "created": true,
+            "receiptTokenAmount": 0n,
+            "receiptTokenMint": "7sUUWN6ZvR3X2iUWjHP5KTNmQizKQEz6iKFytoSBcDDA",
+            "user": "AWb2qUvuFzbVN5Eu7tZY8gM745pus5DhTGgo8U8Bd8X2",
+            "userFundAccount": "GL9FuX9vkMASixFaXf3wrSr8ev8rbkJMVtjpdcLkUX6b",
           },
-          "events": {
-            "unknown": [],
-            "userCreatedOrUpdatedFundAccount": {
-              "created": true,
-              "receiptTokenAmount": 0n,
-              "receiptTokenMint": "7sUUWN6ZvR3X2iUWjHP5KTNmQizKQEz6iKFytoSBcDDA",
-              "user": "AWb2qUvuFzbVN5Eu7tZY8gM745pus5DhTGgo8U8Bd8X2",
-              "userFundAccount": "GL9FuX9vkMASixFaXf3wrSr8ev8rbkJMVtjpdcLkUX6b",
+          "userCreatedOrUpdatedRewardAccount": {
+            "created": true,
+            "receiptTokenAmount": 0n,
+            "receiptTokenMint": "7sUUWN6ZvR3X2iUWjHP5KTNmQizKQEz6iKFytoSBcDDA",
+            "user": "AWb2qUvuFzbVN5Eu7tZY8gM745pus5DhTGgo8U8Bd8X2",
+            "userRewardAccount": "6ZawY1XehsdncSNZPEdbcvfAACjNjR96jhL3KzWj6u1M",
+          },
+          "userDepositedToFund": {
+            "contributionAccrualRate": {
+              "__option": "None",
             },
-            "userCreatedOrUpdatedRewardAccount": {
-              "created": true,
-              "receiptTokenAmount": 0n,
-              "receiptTokenMint": "7sUUWN6ZvR3X2iUWjHP5KTNmQizKQEz6iKFytoSBcDDA",
-              "user": "AWb2qUvuFzbVN5Eu7tZY8gM745pus5DhTGgo8U8Bd8X2",
-              "userRewardAccount": "6ZawY1XehsdncSNZPEdbcvfAACjNjR96jhL3KzWj6u1M",
+            "depositedAmount": 10000000000n,
+            "fundAccount": "4vAHVvvtgWMcZaxgtoT1K63p8ne2tGY4bM5YieFzuUep",
+            "mintedReceiptTokenAmount": 10000000000n,
+            "receiptTokenMint": "7sUUWN6ZvR3X2iUWjHP5KTNmQizKQEz6iKFytoSBcDDA",
+            "supportedTokenMint": {
+              "__option": "Some",
+              "value": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
             },
-            "userDepositedToFund": {
-              "contributionAccrualRate": {
-                "__option": "None",
-              },
-              "depositedAmount": 10000000000n,
-              "fundAccount": "4vAHVvvtgWMcZaxgtoT1K63p8ne2tGY4bM5YieFzuUep",
-              "mintedReceiptTokenAmount": 10000000000n,
-              "receiptTokenMint": "7sUUWN6ZvR3X2iUWjHP5KTNmQizKQEz6iKFytoSBcDDA",
-              "supportedTokenMint": {
-                "__option": "Some",
-                "value": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
-              },
-              "updatedUserRewardAccounts": [
-                "6ZawY1XehsdncSNZPEdbcvfAACjNjR96jhL3KzWj6u1M",
-              ],
-              "user": "AWb2qUvuFzbVN5Eu7tZY8gM745pus5DhTGgo8U8Bd8X2",
-              "userFundAccount": "GL9FuX9vkMASixFaXf3wrSr8ev8rbkJMVtjpdcLkUX6b",
-              "userReceiptTokenAccount": "FSemEnh52ptxSMV29rZxRGqontN2kxuHfeiGFRj133D7",
-              "userSupportedTokenAccount": {
-                "__option": "Some",
-                "value": "8eFrzT4rLHeh6ikBBkTE76dtziRJWRuhcmatPx3B1EdG",
-              },
-              "walletProvider": {
-                "__option": "None",
-              },
+            "updatedUserRewardAccounts": [
+              "6ZawY1XehsdncSNZPEdbcvfAACjNjR96jhL3KzWj6u1M",
+            ],
+            "user": "AWb2qUvuFzbVN5Eu7tZY8gM745pus5DhTGgo8U8Bd8X2",
+            "userFundAccount": "GL9FuX9vkMASixFaXf3wrSr8ev8rbkJMVtjpdcLkUX6b",
+            "userReceiptTokenAccount": "FSemEnh52ptxSMV29rZxRGqontN2kxuHfeiGFRj133D7",
+            "userSupportedTokenAccount": {
+              "__option": "Some",
+              "value": "8eFrzT4rLHeh6ikBBkTE76dtziRJWRuhcmatPx3B1EdG",
+            },
+            "walletProvider": {
+              "__option": "None",
             },
           },
-          "signature": "MASKED(signature)",
-          "slot": "MASKED(/[.*S|s]lots?$/)",
-          "succeeded": true,
-        }
-      `);
+        },
+        "signature": "MASKED(signature)",
+        "slot": "MASKED(/[.*S|s]lots?$/)",
+        "succeeded": true,
+      }
+    `);
 
     const user1Reward_1 = await user1.reward.resolve(true);
 
@@ -684,61 +686,63 @@ describe('restaking.fragX unit test', async () => {
         { signers: [signer1] }
       )
     ).resolves.toMatchInlineSnapshot(`
-        {
-          "args": {
-            "applyPresetComputeUnitLimit": true,
-            "assetAmount": 1000000000000000000n,
-            "assetMint": "FRAGME9aN7qzxkHPmVP22tDhG87srsR9pr5SY9XdRd9R",
-            "metadata": null,
+      {
+        "args": {
+          "applyPresetComputeUnitLimit": true,
+          "assetAmount": 1000000000000000000n,
+          "assetMint": "FRAGME9aN7qzxkHPmVP22tDhG87srsR9pr5SY9XdRd9R",
+          "createUserFundAccount": true,
+          "createUserRewardAccount": true,
+          "metadata": null,
+        },
+        "events": {
+          "unknown": [],
+          "userCreatedOrUpdatedFundAccount": {
+            "created": true,
+            "receiptTokenAmount": 0n,
+            "receiptTokenMint": "9Cn6WLm4dEgRE7G297J7usijc65zNBavZRA9TP78z6Sm",
+            "user": "AWb2qUvuFzbVN5Eu7tZY8gM745pus5DhTGgo8U8Bd8X2",
+            "userFundAccount": "oStWx5CihjrWuTQgiq4p6NfNsixZFGMApV4t5q5yKaW",
           },
-          "events": {
-            "unknown": [],
-            "userCreatedOrUpdatedFundAccount": {
-              "created": true,
-              "receiptTokenAmount": 0n,
-              "receiptTokenMint": "9Cn6WLm4dEgRE7G297J7usijc65zNBavZRA9TP78z6Sm",
-              "user": "AWb2qUvuFzbVN5Eu7tZY8gM745pus5DhTGgo8U8Bd8X2",
-              "userFundAccount": "oStWx5CihjrWuTQgiq4p6NfNsixZFGMApV4t5q5yKaW",
+          "userCreatedOrUpdatedRewardAccount": {
+            "created": true,
+            "receiptTokenAmount": 0n,
+            "receiptTokenMint": "9Cn6WLm4dEgRE7G297J7usijc65zNBavZRA9TP78z6Sm",
+            "user": "AWb2qUvuFzbVN5Eu7tZY8gM745pus5DhTGgo8U8Bd8X2",
+            "userRewardAccount": "8qRoEDzaGn7JEcTLySRxyJS2X69rTDVGo5nNsWauuTy3",
+          },
+          "userDepositedToFund": {
+            "contributionAccrualRate": {
+              "__option": "None",
             },
-            "userCreatedOrUpdatedRewardAccount": {
-              "created": true,
-              "receiptTokenAmount": 0n,
-              "receiptTokenMint": "9Cn6WLm4dEgRE7G297J7usijc65zNBavZRA9TP78z6Sm",
-              "user": "AWb2qUvuFzbVN5Eu7tZY8gM745pus5DhTGgo8U8Bd8X2",
-              "userRewardAccount": "8qRoEDzaGn7JEcTLySRxyJS2X69rTDVGo5nNsWauuTy3",
+            "depositedAmount": 1000000000000000000n,
+            "fundAccount": "E4sjVVyt7h9qtCnzcEpCAXXArXXyLBEar49bEBsCdR5z",
+            "mintedReceiptTokenAmount": 1000000000000000000n,
+            "receiptTokenMint": "9Cn6WLm4dEgRE7G297J7usijc65zNBavZRA9TP78z6Sm",
+            "supportedTokenMint": {
+              "__option": "Some",
+              "value": "FRAGME9aN7qzxkHPmVP22tDhG87srsR9pr5SY9XdRd9R",
             },
-            "userDepositedToFund": {
-              "contributionAccrualRate": {
-                "__option": "None",
-              },
-              "depositedAmount": 1000000000000000000n,
-              "fundAccount": "E4sjVVyt7h9qtCnzcEpCAXXArXXyLBEar49bEBsCdR5z",
-              "mintedReceiptTokenAmount": 1000000000000000000n,
-              "receiptTokenMint": "9Cn6WLm4dEgRE7G297J7usijc65zNBavZRA9TP78z6Sm",
-              "supportedTokenMint": {
-                "__option": "Some",
-                "value": "FRAGME9aN7qzxkHPmVP22tDhG87srsR9pr5SY9XdRd9R",
-              },
-              "updatedUserRewardAccounts": [
-                "8qRoEDzaGn7JEcTLySRxyJS2X69rTDVGo5nNsWauuTy3",
-              ],
-              "user": "AWb2qUvuFzbVN5Eu7tZY8gM745pus5DhTGgo8U8Bd8X2",
-              "userFundAccount": "oStWx5CihjrWuTQgiq4p6NfNsixZFGMApV4t5q5yKaW",
-              "userReceiptTokenAccount": "9SxSvTrCJau5kEuycKPNe9ythdhGCYDtf4hnSsMThBAu",
-              "userSupportedTokenAccount": {
-                "__option": "Some",
-                "value": "9hXqo1QhxTqinenGB7M7iFYPPb59sg5Kr6Uvnq3c7ZNM",
-              },
-              "walletProvider": {
-                "__option": "None",
-              },
+            "updatedUserRewardAccounts": [
+              "8qRoEDzaGn7JEcTLySRxyJS2X69rTDVGo5nNsWauuTy3",
+            ],
+            "user": "AWb2qUvuFzbVN5Eu7tZY8gM745pus5DhTGgo8U8Bd8X2",
+            "userFundAccount": "oStWx5CihjrWuTQgiq4p6NfNsixZFGMApV4t5q5yKaW",
+            "userReceiptTokenAccount": "9SxSvTrCJau5kEuycKPNe9ythdhGCYDtf4hnSsMThBAu",
+            "userSupportedTokenAccount": {
+              "__option": "Some",
+              "value": "9hXqo1QhxTqinenGB7M7iFYPPb59sg5Kr6Uvnq3c7ZNM",
+            },
+            "walletProvider": {
+              "__option": "None",
             },
           },
-          "signature": "MASKED(signature)",
-          "slot": "MASKED(/[.*S|s]lots?$/)",
-          "succeeded": true,
-        }
-      `);
+        },
+        "signature": "MASKED(signature)",
+        "slot": "MASKED(/[.*S|s]lots?$/)",
+        "succeeded": true,
+      }
+    `);
   });
 
   /** jupsol & sanctum-multi-validator test **/
@@ -1163,61 +1167,63 @@ describe('restaking.fragX unit test', async () => {
         { signers: [signer2] }
       )
     ).resolves.toMatchInlineSnapshot(`
-        {
-          "args": {
-            "applyPresetComputeUnitLimit": true,
-            "assetAmount": 10000000000n,
-            "assetMint": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
-            "metadata": null,
+      {
+        "args": {
+          "applyPresetComputeUnitLimit": true,
+          "assetAmount": 10000000000n,
+          "assetMint": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
+          "createUserFundAccount": true,
+          "createUserRewardAccount": true,
+          "metadata": null,
+        },
+        "events": {
+          "unknown": [],
+          "userCreatedOrUpdatedFundAccount": {
+            "created": true,
+            "receiptTokenAmount": 0n,
+            "receiptTokenMint": "Gmx4No1Fki926g1jKoWS2k3JJdGnQuR3L1RNMr7PcQVD",
+            "user": "CCgWk6XBuLqZTcDuJa4ZKGUM22cLXUFAxJSHiZdm3T3b",
+            "userFundAccount": "HosQKDxFmKd7BForhgWWYz68V5ZQnR4QBZVmhCfTmn28",
           },
-          "events": {
-            "unknown": [],
-            "userCreatedOrUpdatedFundAccount": {
-              "created": true,
-              "receiptTokenAmount": 0n,
-              "receiptTokenMint": "Gmx4No1Fki926g1jKoWS2k3JJdGnQuR3L1RNMr7PcQVD",
-              "user": "CCgWk6XBuLqZTcDuJa4ZKGUM22cLXUFAxJSHiZdm3T3b",
-              "userFundAccount": "HosQKDxFmKd7BForhgWWYz68V5ZQnR4QBZVmhCfTmn28",
+          "userCreatedOrUpdatedRewardAccount": {
+            "created": true,
+            "receiptTokenAmount": 0n,
+            "receiptTokenMint": "Gmx4No1Fki926g1jKoWS2k3JJdGnQuR3L1RNMr7PcQVD",
+            "user": "CCgWk6XBuLqZTcDuJa4ZKGUM22cLXUFAxJSHiZdm3T3b",
+            "userRewardAccount": "91mNEHtBj9vnqfrZNDp55di5HPmC6D8aPBNsm3mKtnW",
+          },
+          "userDepositedToFund": {
+            "contributionAccrualRate": {
+              "__option": "None",
             },
-            "userCreatedOrUpdatedRewardAccount": {
-              "created": true,
-              "receiptTokenAmount": 0n,
-              "receiptTokenMint": "Gmx4No1Fki926g1jKoWS2k3JJdGnQuR3L1RNMr7PcQVD",
-              "user": "CCgWk6XBuLqZTcDuJa4ZKGUM22cLXUFAxJSHiZdm3T3b",
-              "userRewardAccount": "91mNEHtBj9vnqfrZNDp55di5HPmC6D8aPBNsm3mKtnW",
+            "depositedAmount": 10000000000n,
+            "fundAccount": "2ejCogYUjKXZhNPWJKG53gcVRSASMqW8Di7E9qD7VWeu",
+            "mintedReceiptTokenAmount": 10000000000n,
+            "receiptTokenMint": "Gmx4No1Fki926g1jKoWS2k3JJdGnQuR3L1RNMr7PcQVD",
+            "supportedTokenMint": {
+              "__option": "Some",
+              "value": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
             },
-            "userDepositedToFund": {
-              "contributionAccrualRate": {
-                "__option": "None",
-              },
-              "depositedAmount": 10000000000n,
-              "fundAccount": "2ejCogYUjKXZhNPWJKG53gcVRSASMqW8Di7E9qD7VWeu",
-              "mintedReceiptTokenAmount": 10000000000n,
-              "receiptTokenMint": "Gmx4No1Fki926g1jKoWS2k3JJdGnQuR3L1RNMr7PcQVD",
-              "supportedTokenMint": {
-                "__option": "Some",
-                "value": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
-              },
-              "updatedUserRewardAccounts": [
-                "91mNEHtBj9vnqfrZNDp55di5HPmC6D8aPBNsm3mKtnW",
-              ],
-              "user": "CCgWk6XBuLqZTcDuJa4ZKGUM22cLXUFAxJSHiZdm3T3b",
-              "userFundAccount": "HosQKDxFmKd7BForhgWWYz68V5ZQnR4QBZVmhCfTmn28",
-              "userReceiptTokenAccount": "4D3xhDuDanWSDzXTksVjdCrgfPpoE9G5VWYdmVrA6ih2",
-              "userSupportedTokenAccount": {
-                "__option": "Some",
-                "value": "C2cyUgbkih42h9z6zb5gxsadnowTgtLJfK4K2s5xX1as",
-              },
-              "walletProvider": {
-                "__option": "None",
-              },
+            "updatedUserRewardAccounts": [
+              "91mNEHtBj9vnqfrZNDp55di5HPmC6D8aPBNsm3mKtnW",
+            ],
+            "user": "CCgWk6XBuLqZTcDuJa4ZKGUM22cLXUFAxJSHiZdm3T3b",
+            "userFundAccount": "HosQKDxFmKd7BForhgWWYz68V5ZQnR4QBZVmhCfTmn28",
+            "userReceiptTokenAccount": "4D3xhDuDanWSDzXTksVjdCrgfPpoE9G5VWYdmVrA6ih2",
+            "userSupportedTokenAccount": {
+              "__option": "Some",
+              "value": "C2cyUgbkih42h9z6zb5gxsadnowTgtLJfK4K2s5xX1as",
+            },
+            "walletProvider": {
+              "__option": "None",
             },
           },
-          "signature": "MASKED(signature)",
-          "slot": "MASKED(/[.*S|s]lots?$/)",
-          "succeeded": true,
-        }
-      `);
+        },
+        "signature": "MASKED(signature)",
+        "slot": "MASKED(/[.*S|s]lots?$/)",
+        "succeeded": true,
+      }
+    `);
 
     const user2DelegateRes = await user2.reward.delegate.execute(
       { newDelegate: signer1.address },

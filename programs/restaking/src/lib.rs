@@ -1029,14 +1029,14 @@ pub mod restaking {
         amount: u64,
         metadata: Option<modules::fund::DepositMetadata>,
     ) -> Result<()> {
-        emit_cpi!(modules::fund::UserFundService::new(
+        emit_cpi!(modules::fund::UserFundDepositService::new(
             &mut ctx.accounts.receipt_token_mint,
             &ctx.accounts.receipt_token_program,
             &mut ctx.accounts.fund_account,
             &mut ctx.accounts.reward_account,
             &ctx.accounts.user,
             &mut ctx.accounts.user_receipt_token_account,
-            ctx.accounts.user_fund_account.as_account_info(),
+            &mut ctx.accounts.user_fund_account,
             &mut ctx.accounts.user_reward_account,
         )?
         .process_deposit_sol(
@@ -1057,14 +1057,14 @@ pub mod restaking {
         receipt_token_amount: u64,
         supported_token_mint: Option<Pubkey>,
     ) -> Result<()> {
-        emit_cpi!(modules::fund::UserFundService::new(
+        emit_cpi!(modules::fund::UserFundWithdrawService::new(
             &mut ctx.accounts.receipt_token_mint,
             &ctx.accounts.receipt_token_program,
             &mut ctx.accounts.fund_account,
             &mut ctx.accounts.reward_account,
             &ctx.accounts.user,
             &mut ctx.accounts.user_receipt_token_account,
-            ctx.accounts.user_fund_account.as_account_info(),
+            &mut ctx.accounts.user_fund_account,
             &mut ctx.accounts.user_reward_account,
         )?
         .process_request_withdrawal(
@@ -1137,14 +1137,14 @@ pub mod restaking {
         amount: u64,
         metadata: Option<modules::fund::DepositMetadata>,
     ) -> Result<()> {
-        emit_cpi!(modules::fund::UserFundService::new(
+        emit_cpi!(modules::fund::UserFundDepositService::new(
             &mut ctx.accounts.receipt_token_mint,
             &ctx.accounts.receipt_token_program,
             &mut ctx.accounts.fund_account,
             &mut ctx.accounts.reward_account,
             &ctx.accounts.user,
             &mut ctx.accounts.user_receipt_token_account,
-            ctx.accounts.user_fund_account.as_account_info(),
+            &mut ctx.accounts.user_fund_account,
             &mut ctx.accounts.user_reward_account,
         )?
         .process_deposit_supported_token(
@@ -1200,14 +1200,14 @@ pub mod restaking {
         ctx: Context<'_, '_, 'info, 'info, UserFundVaultReceiptTokenContext<'info>>,
         metadata: Option<modules::fund::DepositMetadata>,
     ) -> Result<()> {
-        emit_cpi!(modules::fund::UserFundService::new(
+        emit_cpi!(modules::fund::UserFundDepositService::new(
             &mut ctx.accounts.receipt_token_mint,
             &ctx.accounts.receipt_token_program,
             &mut ctx.accounts.fund_account,
             &mut ctx.accounts.reward_account,
             &ctx.accounts.user,
             &mut ctx.accounts.user_receipt_token_account,
-            ctx.accounts.user_fund_account.as_account_info(),
+            &mut ctx.accounts.user_fund_account,
             &mut ctx.accounts.user_reward_account,
         )?
         .process_deposit_vault_receipt_token(
