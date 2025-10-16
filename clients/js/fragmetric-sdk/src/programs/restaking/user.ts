@@ -296,6 +296,14 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
         ),
         v.description('extra authorization is required to add deposit metadata')
       ),
+      createUserFundAccount: v.pipe(
+        v.nullish(v.boolean(), true),
+        v.description('create user fund account')
+      ),
+      createUserRewardAccount: v.pipe(
+        v.nullish(v.boolean(), true),
+        v.description('create user reward account')
+      ),
       applyPresetComputeUnitLimit: v.pipe(
         v.nullish(v.boolean(), true),
         v.description('apply preset CU limit')
@@ -331,28 +339,32 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
               owner: user,
               tokenProgram: token2022.TOKEN_2022_PROGRAM_ADDRESS,
             }),
-            restaking.getUserCreateFundAccountIdempotentInstructionAsync(
-              {
-                user: createNoopSigner(user),
-                program: this.program.address,
-                receiptTokenMint: data.receiptTokenMint!,
-                desiredAccountSize: null,
-              },
-              {
-                programAddress: this.program.address,
-              }
-            ),
-            restaking.getUserCreateRewardAccountIdempotentInstructionAsync(
-              {
-                user: createNoopSigner(user),
-                program: this.program.address,
-                receiptTokenMint: data.receiptTokenMint,
-                desiredAccountSize: null,
-              },
-              {
-                programAddress: this.program.address,
-              }
-            ),
+            args.createUserFundAccount
+              ? restaking.getUserCreateFundAccountIdempotentInstructionAsync(
+                  {
+                    user: createNoopSigner(user),
+                    program: this.program.address,
+                    receiptTokenMint: data.receiptTokenMint!,
+                    desiredAccountSize: null,
+                  },
+                  {
+                    programAddress: this.program.address,
+                  }
+                )
+              : null,
+            args.createUserRewardAccount
+              ? restaking.getUserCreateRewardAccountIdempotentInstructionAsync(
+                  {
+                    user: createNoopSigner(user),
+                    program: this.program.address,
+                    receiptTokenMint: data.receiptTokenMint,
+                    desiredAccountSize: null,
+                  },
+                  {
+                    programAddress: this.program.address,
+                  }
+                )
+              : null,
 
             (async () => {
               // handle deposit metadata here (sig verify)
@@ -485,6 +497,14 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
         v.bigint(),
         v.description('receipt token amount to withdraw')
       ),
+      createUserFundAccount: v.pipe(
+        v.nullish(v.boolean(), true),
+        v.description('create user fund account')
+      ),
+      createUserRewardAccount: v.pipe(
+        v.nullish(v.boolean(), true),
+        v.description('create user reward account')
+      ),
       applyPresetComputeUnitLimit: v.pipe(
         v.nullish(v.boolean(), true),
         v.description('apply preset CU limit')
@@ -513,28 +533,32 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
                   units: 1_400_000,
                 })
               : null,
-            restaking.getUserCreateFundAccountIdempotentInstructionAsync(
-              {
-                user: createNoopSigner(user),
-                receiptTokenMint: data.receiptTokenMint!,
-                program: this.program.address,
-                desiredAccountSize: null,
-              },
-              {
-                programAddress: this.program.address,
-              }
-            ),
-            restaking.getUserCreateRewardAccountIdempotentInstructionAsync(
-              {
-                user: createNoopSigner(user),
-                receiptTokenMint: data.receiptTokenMint,
-                program: this.program.address,
-                desiredAccountSize: null,
-              },
-              {
-                programAddress: this.program.address,
-              }
-            ),
+            args.createUserFundAccount
+              ? restaking.getUserCreateFundAccountIdempotentInstructionAsync(
+                  {
+                    user: createNoopSigner(user),
+                    receiptTokenMint: data.receiptTokenMint!,
+                    program: this.program.address,
+                    desiredAccountSize: null,
+                  },
+                  {
+                    programAddress: this.program.address,
+                  }
+                )
+              : null,
+            args.createUserRewardAccount
+              ? restaking.getUserCreateRewardAccountIdempotentInstructionAsync(
+                  {
+                    user: createNoopSigner(user),
+                    receiptTokenMint: data.receiptTokenMint,
+                    program: this.program.address,
+                    desiredAccountSize: null,
+                  },
+                  {
+                    programAddress: this.program.address,
+                  }
+                )
+              : null,
             (async () => {
               const ix =
                 await restaking.getUserRequestWithdrawalInstructionAsync(
