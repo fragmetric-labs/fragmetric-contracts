@@ -1062,40 +1062,41 @@ describe('restaking.fragX unit test', async () => {
     await expectMasked(
       user3.withdraw.execute({ requestId: requestId }, { signers: [signer3] })
     ).resolves.toMatchInlineSnapshot(`
-        {
-          "args": {
-            "applyPresetComputeUnitLimit": true,
-            "assetMint": null,
+      {
+        "args": {
+          "applyPresetComputeUnitLimit": true,
+          "assetMint": null,
+          "createUserRewardAccount": true,
+          "requestId": 1n,
+        },
+        "events": {
+          "unknown": [],
+          "userWithdrewFromFund": {
+            "batchId": 1n,
+            "burntReceiptTokenAmount": 90000000000n,
+            "deductedFeeAmount": 200268947n,
+            "fundAccount": "56WijXFKfRs6dKtNrqqH2g5A9T1bDHsTLDPREKb5qNWe",
+            "fundWithdrawalBatchAccount": "FKaB11zNxf4EgMkEWrRh8doqRBh7g5tXzsFB4CadgHV6",
+            "receiptTokenMint": "JCzYfo5HVZ9g1NYVqkBrXsv8SeXbTGGfuBEXTcGRCsuz",
             "requestId": 1n,
-          },
-          "events": {
-            "unknown": [],
-            "userWithdrewFromFund": {
-              "batchId": 1n,
-              "burntReceiptTokenAmount": 90000000000n,
-              "deductedFeeAmount": 200268947n,
-              "fundAccount": "56WijXFKfRs6dKtNrqqH2g5A9T1bDHsTLDPREKb5qNWe",
-              "fundWithdrawalBatchAccount": "FKaB11zNxf4EgMkEWrRh8doqRBh7g5tXzsFB4CadgHV6",
-              "receiptTokenMint": "JCzYfo5HVZ9g1NYVqkBrXsv8SeXbTGGfuBEXTcGRCsuz",
-              "requestId": 1n,
-              "returnedReceiptTokenAmount": 0n,
-              "supportedTokenMint": {
-                "__option": "None",
-              },
-              "user": "FZPz1bd26HAMxSRQ5uM69wnW5ATws2ZYyp9B47Lrv6Yj",
-              "userFundAccount": "9rfku8yqmz5tda1Q8QBDhMyYPC21sryA1Ztr9xQmMZwD",
-              "userReceiptTokenAccount": "ATAwHi6iKjSjC4yrCuUmhpU2rsVxJJ1ocHDY6jGj5DXu",
-              "userSupportedTokenAccount": {
-                "__option": "None",
-              },
-              "withdrawnAmount": 99934204698n,
+            "returnedReceiptTokenAmount": 0n,
+            "supportedTokenMint": {
+              "__option": "None",
             },
+            "user": "FZPz1bd26HAMxSRQ5uM69wnW5ATws2ZYyp9B47Lrv6Yj",
+            "userFundAccount": "9rfku8yqmz5tda1Q8QBDhMyYPC21sryA1Ztr9xQmMZwD",
+            "userReceiptTokenAccount": "ATAwHi6iKjSjC4yrCuUmhpU2rsVxJJ1ocHDY6jGj5DXu",
+            "userSupportedTokenAccount": {
+              "__option": "None",
+            },
+            "withdrawnAmount": 99934204698n,
           },
-          "signature": "MASKED(signature)",
-          "slot": "MASKED(/[.*S|s]lots?$/)",
-          "succeeded": true,
-        }
-      `);
+        },
+        "signature": "MASKED(signature)",
+        "slot": "MASKED(/[.*S|s]lots?$/)",
+        "succeeded": true,
+      }
+    `);
 
     // 2) stake test
     // 2-1) user deposits more sol to trigger staking
@@ -2326,10 +2327,10 @@ describe('restaking.fragX unit test', async () => {
   });
 
   // 1.c. user_fund_account x, user_reward_account x
-  test('deposit_sol (user_fund_account x, user_reward_account x)', async () => {
+  test('deposit sol (user_fund_account x, user_reward_account x)', async () => {
     const depositAmount = 1_000_000_000n; // 1 sol
 
-    // user1 deposits
+    // user1 deposits sol
     await user1.deposit.execute(
       {
         assetAmount: depositAmount,
@@ -2350,7 +2351,7 @@ describe('restaking.fragX unit test', async () => {
   test('request withdrawal (user_reward_account x)', async () => {
     const depositAmount = 1_000_000_000n; // 1 sol
 
-    // user1 deposits
+    // user1 deposits sol
     await user1.deposit.execute(
       {
         assetAmount: depositAmount,
@@ -2366,17 +2367,40 @@ describe('restaking.fragX unit test', async () => {
 
     expect(user1Fund_1).toMatchInlineSnapshot(`null`);
 
-    // this should fail because request_withdrawal instruction requires user_fund_account
-    await expect(
-      user1.requestWithdrawal.execute(
-        {
-          receiptTokenAmount: user1_1!.receiptTokenAmount,
-          createUserFundAccount: false,
-          createUserRewardAccount: false,
-        },
-        { signers: [signer1] }
-      )
-    ).rejects.toThrow();
+    // user1 requests withdrawal
+    await user1.requestWithdrawal.execute(
+      {
+        receiptTokenAmount: user1_1!.receiptTokenAmount,
+        createUserRewardAccount: false,
+      },
+      { signers: [signer1] }
+    );
+
+    const user1Fund_2 = await user1.fund.resolve(true);
+    const user1Reward_2 = await user1.reward.resolve(true);
+
+    expect(user1Fund_2!.receiptTokenAmountRecorded).toEqual(0n);
+    expect(user1Fund_2!.withdrawalRequests[0].receiptTokenAmount).toEqual(
+      user1_1!.receiptTokenAmount
+    );
+    expect(user1Reward_2).toEqual(null);
+  });
+
+  // 3. cancel withdrawal request
+  test('cancel withdrawal request (user_reward_account x)', async () => {
+    const depositAmount = 1_000_000_000n; // 1 sol
+
+    // user1 deposits sol
+    await user1.deposit.execute(
+      {
+        assetAmount: depositAmount,
+        createUserFundAccount: false,
+        createUserRewardAccount: false,
+      },
+      { signers: [signer1] }
+    );
+
+    const user1_1 = await user1.resolve(true);
 
     // user1 requests withdrawal
     await user1.requestWithdrawal.execute(
@@ -2384,14 +2408,80 @@ describe('restaking.fragX unit test', async () => {
         receiptTokenAmount: user1_1!.receiptTokenAmount,
         createUserRewardAccount: false,
       },
-      { signers: [signer1] },
+      { signers: [signer1] }
     );
 
     const user1Fund_2 = await user1.fund.resolve(true);
-    const user1Reward_2 = await user1.reward.resolve(true);
 
-    expect(user1Fund_2!.receiptTokenAmountRecorded).toEqual(0n);
-    expect(user1Fund_2!.withdrawalRequests[0].receiptTokenAmount).toEqual(user1_1!.receiptTokenAmount);
-    expect(user1Reward_2).toEqual(null);
+    // user1 cancels withdrawal request
+    await user1.cancelWithdrawalRequest.execute(
+      {
+        requestId: user1Fund_2!.withdrawalRequests[0].requestId,
+        createUserRewardAccount: false,
+      },
+      { signers: [signer1] }
+    );
+
+    const user1Fund_3 = await user1.fund.resolve(true);
+
+    expect(user1Fund_3!.receiptTokenAmountRecorded).toEqual(
+      user1_1!.receiptTokenAmount
+    );
+    expect(user1Fund_3!.withdrawalRequests.length).toEqual(0);
+  });
+
+  // 4. withdraw sol
+  test('withdraw sol (user_reward_account x)', async () => {
+    const depositAmount = 1_000_000_000n; // 1 sol
+
+    // user1 deposits sol
+    await user1.deposit.execute(
+      {
+        assetAmount: depositAmount,
+        createUserFundAccount: false,
+        createUserRewardAccount: false,
+      },
+      { signers: [signer1] }
+    );
+
+    const user1_1 = await user1.resolve(true);
+
+    // user1 requests withdrawal
+    await user1.requestWithdrawal.execute(
+      {
+        receiptTokenAmount: user1_1!.receiptTokenAmount,
+        createUserRewardAccount: false,
+      },
+      { signers: [signer1] }
+    );
+
+    const user1Fund_2 = await user1.fund.resolve(true);
+    const user1_2 = await user1.resolve(true);
+
+    // operator runs withdrawal batch commands
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'EnqueueWithdrawalBatch',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'ProcessWithdrawalBatch',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    // user1 withdraws
+    await user1.withdraw.execute(
+      {
+        requestId: user1Fund_2!.withdrawalRequests[0].requestId,
+        createUserRewardAccount: false,
+      },
+      { signers: [signer1] }
+    );
+
+    const user1Fund_3 = await user1.fund.resolve(true);
+    const user1_3 = await user1.resolve(true);
+
+    expect(user1Fund_3!.receiptTokenAmountRecorded).toEqual(0n);
+    expect(user1_3!.lamports).toBeGreaterThan(user1_2!.lamports);
   });
 });

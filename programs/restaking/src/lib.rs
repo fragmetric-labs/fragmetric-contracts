@@ -1082,14 +1082,14 @@ pub mod restaking {
         request_id: u64,
         supported_token_mint: Option<Pubkey>,
     ) -> Result<()> {
-        emit_cpi!(modules::fund::UserFundService::new(
+        emit_cpi!(modules::fund::UserFundWithdrawService::new(
             &mut ctx.accounts.receipt_token_mint,
             &ctx.accounts.receipt_token_program,
             &mut ctx.accounts.fund_account,
             &mut ctx.accounts.reward_account,
             &ctx.accounts.user,
             &mut ctx.accounts.user_receipt_token_account,
-            ctx.accounts.user_fund_account.as_account_info(),
+            &mut ctx.accounts.user_fund_account,
             &mut ctx.accounts.user_reward_account,
         )?
         .process_cancel_withdrawal_request(
@@ -1107,14 +1107,14 @@ pub mod restaking {
         _batch_id: u64,
         request_id: u64,
     ) -> Result<()> {
-        emit_cpi!(modules::fund::UserFundService::new(
+        emit_cpi!(modules::fund::UserFundWithdrawService::new(
             &mut ctx.accounts.receipt_token_mint,
             &ctx.accounts.receipt_token_program,
             &mut ctx.accounts.fund_account,
             &mut ctx.accounts.reward_account,
             &ctx.accounts.user,
             &mut ctx.accounts.user_receipt_token_account,
-            ctx.accounts.user_fund_account.as_account_info(),
+            &mut ctx.accounts.user_fund_account,
             &mut ctx.accounts.user_reward_account,
         )?
         .process_withdraw_sol(
@@ -1167,14 +1167,14 @@ pub mod restaking {
         _batch_id: u64,
         request_id: u64,
     ) -> Result<()> {
-        emit_cpi!(modules::fund::UserFundService::new(
+        emit_cpi!(modules::fund::UserFundWithdrawService::new(
             &mut ctx.accounts.receipt_token_mint,
             &ctx.accounts.receipt_token_program,
             &mut ctx.accounts.fund_account,
             &mut ctx.accounts.reward_account,
             &ctx.accounts.user,
             &mut ctx.accounts.user_receipt_token_account,
-            ctx.accounts.user_fund_account.as_account_info(),
+            &mut ctx.accounts.user_fund_account,
             &mut ctx.accounts.user_reward_account,
         )?
         .process_withdraw_supported_token(

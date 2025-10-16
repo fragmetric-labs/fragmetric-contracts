@@ -497,10 +497,6 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
         v.bigint(),
         v.description('receipt token amount to withdraw')
       ),
-      createUserFundAccount: v.pipe(
-        v.nullish(v.boolean(), true),
-        v.description('create user fund account')
-      ),
       createUserRewardAccount: v.pipe(
         v.nullish(v.boolean(), true),
         v.description('create user reward account')
@@ -533,19 +529,17 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
                   units: 1_400_000,
                 })
               : null,
-            args.createUserFundAccount
-              ? restaking.getUserCreateFundAccountIdempotentInstructionAsync(
-                  {
-                    user: createNoopSigner(user),
-                    receiptTokenMint: data.receiptTokenMint!,
-                    program: this.program.address,
-                    desiredAccountSize: null,
-                  },
-                  {
-                    programAddress: this.program.address,
-                  }
-                )
-              : null,
+            restaking.getUserCreateFundAccountIdempotentInstructionAsync(
+              {
+                user: createNoopSigner(user),
+                receiptTokenMint: data.receiptTokenMint!,
+                program: this.program.address,
+                desiredAccountSize: null,
+              },
+              {
+                programAddress: this.program.address,
+              }
+            ),
             args.createUserRewardAccount
               ? restaking.getUserCreateRewardAccountIdempotentInstructionAsync(
                   {
@@ -598,6 +592,10 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
         )
       ),
       requestId: v.pipe(v.bigint(), v.description('withdrawal request id')),
+      createUserRewardAccount: v.pipe(
+        v.nullish(v.boolean(), true),
+        v.description('create user reward account')
+      ),
       applyPresetComputeUnitLimit: v.pipe(
         v.nullish(v.boolean(), true),
         v.description('apply preset CU limit')
@@ -642,17 +640,19 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
                 programAddress: this.program.address,
               }
             ),
-            restaking.getUserCreateRewardAccountIdempotentInstructionAsync(
-              {
-                user: createNoopSigner(user),
-                program: this.program.address,
-                receiptTokenMint: data.receiptTokenMint,
-                desiredAccountSize: null,
-              },
-              {
-                programAddress: this.program.address,
-              }
-            ),
+            args.createUserRewardAccount
+              ? restaking.getUserCreateRewardAccountIdempotentInstructionAsync(
+                  {
+                    user: createNoopSigner(user),
+                    program: this.program.address,
+                    receiptTokenMint: data.receiptTokenMint,
+                    desiredAccountSize: null,
+                  },
+                  {
+                    programAddress: this.program.address,
+                  }
+                )
+              : null,
             (async () => {
               const ix =
                 await restaking.getUserCancelWithdrawalRequestInstructionAsync(
@@ -692,6 +692,10 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
         )
       ),
       requestId: v.pipe(v.bigint(), v.description('withdrawal request id')),
+      createUserRewardAccount: v.pipe(
+        v.nullish(v.boolean(), true),
+        v.description('create user reward account')
+      ),
       applyPresetComputeUnitLimit: v.pipe(
         v.nullish(v.boolean(), true),
         v.description('apply preset CU limit')
@@ -745,17 +749,19 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
                 programAddress: this.program.address,
               }
             ),
-            restaking.getUserCreateRewardAccountIdempotentInstructionAsync(
-              {
-                user: createNoopSigner(user),
-                receiptTokenMint: data.receiptTokenMint,
-                program: this.program.address,
-                desiredAccountSize: null,
-              },
-              {
-                programAddress: this.program.address,
-              }
-            ),
+            args.createUserRewardAccount
+              ? restaking.getUserCreateRewardAccountIdempotentInstructionAsync(
+                  {
+                    user: createNoopSigner(user),
+                    receiptTokenMint: data.receiptTokenMint,
+                    program: this.program.address,
+                    desiredAccountSize: null,
+                  },
+                  {
+                    programAddress: this.program.address,
+                  }
+                )
+              : null,
             (async () => {
               const ix = await (args.assetMint
                 ? restaking.getUserWithdrawSupportedTokenInstructionAsync(
