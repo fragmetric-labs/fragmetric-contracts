@@ -12227,11 +12227,6 @@
       "code": 6099,
       "name": "UnexpectedPricingSourceError",
       "msg": "unexpected pricing source"
-    },
-    {
-      "code": 6100,
-      "name": "FundUserFundAccountNotInitializedException",
-      "msg": "fund: user fund account should be initialized"
     }
   ],
   "types": [
