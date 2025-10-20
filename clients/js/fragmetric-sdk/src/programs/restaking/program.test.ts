@@ -186,10 +186,10 @@ test('can traverse context graph', async () => {
     │   │   ├── wrappedToken                                  TokenAccount address=undefined, amount=undefined, mint=undefined
     │   │   ├── supportedTokens                               IterativeAccount length=undefined, types=undefined
     │   │   ├── rewardTokens                                  IterativeAccount length=undefined, types=undefined
-    │   │   ├── deposit                                       TransactionTemplate args=assetMint,assetAmount,metadata,applyPresetComputeUnitLimit, events=userDepositedToFund,userCreatedOrUpdatedFundAccoun
-    │   │   ├── requestWithdrawal                             TransactionTemplate args=assetMint,receiptTokenAmount,applyPresetComputeUnitLimit, events=userRequestedWithdrawalFromFund,userCreatedOrUpdated
-    │   │   ├── cancelWithdrawalRequest                       TransactionTemplate args=assetMint,requestId,applyPresetComputeUnitLimit, events=userCanceledWithdrawalRequestFromFund,userCreatedOrUpdatedFun
-    │   │   ├── withdraw                                      TransactionTemplate args=assetMint,requestId,applyPresetComputeUnitLimit, events=userWithdrewFromFund,userCreatedOrUpdatedFundAccount,userCrea
+    │   │   ├── deposit                                       TransactionTemplate args=assetMint,assetAmount,metadata,createUserFundAccount,createUserRewardAccount,applyPresetComputeUnitLimit, events=user
+    │   │   ├── requestWithdrawal                             TransactionTemplate args=assetMint,receiptTokenAmount,createUserRewardAccount,applyPresetComputeUnitLimit, events=userRequestedWithdrawalFromF
+    │   │   ├── cancelWithdrawalRequest                       TransactionTemplate args=assetMint,requestId,createUserRewardAccount,applyPresetComputeUnitLimit, events=userCanceledWithdrawalRequestFromFund
+    │   │   ├── withdraw                                      TransactionTemplate args=assetMint,requestId,createUserRewardAccount,applyPresetComputeUnitLimit, events=userWithdrewFromFund,userCreatedOrUpd
     │   │   ├── wrap                                          TransactionTemplate args=receiptTokenAmount,receiptTokenAmountAsTargetBalance,applyPresetComputeUnitLimit, events=userWrappedReceiptToken, des
     │   │   ├── unwrap                                        TransactionTemplate args=wrappedTokenAmount,applyPresetComputeUnitLimit, events=userUnwrappedReceiptToken, description=convert wrapped tokens 
     │   │   └── transfer                                      TransactionTemplate args=receiptTokenAmount,recipient,applyPresetComputeUnitLimit, events=userTransferredReceiptToken, description=transfer re
@@ -272,10 +272,10 @@ test('can traverse context graph', async () => {
     │   │   ├── wrappedToken                                  TokenAccount address=undefined, amount=undefined, mint=undefined
     │   │   ├── supportedTokens                               IterativeAccount length=undefined, types=undefined
     │   │   ├── rewardTokens                                  IterativeAccount length=undefined, types=undefined
-    │   │   ├── deposit                                       TransactionTemplate args=assetMint,assetAmount,metadata,applyPresetComputeUnitLimit, events=userDepositedToFund,userCreatedOrUpdatedFundAccoun
-    │   │   ├── requestWithdrawal                             TransactionTemplate args=assetMint,receiptTokenAmount,applyPresetComputeUnitLimit, events=userRequestedWithdrawalFromFund,userCreatedOrUpdated
-    │   │   ├── cancelWithdrawalRequest                       TransactionTemplate args=assetMint,requestId,applyPresetComputeUnitLimit, events=userCanceledWithdrawalRequestFromFund,userCreatedOrUpdatedFun
-    │   │   ├── withdraw                                      TransactionTemplate args=assetMint,requestId,applyPresetComputeUnitLimit, events=userWithdrewFromFund,userCreatedOrUpdatedFundAccount,userCrea
+    │   │   ├── deposit                                       TransactionTemplate args=assetMint,assetAmount,metadata,createUserFundAccount,createUserRewardAccount,applyPresetComputeUnitLimit, events=user
+    │   │   ├── requestWithdrawal                             TransactionTemplate args=assetMint,receiptTokenAmount,createUserRewardAccount,applyPresetComputeUnitLimit, events=userRequestedWithdrawalFromF
+    │   │   ├── cancelWithdrawalRequest                       TransactionTemplate args=assetMint,requestId,createUserRewardAccount,applyPresetComputeUnitLimit, events=userCanceledWithdrawalRequestFromFund
+    │   │   ├── withdraw                                      TransactionTemplate args=assetMint,requestId,createUserRewardAccount,applyPresetComputeUnitLimit, events=userWithdrewFromFund,userCreatedOrUpd
     │   │   ├── wrap                                          TransactionTemplate args=receiptTokenAmount,receiptTokenAmountAsTargetBalance,applyPresetComputeUnitLimit, events=userWrappedReceiptToken, des
     │   │   ├── unwrap                                        TransactionTemplate args=wrappedTokenAmount,applyPresetComputeUnitLimit, events=userUnwrappedReceiptToken, description=convert wrapped tokens 
     │   │   └── transfer                                      TransactionTemplate args=receiptTokenAmount,recipient,applyPresetComputeUnitLimit, events=userTransferredReceiptToken, description=transfer re
@@ -358,10 +358,10 @@ test('can traverse context graph', async () => {
     │   │   ├── wrappedToken                                  TokenAccount address=undefined, amount=undefined, mint=undefined
     │   │   ├── supportedTokens                               IterativeAccount length=undefined, types=undefined
     │   │   ├── rewardTokens                                  IterativeAccount length=undefined, types=undefined
-    │   │   ├── deposit                                       TransactionTemplate args=assetMint,assetAmount,metadata,applyPresetComputeUnitLimit, events=userDepositedToFund,userCreatedOrUpdatedFundAccoun
-    │   │   ├── requestWithdrawal                             TransactionTemplate args=assetMint,receiptTokenAmount,applyPresetComputeUnitLimit, events=userRequestedWithdrawalFromFund,userCreatedOrUpdated
-    │   │   ├── cancelWithdrawalRequest                       TransactionTemplate args=assetMint,requestId,applyPresetComputeUnitLimit, events=userCanceledWithdrawalRequestFromFund,userCreatedOrUpdatedFun
-    │   │   ├── withdraw                                      TransactionTemplate args=assetMint,requestId,applyPresetComputeUnitLimit, events=userWithdrewFromFund,userCreatedOrUpdatedFundAccount,userCrea
+    │   │   ├── deposit                                       TransactionTemplate args=assetMint,assetAmount,metadata,createUserFundAccount,createUserRewardAccount,applyPresetComputeUnitLimit, events=user
+    │   │   ├── requestWithdrawal                             TransactionTemplate args=assetMint,receiptTokenAmount,createUserRewardAccount,applyPresetComputeUnitLimit, events=userRequestedWithdrawalFromF
+    │   │   ├── cancelWithdrawalRequest                       TransactionTemplate args=assetMint,requestId,createUserRewardAccount,applyPresetComputeUnitLimit, events=userCanceledWithdrawalRequestFromFund
+    │   │   ├── withdraw                                      TransactionTemplate args=assetMint,requestId,createUserRewardAccount,applyPresetComputeUnitLimit, events=userWithdrewFromFund,userCreatedOrUpd
     │   │   ├── wrap                                          TransactionTemplate args=receiptTokenAmount,receiptTokenAmountAsTargetBalance,applyPresetComputeUnitLimit, events=userWrappedReceiptToken, des
     │   │   ├── unwrap                                        TransactionTemplate args=wrappedTokenAmount,applyPresetComputeUnitLimit, events=userUnwrappedReceiptToken, description=convert wrapped tokens 
     │   │   └── transfer                                      TransactionTemplate args=receiptTokenAmount,recipient,applyPresetComputeUnitLimit, events=userTransferredReceiptToken, description=transfer re
@@ -444,10 +444,10 @@ test('can traverse context graph', async () => {
     │   │   ├── wrappedToken                                  TokenAccount address=undefined, amount=undefined, mint=undefined
     │   │   ├── supportedTokens                               IterativeAccount length=undefined, types=undefined
     │   │   ├── rewardTokens                                  IterativeAccount length=undefined, types=undefined
-    │   │   ├── deposit                                       TransactionTemplate args=assetMint,assetAmount,metadata,applyPresetComputeUnitLimit, events=userDepositedToFund,userCreatedOrUpdatedFundAccoun
-    │   │   ├── requestWithdrawal                             TransactionTemplate args=assetMint,receiptTokenAmount,applyPresetComputeUnitLimit, events=userRequestedWithdrawalFromFund,userCreatedOrUpdated
-    │   │   ├── cancelWithdrawalRequest                       TransactionTemplate args=assetMint,requestId,applyPresetComputeUnitLimit, events=userCanceledWithdrawalRequestFromFund,userCreatedOrUpdatedFun
-    │   │   ├── withdraw                                      TransactionTemplate args=assetMint,requestId,applyPresetComputeUnitLimit, events=userWithdrewFromFund,userCreatedOrUpdatedFundAccount,userCrea
+    │   │   ├── deposit                                       TransactionTemplate args=assetMint,assetAmount,metadata,createUserFundAccount,createUserRewardAccount,applyPresetComputeUnitLimit, events=user
+    │   │   ├── requestWithdrawal                             TransactionTemplate args=assetMint,receiptTokenAmount,createUserRewardAccount,applyPresetComputeUnitLimit, events=userRequestedWithdrawalFromF
+    │   │   ├── cancelWithdrawalRequest                       TransactionTemplate args=assetMint,requestId,createUserRewardAccount,applyPresetComputeUnitLimit, events=userCanceledWithdrawalRequestFromFund
+    │   │   ├── withdraw                                      TransactionTemplate args=assetMint,requestId,createUserRewardAccount,applyPresetComputeUnitLimit, events=userWithdrewFromFund,userCreatedOrUpd
     │   │   ├── wrap                                          TransactionTemplate args=receiptTokenAmount,receiptTokenAmountAsTargetBalance,applyPresetComputeUnitLimit, events=userWrappedReceiptToken, des
     │   │   ├── unwrap                                        TransactionTemplate args=wrappedTokenAmount,applyPresetComputeUnitLimit, events=userUnwrappedReceiptToken, description=convert wrapped tokens 
     │   │   └── transfer                                      TransactionTemplate args=receiptTokenAmount,recipient,applyPresetComputeUnitLimit, events=userTransferredReceiptToken, description=transfer re
@@ -530,10 +530,10 @@ test('can traverse context graph', async () => {
     │   │   ├── wrappedToken                                  TokenAccount address=undefined, amount=undefined, mint=undefined
     │   │   ├── supportedTokens                               IterativeAccount length=undefined, types=undefined
     │   │   ├── rewardTokens                                  IterativeAccount length=undefined, types=undefined
-    │   │   ├── deposit                                       TransactionTemplate args=assetMint,assetAmount,metadata,applyPresetComputeUnitLimit, events=userDepositedToFund,userCreatedOrUpdatedFundAccoun
-    │   │   ├── requestWithdrawal                             TransactionTemplate args=assetMint,receiptTokenAmount,applyPresetComputeUnitLimit, events=userRequestedWithdrawalFromFund,userCreatedOrUpdated
-    │   │   ├── cancelWithdrawalRequest                       TransactionTemplate args=assetMint,requestId,applyPresetComputeUnitLimit, events=userCanceledWithdrawalRequestFromFund,userCreatedOrUpdatedFun
-    │   │   ├── withdraw                                      TransactionTemplate args=assetMint,requestId,applyPresetComputeUnitLimit, events=userWithdrewFromFund,userCreatedOrUpdatedFundAccount,userCrea
+    │   │   ├── deposit                                       TransactionTemplate args=assetMint,assetAmount,metadata,createUserFundAccount,createUserRewardAccount,applyPresetComputeUnitLimit, events=user
+    │   │   ├── requestWithdrawal                             TransactionTemplate args=assetMint,receiptTokenAmount,createUserRewardAccount,applyPresetComputeUnitLimit, events=userRequestedWithdrawalFromF
+    │   │   ├── cancelWithdrawalRequest                       TransactionTemplate args=assetMint,requestId,createUserRewardAccount,applyPresetComputeUnitLimit, events=userCanceledWithdrawalRequestFromFund
+    │   │   ├── withdraw                                      TransactionTemplate args=assetMint,requestId,createUserRewardAccount,applyPresetComputeUnitLimit, events=userWithdrewFromFund,userCreatedOrUpd
     │   │   ├── wrap                                          TransactionTemplate args=receiptTokenAmount,receiptTokenAmountAsTargetBalance,applyPresetComputeUnitLimit, events=userWrappedReceiptToken, des
     │   │   ├── unwrap                                        TransactionTemplate args=wrappedTokenAmount,applyPresetComputeUnitLimit, events=userUnwrappedReceiptToken, description=convert wrapped tokens 
     │   │   └── transfer                                      TransactionTemplate args=receiptTokenAmount,recipient,applyPresetComputeUnitLimit, events=userTransferredReceiptToken, description=transfer re

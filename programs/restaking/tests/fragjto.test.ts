@@ -360,6 +360,8 @@ describe('restaking.fragJTO test', async () => {
           "applyPresetComputeUnitLimit": true,
           "assetAmount": 100000000000n,
           "assetMint": "jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL",
+          "createUserFundAccount": true,
+          "createUserRewardAccount": true,
           "metadata": null,
         },
         "events": {
@@ -435,6 +437,8 @@ describe('restaking.fragJTO test', async () => {
           "applyPresetComputeUnitLimit": true,
           "assetAmount": 200000000000n,
           "assetMint": "jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL",
+          "createUserFundAccount": true,
+          "createUserRewardAccount": true,
           "metadata": null,
         },
         "events": {
@@ -510,6 +514,8 @@ describe('restaking.fragJTO test', async () => {
           "applyPresetComputeUnitLimit": true,
           "assetAmount": 300000000000n,
           "assetMint": "jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL",
+          "createUserFundAccount": true,
+          "createUserRewardAccount": true,
           "metadata": null,
         },
         "events": {
@@ -721,6 +727,8 @@ describe('restaking.fragJTO test', async () => {
           "applyPresetComputeUnitLimit": true,
           "assetAmount": 200000000000n,
           "assetMint": "jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL",
+          "createUserFundAccount": true,
+          "createUserRewardAccount": true,
           "metadata": {
             "contributionAccrualRate": 150,
             "expiredAt": "MASKED(/.*At?$/)",
@@ -957,6 +965,8 @@ describe('restaking.fragJTO test', async () => {
           "applyPresetComputeUnitLimit": true,
           "assetAmount": 100000000000n,
           "assetMint": "jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL",
+          "createUserFundAccount": true,
+          "createUserRewardAccount": true,
           "metadata": null,
         },
         "events": {
@@ -1337,6 +1347,8 @@ describe('restaking.fragJTO test', async () => {
           "applyPresetComputeUnitLimit": true,
           "assetAmount": 200000000000n,
           "assetMint": "jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL",
+          "createUserFundAccount": true,
+          "createUserRewardAccount": true,
           "metadata": {
             "contributionAccrualRate": 150,
             "expiredAt": "MASKED(/.*At?$/)",
@@ -1499,6 +1511,8 @@ describe('restaking.fragJTO test', async () => {
           "applyPresetComputeUnitLimit": true,
           "assetAmount": 100000000000n,
           "assetMint": "jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL",
+          "createUserFundAccount": true,
+          "createUserRewardAccount": true,
           "metadata": {
             "contributionAccrualRate": 130,
             "expiredAt": "MASKED(/.*At?$/)",
@@ -1657,6 +1671,8 @@ describe('restaking.fragJTO test', async () => {
           "applyPresetComputeUnitLimit": true,
           "assetAmount": 1000000000n,
           "assetMint": "jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL",
+          "createUserFundAccount": true,
+          "createUserRewardAccount": true,
           "metadata": null,
         },
         "events": {
