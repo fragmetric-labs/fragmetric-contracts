@@ -1,5 +1,5 @@
 import { MAX_U64 } from '@fragmetric-labs/sdk';
-import { getAddressDecoder, KeyPairSigner } from '@solana/kit';
+import { address, getAddressDecoder, KeyPairSigner } from '@solana/kit';
 import { afterAll, beforeEach, describe, expect, test } from 'vitest';
 import { RestakingUserAccountContext } from '../../../clients/js/fragmetric-sdk/dist/programs/restaking/user';
 import { createTestSuiteContext, expectMasked } from '../../testutil';
@@ -2269,7 +2269,7 @@ describe('restaking.fragX unit test', async () => {
     const depositAmount = 1_000_000_000n; // 1 sol
 
     // user1 deposits sol
-    await user1.deposit.execute(
+    const depositRes_1 = await user1.deposit.execute(
       {
         assetAmount: depositAmount,
         createUserRewardAccount: false,
@@ -2285,6 +2285,10 @@ describe('restaking.fragX unit test', async () => {
       user1_1!.receiptTokenAmount
     );
     expect(user1Reward_1).toEqual(null);
+
+    expect(depositRes_1.events!.userDepositedToFund!.userFundAccount).toEqual(
+      user1.fund.address
+    );
 
     // user1 deposits supported token
     await user1.deposit.execute(
@@ -2309,7 +2313,7 @@ describe('restaking.fragX unit test', async () => {
     const depositAmount = 1_000_000_000n; // 1 sol
 
     // user1 deposits
-    await user1.deposit.execute(
+    const depositRes = await user1.deposit.execute(
       {
         assetAmount: depositAmount,
         createUserFundAccount: false,
@@ -2323,6 +2327,10 @@ describe('restaking.fragX unit test', async () => {
     expect(user1Fund_1).toEqual(null);
     expect(user1Reward_1!.basePool.tokenAllocatedAmount.totalAmount).toEqual(
       depositAmount
+    );
+
+    expect(depositRes.events!.userDepositedToFund!.userFundAccount).toEqual(
+      address('11111111111111111111111111111111')
     );
   });
 

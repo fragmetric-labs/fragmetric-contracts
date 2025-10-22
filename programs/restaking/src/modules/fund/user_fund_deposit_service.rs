@@ -1,4 +1,4 @@
-use anchor_lang::prelude::*;
+use anchor_lang::{prelude::*, system_program};
 use anchor_spl::token::Token;
 use anchor_spl::token_2022::Token2022;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
@@ -212,8 +212,12 @@ impl<'a, 'info> UserFundDepositService<'a, 'info> {
 
             user: self.user.key(),
             user_receipt_token_account: self.user_receipt_token_account.key(),
-            // TODO: should think about if this field is needed when it's not initialized though
-            user_fund_account: self.user_fund_account.key(),
+            user_fund_account: self
+                .user_fund_account
+                .is_initialized()
+                .then(|| self.user_fund_account.key())
+                .or(Some(system_program::ID))
+                .unwrap(),
             user_supported_token_account: user_supported_token_account
                 .map(|token_account| token_account.key()),
 
