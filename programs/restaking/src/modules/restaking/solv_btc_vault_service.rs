@@ -374,10 +374,12 @@ impl<'info> SolvBTCVaultService<'info> {
             vault.get_withdrawal_fee_rate_bps() as u64,
             10_000,
         )?;
-        require_gte!(
-            1, // due to round up/down
-            expected_supported_token_fee_amount.abs_diff(deducted_supported_token_fee_amount),
-        );
+        if expected_supported_token_fee_amount < deducted_supported_token_fee_amount {
+            require_eq!(
+                deducted_supported_token_fee_amount, // due to round up/down
+                expected_supported_token_fee_amount + 1,
+            );
+        }
 
         if claimed_supported_token_amount == 0 {
             return Ok((

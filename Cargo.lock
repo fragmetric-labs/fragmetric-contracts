@@ -1902,7 +1902,7 @@ dependencies = [
 
 [[package]]
 name = "restaking"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
