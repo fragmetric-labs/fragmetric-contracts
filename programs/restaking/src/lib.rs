@@ -1021,7 +1021,7 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
-    // UserFundContext
+    // UserFundDepositContext
     ////////////////////////////////////////////
 
     pub fn user_deposit_sol<'info>(
@@ -1052,8 +1052,12 @@ pub mod restaking {
         Ok(())
     }
 
+    ////////////////////////////////////////////
+    // UserFundRequestWithdrawalContext
+    ////////////////////////////////////////////
+
     pub fn user_request_withdrawal<'info>(
-        ctx: Context<'_, '_, 'info, 'info, UserFundContext<'info>>,
+        ctx: Context<'_, '_, 'info, 'info, UserFundRequestWithdrawalContext<'info>>,
         receipt_token_amount: u64,
         supported_token_mint: Option<Pubkey>,
     ) -> Result<()> {
@@ -1078,7 +1082,7 @@ pub mod restaking {
     }
 
     pub fn user_cancel_withdrawal_request<'info>(
-        ctx: Context<'_, '_, 'info, 'info, UserFundContext<'info>>,
+        ctx: Context<'_, '_, 'info, 'info, UserFundRequestWithdrawalContext<'info>>,
         request_id: u64,
         supported_token_mint: Option<Pubkey>,
     ) -> Result<()> {
@@ -1101,6 +1105,10 @@ pub mod restaking {
 
         Ok(())
     }
+
+    ////////////////////////////////////////////
+    // UserFundWithdrawContext
+    ////////////////////////////////////////////
 
     pub fn user_withdraw_sol(
         ctx: Context<UserFundWithdrawContext>,
@@ -1161,6 +1169,10 @@ pub mod restaking {
 
         Ok(())
     }
+
+    ////////////////////////////////////////////
+    // UserFundWithdrawSupportedTokenContext
+    ////////////////////////////////////////////
 
     pub fn user_withdraw_supported_token(
         ctx: Context<UserFundWithdrawSupportedTokenContext>,

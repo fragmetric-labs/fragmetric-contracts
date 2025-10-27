@@ -97,7 +97,7 @@ impl NormalizedTokenPoolValueProvider {
 
     #[cfg(test)]
     #[inline(never)]
-    fn resolve_from_account<'info>(
+    fn resolve_from_account(
         token_mint: &Pubkey,
         account: &NormalizedTokenPoolAccount,
         result: &mut TokenValue,

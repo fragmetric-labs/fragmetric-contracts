@@ -133,6 +133,21 @@ impl<'a, 'info> UserFundWithdrawService<'a, 'info> {
             .as_account_info()
             .parse_optional_account_loader::<UserRewardAccount>()?;
 
+        // validation
+        if let Some(user_reward_account) = user_reward_account_option.as_ref() {
+            let user_reward_account = user_reward_account.load()?;
+
+            require_keys_eq!(
+                user_reward_account.receipt_token_mint,
+                self.receipt_token_mint.key()
+            );
+            require_keys_eq!(user_reward_account.user, self.user.key());
+            require!(
+                user_reward_account.is_latest_version(),
+                errors::ErrorCode::InvalidAccountDataVersionError
+            );
+        }
+
         // reduce user's reward accrual rate
         let updated_user_reward_accounts =
             RewardService::new(self.receipt_token_mint, self.reward_account)?
@@ -209,8 +224,6 @@ impl<'a, 'info> UserFundWithdrawService<'a, 'info> {
             receipt_token_amount,
         )?;
 
-        // receipt_token_lock_account.reload()?;
-
         self.fund_account
             .load_mut()?
             .reload_receipt_token_supply(self.receipt_token_mint)?;
@@ -218,11 +231,27 @@ impl<'a, 'info> UserFundWithdrawService<'a, 'info> {
         self.user_fund_account
             .reload_receipt_token_amount(self.user_receipt_token_account)?;
 
-        // increase user's reward accrual rate
         let user_reward_account_option = self
             .user_reward_account
             .as_account_info()
             .parse_optional_account_loader::<UserRewardAccount>()?;
+
+        // validation
+        if let Some(user_reward_account) = user_reward_account_option.as_ref() {
+            let user_reward_account = user_reward_account.load()?;
+
+            require_keys_eq!(
+                user_reward_account.receipt_token_mint,
+                self.receipt_token_mint.key()
+            );
+            require_keys_eq!(user_reward_account.user, self.user.key());
+            require!(
+                user_reward_account.is_latest_version(),
+                errors::ErrorCode::InvalidAccountDataVersionError
+            );
+        }
+
+        // increase user's reward accrual rate
         let updated_user_reward_accounts =
             RewardService::new(self.receipt_token_mint, self.reward_account)?
                 .update_reward_pools_token_allocation(

@@ -9,7 +9,7 @@ pub struct UserDepositedToFund {
 
     pub user: Pubkey,
     pub user_receipt_token_account: Pubkey,
-    pub user_fund_account: Pubkey,
+    pub user_fund_account: Pubkey, // returns Pubkey::default() if user_fund_account is uninitialized
     pub user_supported_token_account: Option<Pubkey>,
 
     pub wallet_provider: Option<String>,

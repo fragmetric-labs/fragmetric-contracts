@@ -37,7 +37,7 @@ pub struct UserFundAccountInitOrUpdateContext<'info> {
 
 #[event_cpi]
 #[derive(Accounts)]
-pub struct UserFundContext<'info> {
+pub struct UserFundRequestWithdrawalContext<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
 

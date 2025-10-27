@@ -1,4 +1,4 @@
-use anchor_lang::{prelude::*, system_program};
+use anchor_lang::prelude::*;
 use anchor_spl::token::Token;
 use anchor_spl::token_2022::Token2022;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
@@ -133,21 +133,48 @@ impl<'a, 'info> UserFundDepositService<'a, 'info> {
             receipt_token_mint_amount,
         )?;
 
-        if self.user_fund_account.is_initialized() {
-            let mut user_fund_account = self
-                .user_fund_account
-                .as_account_info()
-                .parse_account_boxed::<UserFundAccount>()?;
+        let mut user_fund_account_option = self
+            .user_fund_account
+            .as_account_info()
+            .parse_optional_account_boxed::<UserFundAccount>()?;
+
+        if let Some(user_fund_account) = user_fund_account_option.as_deref_mut() {
+            // validation
+            require_keys_eq!(
+                user_fund_account.receipt_token_mint,
+                self.receipt_token_mint.key()
+            );
+            require_keys_eq!(user_fund_account.user, self.user.key());
+            require!(
+                user_fund_account.is_latest_version(),
+                errors::ErrorCode::InvalidAccountDataVersionError
+            );
 
             user_fund_account.reload_receipt_token_amount(self.user_receipt_token_account)?;
             user_fund_account.exit(&crate::ID)?;
         }
 
-        // increase user's reward accrual rate
         let user_reward_account_option = self
             .user_reward_account
             .as_account_info()
             .parse_optional_account_loader::<UserRewardAccount>()?;
+
+        // validation
+        if let Some(user_reward_account) = user_reward_account_option.as_ref() {
+            let user_reward_account = user_reward_account.load()?;
+
+            require_keys_eq!(
+                user_reward_account.receipt_token_mint,
+                self.receipt_token_mint.key()
+            );
+            require_keys_eq!(user_reward_account.user, self.user.key());
+            require!(
+                user_reward_account.is_latest_version(),
+                errors::ErrorCode::InvalidAccountDataVersionError
+            );
+        }
+
+        // increase user's reward accrual rate
         let updated_user_reward_accounts =
             RewardService::new(self.receipt_token_mint, self.reward_account)?
                 .update_reward_pools_token_allocation(
@@ -212,12 +239,8 @@ impl<'a, 'info> UserFundDepositService<'a, 'info> {
 
             user: self.user.key(),
             user_receipt_token_account: self.user_receipt_token_account.key(),
-            user_fund_account: self
-                .user_fund_account
-                .is_initialized()
-                .then(|| self.user_fund_account.key())
-                .or(Some(system_program::ID))
-                .unwrap(),
+            user_fund_account: user_fund_account_option
+                .map_or(Pubkey::default(), |account| account.key()),
             user_supported_token_account: user_supported_token_account
                 .map(|token_account| token_account.key()),
 
@@ -336,21 +359,48 @@ impl<'a, 'info> UserFundDepositService<'a, 'info> {
             receipt_token_mint_amount,
         )?;
 
-        if self.user_fund_account.is_initialized() {
-            let mut user_fund_account = self
-                .user_fund_account
-                .as_account_info()
-                .parse_account_boxed::<UserFundAccount>()?;
+        let mut user_fund_account_option = self
+            .user_fund_account
+            .as_account_info()
+            .parse_optional_account_boxed::<UserFundAccount>()?;
+
+        if let Some(user_fund_account) = user_fund_account_option.as_deref_mut() {
+            // validation
+            require_keys_eq!(
+                user_fund_account.receipt_token_mint,
+                self.receipt_token_mint.key()
+            );
+            require_keys_eq!(user_fund_account.user, self.user.key());
+            require!(
+                user_fund_account.is_latest_version(),
+                errors::ErrorCode::InvalidAccountDataVersionError
+            );
 
             user_fund_account.reload_receipt_token_amount(self.user_receipt_token_account)?;
             user_fund_account.exit(&crate::ID)?;
         }
 
-        // increase user's reward accrual rate
         let user_reward_account_option = self
             .user_reward_account
             .as_account_info()
             .parse_optional_account_loader::<UserRewardAccount>()?;
+
+        // validation
+        if let Some(user_reward_account) = user_reward_account_option.as_ref() {
+            let user_reward_account = user_reward_account.load()?;
+
+            require_keys_eq!(
+                user_reward_account.receipt_token_mint,
+                self.receipt_token_mint.key()
+            );
+            require_keys_eq!(user_reward_account.user, self.user.key());
+            require!(
+                user_reward_account.is_latest_version(),
+                errors::ErrorCode::InvalidAccountDataVersionError
+            );
+        }
+
+        // increase user's reward accrual rate
         let updated_user_reward_accounts =
             RewardService::new(self.receipt_token_mint, self.reward_account)?
                 .update_reward_pools_token_allocation(
@@ -410,7 +460,8 @@ impl<'a, 'info> UserFundDepositService<'a, 'info> {
             updated_user_reward_accounts,
             user: self.user.key(),
             user_receipt_token_account: self.user_receipt_token_account.key(),
-            user_fund_account: self.user_fund_account.key(),
+            user_fund_account: user_fund_account_option
+                .map_or(Pubkey::default(), |account| account.key()),
             user_vault_receipt_token_account: user_vault_receipt_token_account.key(),
             wallet_provider,
             contribution_accrual_rate,
