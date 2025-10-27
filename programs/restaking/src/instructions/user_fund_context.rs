@@ -114,7 +114,7 @@ pub struct UserFundRequestWithdrawalContext<'info> {
 
 #[event_cpi]
 #[derive(Accounts)]
-pub struct UserFundDepositContext<'info> {
+pub struct UserFundDepositSolContext<'info> {
     pub user: Signer<'info>,
 
     pub system_program: Program<'info, System>,
@@ -189,7 +189,7 @@ pub struct UserFundDepositContext<'info> {
 #[event_cpi]
 #[derive(Accounts)]
 #[instruction(batch_id: u64)]
-pub struct UserFundWithdrawContext<'info> {
+pub struct UserFundWithdrawSolContext<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
 

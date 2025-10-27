@@ -1380,80 +1380,6 @@ describe('restaking.fragX unit test', async () => {
     });
   });
 
-  test.skip('user reward pool update fails when there are too many settlement blocks to synchronize', async () => {
-    const MAX_REWARD_NUM = 16;
-    const MAX_SETTLEMENT_BLOCK_NUM = 64;
-
-    let rewardAccount = await ctx.reward.resolveAccount(true);
-    const numOfAvailableReward =
-      MAX_REWARD_NUM - rewardAccount!.data.numRewards;
-
-    // add 16 rewards
-    for (let i = 0; i < numOfAvailableReward; i++) {
-      const reward = await validator.getSigner('mock reward' + i);
-      await ctx.reward.addReward.execute({
-        mint: reward.address,
-        decimals: 9,
-        name: 'mock reward' + i,
-        description: 'mock reward for test',
-      });
-    }
-
-    // user1 deposits sol to accumulate contribution
-    await user1.resolveAddress(true);
-    await validator.airdrop(user1.address!, 1_234_567_890_123n);
-    await user1.deposit.execute(
-      {
-        assetAmount: 1_234_567_890_123n,
-      },
-      { signers: [signer1] }
-    );
-
-    /*
-     * repeatedly call partial update ix to resolve DOS
-     * - settle 1024 blocks to global reward pool
-     * - user1 try to deposit and transaction exceeds maximum CU limit
-     * - repeatedly settle 192 blocks to user reward pool (64 + 32 blocks to check boundary - kind of reward changes every 64 blocks)
-     * - user1 succeeds to deposit without any error
-     */
-
-    // settle 16 * 64 blocks
-    rewardAccount = await ctx.reward.resolveAccount(true);
-    for (let i = 0; i < MAX_REWARD_NUM; i++) {
-      const rewardAddress = rewardAccount!.data.rewards1[i].mint;
-      for (let j = 0; j < MAX_SETTLEMENT_BLOCK_NUM; j++) {
-        await ctx.reward.settleReward.execute({
-          mint: rewardAddress,
-          amount: 287_123_456_789_012_345n,
-          isBonus: i == 0, // only settle fPoint in bonus pool
-        });
-
-        await validator.skipSlots(123_456_789n);
-      }
-    }
-
-    // executing deposit instruction exceeds 1,400,000 CU
-    await expect(
-      user1.deposit.execute(
-        {
-          assetAmount: 1_000_000_000n,
-        },
-        { signers: [signer1] }
-      )
-    ).rejects.toThrowError();
-
-    // repeatedly update 192 blocks
-    await user1.reward.updatePools.executeChained({ numBlocksToSettle: 192 });
-
-    // deposit succeeds after partial pool update
-    await user1.deposit.executeChained(
-      {
-        assetAmount: 1_000_000_000n,
-      },
-      { signers: [signer1] }
-    );
-  });
-
   test('during unstake lst command execution, program should first withdraw stake from stake account whose vote account is preferred withdraw validator', async () => {
     /*
      * modified dynosol spl-stake-pool set 5th most lamport owned stake account's vote account as preferred validator
@@ -2491,5 +2417,79 @@ describe('restaking.fragX unit test', async () => {
 
     expect(user1Fund_3!.receiptTokenAmountRecorded).toEqual(0n);
     expect(user1_3!.lamports).toBeGreaterThan(user1_2!.lamports);
+  });
+
+  test.skip('user reward pool update fails when there are too many settlement blocks to synchronize', async () => {
+    const MAX_REWARD_NUM = 16;
+    const MAX_SETTLEMENT_BLOCK_NUM = 64;
+
+    let rewardAccount = await ctx.reward.resolveAccount(true);
+    const numOfAvailableReward =
+      MAX_REWARD_NUM - rewardAccount!.data.numRewards;
+
+    // add 16 rewards
+    for (let i = 0; i < numOfAvailableReward; i++) {
+      const reward = await validator.getSigner('mock reward' + i);
+      await ctx.reward.addReward.execute({
+        mint: reward.address,
+        decimals: 9,
+        name: 'mock reward' + i,
+        description: 'mock reward for test',
+      });
+    }
+
+    // user1 deposits sol to accumulate contribution
+    await user1.resolveAddress(true);
+    await validator.airdrop(user1.address!, 1_234_567_890_123n);
+    await user1.deposit.execute(
+      {
+        assetAmount: 1_234_567_890_123n,
+      },
+      { signers: [signer1] }
+    );
+
+    /*
+     * repeatedly call partial update ix to resolve DOS
+     * - settle 1024 blocks to global reward pool
+     * - user1 try to deposit and transaction exceeds maximum CU limit
+     * - repeatedly settle 192 blocks to user reward pool (64 + 32 blocks to check boundary - kind of reward changes every 64 blocks)
+     * - user1 succeeds to deposit without any error
+     */
+
+    // settle 16 * 64 blocks
+    rewardAccount = await ctx.reward.resolveAccount(true);
+    for (let i = 0; i < MAX_REWARD_NUM; i++) {
+      const rewardAddress = rewardAccount!.data.rewards1[i].mint;
+      for (let j = 0; j < MAX_SETTLEMENT_BLOCK_NUM; j++) {
+        await ctx.reward.settleReward.execute({
+          mint: rewardAddress,
+          amount: 287_123_456_789_012_345n,
+          isBonus: i == 0, // only settle fPoint in bonus pool
+        });
+
+        await validator.skipSlots(123_456_789n);
+      }
+    }
+
+    // executing deposit instruction exceeds 1,400,000 CU
+    await expect(
+      user1.deposit.execute(
+        {
+          assetAmount: 1_000_000_000n,
+        },
+        { signers: [signer1] }
+      )
+    ).rejects.toThrowError();
+
+    // repeatedly update 192 blocks
+    await user1.reward.updatePools.executeChained({ numBlocksToSettle: 192 });
+
+    // deposit succeeds after partial pool update
+    await user1.deposit.executeChained(
+      {
+        assetAmount: 1_000_000_000n,
+      },
+      { signers: [signer1] }
+    );
   });
 });

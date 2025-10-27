@@ -8,7 +8,7 @@ use crate::utils::{AccountLoaderExt, PDASeeds};
 
 #[event_cpi]
 #[derive(Accounts)]
-pub struct UserFundSupportedTokenContext<'info> {
+pub struct UserFundDepositSupportedTokenContext<'info> {
     pub user: Signer<'info>,
 
     pub receipt_token_program: Program<'info, Token2022>,

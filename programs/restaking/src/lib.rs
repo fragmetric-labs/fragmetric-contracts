@@ -1021,11 +1021,11 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
-    // UserFundDepositContext
+    // UserFundDepositSolContext
     ////////////////////////////////////////////
 
     pub fn user_deposit_sol<'info>(
-        ctx: Context<'_, '_, 'info, 'info, UserFundDepositContext<'info>>,
+        ctx: Context<'_, '_, 'info, 'info, UserFundDepositSolContext<'info>>,
         amount: u64,
         metadata: Option<modules::fund::DepositMetadata>,
     ) -> Result<()> {
@@ -1107,11 +1107,11 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
-    // UserFundWithdrawContext
+    // UserFundWithdrawSolContext
     ////////////////////////////////////////////
 
     pub fn user_withdraw_sol(
-        ctx: Context<UserFundWithdrawContext>,
+        ctx: Context<UserFundWithdrawSolContext>,
         _batch_id: u64,
         request_id: u64,
     ) -> Result<()> {
@@ -1137,11 +1137,11 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
-    // UserFundSupportedTokenContext
+    // UserFundDepositSupportedTokenContext
     ////////////////////////////////////////////
 
     pub fn user_deposit_supported_token<'info>(
-        ctx: Context<'_, '_, 'info, 'info, UserFundSupportedTokenContext<'info>>,
+        ctx: Context<'_, '_, 'info, 'info, UserFundDepositSupportedTokenContext<'info>>,
         amount: u64,
         metadata: Option<modules::fund::DepositMetadata>,
     ) -> Result<()> {
