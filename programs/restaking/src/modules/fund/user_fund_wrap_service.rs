@@ -131,7 +131,19 @@ impl<'a, 'info> UserFundWrapService<'a, 'info> {
             .user_fund_account
             .as_account_info()
             .parse_optional_account_boxed::<UserFundAccount>()?;
-        if let Some(user_fund_account) = &mut user_fund_account_option {
+
+        if let Some(user_fund_account) = user_fund_account_option.as_deref_mut() {
+            // validation
+            require_keys_eq!(
+                user_fund_account.receipt_token_mint,
+                self.receipt_token_mint.key()
+            );
+            require_keys_eq!(user_fund_account.user, self.user.key());
+            require!(
+                user_fund_account.is_latest_version(),
+                ErrorCode::InvalidAccountDataVersionError
+            );
+
             user_fund_account.reload_receipt_token_amount(self.user_receipt_token_account)?;
             user_fund_account.exit(&crate::ID)?;
         }
@@ -146,11 +158,27 @@ impl<'a, 'info> UserFundWrapService<'a, 'info> {
         // update reward
         let reward_service = RewardService::new(self.receipt_token_mint, self.reward_account)?;
 
-        // user lost `amount`
         let user_reward_account_option = self
             .user_reward_account
             .as_account_info()
             .parse_optional_account_loader::<UserRewardAccount>()?;
+
+        // validation
+        if let Some(user_reward_account) = user_reward_account_option.as_ref() {
+            let user_reward_account = user_reward_account.load()?;
+
+            require_keys_eq!(
+                user_reward_account.receipt_token_mint,
+                self.receipt_token_mint.key()
+            );
+            require_keys_eq!(user_reward_account.user, self.user.key());
+            require!(
+                user_reward_account.is_latest_version(),
+                ErrorCode::InvalidAccountDataVersionError
+            );
+        }
+
+        // user lost `amount`
         reward_service.update_reward_pools_token_allocation(
             user_reward_account_option.as_ref(),
             None,
@@ -256,7 +284,19 @@ impl<'a, 'info> UserFundWrapService<'a, 'info> {
             .user_fund_account
             .as_account_info()
             .parse_optional_account_boxed::<UserFundAccount>()?;
-        if let Some(user_fund_account) = &mut user_fund_account_option {
+
+        if let Some(user_fund_account) = user_fund_account_option.as_deref_mut() {
+            // validation
+            require_keys_eq!(
+                user_fund_account.receipt_token_mint,
+                self.receipt_token_mint.key()
+            );
+            require_keys_eq!(user_fund_account.user, self.user.key());
+            require!(
+                user_fund_account.is_latest_version(),
+                ErrorCode::InvalidAccountDataVersionError
+            );
+
             user_fund_account.reload_receipt_token_amount(self.user_receipt_token_account)?;
             user_fund_account.exit(&crate::ID)?;
         }
@@ -283,11 +323,27 @@ impl<'a, 'info> UserFundWrapService<'a, 'info> {
             )?;
         }
 
-        // user gained `amount`
         let user_reward_account_option = self
             .user_reward_account
             .as_account_info()
             .parse_optional_account_loader::<UserRewardAccount>()?;
+
+        // validation
+        if let Some(user_reward_account) = user_reward_account_option.as_ref() {
+            let user_reward_account = user_reward_account.load()?;
+
+            require_keys_eq!(
+                user_reward_account.receipt_token_mint,
+                self.receipt_token_mint.key()
+            );
+            require_keys_eq!(user_reward_account.user, self.user.key());
+            require!(
+                user_reward_account.is_latest_version(),
+                ErrorCode::InvalidAccountDataVersionError
+            );
+        }
+
+        // user gained `amount`
         reward_service.update_reward_pools_token_allocation(
             None,
             user_reward_account_option.as_ref(),

@@ -1021,15 +1021,15 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
-    // UserFundContext
+    // UserFundDepositSolContext
     ////////////////////////////////////////////
 
     pub fn user_deposit_sol<'info>(
-        ctx: Context<'_, '_, 'info, 'info, UserFundContext<'info>>,
+        ctx: Context<'_, '_, 'info, 'info, UserFundDepositSolContext<'info>>,
         amount: u64,
         metadata: Option<modules::fund::DepositMetadata>,
     ) -> Result<()> {
-        emit_cpi!(modules::fund::UserFundService::new(
+        emit_cpi!(modules::fund::UserFundDepositService::new(
             &mut ctx.accounts.receipt_token_mint,
             &ctx.accounts.receipt_token_program,
             &mut ctx.accounts.fund_account,
@@ -1052,12 +1052,16 @@ pub mod restaking {
         Ok(())
     }
 
+    ////////////////////////////////////////////
+    // UserFundRequestWithdrawalContext
+    ////////////////////////////////////////////
+
     pub fn user_request_withdrawal<'info>(
-        ctx: Context<'_, '_, 'info, 'info, UserFundContext<'info>>,
+        ctx: Context<'_, '_, 'info, 'info, UserFundRequestWithdrawalContext<'info>>,
         receipt_token_amount: u64,
         supported_token_mint: Option<Pubkey>,
     ) -> Result<()> {
-        emit_cpi!(modules::fund::UserFundService::new(
+        emit_cpi!(modules::fund::UserFundWithdrawService::new(
             &mut ctx.accounts.receipt_token_mint,
             &ctx.accounts.receipt_token_program,
             &mut ctx.accounts.fund_account,
@@ -1078,11 +1082,11 @@ pub mod restaking {
     }
 
     pub fn user_cancel_withdrawal_request<'info>(
-        ctx: Context<'_, '_, 'info, 'info, UserFundContext<'info>>,
+        ctx: Context<'_, '_, 'info, 'info, UserFundRequestWithdrawalContext<'info>>,
         request_id: u64,
         supported_token_mint: Option<Pubkey>,
     ) -> Result<()> {
-        emit_cpi!(modules::fund::UserFundService::new(
+        emit_cpi!(modules::fund::UserFundWithdrawService::new(
             &mut ctx.accounts.receipt_token_mint,
             &ctx.accounts.receipt_token_program,
             &mut ctx.accounts.fund_account,
@@ -1102,12 +1106,16 @@ pub mod restaking {
         Ok(())
     }
 
+    ////////////////////////////////////////////
+    // UserFundWithdrawSolContext
+    ////////////////////////////////////////////
+
     pub fn user_withdraw_sol(
-        ctx: Context<UserFundWithdrawContext>,
+        ctx: Context<UserFundWithdrawSolContext>,
         _batch_id: u64,
         request_id: u64,
     ) -> Result<()> {
-        emit_cpi!(modules::fund::UserFundService::new(
+        emit_cpi!(modules::fund::UserFundWithdrawService::new(
             &mut ctx.accounts.receipt_token_mint,
             &ctx.accounts.receipt_token_program,
             &mut ctx.accounts.fund_account,
@@ -1129,15 +1137,15 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
-    // UserFundSupportedTokenContext
+    // UserFundDepositSupportedTokenContext
     ////////////////////////////////////////////
 
     pub fn user_deposit_supported_token<'info>(
-        ctx: Context<'_, '_, 'info, 'info, UserFundSupportedTokenContext<'info>>,
+        ctx: Context<'_, '_, 'info, 'info, UserFundDepositSupportedTokenContext<'info>>,
         amount: u64,
         metadata: Option<modules::fund::DepositMetadata>,
     ) -> Result<()> {
-        emit_cpi!(modules::fund::UserFundService::new(
+        emit_cpi!(modules::fund::UserFundDepositService::new(
             &mut ctx.accounts.receipt_token_mint,
             &ctx.accounts.receipt_token_program,
             &mut ctx.accounts.fund_account,
@@ -1162,12 +1170,16 @@ pub mod restaking {
         Ok(())
     }
 
+    ////////////////////////////////////////////
+    // UserFundWithdrawSupportedTokenContext
+    ////////////////////////////////////////////
+
     pub fn user_withdraw_supported_token(
         ctx: Context<UserFundWithdrawSupportedTokenContext>,
         _batch_id: u64,
         request_id: u64,
     ) -> Result<()> {
-        emit_cpi!(modules::fund::UserFundService::new(
+        emit_cpi!(modules::fund::UserFundWithdrawService::new(
             &mut ctx.accounts.receipt_token_mint,
             &ctx.accounts.receipt_token_program,
             &mut ctx.accounts.fund_account,
@@ -1200,7 +1212,7 @@ pub mod restaking {
         ctx: Context<'_, '_, 'info, 'info, UserFundVaultReceiptTokenContext<'info>>,
         metadata: Option<modules::fund::DepositMetadata>,
     ) -> Result<()> {
-        emit_cpi!(modules::fund::UserFundService::new(
+        emit_cpi!(modules::fund::UserFundDepositService::new(
             &mut ctx.accounts.receipt_token_mint,
             &ctx.accounts.receipt_token_program,
             &mut ctx.accounts.fund_account,

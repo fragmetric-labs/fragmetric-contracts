@@ -12,7 +12,7 @@ pub struct UserDepositedToVault {
 
     pub user: Pubkey,
     pub user_receipt_token_account: Pubkey,
-    pub user_fund_account: Pubkey,
+    pub user_fund_account: Pubkey, // returns Pubkey::default() if user_fund_account is uninitialized
     pub user_vault_receipt_token_account: Pubkey,
 
     pub wallet_provider: Option<String>,

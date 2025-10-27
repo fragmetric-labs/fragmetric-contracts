@@ -470,6 +470,8 @@ describe('restaking.fragBTC test', async () => {
           "assetAmount": 100000000n,
           "assetMint": "zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg",
           "metadata": null,
+          "skipUserFundAccountCreation": false,
+          "skipUserRewardAccountCreation": false,
         },
         "events": {
           "unknown": [],
@@ -766,6 +768,8 @@ describe('restaking.fragBTC test', async () => {
           "assetAmount": 100000000n,
           "assetMint": "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
           "metadata": null,
+          "skipUserFundAccountCreation": false,
+          "skipUserRewardAccountCreation": false,
         },
         "events": {
           "unknown": [],
@@ -930,6 +934,8 @@ describe('restaking.fragBTC test', async () => {
           "assetAmount": 100000000n,
           "assetMint": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
           "metadata": null,
+          "skipUserFundAccountCreation": false,
+          "skipUserRewardAccountCreation": false,
         },
         "events": {
           "unknown": [],
@@ -3242,6 +3248,7 @@ describe('restaking.fragBTC test', async () => {
           "applyPresetComputeUnitLimit": true,
           "assetMint": "zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg",
           "requestId": 3n,
+          "skipUserRewardAccountCreation": false,
         },
         "events": {
           "unknown": [],
@@ -4687,6 +4694,8 @@ describe('restaking.fragBTC test', async () => {
           "assetAmount": null,
           "assetMint": "DNLsKFnrBjTBKp1eSwt8z1iNu2T2PL3MnxZFsGEEpQCf",
           "metadata": null,
+          "skipUserFundAccountCreation": false,
+          "skipUserRewardAccountCreation": false,
         },
         "events": {
           "unknown": [],

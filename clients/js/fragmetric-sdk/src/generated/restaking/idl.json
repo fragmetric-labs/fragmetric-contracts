@@ -6709,8 +6709,7 @@
           "writable": true,
           "signer": true,
           "relations": [
-            "user_fund_account",
-            "user_reward_account"
+            "user_fund_account"
           ]
         },
         {
@@ -6727,8 +6726,7 @@
           "relations": [
             "fund_account",
             "user_fund_account",
-            "reward_account",
-            "user_reward_account"
+            "reward_account"
           ]
         },
         {
@@ -7830,12 +7828,7 @@
       "accounts": [
         {
           "name": "user",
-          "writable": true,
-          "signer": true,
-          "relations": [
-            "user_fund_account",
-            "user_reward_account"
-          ]
+          "signer": true
         },
         {
           "name": "system_program",
@@ -7850,9 +7843,7 @@
           "writable": true,
           "relations": [
             "fund_account",
-            "user_fund_account",
-            "reward_account",
-            "user_reward_account"
+            "reward_account"
           ]
         },
         {
@@ -8173,11 +8164,7 @@
       "accounts": [
         {
           "name": "user",
-          "signer": true,
-          "relations": [
-            "user_fund_account",
-            "user_reward_account"
-          ]
+          "signer": true
         },
         {
           "name": "receipt_token_program",
@@ -8191,9 +8178,7 @@
           "writable": true,
           "relations": [
             "fund_account",
-            "user_fund_account",
-            "reward_account",
-            "user_reward_account"
+            "reward_account"
           ]
         },
         {
@@ -8520,11 +8505,7 @@
       "accounts": [
         {
           "name": "user",
-          "signer": true,
-          "relations": [
-            "user_fund_account",
-            "user_reward_account"
-          ]
+          "signer": true
         },
         {
           "name": "receipt_token_program",
@@ -8618,9 +8599,7 @@
           "writable": true,
           "relations": [
             "fund_account",
-            "user_fund_account",
-            "reward_account",
-            "user_reward_account"
+            "reward_account"
           ]
         },
         {
@@ -8920,8 +8899,7 @@
           "writable": true,
           "signer": true,
           "relations": [
-            "user_fund_account",
-            "user_reward_account"
+            "user_fund_account"
           ]
         },
         {
@@ -8938,8 +8916,7 @@
           "relations": [
             "fund_account",
             "user_fund_account",
-            "reward_account",
-            "user_reward_account"
+            "reward_account"
           ]
         },
         {
@@ -9794,8 +9771,7 @@
           "writable": true,
           "signer": true,
           "relations": [
-            "user_fund_account",
-            "user_reward_account"
+            "user_fund_account"
           ]
         },
         {
@@ -9812,8 +9788,7 @@
             "fund_account",
             "fund_withdrawal_batch_account",
             "user_fund_account",
-            "reward_account",
-            "user_reward_account"
+            "reward_account"
           ]
         },
         {
@@ -10174,8 +10149,7 @@
           "name": "user",
           "signer": true,
           "relations": [
-            "user_fund_account",
-            "user_reward_account"
+            "user_fund_account"
           ]
         },
         {
@@ -10195,8 +10169,7 @@
             "fund_account",
             "fund_withdrawal_batch_account",
             "user_fund_account",
-            "reward_account",
-            "user_reward_account"
+            "reward_account"
           ]
         },
         {

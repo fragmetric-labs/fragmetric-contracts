@@ -1,5 +1,5 @@
 import { MAX_U64 } from '@fragmetric-labs/sdk';
-import { getAddressDecoder, KeyPairSigner } from '@solana/kit';
+import { address, getAddressDecoder, KeyPairSigner } from '@solana/kit';
 import { afterAll, beforeEach, describe, expect, test } from 'vitest';
 import { RestakingUserAccountContext } from '../../../clients/js/fragmetric-sdk/dist/programs/restaking/user';
 import { createTestSuiteContext, expectMasked } from '../../testutil';
@@ -586,61 +586,63 @@ describe('restaking.fragX unit test', async () => {
         { signers: [signer1] }
       )
     ).resolves.toMatchInlineSnapshot(`
-        {
-          "args": {
-            "applyPresetComputeUnitLimit": true,
-            "assetAmount": 10000000000n,
-            "assetMint": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
-            "metadata": null,
+      {
+        "args": {
+          "applyPresetComputeUnitLimit": true,
+          "assetAmount": 10000000000n,
+          "assetMint": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
+          "metadata": null,
+          "skipUserFundAccountCreation": false,
+          "skipUserRewardAccountCreation": false,
+        },
+        "events": {
+          "unknown": [],
+          "userCreatedOrUpdatedFundAccount": {
+            "created": true,
+            "receiptTokenAmount": 0n,
+            "receiptTokenMint": "7sUUWN6ZvR3X2iUWjHP5KTNmQizKQEz6iKFytoSBcDDA",
+            "user": "AWb2qUvuFzbVN5Eu7tZY8gM745pus5DhTGgo8U8Bd8X2",
+            "userFundAccount": "GL9FuX9vkMASixFaXf3wrSr8ev8rbkJMVtjpdcLkUX6b",
           },
-          "events": {
-            "unknown": [],
-            "userCreatedOrUpdatedFundAccount": {
-              "created": true,
-              "receiptTokenAmount": 0n,
-              "receiptTokenMint": "7sUUWN6ZvR3X2iUWjHP5KTNmQizKQEz6iKFytoSBcDDA",
-              "user": "AWb2qUvuFzbVN5Eu7tZY8gM745pus5DhTGgo8U8Bd8X2",
-              "userFundAccount": "GL9FuX9vkMASixFaXf3wrSr8ev8rbkJMVtjpdcLkUX6b",
+          "userCreatedOrUpdatedRewardAccount": {
+            "created": true,
+            "receiptTokenAmount": 0n,
+            "receiptTokenMint": "7sUUWN6ZvR3X2iUWjHP5KTNmQizKQEz6iKFytoSBcDDA",
+            "user": "AWb2qUvuFzbVN5Eu7tZY8gM745pus5DhTGgo8U8Bd8X2",
+            "userRewardAccount": "6ZawY1XehsdncSNZPEdbcvfAACjNjR96jhL3KzWj6u1M",
+          },
+          "userDepositedToFund": {
+            "contributionAccrualRate": {
+              "__option": "None",
             },
-            "userCreatedOrUpdatedRewardAccount": {
-              "created": true,
-              "receiptTokenAmount": 0n,
-              "receiptTokenMint": "7sUUWN6ZvR3X2iUWjHP5KTNmQizKQEz6iKFytoSBcDDA",
-              "user": "AWb2qUvuFzbVN5Eu7tZY8gM745pus5DhTGgo8U8Bd8X2",
-              "userRewardAccount": "6ZawY1XehsdncSNZPEdbcvfAACjNjR96jhL3KzWj6u1M",
+            "depositedAmount": 10000000000n,
+            "fundAccount": "4vAHVvvtgWMcZaxgtoT1K63p8ne2tGY4bM5YieFzuUep",
+            "mintedReceiptTokenAmount": 10000000000n,
+            "receiptTokenMint": "7sUUWN6ZvR3X2iUWjHP5KTNmQizKQEz6iKFytoSBcDDA",
+            "supportedTokenMint": {
+              "__option": "Some",
+              "value": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
             },
-            "userDepositedToFund": {
-              "contributionAccrualRate": {
-                "__option": "None",
-              },
-              "depositedAmount": 10000000000n,
-              "fundAccount": "4vAHVvvtgWMcZaxgtoT1K63p8ne2tGY4bM5YieFzuUep",
-              "mintedReceiptTokenAmount": 10000000000n,
-              "receiptTokenMint": "7sUUWN6ZvR3X2iUWjHP5KTNmQizKQEz6iKFytoSBcDDA",
-              "supportedTokenMint": {
-                "__option": "Some",
-                "value": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
-              },
-              "updatedUserRewardAccounts": [
-                "6ZawY1XehsdncSNZPEdbcvfAACjNjR96jhL3KzWj6u1M",
-              ],
-              "user": "AWb2qUvuFzbVN5Eu7tZY8gM745pus5DhTGgo8U8Bd8X2",
-              "userFundAccount": "GL9FuX9vkMASixFaXf3wrSr8ev8rbkJMVtjpdcLkUX6b",
-              "userReceiptTokenAccount": "FSemEnh52ptxSMV29rZxRGqontN2kxuHfeiGFRj133D7",
-              "userSupportedTokenAccount": {
-                "__option": "Some",
-                "value": "8eFrzT4rLHeh6ikBBkTE76dtziRJWRuhcmatPx3B1EdG",
-              },
-              "walletProvider": {
-                "__option": "None",
-              },
+            "updatedUserRewardAccounts": [
+              "6ZawY1XehsdncSNZPEdbcvfAACjNjR96jhL3KzWj6u1M",
+            ],
+            "user": "AWb2qUvuFzbVN5Eu7tZY8gM745pus5DhTGgo8U8Bd8X2",
+            "userFundAccount": "GL9FuX9vkMASixFaXf3wrSr8ev8rbkJMVtjpdcLkUX6b",
+            "userReceiptTokenAccount": "FSemEnh52ptxSMV29rZxRGqontN2kxuHfeiGFRj133D7",
+            "userSupportedTokenAccount": {
+              "__option": "Some",
+              "value": "8eFrzT4rLHeh6ikBBkTE76dtziRJWRuhcmatPx3B1EdG",
+            },
+            "walletProvider": {
+              "__option": "None",
             },
           },
-          "signature": "MASKED(signature)",
-          "slot": "MASKED(/[.*S|s]lots?$/)",
-          "succeeded": true,
-        }
-      `);
+        },
+        "signature": "MASKED(signature)",
+        "slot": "MASKED(/[.*S|s]lots?$/)",
+        "succeeded": true,
+      }
+    `);
 
     const user1Reward_1 = await user1.reward.resolve(true);
 
@@ -684,61 +686,63 @@ describe('restaking.fragX unit test', async () => {
         { signers: [signer1] }
       )
     ).resolves.toMatchInlineSnapshot(`
-        {
-          "args": {
-            "applyPresetComputeUnitLimit": true,
-            "assetAmount": 1000000000000000000n,
-            "assetMint": "FRAGME9aN7qzxkHPmVP22tDhG87srsR9pr5SY9XdRd9R",
-            "metadata": null,
+      {
+        "args": {
+          "applyPresetComputeUnitLimit": true,
+          "assetAmount": 1000000000000000000n,
+          "assetMint": "FRAGME9aN7qzxkHPmVP22tDhG87srsR9pr5SY9XdRd9R",
+          "metadata": null,
+          "skipUserFundAccountCreation": false,
+          "skipUserRewardAccountCreation": false,
+        },
+        "events": {
+          "unknown": [],
+          "userCreatedOrUpdatedFundAccount": {
+            "created": true,
+            "receiptTokenAmount": 0n,
+            "receiptTokenMint": "9Cn6WLm4dEgRE7G297J7usijc65zNBavZRA9TP78z6Sm",
+            "user": "AWb2qUvuFzbVN5Eu7tZY8gM745pus5DhTGgo8U8Bd8X2",
+            "userFundAccount": "oStWx5CihjrWuTQgiq4p6NfNsixZFGMApV4t5q5yKaW",
           },
-          "events": {
-            "unknown": [],
-            "userCreatedOrUpdatedFundAccount": {
-              "created": true,
-              "receiptTokenAmount": 0n,
-              "receiptTokenMint": "9Cn6WLm4dEgRE7G297J7usijc65zNBavZRA9TP78z6Sm",
-              "user": "AWb2qUvuFzbVN5Eu7tZY8gM745pus5DhTGgo8U8Bd8X2",
-              "userFundAccount": "oStWx5CihjrWuTQgiq4p6NfNsixZFGMApV4t5q5yKaW",
+          "userCreatedOrUpdatedRewardAccount": {
+            "created": true,
+            "receiptTokenAmount": 0n,
+            "receiptTokenMint": "9Cn6WLm4dEgRE7G297J7usijc65zNBavZRA9TP78z6Sm",
+            "user": "AWb2qUvuFzbVN5Eu7tZY8gM745pus5DhTGgo8U8Bd8X2",
+            "userRewardAccount": "8qRoEDzaGn7JEcTLySRxyJS2X69rTDVGo5nNsWauuTy3",
+          },
+          "userDepositedToFund": {
+            "contributionAccrualRate": {
+              "__option": "None",
             },
-            "userCreatedOrUpdatedRewardAccount": {
-              "created": true,
-              "receiptTokenAmount": 0n,
-              "receiptTokenMint": "9Cn6WLm4dEgRE7G297J7usijc65zNBavZRA9TP78z6Sm",
-              "user": "AWb2qUvuFzbVN5Eu7tZY8gM745pus5DhTGgo8U8Bd8X2",
-              "userRewardAccount": "8qRoEDzaGn7JEcTLySRxyJS2X69rTDVGo5nNsWauuTy3",
+            "depositedAmount": 1000000000000000000n,
+            "fundAccount": "E4sjVVyt7h9qtCnzcEpCAXXArXXyLBEar49bEBsCdR5z",
+            "mintedReceiptTokenAmount": 1000000000000000000n,
+            "receiptTokenMint": "9Cn6WLm4dEgRE7G297J7usijc65zNBavZRA9TP78z6Sm",
+            "supportedTokenMint": {
+              "__option": "Some",
+              "value": "FRAGME9aN7qzxkHPmVP22tDhG87srsR9pr5SY9XdRd9R",
             },
-            "userDepositedToFund": {
-              "contributionAccrualRate": {
-                "__option": "None",
-              },
-              "depositedAmount": 1000000000000000000n,
-              "fundAccount": "E4sjVVyt7h9qtCnzcEpCAXXArXXyLBEar49bEBsCdR5z",
-              "mintedReceiptTokenAmount": 1000000000000000000n,
-              "receiptTokenMint": "9Cn6WLm4dEgRE7G297J7usijc65zNBavZRA9TP78z6Sm",
-              "supportedTokenMint": {
-                "__option": "Some",
-                "value": "FRAGME9aN7qzxkHPmVP22tDhG87srsR9pr5SY9XdRd9R",
-              },
-              "updatedUserRewardAccounts": [
-                "8qRoEDzaGn7JEcTLySRxyJS2X69rTDVGo5nNsWauuTy3",
-              ],
-              "user": "AWb2qUvuFzbVN5Eu7tZY8gM745pus5DhTGgo8U8Bd8X2",
-              "userFundAccount": "oStWx5CihjrWuTQgiq4p6NfNsixZFGMApV4t5q5yKaW",
-              "userReceiptTokenAccount": "9SxSvTrCJau5kEuycKPNe9ythdhGCYDtf4hnSsMThBAu",
-              "userSupportedTokenAccount": {
-                "__option": "Some",
-                "value": "9hXqo1QhxTqinenGB7M7iFYPPb59sg5Kr6Uvnq3c7ZNM",
-              },
-              "walletProvider": {
-                "__option": "None",
-              },
+            "updatedUserRewardAccounts": [
+              "8qRoEDzaGn7JEcTLySRxyJS2X69rTDVGo5nNsWauuTy3",
+            ],
+            "user": "AWb2qUvuFzbVN5Eu7tZY8gM745pus5DhTGgo8U8Bd8X2",
+            "userFundAccount": "oStWx5CihjrWuTQgiq4p6NfNsixZFGMApV4t5q5yKaW",
+            "userReceiptTokenAccount": "9SxSvTrCJau5kEuycKPNe9ythdhGCYDtf4hnSsMThBAu",
+            "userSupportedTokenAccount": {
+              "__option": "Some",
+              "value": "9hXqo1QhxTqinenGB7M7iFYPPb59sg5Kr6Uvnq3c7ZNM",
+            },
+            "walletProvider": {
+              "__option": "None",
             },
           },
-          "signature": "MASKED(signature)",
-          "slot": "MASKED(/[.*S|s]lots?$/)",
-          "succeeded": true,
-        }
-      `);
+        },
+        "signature": "MASKED(signature)",
+        "slot": "MASKED(/[.*S|s]lots?$/)",
+        "succeeded": true,
+      }
+    `);
   });
 
   /** jupsol & sanctum-multi-validator test **/
@@ -1058,40 +1062,41 @@ describe('restaking.fragX unit test', async () => {
     await expectMasked(
       user3.withdraw.execute({ requestId: requestId }, { signers: [signer3] })
     ).resolves.toMatchInlineSnapshot(`
-        {
-          "args": {
-            "applyPresetComputeUnitLimit": true,
-            "assetMint": null,
+      {
+        "args": {
+          "applyPresetComputeUnitLimit": true,
+          "assetMint": null,
+          "requestId": 1n,
+          "skipUserRewardAccountCreation": false,
+        },
+        "events": {
+          "unknown": [],
+          "userWithdrewFromFund": {
+            "batchId": 1n,
+            "burntReceiptTokenAmount": 90000000000n,
+            "deductedFeeAmount": 200268947n,
+            "fundAccount": "56WijXFKfRs6dKtNrqqH2g5A9T1bDHsTLDPREKb5qNWe",
+            "fundWithdrawalBatchAccount": "FKaB11zNxf4EgMkEWrRh8doqRBh7g5tXzsFB4CadgHV6",
+            "receiptTokenMint": "JCzYfo5HVZ9g1NYVqkBrXsv8SeXbTGGfuBEXTcGRCsuz",
             "requestId": 1n,
-          },
-          "events": {
-            "unknown": [],
-            "userWithdrewFromFund": {
-              "batchId": 1n,
-              "burntReceiptTokenAmount": 90000000000n,
-              "deductedFeeAmount": 200268947n,
-              "fundAccount": "56WijXFKfRs6dKtNrqqH2g5A9T1bDHsTLDPREKb5qNWe",
-              "fundWithdrawalBatchAccount": "FKaB11zNxf4EgMkEWrRh8doqRBh7g5tXzsFB4CadgHV6",
-              "receiptTokenMint": "JCzYfo5HVZ9g1NYVqkBrXsv8SeXbTGGfuBEXTcGRCsuz",
-              "requestId": 1n,
-              "returnedReceiptTokenAmount": 0n,
-              "supportedTokenMint": {
-                "__option": "None",
-              },
-              "user": "FZPz1bd26HAMxSRQ5uM69wnW5ATws2ZYyp9B47Lrv6Yj",
-              "userFundAccount": "9rfku8yqmz5tda1Q8QBDhMyYPC21sryA1Ztr9xQmMZwD",
-              "userReceiptTokenAccount": "ATAwHi6iKjSjC4yrCuUmhpU2rsVxJJ1ocHDY6jGj5DXu",
-              "userSupportedTokenAccount": {
-                "__option": "None",
-              },
-              "withdrawnAmount": 99934204698n,
+            "returnedReceiptTokenAmount": 0n,
+            "supportedTokenMint": {
+              "__option": "None",
             },
+            "user": "FZPz1bd26HAMxSRQ5uM69wnW5ATws2ZYyp9B47Lrv6Yj",
+            "userFundAccount": "9rfku8yqmz5tda1Q8QBDhMyYPC21sryA1Ztr9xQmMZwD",
+            "userReceiptTokenAccount": "ATAwHi6iKjSjC4yrCuUmhpU2rsVxJJ1ocHDY6jGj5DXu",
+            "userSupportedTokenAccount": {
+              "__option": "None",
+            },
+            "withdrawnAmount": 99934204698n,
           },
-          "signature": "MASKED(signature)",
-          "slot": "MASKED(/[.*S|s]lots?$/)",
-          "succeeded": true,
-        }
-      `);
+        },
+        "signature": "MASKED(signature)",
+        "slot": "MASKED(/[.*S|s]lots?$/)",
+        "succeeded": true,
+      }
+    `);
 
     // 2) stake test
     // 2-1) user deposits more sol to trigger staking
@@ -1163,61 +1168,63 @@ describe('restaking.fragX unit test', async () => {
         { signers: [signer2] }
       )
     ).resolves.toMatchInlineSnapshot(`
-        {
-          "args": {
-            "applyPresetComputeUnitLimit": true,
-            "assetAmount": 10000000000n,
-            "assetMint": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
-            "metadata": null,
+      {
+        "args": {
+          "applyPresetComputeUnitLimit": true,
+          "assetAmount": 10000000000n,
+          "assetMint": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
+          "metadata": null,
+          "skipUserFundAccountCreation": false,
+          "skipUserRewardAccountCreation": false,
+        },
+        "events": {
+          "unknown": [],
+          "userCreatedOrUpdatedFundAccount": {
+            "created": true,
+            "receiptTokenAmount": 0n,
+            "receiptTokenMint": "Gmx4No1Fki926g1jKoWS2k3JJdGnQuR3L1RNMr7PcQVD",
+            "user": "CCgWk6XBuLqZTcDuJa4ZKGUM22cLXUFAxJSHiZdm3T3b",
+            "userFundAccount": "HosQKDxFmKd7BForhgWWYz68V5ZQnR4QBZVmhCfTmn28",
           },
-          "events": {
-            "unknown": [],
-            "userCreatedOrUpdatedFundAccount": {
-              "created": true,
-              "receiptTokenAmount": 0n,
-              "receiptTokenMint": "Gmx4No1Fki926g1jKoWS2k3JJdGnQuR3L1RNMr7PcQVD",
-              "user": "CCgWk6XBuLqZTcDuJa4ZKGUM22cLXUFAxJSHiZdm3T3b",
-              "userFundAccount": "HosQKDxFmKd7BForhgWWYz68V5ZQnR4QBZVmhCfTmn28",
+          "userCreatedOrUpdatedRewardAccount": {
+            "created": true,
+            "receiptTokenAmount": 0n,
+            "receiptTokenMint": "Gmx4No1Fki926g1jKoWS2k3JJdGnQuR3L1RNMr7PcQVD",
+            "user": "CCgWk6XBuLqZTcDuJa4ZKGUM22cLXUFAxJSHiZdm3T3b",
+            "userRewardAccount": "91mNEHtBj9vnqfrZNDp55di5HPmC6D8aPBNsm3mKtnW",
+          },
+          "userDepositedToFund": {
+            "contributionAccrualRate": {
+              "__option": "None",
             },
-            "userCreatedOrUpdatedRewardAccount": {
-              "created": true,
-              "receiptTokenAmount": 0n,
-              "receiptTokenMint": "Gmx4No1Fki926g1jKoWS2k3JJdGnQuR3L1RNMr7PcQVD",
-              "user": "CCgWk6XBuLqZTcDuJa4ZKGUM22cLXUFAxJSHiZdm3T3b",
-              "userRewardAccount": "91mNEHtBj9vnqfrZNDp55di5HPmC6D8aPBNsm3mKtnW",
+            "depositedAmount": 10000000000n,
+            "fundAccount": "2ejCogYUjKXZhNPWJKG53gcVRSASMqW8Di7E9qD7VWeu",
+            "mintedReceiptTokenAmount": 10000000000n,
+            "receiptTokenMint": "Gmx4No1Fki926g1jKoWS2k3JJdGnQuR3L1RNMr7PcQVD",
+            "supportedTokenMint": {
+              "__option": "Some",
+              "value": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
             },
-            "userDepositedToFund": {
-              "contributionAccrualRate": {
-                "__option": "None",
-              },
-              "depositedAmount": 10000000000n,
-              "fundAccount": "2ejCogYUjKXZhNPWJKG53gcVRSASMqW8Di7E9qD7VWeu",
-              "mintedReceiptTokenAmount": 10000000000n,
-              "receiptTokenMint": "Gmx4No1Fki926g1jKoWS2k3JJdGnQuR3L1RNMr7PcQVD",
-              "supportedTokenMint": {
-                "__option": "Some",
-                "value": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
-              },
-              "updatedUserRewardAccounts": [
-                "91mNEHtBj9vnqfrZNDp55di5HPmC6D8aPBNsm3mKtnW",
-              ],
-              "user": "CCgWk6XBuLqZTcDuJa4ZKGUM22cLXUFAxJSHiZdm3T3b",
-              "userFundAccount": "HosQKDxFmKd7BForhgWWYz68V5ZQnR4QBZVmhCfTmn28",
-              "userReceiptTokenAccount": "4D3xhDuDanWSDzXTksVjdCrgfPpoE9G5VWYdmVrA6ih2",
-              "userSupportedTokenAccount": {
-                "__option": "Some",
-                "value": "C2cyUgbkih42h9z6zb5gxsadnowTgtLJfK4K2s5xX1as",
-              },
-              "walletProvider": {
-                "__option": "None",
-              },
+            "updatedUserRewardAccounts": [
+              "91mNEHtBj9vnqfrZNDp55di5HPmC6D8aPBNsm3mKtnW",
+            ],
+            "user": "CCgWk6XBuLqZTcDuJa4ZKGUM22cLXUFAxJSHiZdm3T3b",
+            "userFundAccount": "HosQKDxFmKd7BForhgWWYz68V5ZQnR4QBZVmhCfTmn28",
+            "userReceiptTokenAccount": "4D3xhDuDanWSDzXTksVjdCrgfPpoE9G5VWYdmVrA6ih2",
+            "userSupportedTokenAccount": {
+              "__option": "Some",
+              "value": "C2cyUgbkih42h9z6zb5gxsadnowTgtLJfK4K2s5xX1as",
+            },
+            "walletProvider": {
+              "__option": "None",
             },
           },
-          "signature": "MASKED(signature)",
-          "slot": "MASKED(/[.*S|s]lots?$/)",
-          "succeeded": true,
-        }
-      `);
+        },
+        "signature": "MASKED(signature)",
+        "slot": "MASKED(/[.*S|s]lots?$/)",
+        "succeeded": true,
+      }
+    `);
 
     const user2DelegateRes = await user2.reward.delegate.execute(
       { newDelegate: signer1.address },
@@ -1371,80 +1378,6 @@ describe('restaking.fragX unit test', async () => {
     await ctx.fund.removeSupportedToken.execute({
       mint: 'BonK1YhkXEGLZzwtcvRTip3gAL9nCeQD7ppZBLXhtTs',
     });
-  });
-
-  test.skip('user reward pool update fails when there are too many settlement blocks to synchronize', async () => {
-    const MAX_REWARD_NUM = 16;
-    const MAX_SETTLEMENT_BLOCK_NUM = 64;
-
-    let rewardAccount = await ctx.reward.resolveAccount(true);
-    const numOfAvailableReward =
-      MAX_REWARD_NUM - rewardAccount!.data.numRewards;
-
-    // add 16 rewards
-    for (let i = 0; i < numOfAvailableReward; i++) {
-      const reward = await validator.getSigner('mock reward' + i);
-      await ctx.reward.addReward.execute({
-        mint: reward.address,
-        decimals: 9,
-        name: 'mock reward' + i,
-        description: 'mock reward for test',
-      });
-    }
-
-    // user1 deposits sol to accumulate contribution
-    await user1.resolveAddress(true);
-    await validator.airdrop(user1.address!, 1_234_567_890_123n);
-    await user1.deposit.execute(
-      {
-        assetAmount: 1_234_567_890_123n,
-      },
-      { signers: [signer1] }
-    );
-
-    /*
-     * repeatedly call partial update ix to resolve DOS
-     * - settle 1024 blocks to global reward pool
-     * - user1 try to deposit and transaction exceeds maximum CU limit
-     * - repeatedly settle 192 blocks to user reward pool (64 + 32 blocks to check boundary - kind of reward changes every 64 blocks)
-     * - user1 succeeds to deposit without any error
-     */
-
-    // settle 16 * 64 blocks
-    rewardAccount = await ctx.reward.resolveAccount(true);
-    for (let i = 0; i < MAX_REWARD_NUM; i++) {
-      const rewardAddress = rewardAccount!.data.rewards1[i].mint;
-      for (let j = 0; j < MAX_SETTLEMENT_BLOCK_NUM; j++) {
-        await ctx.reward.settleReward.execute({
-          mint: rewardAddress,
-          amount: 287_123_456_789_012_345n,
-          isBonus: i == 0, // only settle fPoint in bonus pool
-        });
-
-        await validator.skipSlots(123_456_789n);
-      }
-    }
-
-    // executing deposit instruction exceeds 1,400,000 CU
-    await expect(
-      user1.deposit.execute(
-        {
-          assetAmount: 1_000_000_000n,
-        },
-        { signers: [signer1] }
-      )
-    ).rejects.toThrowError();
-
-    // repeatedly update 192 blocks
-    await user1.reward.updatePools.executeChained({ numBlocksToSettle: 192 });
-
-    // deposit succeeds after partial pool update
-    await user1.deposit.executeChained(
-      {
-        assetAmount: 1_000_000_000n,
-      },
-      { signers: [signer1] }
-    );
   });
 
   test('during unstake lst command execution, program should first withdraw stake from stake account whose vote account is preferred withdraw validator', async () => {
@@ -2247,6 +2180,316 @@ describe('restaking.fragX unit test', async () => {
     // user1 reward's contribution starts to increase again after user1 unwrapped his wrapped token
     expect(user1Reward_4!.basePool.contribution).toBeGreaterThan(
       user1Reward_3!.basePool.contribution
+    );
+  });
+
+  /** user fund/reward account to UncheckedAccount */
+
+  // 1. deposit_sol/supported_token
+  // 1.a. user_fund_account o, user_reward_account x
+  // 1.b. user_fund_account x, user_reward_account o
+  // 1.c. user_fund_account x, user_reward_account x
+
+  // 1.a. user_fund_account o, user_reward_account x
+  test('deposit_sol/supported_token (user_fund_account o, user_reward_account x)', async () => {
+    const depositAmount = 1_000_000_000n; // 1 sol
+
+    // user1 deposits sol
+    const depositRes_1 = await user1.deposit.execute(
+      {
+        assetAmount: depositAmount,
+        skipUserRewardAccountCreation: true,
+      },
+      { signers: [signer1] }
+    );
+
+    const user1Fund_1 = await user1.fund.resolve(true);
+    const user1Reward_1 = await user1.reward.resolve(true);
+    const user1_1 = await user1.resolve(true);
+
+    expect(user1Fund_1!.receiptTokenAmountRecorded).toEqual(
+      user1_1!.receiptTokenAmount
+    );
+    expect(user1Reward_1).toEqual(null);
+
+    expect(depositRes_1.events!.userDepositedToFund!.userFundAccount).toEqual(
+      user1.fund.address
+    );
+
+    // user1 deposits supported token
+    await user1.deposit.execute(
+      {
+        assetMint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+        assetAmount: depositAmount,
+        skipUserRewardAccountCreation: true,
+      },
+      { signers: [signer1] }
+    );
+
+    const user1Fund_2 = await user1.fund.resolve(true);
+    const user1_2 = await user1.resolve(true);
+
+    expect(user1Fund_2!.receiptTokenAmountRecorded).toEqual(
+      user1_2!.receiptTokenAmount
+    );
+  });
+
+  // 1.b. user_fund_account x, user_reward_account o
+  test('deposit_sol (user_fund_account x, user_reward_account o)', async () => {
+    const depositAmount = 1_000_000_000n; // 1 sol
+
+    // user1 deposits
+    const depositRes = await user1.deposit.execute(
+      {
+        assetAmount: depositAmount,
+        skipUserFundAccountCreation: true,
+      },
+      { signers: [signer1] }
+    );
+
+    const user1Fund_1 = await user1.fund.resolve(true);
+    const user1Reward_1 = await user1.reward.resolve(true);
+
+    expect(user1Fund_1).toEqual(null);
+    expect(user1Reward_1!.basePool.tokenAllocatedAmount.totalAmount).toEqual(
+      depositAmount
+    );
+
+    expect(depositRes.events!.userDepositedToFund!.userFundAccount).toEqual(
+      address('11111111111111111111111111111111')
+    );
+  });
+
+  // 1.c. user_fund_account x, user_reward_account x
+  test('deposit sol (user_fund_account x, user_reward_account x)', async () => {
+    const depositAmount = 1_000_000_000n; // 1 sol
+
+    // user1 deposits sol
+    await user1.deposit.execute(
+      {
+        assetAmount: depositAmount,
+        skipUserFundAccountCreation: true,
+        skipUserRewardAccountCreation: true,
+      },
+      { signers: [signer1] }
+    );
+
+    const user1Fund_1 = await user1.fund.resolve(true);
+    const user1Reward_1 = await user1.reward.resolve(true);
+
+    expect(user1Fund_1).toEqual(null);
+    expect(user1Reward_1).toEqual(null);
+  });
+
+  // 2. request withdrawal
+  test('request withdrawal (user_reward_account x)', async () => {
+    const depositAmount = 1_000_000_000n; // 1 sol
+
+    // user1 deposits sol
+    await user1.deposit.execute(
+      {
+        assetAmount: depositAmount,
+        skipUserFundAccountCreation: true,
+        skipUserRewardAccountCreation: true,
+      },
+      { signers: [signer1] }
+    );
+
+    const user1Fund_1 = await user1.fund.resolve(true);
+    const user1Reward_1 = await user1.reward.resolve(true);
+    const user1_1 = await user1.resolve(true);
+
+    expect(user1Fund_1).toMatchInlineSnapshot(`null`);
+
+    // user1 requests withdrawal
+    await user1.requestWithdrawal.execute(
+      {
+        receiptTokenAmount: user1_1!.receiptTokenAmount,
+        skipUserRewardAccountCreation: true,
+      },
+      { signers: [signer1] }
+    );
+
+    const user1Fund_2 = await user1.fund.resolve(true);
+    const user1Reward_2 = await user1.reward.resolve(true);
+
+    expect(user1Fund_2!.receiptTokenAmountRecorded).toEqual(0n);
+    expect(user1Fund_2!.withdrawalRequests[0].receiptTokenAmount).toEqual(
+      user1_1!.receiptTokenAmount
+    );
+    expect(user1Reward_2).toEqual(null);
+  });
+
+  // 3. cancel withdrawal request
+  test('cancel withdrawal request (user_reward_account x)', async () => {
+    const depositAmount = 1_000_000_000n; // 1 sol
+
+    // user1 deposits sol
+    await user1.deposit.execute(
+      {
+        assetAmount: depositAmount,
+        skipUserFundAccountCreation: true,
+        skipUserRewardAccountCreation: true,
+      },
+      { signers: [signer1] }
+    );
+
+    const user1_1 = await user1.resolve(true);
+
+    // user1 requests withdrawal
+    await user1.requestWithdrawal.execute(
+      {
+        receiptTokenAmount: user1_1!.receiptTokenAmount,
+        skipUserRewardAccountCreation: true,
+      },
+      { signers: [signer1] }
+    );
+
+    const user1Fund_2 = await user1.fund.resolve(true);
+
+    // user1 cancels withdrawal request
+    await user1.cancelWithdrawalRequest.execute(
+      {
+        requestId: user1Fund_2!.withdrawalRequests[0].requestId,
+        skipUserRewardAccountCreation: true,
+      },
+      { signers: [signer1] }
+    );
+
+    const user1Fund_3 = await user1.fund.resolve(true);
+
+    expect(user1Fund_3!.receiptTokenAmountRecorded).toEqual(
+      user1_1!.receiptTokenAmount
+    );
+    expect(user1Fund_3!.withdrawalRequests.length).toEqual(0);
+  });
+
+  // 4. withdraw sol
+  test('withdraw sol (user_reward_account x)', async () => {
+    const depositAmount = 1_000_000_000n; // 1 sol
+
+    // user1 deposits sol
+    await user1.deposit.execute(
+      {
+        assetAmount: depositAmount,
+        skipUserFundAccountCreation: true,
+        skipUserRewardAccountCreation: true,
+      },
+      { signers: [signer1] }
+    );
+
+    const user1_1 = await user1.resolve(true);
+
+    // user1 requests withdrawal
+    await user1.requestWithdrawal.execute(
+      {
+        receiptTokenAmount: user1_1!.receiptTokenAmount,
+        skipUserRewardAccountCreation: true,
+      },
+      { signers: [signer1] }
+    );
+
+    const user1Fund_2 = await user1.fund.resolve(true);
+    const user1_2 = await user1.resolve(true);
+
+    // operator runs withdrawal batch commands
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'EnqueueWithdrawalBatch',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'ProcessWithdrawalBatch',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    // user1 withdraws
+    await user1.withdraw.execute(
+      {
+        requestId: user1Fund_2!.withdrawalRequests[0].requestId,
+        skipUserRewardAccountCreation: true,
+      },
+      { signers: [signer1] }
+    );
+
+    const user1Fund_3 = await user1.fund.resolve(true);
+    const user1_3 = await user1.resolve(true);
+
+    expect(user1Fund_3!.receiptTokenAmountRecorded).toEqual(0n);
+    expect(user1_3!.lamports).toBeGreaterThan(user1_2!.lamports);
+  });
+
+  test.skip('user reward pool update fails when there are too many settlement blocks to synchronize', async () => {
+    const MAX_REWARD_NUM = 16;
+    const MAX_SETTLEMENT_BLOCK_NUM = 64;
+
+    let rewardAccount = await ctx.reward.resolveAccount(true);
+    const numOfAvailableReward =
+      MAX_REWARD_NUM - rewardAccount!.data.numRewards;
+
+    // add 16 rewards
+    for (let i = 0; i < numOfAvailableReward; i++) {
+      const reward = await validator.getSigner('mock reward' + i);
+      await ctx.reward.addReward.execute({
+        mint: reward.address,
+        decimals: 9,
+        name: 'mock reward' + i,
+        description: 'mock reward for test',
+      });
+    }
+
+    // user1 deposits sol to accumulate contribution
+    await user1.resolveAddress(true);
+    await validator.airdrop(user1.address!, 1_234_567_890_123n);
+    await user1.deposit.execute(
+      {
+        assetAmount: 1_234_567_890_123n,
+      },
+      { signers: [signer1] }
+    );
+
+    /*
+     * repeatedly call partial update ix to resolve DOS
+     * - settle 1024 blocks to global reward pool
+     * - user1 try to deposit and transaction exceeds maximum CU limit
+     * - repeatedly settle 192 blocks to user reward pool (64 + 32 blocks to check boundary - kind of reward changes every 64 blocks)
+     * - user1 succeeds to deposit without any error
+     */
+
+    // settle 16 * 64 blocks
+    rewardAccount = await ctx.reward.resolveAccount(true);
+    for (let i = 0; i < MAX_REWARD_NUM; i++) {
+      const rewardAddress = rewardAccount!.data.rewards1[i].mint;
+      for (let j = 0; j < MAX_SETTLEMENT_BLOCK_NUM; j++) {
+        await ctx.reward.settleReward.execute({
+          mint: rewardAddress,
+          amount: 287_123_456_789_012_345n,
+          isBonus: i == 0, // only settle fPoint in bonus pool
+        });
+
+        await validator.skipSlots(123_456_789n);
+      }
+    }
+
+    // executing deposit instruction exceeds 1,400,000 CU
+    await expect(
+      user1.deposit.execute(
+        {
+          assetAmount: 1_000_000_000n,
+        },
+        { signers: [signer1] }
+      )
+    ).rejects.toThrowError();
+
+    // repeatedly update 192 blocks
+    await user1.reward.updatePools.executeChained({ numBlocksToSettle: 192 });
+
+    // deposit succeeds after partial pool update
+    await user1.deposit.executeChained(
+      {
+        assetAmount: 1_000_000_000n,
+      },
+      { signers: [signer1] }
     );
   });
 });

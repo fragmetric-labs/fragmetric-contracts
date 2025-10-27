@@ -8,7 +8,7 @@ use crate::utils::{AccountLoaderExt, PDASeeds};
 
 #[event_cpi]
 #[derive(Accounts)]
-pub struct UserFundSupportedTokenContext<'info> {
+pub struct UserFundDepositSupportedTokenContext<'info> {
     pub user: Signer<'info>,
 
     pub receipt_token_program: Program<'info, Token2022>,
@@ -59,15 +59,13 @@ pub struct UserFundSupportedTokenContext<'info> {
     )]
     pub fund_account: AccountLoader<'info, FundAccount>,
 
+    /// CHECK: user might not have fund account...
     #[account(
         mut,
         seeds = [UserFundAccount::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
-        bump = user_fund_account.get_bump(),
-        has_one = receipt_token_mint,
-        has_one = user,
-        constraint = user_fund_account.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
+        bump,
     )]
-    pub user_fund_account: Box<Account<'info, UserFundAccount>>,
+    pub user_fund_account: UncheckedAccount<'info>,
 
     #[account(
         mut,
@@ -78,15 +76,13 @@ pub struct UserFundSupportedTokenContext<'info> {
     )]
     pub reward_account: AccountLoader<'info, RewardAccount>,
 
+    /// CHECK: user might not have reward account...
     #[account(
         mut,
         seeds = [UserRewardAccount::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
-        bump = user_reward_account.get_bump()?,
-        has_one = receipt_token_mint,
-        has_one = user,
-        constraint = user_reward_account.load()?.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
+        bump,
     )]
-    pub user_reward_account: AccountLoader<'info, UserRewardAccount>,
+    pub user_reward_account: UncheckedAccount<'info>,
 
     /// CHECK: This is safe that checks it's ID
     #[account(address = instructions_sysvar::ID)]
@@ -182,14 +178,12 @@ pub struct UserFundWithdrawSupportedTokenContext<'info> {
     )]
     pub reward_account: AccountLoader<'info, RewardAccount>,
 
+    /// CHECK: user might not have reward account...
     #[account(
         seeds = [UserRewardAccount::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
-        bump = user_reward_account.get_bump()?,
-        has_one = receipt_token_mint,
-        has_one = user,
-        constraint = user_reward_account.load()?.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
+        bump,
     )]
-    pub user_reward_account: AccountLoader<'info, UserRewardAccount>,
+    pub user_reward_account: UncheckedAccount<'info>,
 
     /// CHECK: deprecated
     #[account(address = instructions_sysvar::ID)]
