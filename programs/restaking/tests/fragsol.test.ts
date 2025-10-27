@@ -867,9 +867,9 @@ describe('restaking.fragSOL test', async () => {
           "applyPresetComputeUnitLimit": true,
           "assetAmount": 5000000000n,
           "assetMint": null,
-          "createUserFundAccount": true,
-          "createUserRewardAccount": true,
           "metadata": null,
+          "skipUserFundAccountCreation": false,
+          "skipUserRewardAccountCreation": false,
         },
         "events": {
           "unknown": [],
@@ -1089,9 +1089,9 @@ describe('restaking.fragSOL test', async () => {
           "applyPresetComputeUnitLimit": true,
           "assetAmount": 5000000000n,
           "assetMint": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
-          "createUserFundAccount": true,
-          "createUserRewardAccount": true,
           "metadata": null,
+          "skipUserFundAccountCreation": false,
+          "skipUserRewardAccountCreation": false,
         },
         "events": {
           "unknown": [],

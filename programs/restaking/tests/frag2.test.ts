@@ -262,9 +262,9 @@ describe('restaking.frag2 test', async () => {
           "applyPresetComputeUnitLimit": true,
           "assetAmount": 5000000000n,
           "assetMint": "FRAGMEWj2z65qM62zqKhNtwNFskdfKs4ekDUDX3b4VD5",
-          "createUserFundAccount": true,
-          "createUserRewardAccount": true,
           "metadata": null,
+          "skipUserFundAccountCreation": false,
+          "skipUserRewardAccountCreation": false,
         },
         "events": {
           "unknown": [],

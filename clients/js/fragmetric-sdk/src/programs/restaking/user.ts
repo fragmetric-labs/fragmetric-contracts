@@ -296,13 +296,13 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
         ),
         v.description('extra authorization is required to add deposit metadata')
       ),
-      createUserFundAccount: v.pipe(
-        v.nullish(v.boolean(), true),
-        v.description('create user fund account')
+      skipUserFundAccountCreation: v.pipe(
+        v.nullish(v.boolean(), false),
+        v.description('skip user fund account creation')
       ),
-      createUserRewardAccount: v.pipe(
-        v.nullish(v.boolean(), true),
-        v.description('create user reward account')
+      skipUserRewardAccountCreation: v.pipe(
+        v.nullish(v.boolean(), false),
+        v.description('skip user reward account creation')
       ),
       applyPresetComputeUnitLimit: v.pipe(
         v.nullish(v.boolean(), true),
@@ -339,7 +339,7 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
               owner: user,
               tokenProgram: token2022.TOKEN_2022_PROGRAM_ADDRESS,
             }),
-            args.createUserFundAccount
+            !args.skipUserFundAccountCreation
               ? restaking.getUserCreateFundAccountIdempotentInstructionAsync(
                   {
                     user: createNoopSigner(user),
@@ -352,7 +352,7 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
                   }
                 )
               : null,
-            args.createUserRewardAccount
+            !args.skipUserRewardAccountCreation
               ? restaking.getUserCreateRewardAccountIdempotentInstructionAsync(
                   {
                     user: createNoopSigner(user),
@@ -497,9 +497,9 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
         v.bigint(),
         v.description('receipt token amount to withdraw')
       ),
-      createUserRewardAccount: v.pipe(
-        v.nullish(v.boolean(), true),
-        v.description('create user reward account')
+      skipUserRewardAccountCreation: v.pipe(
+        v.nullish(v.boolean(), false),
+        v.description('skip user reward account creation')
       ),
       applyPresetComputeUnitLimit: v.pipe(
         v.nullish(v.boolean(), true),
@@ -540,7 +540,7 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
                 programAddress: this.program.address,
               }
             ),
-            args.createUserRewardAccount
+            !args.skipUserRewardAccountCreation
               ? restaking.getUserCreateRewardAccountIdempotentInstructionAsync(
                   {
                     user: createNoopSigner(user),
@@ -592,9 +592,9 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
         )
       ),
       requestId: v.pipe(v.bigint(), v.description('withdrawal request id')),
-      createUserRewardAccount: v.pipe(
-        v.nullish(v.boolean(), true),
-        v.description('create user reward account')
+      skipUserRewardAccountCreation: v.pipe(
+        v.nullish(v.boolean(), false),
+        v.description('skip user reward account creation')
       ),
       applyPresetComputeUnitLimit: v.pipe(
         v.nullish(v.boolean(), true),
@@ -640,7 +640,7 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
                 programAddress: this.program.address,
               }
             ),
-            args.createUserRewardAccount
+            !args.skipUserRewardAccountCreation
               ? restaking.getUserCreateRewardAccountIdempotentInstructionAsync(
                   {
                     user: createNoopSigner(user),
@@ -692,9 +692,9 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
         )
       ),
       requestId: v.pipe(v.bigint(), v.description('withdrawal request id')),
-      createUserRewardAccount: v.pipe(
-        v.nullish(v.boolean(), true),
-        v.description('create user reward account')
+      skipUserRewardAccountCreation: v.pipe(
+        v.nullish(v.boolean(), false),
+        v.description('skip user reward account creation')
       ),
       applyPresetComputeUnitLimit: v.pipe(
         v.nullish(v.boolean(), true),
@@ -749,7 +749,7 @@ export class RestakingUserAccountContext extends BaseAccountContext<RestakingRec
                 programAddress: this.program.address,
               }
             ),
-            args.createUserRewardAccount
+            !args.skipUserRewardAccountCreation
               ? restaking.getUserCreateRewardAccountIdempotentInstructionAsync(
                   {
                     user: createNoopSigner(user),

@@ -591,9 +591,9 @@ describe('restaking.fragX unit test', async () => {
           "applyPresetComputeUnitLimit": true,
           "assetAmount": 10000000000n,
           "assetMint": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
-          "createUserFundAccount": true,
-          "createUserRewardAccount": true,
           "metadata": null,
+          "skipUserFundAccountCreation": false,
+          "skipUserRewardAccountCreation": false,
         },
         "events": {
           "unknown": [],
@@ -691,9 +691,9 @@ describe('restaking.fragX unit test', async () => {
           "applyPresetComputeUnitLimit": true,
           "assetAmount": 1000000000000000000n,
           "assetMint": "FRAGME9aN7qzxkHPmVP22tDhG87srsR9pr5SY9XdRd9R",
-          "createUserFundAccount": true,
-          "createUserRewardAccount": true,
           "metadata": null,
+          "skipUserFundAccountCreation": false,
+          "skipUserRewardAccountCreation": false,
         },
         "events": {
           "unknown": [],
@@ -1066,8 +1066,8 @@ describe('restaking.fragX unit test', async () => {
         "args": {
           "applyPresetComputeUnitLimit": true,
           "assetMint": null,
-          "createUserRewardAccount": true,
           "requestId": 1n,
+          "skipUserRewardAccountCreation": false,
         },
         "events": {
           "unknown": [],
@@ -1173,9 +1173,9 @@ describe('restaking.fragX unit test', async () => {
           "applyPresetComputeUnitLimit": true,
           "assetAmount": 10000000000n,
           "assetMint": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
-          "createUserFundAccount": true,
-          "createUserRewardAccount": true,
           "metadata": null,
+          "skipUserFundAccountCreation": false,
+          "skipUserRewardAccountCreation": false,
         },
         "events": {
           "unknown": [],
@@ -2272,7 +2272,7 @@ describe('restaking.fragX unit test', async () => {
     const depositRes_1 = await user1.deposit.execute(
       {
         assetAmount: depositAmount,
-        createUserRewardAccount: false,
+        skipUserRewardAccountCreation: true,
       },
       { signers: [signer1] }
     );
@@ -2295,7 +2295,7 @@ describe('restaking.fragX unit test', async () => {
       {
         assetMint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
         assetAmount: depositAmount,
-        createUserRewardAccount: false,
+        skipUserRewardAccountCreation: true,
       },
       { signers: [signer1] }
     );
@@ -2316,7 +2316,7 @@ describe('restaking.fragX unit test', async () => {
     const depositRes = await user1.deposit.execute(
       {
         assetAmount: depositAmount,
-        createUserFundAccount: false,
+        skipUserFundAccountCreation: true,
       },
       { signers: [signer1] }
     );
@@ -2342,8 +2342,8 @@ describe('restaking.fragX unit test', async () => {
     await user1.deposit.execute(
       {
         assetAmount: depositAmount,
-        createUserFundAccount: false,
-        createUserRewardAccount: false,
+        skipUserFundAccountCreation: true,
+        skipUserRewardAccountCreation: true,
       },
       { signers: [signer1] }
     );
@@ -2363,8 +2363,8 @@ describe('restaking.fragX unit test', async () => {
     await user1.deposit.execute(
       {
         assetAmount: depositAmount,
-        createUserFundAccount: false,
-        createUserRewardAccount: false,
+        skipUserFundAccountCreation: true,
+        skipUserRewardAccountCreation: true,
       },
       { signers: [signer1] }
     );
@@ -2379,7 +2379,7 @@ describe('restaking.fragX unit test', async () => {
     await user1.requestWithdrawal.execute(
       {
         receiptTokenAmount: user1_1!.receiptTokenAmount,
-        createUserRewardAccount: false,
+        skipUserRewardAccountCreation: true,
       },
       { signers: [signer1] }
     );
@@ -2402,8 +2402,8 @@ describe('restaking.fragX unit test', async () => {
     await user1.deposit.execute(
       {
         assetAmount: depositAmount,
-        createUserFundAccount: false,
-        createUserRewardAccount: false,
+        skipUserFundAccountCreation: true,
+        skipUserRewardAccountCreation: true,
       },
       { signers: [signer1] }
     );
@@ -2414,7 +2414,7 @@ describe('restaking.fragX unit test', async () => {
     await user1.requestWithdrawal.execute(
       {
         receiptTokenAmount: user1_1!.receiptTokenAmount,
-        createUserRewardAccount: false,
+        skipUserRewardAccountCreation: true,
       },
       { signers: [signer1] }
     );
@@ -2425,7 +2425,7 @@ describe('restaking.fragX unit test', async () => {
     await user1.cancelWithdrawalRequest.execute(
       {
         requestId: user1Fund_2!.withdrawalRequests[0].requestId,
-        createUserRewardAccount: false,
+        skipUserRewardAccountCreation: true,
       },
       { signers: [signer1] }
     );
@@ -2446,8 +2446,8 @@ describe('restaking.fragX unit test', async () => {
     await user1.deposit.execute(
       {
         assetAmount: depositAmount,
-        createUserFundAccount: false,
-        createUserRewardAccount: false,
+        skipUserFundAccountCreation: true,
+        skipUserRewardAccountCreation: true,
       },
       { signers: [signer1] }
     );
@@ -2458,7 +2458,7 @@ describe('restaking.fragX unit test', async () => {
     await user1.requestWithdrawal.execute(
       {
         receiptTokenAmount: user1_1!.receiptTokenAmount,
-        createUserRewardAccount: false,
+        skipUserRewardAccountCreation: true,
       },
       { signers: [signer1] }
     );
@@ -2481,7 +2481,7 @@ describe('restaking.fragX unit test', async () => {
     await user1.withdraw.execute(
       {
         requestId: user1Fund_2!.withdrawalRequests[0].requestId,
-        createUserRewardAccount: false,
+        skipUserRewardAccountCreation: true,
       },
       { signers: [signer1] }
     );

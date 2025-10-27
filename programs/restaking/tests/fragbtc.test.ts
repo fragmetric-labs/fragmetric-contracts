@@ -469,9 +469,9 @@ describe('restaking.fragBTC test', async () => {
           "applyPresetComputeUnitLimit": true,
           "assetAmount": 100000000n,
           "assetMint": "zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg",
-          "createUserFundAccount": true,
-          "createUserRewardAccount": true,
           "metadata": null,
+          "skipUserFundAccountCreation": false,
+          "skipUserRewardAccountCreation": false,
         },
         "events": {
           "unknown": [],
@@ -767,9 +767,9 @@ describe('restaking.fragBTC test', async () => {
           "applyPresetComputeUnitLimit": true,
           "assetAmount": 100000000n,
           "assetMint": "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
-          "createUserFundAccount": true,
-          "createUserRewardAccount": true,
           "metadata": null,
+          "skipUserFundAccountCreation": false,
+          "skipUserRewardAccountCreation": false,
         },
         "events": {
           "unknown": [],
@@ -933,9 +933,9 @@ describe('restaking.fragBTC test', async () => {
           "applyPresetComputeUnitLimit": true,
           "assetAmount": 100000000n,
           "assetMint": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
-          "createUserFundAccount": true,
-          "createUserRewardAccount": true,
           "metadata": null,
+          "skipUserFundAccountCreation": false,
+          "skipUserRewardAccountCreation": false,
         },
         "events": {
           "unknown": [],
@@ -3247,8 +3247,8 @@ describe('restaking.fragBTC test', async () => {
         "args": {
           "applyPresetComputeUnitLimit": true,
           "assetMint": "zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg",
-          "createUserRewardAccount": true,
           "requestId": 3n,
+          "skipUserRewardAccountCreation": false,
         },
         "events": {
           "unknown": [],
@@ -4693,9 +4693,9 @@ describe('restaking.fragBTC test', async () => {
           "applyPresetComputeUnitLimit": true,
           "assetAmount": null,
           "assetMint": "DNLsKFnrBjTBKp1eSwt8z1iNu2T2PL3MnxZFsGEEpQCf",
-          "createUserFundAccount": true,
-          "createUserRewardAccount": true,
           "metadata": null,
+          "skipUserFundAccountCreation": false,
+          "skipUserRewardAccountCreation": false,
         },
         "events": {
           "unknown": [],

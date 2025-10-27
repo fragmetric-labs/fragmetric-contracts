@@ -213,9 +213,9 @@ describe('restaking.fragSWTCH test', async () => {
           "applyPresetComputeUnitLimit": true,
           "assetAmount": 5000000000n,
           "assetMint": "SW1TCHLmRGTfW5xZknqQdpdarB8PD95sJYWpNp9TbFx",
-          "createUserFundAccount": true,
-          "createUserRewardAccount": true,
           "metadata": null,
+          "skipUserFundAccountCreation": false,
+          "skipUserRewardAccountCreation": false,
         },
         "events": {
           "unknown": [],
