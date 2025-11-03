@@ -9,7 +9,6 @@ use super::WithdrawalRequest;
 pub const FUND_ACCOUNT_MAX_QUEUED_WITHDRAWAL_BATCHES: usize = 10;
 
 #[zero_copy]
-#[repr(C)]
 pub(super) struct AssetState {
     token_mint: Pubkey,
     token_program: Pubkey,
@@ -363,7 +362,6 @@ impl AssetState {
 }
 
 #[zero_copy]
-#[repr(C)]
 #[derive(Default)]
 pub(super) struct WithdrawalBatch {
     pub batch_id: u64,

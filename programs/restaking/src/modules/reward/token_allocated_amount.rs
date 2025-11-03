@@ -8,7 +8,6 @@ const MIN_CONTRIBUTION_ACCRUAL_RATE: u16 = 100;
 const MAX_CONTRIBUTION_ACCRUAL_RATE: u16 = 500;
 
 #[zero_copy]
-#[repr(C)]
 pub(super) struct TokenAllocatedAmount {
     total_amount: u64,
     num_records: u8,
@@ -172,7 +171,6 @@ impl TokenAllocatedAmount {
 }
 
 #[zero_copy]
-#[repr(C)]
 struct TokenAllocatedAmountRecord {
     amount: u64,
     /// Contribution accrual rate per 1 lamports (decimals = 2)

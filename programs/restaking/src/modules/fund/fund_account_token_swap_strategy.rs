@@ -19,7 +19,6 @@ use crate::modules::swap::{TokenSwapSource, TokenSwapSourcePod};
 /// In this case `to_token` need not be one of fund's supported token.
 /// However, to prevent endless swap, token swap strategies must form DAG(vertex = token, edge = strategy).
 #[zero_copy]
-#[repr(C)]
 pub(super) struct TokenSwapStrategy {
     pub from_token_mint: Pubkey,
     pub to_token_mint: Pubkey,

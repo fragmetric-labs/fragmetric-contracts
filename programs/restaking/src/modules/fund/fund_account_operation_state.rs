@@ -5,7 +5,6 @@ use super::commands::*;
 const FUND_ACCOUNT_OPERATION_COMMAND_EXPIRATION_SECONDS: i64 = 600;
 
 #[zero_copy]
-#[repr(C)]
 pub(super) struct OperationState {
     updated_slot: u64,
     updated_at: i64,

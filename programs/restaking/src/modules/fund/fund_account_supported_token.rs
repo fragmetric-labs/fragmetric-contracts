@@ -7,7 +7,6 @@ use crate::modules::pricing::{TokenPricingSource, TokenPricingSourcePod};
 use super::AssetState;
 
 #[zero_copy]
-#[repr(C)]
 pub(super) struct SupportedToken {
     pub mint: Pubkey,
     pub program: Pubkey,
