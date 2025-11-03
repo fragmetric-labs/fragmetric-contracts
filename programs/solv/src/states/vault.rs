@@ -133,7 +133,6 @@ pub struct VaultAccount {
 
 const BPS: u16 = 10_000;
 
-#[repr(C)]
 #[zero_copy]
 #[derive(Default)]
 #[cfg_attr(test, derive(Debug, PartialEq))]

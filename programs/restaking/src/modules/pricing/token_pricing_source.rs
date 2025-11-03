@@ -142,7 +142,6 @@ impl TokenPricingSource {
 
 /// Pod type of `Option<TokenPricingSource>`
 #[zero_copy]
-#[repr(C)]
 pub struct TokenPricingSourcePod {
     discriminant: u8,
     _padding: [u8; 7],

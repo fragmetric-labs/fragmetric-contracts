@@ -8,7 +8,6 @@ const REWARD_DESCRIPTION_MAX_LEN: usize = 128;
 
 /// Reward type.
 #[zero_copy]
-#[repr(C)]
 pub(super) struct Reward {
     /// ID is determined by reward account.
     pub id: u16,

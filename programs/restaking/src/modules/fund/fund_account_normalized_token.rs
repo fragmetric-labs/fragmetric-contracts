@@ -4,7 +4,6 @@ use bytemuck::Zeroable;
 use crate::modules::pricing::{TokenPricingSource, TokenPricingSourcePod};
 
 #[zero_copy]
-#[repr(C)]
 pub(super) struct NormalizedToken {
     pub mint: Pubkey,
     pub program: Pubkey,

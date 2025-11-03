@@ -346,7 +346,6 @@ const FUND_ACCOUNT_OPERATION_COMMAND_BUFFER_SIZE: usize = 3126;
 
 /// Pod type of `Option<OperationCommand>`
 #[zero_copy]
-#[repr(C)]
 pub struct OperationCommandPod {
     discriminant: u8,
     buffer: [u8; FUND_ACCOUNT_OPERATION_COMMAND_BUFFER_SIZE],
@@ -412,9 +411,8 @@ impl OperationCommandAccountMeta {
     }
 }
 
-#[zero_copy]
-#[repr(C)]
 /// Pod type of `OperationCommandAccountMeta`
+#[zero_copy]
 pub struct OperationCommandAccountMetaPod {
     pubkey: Pubkey,
     is_writable: u8,
@@ -468,7 +466,6 @@ impl OperationCommandEntry {
 
 /// Pod type of `Option<OperationCommandEntry>`
 #[zero_copy]
-#[repr(C)]
 pub struct OperationCommandEntryPod {
     num_required_accounts: u8,
     _padding: [u8; 7],

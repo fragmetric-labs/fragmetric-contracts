@@ -65,7 +65,6 @@ pub(super) struct RestakingVault {
 }
 
 #[zero_copy]
-#[repr(C)]
 pub(super) struct TokenExchangeRatio {
     pub numerator: u64,
     pub denominator: u64,
@@ -429,7 +428,6 @@ impl RestakingVault {
 }
 
 #[zero_copy]
-#[repr(C)]
 pub(super) struct RestakingVaultDelegation {
     pub operator: Pubkey,
 
@@ -466,7 +464,6 @@ impl RestakingVaultDelegation {
 }
 
 #[zero_copy]
-#[repr(C)]
 pub(super) struct RewardToken {
     pub mint: Pubkey,
     pub harvest_threshold_min_amount: u64,

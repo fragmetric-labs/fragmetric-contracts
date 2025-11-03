@@ -99,7 +99,6 @@ impl TokenValue {
 
 /// Pod type of `TokenValue`
 #[zero_copy]
-#[repr(C)]
 pub struct TokenValuePod {
     pub numerator: [AssetPod; TOKEN_VALUE_MAX_NUMERATORS_SIZE],
     pub num_numerator: u64,
@@ -237,7 +236,6 @@ impl Asset {
 
 /// Pod type of `Asset`
 #[zero_copy]
-#[repr(C)]
 pub struct AssetPod {
     pub discriminant: u8,
     _padding: [u8; 7],

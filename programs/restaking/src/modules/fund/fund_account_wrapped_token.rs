@@ -7,7 +7,6 @@ use crate::errors::ErrorCode;
 pub const FUND_ACCOUNT_MAX_WRAPPED_TOKEN_HOLDERS: usize = 30;
 
 #[zero_copy]
-#[repr(C)]
 pub(super) struct WrappedToken {
     pub mint: Pubkey,
     pub program: Pubkey,
@@ -164,7 +163,6 @@ impl WrappedToken {
 }
 
 #[zero_copy]
-#[repr(C)]
 pub(super) struct WrappedTokenHolder {
     pub token_account: Pubkey,
     pub amount: u64,

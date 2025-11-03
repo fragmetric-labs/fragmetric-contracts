@@ -19,7 +19,6 @@ impl TokenSwapSource {
 
 /// Pod type of `TokenSwapSource`
 #[zero_copy]
-#[repr(C)]
 pub struct TokenSwapSourcePod {
     discriminant: u8,
     _padding: [u8; 7],
