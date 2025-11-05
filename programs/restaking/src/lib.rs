@@ -1320,6 +1320,22 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
+    // UserFundAccountCloseContext
+    ////////////////////////////////////////////
+
+    pub fn user_close_fund_account(ctx: Context<UserFundAccountCloseContext>) -> Result<()> {
+        emit_cpi!(
+            modules::fund::UserFundConfigurationService::process_close_user_fund_account(
+                &mut ctx.accounts.user_fund_account,
+                &ctx.accounts.user,
+                ctx.accounts.receipt_token_mint.key(),
+            )?
+        );
+
+        Ok(())
+    }
+
+    ////////////////////////////////////////////
     // UserRewardAccountInitOrUpdateContext
     ////////////////////////////////////////////
 
@@ -1412,22 +1428,6 @@ pub mod restaking {
             ctx.accounts.user_reward_account.as_account_info(),
         )?
         .process_delegate_user_reward_account(&ctx.accounts.delegate_authority, delegate)?);
-
-        Ok(())
-    }
-
-    ////////////////////////////////////////////
-    // UserFundAccountCloseContext
-    ////////////////////////////////////////////
-
-    pub fn user_close_fund_account(ctx: Context<UserFundAccountCloseContext>) -> Result<()> {
-        emit_cpi!(
-            modules::fund::UserFundConfigurationService::process_close_user_fund_account(
-                &mut ctx.accounts.user_fund_account,
-                &ctx.accounts.user,
-                ctx.accounts.receipt_token_mint.key(),
-            )?
-        );
 
         Ok(())
     }
