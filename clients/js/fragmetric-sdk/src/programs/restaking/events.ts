@@ -18,6 +18,8 @@ import {
   getUserCanceledWithdrawalRequestFromFundDiscriminatorBytes,
   getUserClaimedRewardDecoder,
   getUserClaimedRewardDiscriminatorBytes,
+  getUserClosedFundAccountDecoder,
+  getUserClosedFundAccountDiscriminatorBytes,
   getUserCreatedOrUpdatedFundAccountDecoder,
   getUserCreatedOrUpdatedFundAccountDiscriminatorBytes,
   getUserCreatedOrUpdatedRewardAccountDecoder,
@@ -145,6 +147,10 @@ export const restakingAnchorEventDecoders = {
   userDelegatedRewardAccount: {
     discriminator: getUserDelegatedRewardAccountDiscriminatorBytes(),
     decoder: getUserDelegatedRewardAccountDecoder(),
+  },
+  userClosedFundAccount: {
+    discriminator: getUserClosedFundAccountDiscriminatorBytes(),
+    decoder: getUserClosedFundAccountDecoder(),
   },
 } satisfies {
   [k in string]: {

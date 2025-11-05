@@ -20,6 +20,7 @@ export * from './operatorUpdatedRewardPools';
 export * from './rewardAccount';
 export * from './userCanceledWithdrawalRequestFromFund';
 export * from './userClaimedReward';
+export * from './userClosedFundAccount';
 export * from './userCreatedOrUpdatedFundAccount';
 export * from './userCreatedOrUpdatedRewardAccount';
 export * from './userDelegatedRewardAccount';

@@ -7257,6 +7257,98 @@
       ]
     },
     {
+      "name": "user_close_fund_account",
+      "discriminator": [
+        145,
+        29,
+        105,
+        203,
+        153,
+        69,
+        102,
+        197
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "user_fund_account"
+          ]
+        },
+        {
+          "name": "receipt_token_mint",
+          "relations": [
+            "user_fund_account"
+          ]
+        },
+        {
+          "name": "user_fund_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  102,
+                  117,
+                  110,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              }
+            ]
+          }
+        },
+        {
+          "name": "event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "user_create_fund_account_idempotent",
       "discriminator": [
         18,
@@ -11581,6 +11673,19 @@
         151,
         242,
         46
+      ]
+    },
+    {
+      "name": "UserClosedFundAccount",
+      "discriminator": [
+        190,
+        20,
+        28,
+        58,
+        115,
+        223,
+        158,
+        56
       ]
     },
     {
@@ -16896,6 +17001,26 @@
           {
             "name": "total_claimed_reward_token_amount",
             "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "UserClosedFundAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "receipt_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "user_fund_account",
+            "type": "pubkey"
           }
         ]
       }

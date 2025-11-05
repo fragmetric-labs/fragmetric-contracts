@@ -2446,6 +2446,52 @@ describe('restaking.fragX unit test', async () => {
     await user1.reward.updatePools.execute({});
   });
 
+  /** close user accounts */
+
+  // close user fund account
+  test.only('close user fund account', async () => {
+    const depositAmount = 1_000_000_000n; // 1 sol
+
+    // user1 deposits sol
+    await user1.deposit.execute(
+      { assetAmount: depositAmount },
+      { signers: [signer1] }
+    );
+
+    const user1_1 = await user1.resolve(true);
+
+    // user1 requests withdrawal
+    await user1.requestWithdrawal.execute(
+      { receiptTokenAmount: user1_1!.receiptTokenAmount },
+      { signers: [signer1] }
+    );
+
+    const user1Fund_2 = await user1.fund.resolve(true);
+
+    // transaction fails because user1 has a withdrawal request
+    await expect(
+      user1.closeFundAccount.execute({}, { signers: [signer1] })
+    ).rejects.toThrow();
+
+    // user1 cancels withdrawal request
+    await user1.cancelWithdrawalRequest.execute(
+      { requestId: user1Fund_2!.withdrawalRequests[0].requestId },
+      { signers: [signer1] }
+    );
+
+    const user1_3 = await user1.resolve(true);
+
+    // now user1 can close fund account
+    await user1.closeFundAccount.execute({}, { signers: [signer1] });
+
+    const user1_4 = await user1.resolve(true);
+
+    expect(user1_4!.lamports).toBeGreaterThan(user1_3!.lamports);
+
+    const user1FundAccount = await validator.getAccount(user1.fund.address!);
+    expect(user1FundAccount).toEqual(null);
+  });
+
   test.skip('user reward pool update fails when there are too many settlement blocks to synchronize', async () => {
     const MAX_REWARD_NUM = 16;
     const MAX_SETTLEMENT_BLOCK_NUM = 64;
