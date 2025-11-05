@@ -143,4 +143,20 @@ impl<'a, 'info> UserFundConfigurationService<'a, 'info> {
             Ok(None)
         }
     }
+
+    pub fn process_close_user_fund_account(
+        user_fund_account: &mut Account<'info, UserFundAccount>,
+        user: &Signer<'info>,
+        receipt_token_mint: Pubkey,
+    ) -> Result<events::UserClosedFundAccount> {
+        require_eq!(user_fund_account.withdrawal_requests.len(), 0);
+
+        user_fund_account.close(user.to_account_info())?;
+
+        Ok(events::UserClosedFundAccount {
+            receipt_token_mint: receipt_token_mint,
+            user: user.key(),
+            user_fund_account: user_fund_account.key(),
+        })
+    }
 }

@@ -23,7 +23,7 @@ pub struct UserFundAccount {
     _reserved: [u8; 32],
 
     #[max_len(USER_FUND_ACCOUNT_MAX_WITHDRAWAL_REQUESTS_SIZE)]
-    withdrawal_requests: Vec<WithdrawalRequest>,
+    pub(super) withdrawal_requests: Vec<WithdrawalRequest>,
 }
 
 impl PDASeeds<4> for UserFundAccount {

@@ -264,3 +264,22 @@ pub struct UserFundWithdrawSolContext<'info> {
     )]
     pub user_reward_account: UncheckedAccount<'info>,
 }
+
+#[event_cpi]
+#[derive(Accounts)]
+pub struct UserFundAccountCloseContext<'info> {
+    #[account(mut)]
+    pub user: Signer<'info>,
+
+    pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    #[account(
+        mut,
+        seeds = [UserFundAccount::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
+        bump = user_fund_account.get_bump(),
+        has_one = receipt_token_mint,
+        has_one = user,
+        constraint = user_fund_account.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
+    )]
+    pub user_fund_account: Box<Account<'info, UserFundAccount>>,
+}
