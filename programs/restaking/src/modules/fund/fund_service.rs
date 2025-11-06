@@ -118,7 +118,8 @@ impl<'a, 'info> FundService<'a, 'info> {
                 | Some(TokenPricingSource::JitoRestakingVault { address })
                 | Some(TokenPricingSource::FragmetricNormalizedTokenPool { address })
                 | Some(TokenPricingSource::SolvBTCVault { address })
-                | Some(TokenPricingSource::VirtualVault { address }) => {
+                | Some(TokenPricingSource::VirtualVault { address })
+                | Some(TokenPricingSource::DriftVault { address }) => {
                     for remaining_account in remaining_accounts {
                         if address == remaining_account.key() {
                             pricing_sources.push(remaining_account);
@@ -270,6 +271,7 @@ impl<'a, 'info> FundService<'a, 'info> {
                                         TokenPricingSource::JitoRestakingVault { .. }
                                         | TokenPricingSource::SolvBTCVault { .. }
                                         | TokenPricingSource::VirtualVault { .. }
+                                        | TokenPricingSource::DriftVault { .. }
                                         | TokenPricingSource::FragmetricNormalizedTokenPool {
                                             ..
                                         }

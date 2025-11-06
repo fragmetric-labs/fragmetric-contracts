@@ -382,7 +382,8 @@ impl HarvestRestakingYieldCommand {
         let entry = match receipt_token_pricing_source {
             Some(TokenPricingSource::JitoRestakingVault { .. })
             | Some(TokenPricingSource::SolvBTCVault { .. })
-            | Some(TokenPricingSource::VirtualVault { .. }) => {
+            | Some(TokenPricingSource::VirtualVault { .. })
+            | Some(TokenPricingSource::DriftVault { .. }) => {
                 let required_accounts = VaultRewardTokenAccountCandidates::find_accounts(
                     &vault,
                     &reward_token_mints[0],
@@ -435,7 +436,8 @@ impl HarvestRestakingYieldCommand {
         let entry = match receipt_token_pricing_source {
             Some(TokenPricingSource::JitoRestakingVault { .. })
             | Some(TokenPricingSource::SolvBTCVault { .. })
-            | Some(TokenPricingSource::VirtualVault { .. }) => {
+            | Some(TokenPricingSource::VirtualVault { .. })
+            | Some(TokenPricingSource::DriftVault { .. }) => {
                 let required_accounts = VaultRewardTokenAccountCandidates::find_accounts(
                     &vault,
                     &reward_token_mints[0],
@@ -486,7 +488,8 @@ impl HarvestRestakingYieldCommand {
 
         let entry = match receipt_token_pricing_source {
             Some(TokenPricingSource::JitoRestakingVault { .. })
-            | Some(TokenPricingSource::SolvBTCVault { .. }) => {
+            | Some(TokenPricingSource::SolvBTCVault { .. })
+            | Some(TokenPricingSource::DriftVault { .. }) => {
                 let command = Self {
                     state: PrepareCompoundVaultSupportedToken { vault },
                 };
@@ -533,7 +536,8 @@ impl HarvestRestakingYieldCommand {
 
         let Some(entry) = (match receipt_token_pricing_source {
             Some(TokenPricingSource::JitoRestakingVault { .. })
-            | Some(TokenPricingSource::SolvBTCVault { .. }) => self
+            | Some(TokenPricingSource::SolvBTCVault { .. })
+            | Some(TokenPricingSource::DriftVault { .. }) => self
                 .create_execute_compound_reward_command_from_vault_ata(
                     ctx,
                     accounts,
@@ -755,7 +759,8 @@ impl HarvestRestakingYieldCommand {
 
         let Some(entry) = (match receipt_token_pricing_source {
             Some(TokenPricingSource::JitoRestakingVault { .. })
-            | Some(TokenPricingSource::SolvBTCVault { .. }) => self
+            | Some(TokenPricingSource::SolvBTCVault { .. })
+            | Some(TokenPricingSource::DriftVault { .. }) => self
                 .create_execute_distribute_reward_command_from_vault_ata(
                     ctx,
                     accounts,
@@ -923,6 +928,9 @@ impl HarvestRestakingYieldCommand {
                 };
                 Some(command.with_required_accounts(required_accounts))
             }
+            Some(TokenPricingSource::DriftVault { .. }) => {
+                todo!();
+            }
             Some(TokenPricingSource::VirtualVault { .. }) => None,
             // otherwise fails
             Some(TokenPricingSource::SPLStakePool { .. })
@@ -982,7 +990,8 @@ impl HarvestRestakingYieldCommand {
             let (token_commission_amount, token_compounded_amount) =
                 match receipt_token_pricing_source {
                     Some(TokenPricingSource::JitoRestakingVault { .. })
-                    | Some(TokenPricingSource::SolvBTCVault { .. }) => self
+                    | Some(TokenPricingSource::SolvBTCVault { .. })
+                    | Some(TokenPricingSource::DriftVault { .. }) => self
                         .apply_commission_and_transfer_reward(
                             ctx,
                             &mut accounts,
@@ -1119,7 +1128,8 @@ impl HarvestRestakingYieldCommand {
             let (token_commission_amount, reward_token_amount, token_compounded_amount) =
                 match receipt_token_pricing_source {
                     Some(TokenPricingSource::JitoRestakingVault { .. })
-                    | Some(TokenPricingSource::SolvBTCVault { .. }) => self
+                    | Some(TokenPricingSource::SolvBTCVault { .. })
+                    | Some(TokenPricingSource::DriftVault { .. }) => self
                         .apply_commission_and_swap_reward(
                             ctx,
                             &mut accounts,
@@ -1282,7 +1292,8 @@ impl HarvestRestakingYieldCommand {
                 let (token_commission_amount, token_distributed_amount) =
                     match receipt_token_pricing_source {
                         Some(TokenPricingSource::JitoRestakingVault { .. })
-                        | Some(TokenPricingSource::SolvBTCVault { .. }) => self
+                        | Some(TokenPricingSource::SolvBTCVault { .. })
+                        | Some(TokenPricingSource::DriftVault { .. }) => self
                             .apply_commission_and_transfer_reward(
                                 ctx,
                                 &mut accounts,
@@ -1474,6 +1485,7 @@ impl HarvestRestakingYieldCommand {
                 vault_supported_token_compounded_amount
             }
             Some(TokenPricingSource::VirtualVault { .. }) => 0,
+            Some(TokenPricingSource::DriftVault { .. }) => todo!(),
             // otherwise fails
             Some(TokenPricingSource::SPLStakePool { .. })
             | Some(TokenPricingSource::MarinadeStakePool { .. })

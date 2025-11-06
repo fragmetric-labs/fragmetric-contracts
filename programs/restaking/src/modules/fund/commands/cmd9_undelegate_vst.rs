@@ -119,7 +119,8 @@ impl UndelegateVSTCommand {
                 command.with_required_accounts(required_accounts)
             }
             Some(TokenPricingSource::VirtualVault { .. })
-            | Some(TokenPricingSource::SolvBTCVault { .. }) => command.without_required_accounts(),
+            | Some(TokenPricingSource::SolvBTCVault { .. })
+            | Some(TokenPricingSource::DriftVault { .. }) => command.without_required_accounts(),
             // otherwise fails
             Some(TokenPricingSource::SPLStakePool { .. })
             | Some(TokenPricingSource::MarinadeStakePool { .. })
@@ -223,7 +224,8 @@ impl UndelegateVSTCommand {
                 Ok((None, Some(entry)))
             }
             Some(TokenPricingSource::VirtualVault { .. })
-            | Some(TokenPricingSource::SolvBTCVault { .. }) => Ok((
+            | Some(TokenPricingSource::SolvBTCVault { .. })
+            | Some(TokenPricingSource::DriftVault { .. }) => Ok((
                 None,
                 self.create_prepare_command(ctx, vaults[1..].to_vec())?,
             )),
@@ -357,7 +359,8 @@ impl UndelegateVSTCommand {
                 }
             }
             Some(TokenPricingSource::SolvBTCVault { .. })
-            | Some(TokenPricingSource::VirtualVault { .. }) => Ok((
+            | Some(TokenPricingSource::VirtualVault { .. })
+            | Some(TokenPricingSource::DriftVault { .. }) => Ok((
                 None,
                 self.create_prepare_command(ctx, vaults[1..].to_vec())?,
             )),

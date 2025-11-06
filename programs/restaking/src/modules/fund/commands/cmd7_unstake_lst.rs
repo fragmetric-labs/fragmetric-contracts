@@ -233,6 +233,7 @@ impl UnstakeLSTCommand {
                             | Some(TokenPricingSource::FragmetricRestakingFund { .. })
                             | Some(TokenPricingSource::SolvBTCVault { .. })
                             | Some(TokenPricingSource::VirtualVault { .. })
+                            | Some(TokenPricingSource::DriftVault { .. })
                             | None => {
                                 err!(ErrorCode::FundOperationCommandExecutionFailedException)?
                             }
@@ -311,6 +312,7 @@ impl UnstakeLSTCommand {
             | Some(TokenPricingSource::PeggedToken { .. })
             | Some(TokenPricingSource::SolvBTCVault { .. })
             | Some(TokenPricingSource::VirtualVault { .. })
+            | Some(TokenPricingSource::DriftVault { .. })
             | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
             #[cfg(all(test, not(feature = "idl-build")))]
             Some(TokenPricingSource::Mock { .. }) => {
@@ -384,6 +386,7 @@ impl UnstakeLSTCommand {
             | Some(TokenPricingSource::PeggedToken { .. })
             | Some(TokenPricingSource::SolvBTCVault { .. })
             | Some(TokenPricingSource::VirtualVault { .. })
+            | Some(TokenPricingSource::DriftVault { .. })
             | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
             #[cfg(all(test, not(feature = "idl-build")))]
             Some(TokenPricingSource::Mock { .. }) => {
@@ -467,6 +470,7 @@ impl UnstakeLSTCommand {
             | Some(TokenPricingSource::PeggedToken { .. })
             | Some(TokenPricingSource::SolvBTCVault { .. })
             | Some(TokenPricingSource::VirtualVault { .. })
+            | Some(TokenPricingSource::DriftVault { .. })
             | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
             #[cfg(all(test, not(feature = "idl-build")))]
             Some(TokenPricingSource::Mock { .. }) => {
@@ -649,6 +653,7 @@ impl UnstakeLSTCommand {
             | Some(TokenPricingSource::PeggedToken { .. })
             | Some(TokenPricingSource::SolvBTCVault { .. })
             | Some(TokenPricingSource::VirtualVault { .. })
+            | Some(TokenPricingSource::DriftVault { .. })
             | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
             #[cfg(all(test, not(feature = "idl-build")))]
             Some(TokenPricingSource::Mock { .. }) => {

@@ -54,7 +54,8 @@ pub(in crate::modules) fn validate_pricing_source<'info>(
         | TokenPricingSource::OrcaDEXLiquidityPool { .. }
         | TokenPricingSource::PeggedToken { .. }
         | TokenPricingSource::SolvBTCVault { .. }
-        | TokenPricingSource::VirtualVault { .. } => err!(ErrorCode::UnexpectedPricingSourceError)?,
+        | TokenPricingSource::VirtualVault { .. }
+        | TokenPricingSource::DriftVault { .. } => err!(ErrorCode::UnexpectedPricingSourceError)?,
         #[cfg(all(test, not(feature = "idl-build")))]
         TokenPricingSource::Mock { .. } => err!(ErrorCode::UnexpectedPricingSourceError)?,
     }

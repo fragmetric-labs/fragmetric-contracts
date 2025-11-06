@@ -125,6 +125,7 @@ impl ClaimUnrestakedVSTCommand {
                 }
                 // no unrestaking on virtual vault
                 Some(TokenPricingSource::VirtualVault { .. }) => return Ok(None),
+                Some(TokenPricingSource::DriftVault { .. }) => todo!(),
                 // otherwise fails
                 Some(TokenPricingSource::SPLStakePool { .. })
                 | Some(TokenPricingSource::MarinadeStakePool { .. })
@@ -246,6 +247,7 @@ impl ClaimUnrestakedVSTCommand {
 
                 Ok(Some(command.with_required_accounts(required_accounts)))
             }
+            Some(TokenPricingSource::DriftVault { .. }) => todo!(),
             // invalid configuration
             Some(TokenPricingSource::SPLStakePool { .. })
             | Some(TokenPricingSource::MarinadeStakePool { .. })
@@ -595,6 +597,7 @@ impl ClaimUnrestakedVSTCommand {
                     .into(),
                 ))
             }
+            Some(TokenPricingSource::DriftVault { .. }) => todo!(),
             // invalid configuration
             Some(TokenPricingSource::SPLStakePool { .. })
             | Some(TokenPricingSource::MarinadeStakePool { .. })

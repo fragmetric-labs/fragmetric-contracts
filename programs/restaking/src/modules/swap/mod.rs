@@ -37,7 +37,8 @@ pub(in crate::modules) fn validate_pricing_source<'info>(
         | TokenPricingSource::PeggedToken { .. }
         | TokenPricingSource::SolvBTCVault { .. }
         | TokenPricingSource::SanctumMultiValidatorSPLStakePool { .. }
-        | TokenPricingSource::VirtualVault { .. } => err!(ErrorCode::UnexpectedPricingSourceError)?,
+        | TokenPricingSource::VirtualVault { .. }
+        | TokenPricingSource::DriftVault { .. } => err!(ErrorCode::UnexpectedPricingSourceError)?,
         #[cfg(all(test, not(feature = "idl-build")))]
         TokenPricingSource::Mock { .. } => err!(ErrorCode::UnexpectedPricingSourceError)?,
     }

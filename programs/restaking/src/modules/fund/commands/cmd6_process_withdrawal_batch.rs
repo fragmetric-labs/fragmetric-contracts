@@ -126,6 +126,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         | Some(TokenPricingSource::FragmetricRestakingFund { .. })
                         | Some(TokenPricingSource::SolvBTCVault { .. })
                         | Some(TokenPricingSource::VirtualVault { .. })
+                        | Some(TokenPricingSource::DriftVault { .. })
                         | None => {
                             err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
                         }
@@ -149,6 +150,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         }
                         // virtual vault (no-op)
                         Some(TokenPricingSource::VirtualVault { .. }) => {}
+                        Some(TokenPricingSource::DriftVault { .. }) => todo!(),
                         // otherwise fails
                         Some(TokenPricingSource::SPLStakePool { .. })
                         | Some(TokenPricingSource::MarinadeStakePool { .. })
@@ -217,7 +219,8 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                             | Some(TokenPricingSource::FragmetricRestakingFund { .. })
                             | Some(TokenPricingSource::SolvBTCVault { .. })
                             | Some(TokenPricingSource::VirtualVault { .. })
-                            | None => err!(
+                            | Some(TokenPricingSource::DriftVault { .. }) => todo!(),
+                            None => err!(
                                 errors::ErrorCode::FundOperationCommandExecutionFailedException
                             ),
                             #[cfg(all(test, not(feature = "idl-build")))]
@@ -238,6 +241,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                             | Some(TokenPricingSource::SolvBTCVault { .. }) => Ok(count + 1),
                             // virtual vault (no-op)
                             Some(TokenPricingSource::VirtualVault { .. }) => Ok(count),
+                            Some(TokenPricingSource::DriftVault { .. }) => todo!(),
                             // otherwise fails
                             Some(TokenPricingSource::SPLStakePool { .. })
                             | Some(TokenPricingSource::MarinadeStakePool { .. })
@@ -322,6 +326,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         | Some(TokenPricingSource::FragmetricRestakingFund { .. })
                         | Some(TokenPricingSource::SolvBTCVault { .. })
                         | Some(TokenPricingSource::VirtualVault { .. })
+                        | Some(TokenPricingSource::DriftVault { .. })
                         | None => {
                             err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?
                         }
@@ -366,6 +371,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                         }
                         // virtual vault (no-op)
                         Some(TokenPricingSource::VirtualVault { .. }) => (0, 0),
+                        Some(TokenPricingSource::DriftVault { .. }) => todo!(),
                         // otherwise fails
                         Some(TokenPricingSource::SPLStakePool { .. })
                         | Some(TokenPricingSource::MarinadeStakePool { .. })

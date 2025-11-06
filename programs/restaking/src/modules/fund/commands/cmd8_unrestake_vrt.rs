@@ -411,6 +411,7 @@ impl UnrestakeVRTCommand {
                         let _ = items.next();
                         return self.create_prepare_command_with_items(ctx, items);
                     }
+                    Some(TokenPricingSource::DriftVault { .. }) => todo!(),
                     // otherwise fails
                     Some(TokenPricingSource::SPLStakePool { .. })
                     | Some(TokenPricingSource::MarinadeStakePool { .. })
@@ -546,6 +547,7 @@ impl UnrestakeVRTCommand {
                     ),
                 ))
             }
+            Some(TokenPricingSource::DriftVault { .. }) => todo!(),
             // invalid configuration
             Some(TokenPricingSource::SPLStakePool { .. })
             | Some(TokenPricingSource::MarinadeStakePool { .. })
@@ -798,6 +800,7 @@ impl UnrestakeVRTCommand {
                     Ok(None)
                 }
             }
+            Some(TokenPricingSource::DriftVault { .. }) => todo!(),
             // invalid configuration
             Some(TokenPricingSource::SPLStakePool { .. })
             | Some(TokenPricingSource::MarinadeStakePool { .. })

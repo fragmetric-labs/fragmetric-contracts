@@ -52,6 +52,9 @@ pub(in crate::modules) fn validate_pricing_source<'info>(
                 fund_account,
             )?
         }
+        TokenPricingSource::DriftVault { .. } => {
+            todo!()
+        }
         // otherwise fails
         TokenPricingSource::SPLStakePool { .. }
         | TokenPricingSource::MarinadeStakePool { .. }

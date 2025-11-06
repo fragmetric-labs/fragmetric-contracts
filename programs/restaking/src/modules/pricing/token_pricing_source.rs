@@ -40,6 +40,9 @@ pub enum TokenPricingSource {
     VirtualVault {
         address: Pubkey,
     },
+    DriftVault {
+        address: Pubkey,
+    },
     #[cfg(all(test, not(feature = "idl-build")))]
     Mock {
         #[max_len(0)]
@@ -77,6 +80,9 @@ impl core::fmt::Display for TokenPricingSource {
             }
             Self::VirtualVault { address } => {
                 write!(f, "VirtualVault({})", address)
+            }
+            Self::DriftVault { address } => {
+                write!(f, "DriftVault({})", address)
             }
             #[cfg(all(test, not(feature = "idl-build")))]
             Self::Mock { .. } => write!(f, "Mock(...)"),
@@ -129,6 +135,10 @@ impl TokenPricingSource {
             }
             TokenPricingSource::VirtualVault { address } => {
                 pod.discriminant = 11;
+                pod.address = *address;
+            }
+            TokenPricingSource::DriftVault { address } => {
+                pod.discriminant = 12;
                 pod.address = *address;
             }
             #[cfg(all(test, not(feature = "idl-build")))]
@@ -196,6 +206,9 @@ impl TokenPricingSourcePod {
                 address: self.address,
             },
             11 => TokenPricingSource::VirtualVault {
+                address: self.address,
+            },
+            12 => TokenPricingSource::DriftVault {
                 address: self.address,
             },
             #[cfg(all(test, not(feature = "idl-build")))]

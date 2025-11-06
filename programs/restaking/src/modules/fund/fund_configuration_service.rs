@@ -209,7 +209,8 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
                 | Some(TokenPricingSource::FragmetricRestakingFund { .. })
                 | Some(TokenPricingSource::JitoRestakingVault { .. })
                 | Some(TokenPricingSource::SolvBTCVault { .. })
-                | Some(TokenPricingSource::VirtualVault { .. }) => {
+                | Some(TokenPricingSource::VirtualVault { .. })
+                | Some(TokenPricingSource::DriftVault { .. }) => {
                     err!(ErrorCode::UnexpectedPricingSourceError)?
                 }
                 #[cfg(all(test, not(feature = "idl-build")))]
@@ -272,7 +273,8 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
             | TokenPricingSource::FragmetricRestakingFund { .. }
             | TokenPricingSource::JitoRestakingVault { .. }
             | TokenPricingSource::SolvBTCVault { .. }
-            | TokenPricingSource::VirtualVault { .. } => {
+            | TokenPricingSource::VirtualVault { .. }
+            | TokenPricingSource::DriftVault { .. } => {
                 err!(ErrorCode::UnexpectedPricingSourceError)?
             }
             #[cfg(all(test, not(feature = "idl-build")))]
@@ -550,7 +552,8 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
                     | Some(TokenPricingSource::FragmetricRestakingFund { .. })
                     | Some(TokenPricingSource::JitoRestakingVault { .. })
                     | Some(TokenPricingSource::SolvBTCVault { .. })
-                    | Some(TokenPricingSource::VirtualVault { .. }) => {
+                    | Some(TokenPricingSource::VirtualVault { .. })
+                    | Some(TokenPricingSource::DriftVault { .. }) => {
                         err!(ErrorCode::UnexpectedPricingSourceError)?
                     }
                     #[cfg(all(test, not(feature = "idl-build")))]

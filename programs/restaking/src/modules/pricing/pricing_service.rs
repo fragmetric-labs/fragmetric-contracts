@@ -198,6 +198,9 @@ impl<'info> PricingService<'info> {
             TokenPricingSource::VirtualVault { .. } => {
                 self.token_values[token_index] = TokenValue::default();
             }
+            TokenPricingSource::DriftVault { .. } => {
+                todo!();
+            }
             #[cfg(all(test, not(feature = "idl-build")))]
             TokenPricingSource::Mock {
                 numerator,

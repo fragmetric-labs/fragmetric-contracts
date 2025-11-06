@@ -264,6 +264,7 @@ impl SelfExecutable for RestakeVSTCommand {
                                 ),
                             ));
                         }
+                        Some(TokenPricingSource::DriftVault { .. }) => todo!(),
                         // otherwise fails
                         Some(TokenPricingSource::SPLStakePool { .. })
                         | Some(TokenPricingSource::MarinadeStakePool { .. })
@@ -500,6 +501,7 @@ impl SelfExecutable for RestakeVSTCommand {
                             FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
                                 .update_asset_values(&mut pricing_service, true)?;
                         }
+                        Some(TokenPricingSource::DriftVault { .. }) => todo!(),
                         // otherwise fails
                         Some(TokenPricingSource::SPLStakePool { .. })
                         | Some(TokenPricingSource::MarinadeStakePool { .. })
@@ -564,6 +566,7 @@ impl RestakeVSTCommand {
                 command.with_required_accounts(required_accounts)
             }
             Some(TokenPricingSource::VirtualVault { .. }) => command.without_required_accounts(),
+            Some(TokenPricingSource::DriftVault { .. }) => todo!(),
             // otherwise fails
             Some(TokenPricingSource::SPLStakePool { .. })
             | Some(TokenPricingSource::MarinadeStakePool { .. })

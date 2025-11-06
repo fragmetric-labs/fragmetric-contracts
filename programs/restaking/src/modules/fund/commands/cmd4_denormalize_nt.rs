@@ -405,6 +405,7 @@ impl DenormalizeNTCommand {
             | Some(TokenPricingSource::PeggedToken { .. })
             | Some(TokenPricingSource::SolvBTCVault { .. })
             | Some(TokenPricingSource::VirtualVault { .. })
+            | Some(TokenPricingSource::DriftVault { .. })
             | None => err!(errors::ErrorCode::FundOperationCommandExecutionFailedException)?,
             #[cfg(all(test, not(feature = "idl-build")))]
             Some(TokenPricingSource::Mock { .. }) => {
