@@ -103,4 +103,33 @@ export class RestakingUserFundAccountContext extends AccountContext<
       ],
     }
   );
+
+  readonly closeAccount = new TransactionTemplateContext(this, null, {
+    description: 'close user fund account',
+    anchorEventDecoders: getRestakingAnchorEventDecoders(
+      'userClosedFundAccount'
+    ),
+    instructions: [
+      async (parent, args) => {
+        const [receiptTokenMint, user] = await Promise.all([
+          parent.parent.parent.resolve(true),
+          parent.parent.resolveAddress(true),
+        ]);
+        if (!(receiptTokenMint && user)) throw new Error('invalid context');
+
+        return Promise.all([
+          restaking.getUserCloseFundAccountInstructionAsync(
+            {
+              user: createNoopSigner(user),
+              program: this.program.address,
+              receiptTokenMint: receiptTokenMint.receiptTokenMint!,
+            },
+            {
+              programAddress: this.program.address,
+            }
+          ),
+        ]);
+      },
+    ],
+  });
 }

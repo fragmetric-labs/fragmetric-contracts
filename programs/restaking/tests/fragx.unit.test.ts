@@ -2470,7 +2470,7 @@ describe('restaking.fragX unit test', async () => {
 
     // transaction fails because user1 has a withdrawal request
     await expect(
-      user1.closeFundAccount.execute({}, { signers: [signer1] })
+      user1.fund.closeAccount.execute({}, { signers: [signer1] })
     ).rejects.toThrow();
 
     // user1 cancels withdrawal request
@@ -2482,7 +2482,7 @@ describe('restaking.fragX unit test', async () => {
     const user1_3 = await user1.resolve(true);
 
     // now user1 can close fund account
-    await user1.closeFundAccount.execute({}, { signers: [signer1] });
+    await user1.fund.closeAccount.execute({}, { signers: [signer1] });
 
     const user1_4 = await user1.resolve(true);
 
