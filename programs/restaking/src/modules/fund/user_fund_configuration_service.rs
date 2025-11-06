@@ -154,7 +154,7 @@ impl<'a, 'info> UserFundConfigurationService<'a, 'info> {
         user_fund_account.close(user.to_account_info())?;
 
         Ok(events::UserClosedFundAccount {
-            receipt_token_mint: receipt_token_mint,
+            receipt_token_mint,
             user: user.key(),
             user_fund_account: user_fund_account.key(),
         })
