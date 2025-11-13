@@ -429,7 +429,7 @@ export async function initializeFragX(
       }),
     () =>
       ctx.reward.addReward.execute({
-        mint: 'FSWSBMV5EB7J8JdafNBLZpfSCLiFwpMCqod2RpkU4RNn',
+        mint: 'SW1TCHLmRGTfW5xZknqQdpdarB8PD95sJYWpNp9TbFx',
         decimals: 9,
         name: 'SWTCH',
         description: 'Switchboard Token',
@@ -450,7 +450,7 @@ export async function initializeFragX(
     // }),
     () =>
       ctx.reward.settleReward.execute({
-        mint: 'FSWSBMV5EB7J8JdafNBLZpfSCLiFwpMCqod2RpkU4RNn',
+        mint: 'SW1TCHLmRGTfW5xZknqQdpdarB8PD95sJYWpNp9TbFx',
         amount: 0n,
       }),
 
