@@ -64,3 +64,4 @@ rust_decimal_macros = "1.37.1"
 
 marinade-cpi = { path = "./clients/rust/marinade-cpi" }
 whirlpool-cpi = { path = "./clients/rust/whirlpool-cpi" }
+drift-vault-cpi = { path = "./clients/rust/drift-vault-cpi" }

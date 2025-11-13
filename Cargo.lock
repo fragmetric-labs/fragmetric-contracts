@@ -921,6 +921,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "drift-vault-cpi"
+version = "0.1.0"
+dependencies = [
+ "anchor-lang",
+]
+
+[[package]]
 name = "ed25519"
 version = "1.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1042,14 +1049,6 @@ name = "foreign-types-shared"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "00b0228411908ca8685dba7fc2cdd70ec9990a6e753e89b6ac91a84c40fbaf4b"
-
-[[package]]
-name = "fragmetric-cpi"
-version = "0.5.1"
-dependencies = [
- "anchor-lang",
- "bytemuck",
-]
 
 [[package]]
 name = "funty"
@@ -1907,6 +1906,7 @@ dependencies = [
  "anchor-lang",
  "anchor-spl",
  "bytemuck",
+ "drift-vault-cpi",
  "jito-bytemuck",
  "jito-vault-core",
  "jito-vault-sdk",
