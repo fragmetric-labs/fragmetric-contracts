@@ -2686,6 +2686,10 @@
     },
     {
       "name": "WithdrawRequest",
+      "serialization": "bytemuckunsafe",
+      "repr": {
+        "kind": "c"
+      },
       "type": {
         "kind": "struct",
         "fields": [
@@ -2820,6 +2824,10 @@
     },
     {
       "name": "FeeUpdate",
+      "serialization": "bytemuckunsafe",
+      "repr": {
+        "kind": "c"
+      },
       "type": {
         "kind": "struct",
         "fields": [
@@ -2862,6 +2870,10 @@
     },
     {
       "name": "TokenizedVaultDepositor",
+      "serialization": "bytemuckunsafe",
+      "repr": {
+        "kind": "c"
+      },
       "type": {
         "kind": "struct",
         "fields": [
@@ -2979,6 +2991,10 @@
     },
     {
       "name": "VaultDepositor",
+      "serialization": "bytemuckunsafe",
+      "repr": {
+        "kind": "c"
+      },
       "type": {
         "kind": "struct",
         "fields": [
@@ -3099,6 +3115,10 @@
     },
     {
       "name": "VaultProtocol",
+      "serialization": "bytemuckunsafe",
+      "repr": {
+        "kind": "c"
+      },
       "type": {
         "kind": "struct",
         "fields": [
@@ -3184,6 +3204,10 @@
     },
     {
       "name": "Vault",
+      "serialization": "bytemuckunsafe",
+      "repr": {
+        "kind": "c"
+      },
       "type": {
         "kind": "struct",
         "fields": [
