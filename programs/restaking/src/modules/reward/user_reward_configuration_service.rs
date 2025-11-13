@@ -4,7 +4,7 @@ use anchor_spl::token::spl_token;
 use anchor_spl::token_interface::{Mint, TokenAccount};
 
 use crate::utils::*;
-use crate::{events, modules};
+use crate::{errors, events, modules};
 
 use super::*;
 
@@ -190,6 +190,56 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
             user: self.user_receipt_token_account.owner,
             user_reward_account: self.user_reward_account.key(),
             delegate,
+        })
+    }
+
+    pub fn process_close_user_reward_account(
+        reward_account_loader: &AccountLoader<'info, RewardAccount>,
+        user_reward_account_loader: &AccountLoader<'info, UserRewardAccount>,
+        user: &Signer<'info>,
+        receipt_token_mint: Pubkey,
+
+        skip_revert_if_claimable_reward_left: Option<bool>,
+    ) -> Result<events::UserClosedRewardAccount> {
+        let user_reward_account = user_reward_account_loader.load()?;
+        let reward_account = reward_account_loader.load()?;
+
+        // user_reward_account should be synced before close
+        for (user_reward_pool, reward_pool) in user_reward_account
+            .get_user_reward_pools_iter()
+            .zip(reward_account.get_reward_pools_iter())
+        {
+            if user_reward_pool.updated_slot < reward_pool.updated_slot {
+                return err!(errors::ErrorCode::RewardUserRewardAccountNotSyncedError);
+            }
+        }
+
+        // user should claim total reward before close
+        if matches!(skip_revert_if_claimable_reward_left, Some(false)) {
+            for user_reward_pool in user_reward_account.get_user_reward_pools_iter() {
+                for user_reward_settlement in user_reward_pool.get_reward_settlements_iter() {
+                    let has_unclaimed_reward = reward_account
+                        .get_reward(user_reward_settlement.reward_id)?
+                        .claimable
+                        == 1
+                        && user_reward_settlement.total_claimed_amount
+                            < user_reward_settlement.total_settled_amount;
+
+                    if has_unclaimed_reward {
+                        return err!(errors::ErrorCode::RewardUserNotClaimedTotalError);
+                    }
+                }
+            }
+        }
+
+        drop(user_reward_account);
+
+        user_reward_account_loader.close(user.to_account_info())?;
+
+        Ok(events::UserClosedRewardAccount {
+            receipt_token_mint,
+            user: user.key(),
+            user_reward_account: user_reward_account_loader.key(),
         })
     }
 }

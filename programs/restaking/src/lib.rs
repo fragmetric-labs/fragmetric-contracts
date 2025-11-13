@@ -1433,6 +1433,27 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
+    // UserRewardAccountCloseContext
+    ////////////////////////////////////////////
+
+    pub fn user_close_reward_account(
+        ctx: Context<UserRewardAccountCloseContext>,
+        skip_revert_if_claimable_reward_left: Option<bool>,
+    ) -> Result<()> {
+        emit_cpi!(
+            modules::reward::UserRewardConfigurationService::process_close_user_reward_account(
+                &ctx.accounts.reward_account,
+                &ctx.accounts.user_reward_account,
+                &ctx.accounts.user,
+                ctx.accounts.receipt_token_mint.key(),
+                skip_revert_if_claimable_reward_left
+            )?
+        );
+
+        Ok(())
+    }
+
+    ////////////////////////////////////////////
     // UserReceiptTokenTransferContext
     ////////////////////////////////////////////
 

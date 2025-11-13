@@ -308,4 +308,10 @@ pub enum ErrorCode {
 
     #[msg("unexpected pricing source")]
     UnexpectedPricingSourceError,
+
+    #[msg("reward: user reward account not synced")]
+    RewardUserRewardAccountNotSyncedError,
+
+    #[msg("reward: user not claimed total reward")]
+    RewardUserNotClaimedTotalError,
 }
