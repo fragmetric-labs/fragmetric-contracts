@@ -27,6 +27,7 @@ import * as jitoRestaking from '../../generated/jito_restaking';
 import * as jitoVault from '../../generated/jito_vault';
 import * as restaking from '../../generated/restaking';
 import * as solv from '../../generated/solv';
+import * as driftVault from '../../generated/drift_vault';
 import { SolvBTCVaultProgram } from '../solv';
 import { SolvVaultAccountContext } from '../solv/vault';
 import { getRestakingAnchorEventDecoders } from './events';
@@ -39,6 +40,7 @@ import { RestakingProgram } from './program';
 import { RestakingReceiptTokenMintAccountContext } from './receipt_token_mint';
 import { JitoVaultAccountContext } from './restaking_vault_jito';
 import { VirtualVaultAccountContext } from './restaking_vault_virtual';
+import { DriftVaultAccountContext } from './restaking_vault_drift';
 
 export class RestakingFundAccountContext extends AccountContext<
   RestakingReceiptTokenMintAccountContext,
@@ -280,6 +282,8 @@ export class RestakingFundAccountContext extends AccountContext<
         return this.__solvBTCVaultProgram.vault(vault!);
       case system.SYSTEM_PROGRAM_ADDRESS:
         return new VirtualVaultAccountContext(this);
+      case driftVault.DRIFT_VAULTS_PROGRAM_ADDRESS:
+        return new DriftVaultAccountContext(this, vault!);
     }
   }
 
@@ -1330,6 +1334,7 @@ export class RestakingFundAccountContext extends AccountContext<
             'JitoRestakingVault',
             'SolvBTCVault',
             'VirtualVault',
+            'DriftVault',
           ]),
           address: v.string(),
         }) as v.GenericSchema<
@@ -1580,6 +1585,66 @@ export class RestakingFundAccountContext extends AccountContext<
                 payer: createNoopSigner(payer as Address),
                 mint: vrtMint,
                 owner: vault,
+                tokenProgram: token.TOKEN_PROGRAM_ADDRESS,
+              }),
+              ix,
+            ]);
+          } else if (args.pricingSource.__kind == 'DriftVault') {
+            const vaultContext = parent.restakingVault(
+              args.vault,
+              driftVault.DRIFT_VAULTS_PROGRAM_ADDRESS,
+            );
+
+            if (!(vaultContext && vaultContext instanceof DriftVaultAccountContext)) {
+              throw new Error('invalid context: drift vault not found');
+            }
+            const vaultAccount = await vaultContext?.resolveAccount(true);
+            if (!vaultAccount) {
+              throw new Error('invalid context: drift vault account not found');
+            }
+
+            const vrtMint = (await vaultContext?.vaultReceiptTokenMint.resolveAddress())!;
+            const driftVaultTokenAccountAddress = vaultAccount.data.tokenAccount;
+            const driftVaultTokenAccountContext = new TokenAccountContext(parent, driftVaultTokenAccountAddress);
+            const driftVaultTokenAccount = await driftVaultTokenAccountContext.resolveAccount(true);
+            if (!driftVaultTokenAccount) {
+              throw new Error('invalid context: drift vault token account does not exist');
+            }
+            const supportedTokenMint = driftVaultTokenAccount.data.mint;
+
+            const ix =
+              await restaking.getFundManagerInitializeFundRestakingVaultInstructionAsync({
+                vaultAccount: vaultAccount.address,
+                vaultReceiptTokenMint: vrtMint,
+                vaultSupportedTokenMint: supportedTokenMint,
+                fundManager: createNoopSigner(fundManager),
+                receiptTokenMint: data.receiptTokenMint,
+                pricingSource: args.pricingSource as restaking.TokenPricingSourceArgs,
+                program: this.program.address,
+              });
+
+            for (const accountMeta of data.__pricingSources) {
+              ix.accounts.push(accountMeta);
+            }
+            ix.accounts.push({
+              address: args.pricingSource.address as Address,
+              role: AccountRole.READONLY,
+            });
+
+            const fundReserve = ix.accounts[3].address;
+
+            return Promise.all([
+              // *** TODO: need to be removed (drift vault does not use ATA for Token Account) ***
+              token.getCreateAssociatedTokenIdempotentInstructionAsync({
+                payer: createNoopSigner(payer as Address),
+                mint: supportedTokenMint,
+                owner: vaultAccount.address,
+                tokenProgram: token.TOKEN_PROGRAM_ADDRESS,
+              }),
+              token.getCreateAssociatedTokenIdempotentInstructionAsync({
+                payer: createNoopSigner(payer as Address),
+                mint: vrtMint,
+                owner: fundReserve,
                 tokenProgram: token.TOKEN_PROGRAM_ADDRESS,
               }),
               ix,
