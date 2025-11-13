@@ -2449,7 +2449,7 @@ describe('restaking.fragX unit test', async () => {
   /** close user accounts */
 
   // close user fund account
-  test.only('close user fund account', async () => {
+  test('close user fund account', async () => {
     const depositAmount = 1_000_000_000n; // 1 sol
 
     // user1 deposits sol
@@ -2490,6 +2490,137 @@ describe('restaking.fragX unit test', async () => {
 
     const user1FundAccount = await validator.getAccount(user1.fund.address!);
     expect(user1FundAccount).toEqual(null);
+  });
+
+  // close user reward account
+  test.only('close user reward account', async () => {
+    const depositAmount = 1_000_000_000n; // 1 sol
+
+    // user1 deposits sol
+    await user1.deposit.execute(
+      { assetAmount: depositAmount },
+      { signers: [signer1] }
+    );
+
+    // operator updates reward pools
+    await ctx.reward.updatePools.execute({});
+
+    // transaction fails because user reward account is not synced with the global reward account
+    // error message: reward: user reward account not synced
+    await expect(
+      user1.reward.closeAccount.execute({}, { signers: [signer1] })
+    ).rejects.toThrow();
+
+    // user1 updates reward pools
+    await user1.reward.updatePools.execute({});
+
+    // now transaction succeeds
+    await user1.reward.closeAccount.execute({}, { signers: [signer1] });
+
+    // 1. with non-claimable reward
+
+    const reward = await ctx.reward.resolveAccount(true);
+
+    // user1 recreates reward account
+    await user1.reward.initializeOrUpdateAccount.execute(
+      {},
+      { signers: [signer1] }
+    );
+
+    // user1 updates reward pools
+    await user1.reward.updatePools.execute({});
+
+    // mint non-claimable reward token to reward_token_reserve_account to settle
+    await validator.airdropToken(
+      reward!.data.reserveAccount,
+      'SW1TCHLmRGTfW5xZknqQdpdarB8PD95sJYWpNp9TbFx',
+      1_000_000_000n
+    );
+
+    // reward settle
+    await ctx.reward.settleReward.execute({
+      mint: 'SW1TCHLmRGTfW5xZknqQdpdarB8PD95sJYWpNp9TbFx',
+      amount: 1_000_000_000n,
+    });
+
+    // user1 updates reward pools
+    await user1.reward.updatePools.execute({});
+
+    // transaction succeeds
+    await user1.reward.closeAccount.execute(
+      { skipRevertIfClaimableRewardLeft: false },
+      { signers: [signer1] }
+    );
+
+    // 2. with claimable reward
+
+    // user1 recreates reward account
+    await user1.reward.initializeOrUpdateAccount.execute(
+      {},
+      { signers: [signer1] }
+    );
+
+    // add fake reward token
+    await ctx.reward.addReward.execute({
+      mint: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
+      decimals: 9,
+      name: 'JITO',
+      description: 'Jito Token',
+    });
+
+    // update fake reward token to claimable
+    await ctx.reward.updateReward.execute({
+      mint: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
+      claimable: true,
+    });
+
+    // mint claimable fake reward token to reward_token_reserve_account to settle
+    await validator.airdropToken(
+      reward!.data.reserveAccount,
+      'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
+      1_000_000_000n
+    );
+
+    await ctx.reward.settleReward.execute({
+      mint: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
+      amount: 1_000_000_000n,
+    });
+
+    // transaction fails because user didn't claimed total reward yet
+    // error message: reward: user not claimed total reward
+    await expect(
+      user1.reward.closeAccount.execute(
+        { skipRevertIfClaimableRewardLeft: false },
+        { signers: [signer1] }
+      )
+    ).rejects.toThrow();
+
+    // user1 claims reward
+    await user1.reward.claim.execute(
+      {
+        mint: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
+        amount: null,
+        recipient: null,
+      },
+      { signers: [signer1] }
+    );
+
+    const user1_4 = await user1.resolve(true);
+
+    // now transaction succeeds
+    await user1.reward.closeAccount.execute(
+      { skipRevertIfClaimableRewardLeft: false },
+      { signers: [signer1] }
+    );
+
+    const user1_5 = await user1.resolve(true);
+
+    expect(user1_5!.lamports).toBeGreaterThan(user1_4!.lamports);
+
+    const user1RewardAccount = await validator.getAccount(
+      user1.reward.address!
+    );
+    expect(user1RewardAccount).toEqual(null);
   });
 
   test.skip('user reward pool update fails when there are too many settlement blocks to synchronize', async () => {

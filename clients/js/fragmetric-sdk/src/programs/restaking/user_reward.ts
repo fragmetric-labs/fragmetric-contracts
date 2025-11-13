@@ -530,6 +530,48 @@ abstract class RestakingAbstractUserRewardAccountContext<
       },
     ],
   });
+
+  readonly closeAccount = new TransactionTemplateContext(
+    this,
+    v.object({
+      skipRevertIfClaimableRewardLeft: v.pipe(
+        v.nullish(v.boolean(), true),
+        v.description(
+          'whether to skip revert if claimable reward is left, default is true'
+        )
+      ),
+    }),
+    {
+      description: 'close user reward account',
+      anchorEventDecoders: getRestakingAnchorEventDecoders(
+        'userClosedRewardAccount'
+      ),
+      instructions: [
+        async (parent, args) => {
+          const [receiptTokenMint, user] = await Promise.all([
+            parent.parent.parent.resolveAddress(true),
+            parent.parent.resolveAddress(true),
+          ]);
+          if (!(receiptTokenMint && user)) throw new Error('invalid context');
+
+          return Promise.all([
+            restaking.getUserCloseRewardAccountInstructionAsync(
+              {
+                user: createNoopSigner(user),
+                receiptTokenMint,
+                skipRevertIfClaimableRewardLeft:
+                  args.skipRevertIfClaimableRewardLeft,
+                program: this.program.address,
+              },
+              {
+                programAddress: this.program.address,
+              }
+            ),
+          ]);
+        },
+      ],
+    }
+  );
 }
 
 export class RestakingUserRewardAccountContext extends RestakingAbstractUserRewardAccountContext<RestakingUserAccountContext> {

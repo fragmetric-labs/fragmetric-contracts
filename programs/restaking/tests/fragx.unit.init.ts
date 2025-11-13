@@ -443,7 +443,7 @@ export async function initializeFragX(
       }),
     // NOTE: updateReward ix test
     // () => receiptToken.reward.updateRewardTransaction.execute({
-    //   mint: 'FSWSBMV5EB7J8JdafNBLZpfSCLiFwpMCqod2RpkU4RNn',
+    //   mint: 'SW1TCHLmRGTfW5xZknqQdpdarB8PD95sJYWpNp9TbFx',
     //   newMint: 'REALSWTCH7J8JdafNBLZpfSCLiFwpMCqod2RpkU4RNn',
     //   newDecimals: 9,
     //   claimable: true,

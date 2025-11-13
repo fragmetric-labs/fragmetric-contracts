@@ -7349,6 +7349,130 @@
       "args": []
     },
     {
+      "name": "user_close_reward_account",
+      "discriminator": [
+        16,
+        26,
+        2,
+        72,
+        168,
+        122,
+        128,
+        251
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "user_reward_account"
+          ]
+        },
+        {
+          "name": "receipt_token_mint",
+          "relations": [
+            "reward_account",
+            "user_reward_account"
+          ]
+        },
+        {
+          "name": "reward_account",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  119,
+                  97,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user_reward_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  114,
+                  101,
+                  119,
+                  97,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              }
+            ]
+          }
+        },
+        {
+          "name": "event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "skip_revert_if_claimable_reward_left",
+          "type": {
+            "option": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "user_create_fund_account_idempotent",
       "discriminator": [
         18,
@@ -11689,6 +11813,19 @@
       ]
     },
     {
+      "name": "UserClosedRewardAccount",
+      "discriminator": [
+        170,
+        225,
+        119,
+        0,
+        51,
+        94,
+        4,
+        132
+      ]
+    },
+    {
       "name": "UserCreatedOrUpdatedFundAccount",
       "discriminator": [
         26,
@@ -12332,6 +12469,16 @@
       "code": 6099,
       "name": "UnexpectedPricingSourceError",
       "msg": "unexpected pricing source"
+    },
+    {
+      "code": 6100,
+      "name": "RewardUserRewardAccountNotSyncedError",
+      "msg": "reward: user reward account not synced"
+    },
+    {
+      "code": 6101,
+      "name": "RewardUserNotClaimedTotalError",
+      "msg": "reward: user not claimed total reward"
     }
   ],
   "types": [
@@ -17020,6 +17167,26 @@
           },
           {
             "name": "user_fund_account",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "UserClosedRewardAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "receipt_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "user_reward_account",
             "type": "pubkey"
           }
         ]

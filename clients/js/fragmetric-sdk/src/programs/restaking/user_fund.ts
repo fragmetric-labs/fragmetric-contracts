@@ -112,7 +112,7 @@ export class RestakingUserFundAccountContext extends AccountContext<
     instructions: [
       async (parent, args) => {
         const [receiptTokenMint, user] = await Promise.all([
-          parent.parent.parent.resolve(true),
+          parent.parent.parent.resolveAddress(true),
           parent.parent.resolveAddress(true),
         ]);
         if (!(receiptTokenMint && user)) throw new Error('invalid context');
@@ -121,8 +121,8 @@ export class RestakingUserFundAccountContext extends AccountContext<
           restaking.getUserCloseFundAccountInstructionAsync(
             {
               user: createNoopSigner(user),
+              receiptTokenMint,
               program: this.program.address,
-              receiptTokenMint: receiptTokenMint.receiptTokenMint!,
             },
             {
               programAddress: this.program.address,

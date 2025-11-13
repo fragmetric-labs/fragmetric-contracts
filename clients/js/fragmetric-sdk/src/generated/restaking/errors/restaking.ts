@@ -214,6 +214,10 @@ export const RESTAKING_ERROR__FUND_OPERATION_DISABLED_ERROR = 0x17d1; // 6097
 export const RESTAKING_ERROR__FUND_TOKEN_SWAP_STRATEGY_VALIDATION_ERROR = 0x17d2; // 6098
 /** UnexpectedPricingSourceError: unexpected pricing source */
 export const RESTAKING_ERROR__UNEXPECTED_PRICING_SOURCE_ERROR = 0x17d3; // 6099
+/** RewardUserRewardAccountNotSyncedError: reward: user reward account not synced */
+export const RESTAKING_ERROR__REWARD_USER_REWARD_ACCOUNT_NOT_SYNCED_ERROR = 0x17d4; // 6100
+/** RewardUserNotClaimedTotalError: reward: user not claimed total reward */
+export const RESTAKING_ERROR__REWARD_USER_NOT_CLAIMED_TOTAL_ERROR = 0x17d5; // 6101
 
 export type RestakingError =
   | typeof RESTAKING_ERROR__CALCULATION_ARITHMETIC_EXCEPTION
@@ -307,7 +311,9 @@ export type RestakingError =
   | typeof RESTAKING_ERROR__REWARD_POOL_CLOSE_CONDITION_ERROR
   | typeof RESTAKING_ERROR__REWARD_POOL_NOT_FOUND_ERROR
   | typeof RESTAKING_ERROR__REWARD_SETTLEMENT_NOT_FOUND_ERROR
+  | typeof RESTAKING_ERROR__REWARD_USER_NOT_CLAIMED_TOTAL_ERROR
   | typeof RESTAKING_ERROR__REWARD_USER_POOL_NOT_FOUND_ERROR
+  | typeof RESTAKING_ERROR__REWARD_USER_REWARD_ACCOUNT_NOT_SYNCED_ERROR
   | typeof RESTAKING_ERROR__STAKING_ACCOUNT_NOT_MATCHED_EXCEPTION
   | typeof RESTAKING_ERROR__STAKING_S_P_L_ACTIVE_STAKE_NOT_AVAILABLE_EXCEPTION
   | typeof RESTAKING_ERROR__STAKING_UNINITIALIZED_WITHDRAW_TICKET_NOT_FOUND_EXCEPTION
@@ -411,7 +417,9 @@ if (process.env.NODE_ENV !== 'production') {
     [RESTAKING_ERROR__REWARD_POOL_CLOSE_CONDITION_ERROR]: `reward: cannot close the reward pool`,
     [RESTAKING_ERROR__REWARD_POOL_NOT_FOUND_ERROR]: `reward: pool not found`,
     [RESTAKING_ERROR__REWARD_SETTLEMENT_NOT_FOUND_ERROR]: `reward: settlement not found`,
+    [RESTAKING_ERROR__REWARD_USER_NOT_CLAIMED_TOTAL_ERROR]: `reward: user not claimed total reward`,
     [RESTAKING_ERROR__REWARD_USER_POOL_NOT_FOUND_ERROR]: `reward: user pool not found`,
+    [RESTAKING_ERROR__REWARD_USER_REWARD_ACCOUNT_NOT_SYNCED_ERROR]: `reward: user reward account not synced`,
     [RESTAKING_ERROR__STAKING_ACCOUNT_NOT_MATCHED_EXCEPTION]: `staking: account not matched`,
     [RESTAKING_ERROR__STAKING_S_P_L_ACTIVE_STAKE_NOT_AVAILABLE_EXCEPTION]: `staking: spl stake pool's active stake not available`,
     [RESTAKING_ERROR__STAKING_UNINITIALIZED_WITHDRAW_TICKET_NOT_FOUND_EXCEPTION]: `staking: failed to find uninitialized withdraw ticket`,
