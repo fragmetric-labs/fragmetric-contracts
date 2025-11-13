@@ -81,7 +81,7 @@ export function initializeFragUSD(testCtx: TestSuiteContext) {
     () =>
       ctx.fund.initializeWrappedToken.execute({
         mint: '6HdgTPBRV8KvdP6qy3S81ZFBHyTWmozg7ENy1GCrRyfc',
-      }),  
+      }),
     () =>
       ctx.fund.addRestakingVault.execute({
         vault: 'CoHd9JpwfcA76XQGA4AYfnjvAtWKoBQ6eWBkFzR1A2ui', // TODO: This address need to be replaced

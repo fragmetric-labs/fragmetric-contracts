@@ -23,11 +23,11 @@ import {
   TransactionTemplateContext,
   transformAddressResolverVariant,
 } from '../../context';
+import * as driftVault from '../../generated/drift_vault';
 import * as jitoRestaking from '../../generated/jito_restaking';
 import * as jitoVault from '../../generated/jito_vault';
 import * as restaking from '../../generated/restaking';
 import * as solv from '../../generated/solv';
-import * as driftVault from '../../generated/drift_vault';
 import { SolvBTCVaultProgram } from '../solv';
 import { SolvVaultAccountContext } from '../solv/vault';
 import { getRestakingAnchorEventDecoders } from './events';
@@ -38,9 +38,9 @@ import { RestakingFundWithdrawalBatchAccountContext } from './fund_withdrawal_ba
 import { RestakingFundWrapAccountContext } from './fund_wrap';
 import { RestakingProgram } from './program';
 import { RestakingReceiptTokenMintAccountContext } from './receipt_token_mint';
+import { DriftVaultAccountContext } from './restaking_vault_drift';
 import { JitoVaultAccountContext } from './restaking_vault_jito';
 import { VirtualVaultAccountContext } from './restaking_vault_virtual';
-import { DriftVaultAccountContext } from './restaking_vault_drift';
 
 export class RestakingFundAccountContext extends AccountContext<
   RestakingReceiptTokenMintAccountContext,
@@ -1381,6 +1381,13 @@ export class RestakingFundAccountContext extends AccountContext<
               throw new Error('invalid context: jito vault account not found');
             }
 
+            const [vaultVaultSupportedTokenAccountAddress] =
+              await token.findAssociatedTokenPda({
+                mint: vaultAccount.data.supportedMint,
+                owner: vaultAccount.address,
+                tokenProgram: token.TOKEN_PROGRAM_ADDRESS,
+              });
+
             const ix =
               await restaking.getFundManagerInitializeFundRestakingVaultInstructionAsync(
                 {
@@ -1392,6 +1399,8 @@ export class RestakingFundAccountContext extends AccountContext<
                   pricingSource:
                     args.pricingSource as restaking.TokenPricingSourceArgs,
                   program: this.program.address,
+                  vaultVaultSupportedTokenAccount:
+                    vaultVaultSupportedTokenAccountAddress,
                 },
                 {
                   programAddress: this.program.address,
@@ -1459,6 +1468,13 @@ export class RestakingFundAccountContext extends AccountContext<
               throw new Error('invalid context: solv vault account not found');
             }
 
+            const [vaultVaultSupportedTokenAccountAddress] =
+              await token.findAssociatedTokenPda({
+                mint: vaultAccount.data.vaultSupportedTokenMint,
+                owner: vaultAccount.address,
+                tokenProgram: token.TOKEN_PROGRAM_ADDRESS,
+              });
+
             const ix =
               await restaking.getFundManagerInitializeFundRestakingVaultInstructionAsync(
                 {
@@ -1472,6 +1488,8 @@ export class RestakingFundAccountContext extends AccountContext<
                   pricingSource:
                     args.pricingSource as restaking.TokenPricingSourceArgs,
                   program: this.program.address,
+                  vaultVaultSupportedTokenAccount:
+                    vaultVaultSupportedTokenAccountAddress,
                 },
                 {
                   programAddress: this.program.address,
@@ -1539,6 +1557,13 @@ export class RestakingFundAccountContext extends AccountContext<
               );
             }
 
+            const [vaultVaultSupportedTokenAccountAddress] =
+              await token.findAssociatedTokenPda({
+                mint: vrtMint,
+                owner: vault,
+                tokenProgram: token.TOKEN_PROGRAM_ADDRESS,
+              });
+
             const ix =
               await restaking.getFundManagerInitializeFundRestakingVaultInstructionAsync(
                 {
@@ -1550,6 +1575,8 @@ export class RestakingFundAccountContext extends AccountContext<
                   pricingSource:
                     args.pricingSource as restaking.TokenPricingSourceArgs,
                   program: this.program.address,
+                  vaultVaultSupportedTokenAccount:
+                    vaultVaultSupportedTokenAccountAddress,
                 },
                 {
                   programAddress: this.program.address,
@@ -1592,10 +1619,14 @@ export class RestakingFundAccountContext extends AccountContext<
           } else if (args.pricingSource.__kind == 'DriftVault') {
             const vaultContext = parent.restakingVault(
               args.vault,
-              driftVault.DRIFT_VAULTS_PROGRAM_ADDRESS,
+              driftVault.DRIFT_VAULTS_PROGRAM_ADDRESS
             );
 
-            if (!(vaultContext && vaultContext instanceof DriftVaultAccountContext)) {
+            if (
+              !(
+                vaultContext && vaultContext instanceof DriftVaultAccountContext
+              )
+            ) {
               throw new Error('invalid context: drift vault not found');
             }
             const vaultAccount = await vaultContext?.resolveAccount(true);
@@ -1603,25 +1634,47 @@ export class RestakingFundAccountContext extends AccountContext<
               throw new Error('invalid context: drift vault account not found');
             }
 
-            const vrtMint = (await vaultContext?.vaultReceiptTokenMint.resolveAddress())!;
-            const driftVaultTokenAccountAddress = vaultAccount.data.tokenAccount;
-            const driftVaultTokenAccountContext = new TokenAccountContext(parent, driftVaultTokenAccountAddress);
-            const driftVaultTokenAccount = await driftVaultTokenAccountContext.resolveAccount(true);
+            const vrtMint =
+              (await vaultContext?.vaultReceiptTokenMint.resolveAddress())!;
+            const driftVaultTokenAccountAddress =
+              vaultAccount.data.tokenAccount;
+            const driftVaultTokenAccountContext = new TokenAccountContext(
+              parent,
+              driftVaultTokenAccountAddress
+            );
+            const driftVaultTokenAccount =
+              await driftVaultTokenAccountContext.resolveAccount(true);
             if (!driftVaultTokenAccount) {
-              throw new Error('invalid context: drift vault token account does not exist');
+              throw new Error(
+                'invalid context: drift vault token account does not exist'
+              );
             }
             const supportedTokenMint = driftVaultTokenAccount.data.mint;
 
-            const ix =
-              await restaking.getFundManagerInitializeFundRestakingVaultInstructionAsync({
-                vaultAccount: vaultAccount.address,
-                vaultReceiptTokenMint: vrtMint,
-                vaultSupportedTokenMint: supportedTokenMint,
-                fundManager: createNoopSigner(fundManager),
-                receiptTokenMint: data.receiptTokenMint,
-                pricingSource: args.pricingSource as restaking.TokenPricingSourceArgs,
-                program: this.program.address,
+            const [vaultVaultSupportedTokenAccount] =
+              await getProgramDerivedAddress({
+                programAddress: driftVault.DRIFT_VAULTS_PROGRAM_ADDRESS,
+                seeds: [
+                  getBytesEncoder().encode(Buffer.from('vault_token_account')),
+                  getAddressEncoder().encode(vaultAccount.address),
+                ],
               });
+
+            const ix =
+              await restaking.getFundManagerInitializeFundRestakingVaultInstructionAsync(
+                {
+                  vaultAccount: vaultAccount.address,
+                  vaultReceiptTokenMint: vrtMint,
+                  vaultSupportedTokenMint: supportedTokenMint,
+                  fundManager: createNoopSigner(fundManager),
+                  receiptTokenMint: data.receiptTokenMint,
+                  pricingSource:
+                    args.pricingSource as restaking.TokenPricingSourceArgs,
+                  program: this.program.address,
+                  vaultVaultSupportedTokenAccount:
+                    vaultVaultSupportedTokenAccount,
+                }
+              );
 
             for (const accountMeta of data.__pricingSources) {
               ix.accounts.push(accountMeta);

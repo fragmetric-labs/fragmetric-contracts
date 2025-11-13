@@ -54,9 +54,9 @@ pub struct FundManagerFundRestakingVaultInitialContext<'info> {
     pub fund_vault_supported_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
-        associated_token::mint = vault_supported_token_mint,
-        associated_token::authority = vault_account,
-        associated_token::token_program = Token::id(),
+        constraint = vault_vault_supported_token_account.mint == vault_supported_token_mint.key(),
+        constraint = vault_vault_supported_token_account.owner == vault_account.key(),
+        owner = Token::id(),
     )]
     pub vault_vault_supported_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 }
