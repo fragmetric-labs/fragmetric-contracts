@@ -54,6 +54,12 @@ const codegenConfig: {
       javascript: true,
       visitors: [jitoProgramsVisitor],
     },
+    'fragmetric-sdk/src/generated/drift_vault': {
+      idlFilePath: './idls/drift_vault.json',
+      rust: false,
+      javascript: true,
+      visitors: [anchorTransformEventsToAccountsVisitor],
+    },
   },
 };
 

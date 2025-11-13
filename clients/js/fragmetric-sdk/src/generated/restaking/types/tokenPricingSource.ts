@@ -33,7 +33,8 @@ export type TokenPricingSource =
   | { __kind: 'PeggedToken'; address: Address }
   | { __kind: 'SolvBTCVault'; address: Address }
   | { __kind: 'SanctumMultiValidatorSPLStakePool'; address: Address }
-  | { __kind: 'VirtualVault'; address: Address };
+  | { __kind: 'VirtualVault'; address: Address }
+  | { __kind: 'DriftVault'; address: Address };
 
 export type TokenPricingSourceArgs = TokenPricingSource;
 
@@ -68,6 +69,7 @@ export function getTokenPricingSourceEncoder(): FixedSizeEncoder<TokenPricingSou
       getStructEncoder([['address', getAddressEncoder()]]),
     ],
     ['VirtualVault', getStructEncoder([['address', getAddressEncoder()]])],
+    ['DriftVault', getStructEncoder([['address', getAddressEncoder()]])],
   ]) as FixedSizeEncoder<TokenPricingSourceArgs>;
 }
 
@@ -102,6 +104,7 @@ export function getTokenPricingSourceDecoder(): FixedSizeDecoder<TokenPricingSou
       getStructDecoder([['address', getAddressDecoder()]]),
     ],
     ['VirtualVault', getStructDecoder([['address', getAddressDecoder()]])],
+    ['DriftVault', getStructDecoder([['address', getAddressDecoder()]])],
   ]) as FixedSizeDecoder<TokenPricingSource>;
 }
 
@@ -248,6 +251,14 @@ export function tokenPricingSource(
   '__kind',
   'VirtualVault'
 >;
+export function tokenPricingSource(
+  kind: 'DriftVault',
+  data: GetDiscriminatedUnionVariantContent<
+    TokenPricingSourceArgs,
+    '__kind',
+    'DriftVault'
+  >
+): GetDiscriminatedUnionVariant<TokenPricingSourceArgs, '__kind', 'DriftVault'>;
 export function tokenPricingSource<
   K extends TokenPricingSourceArgs['__kind'],
   Data,

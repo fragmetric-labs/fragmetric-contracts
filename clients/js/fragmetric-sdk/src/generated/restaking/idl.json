@@ -2,7 +2,7 @@
   "address": "4qEHCzsLFUnw8jmhmRSmAK5VhZVoSD1iVqukAf92yHi5",
   "metadata": {
     "name": "restaking",
-    "version": "0.7.1",
+    "version": "0.7.2",
     "spec": "0.1.0",
     "description": "Fragmetric Liquid Restaking Program",
     "repository": "https://github.com/fragmetric-labs/contracts"
@@ -16222,6 +16222,15 @@
           },
           {
             "name": "VirtualVault",
+            "fields": [
+              {
+                "name": "address",
+                "type": "pubkey"
+              }
+            ]
+          },
+          {
+            "name": "DriftVault",
             "fields": [
               {
                 "name": "address",
