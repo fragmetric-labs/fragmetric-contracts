@@ -548,17 +548,28 @@ abstract class RestakingAbstractUserRewardAccountContext<
       ),
       instructions: [
         async (parent, args) => {
-          const [receiptTokenMint, user] = await Promise.all([
+          const [receiptTokenMint, userAddress] = await Promise.all([
             parent.parent.parent.resolveAddress(true),
             parent.parent.resolveAddress(true),
           ]);
-          if (!(receiptTokenMint && user)) throw new Error('invalid context');
+          if (!(receiptTokenMint && userAddress))
+            throw new Error('invalid context');
+
+          const ix =
+            await token.getCreateAssociatedTokenIdempotentInstructionAsync({
+              payer: createNoopSigner(userAddress),
+              mint: receiptTokenMint,
+              owner: userAddress,
+              tokenProgram: token2022.TOKEN_2022_PROGRAM_ADDRESS,
+            });
+          const userReceiptTokenAccountAddress = ix.accounts[1].address;
 
           return Promise.all([
             restaking.getUserCloseRewardAccountInstructionAsync(
               {
-                user: createNoopSigner(user),
+                user: createNoopSigner(userAddress),
                 receiptTokenMint,
+                userReceiptTokenAccount: userReceiptTokenAccountAddress,
                 skipRevertIfClaimableRewardLeft:
                   args.skipRevertIfClaimableRewardLeft,
                 program: this.program.address,

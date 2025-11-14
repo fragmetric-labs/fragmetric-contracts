@@ -7377,7 +7377,11 @@
           ]
         },
         {
+          "name": "user_receipt_token_account"
+        },
+        {
           "name": "reward_account",
+          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -12472,11 +12476,21 @@
     },
     {
       "code": 6100,
+      "name": "UnexpectedAssociatedTokenAccountAddressException",
+      "msg": "unexpected associated token account address"
+    },
+    {
+      "code": 6101,
+      "name": "RewardUserTokenAccountNotInitializedException",
+      "msg": "reward: user token account not initialized"
+    },
+    {
+      "code": 6102,
       "name": "RewardUserRewardAccountNotSyncedError",
       "msg": "reward: user reward account not synced"
     },
     {
-      "code": 6101,
+      "code": 6103,
       "name": "RewardUserNotClaimedTotalError",
       "msg": "reward: user not claimed total reward"
     }
