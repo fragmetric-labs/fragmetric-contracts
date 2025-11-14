@@ -179,7 +179,7 @@ pub mod restaking {
     ) -> Result<()> {
         let event = modules::reward::UserRewardConfigurationService::new(
             &ctx.accounts.receipt_token_mint,
-            &ctx.accounts.user_receipt_token_account,
+            ctx.accounts.user_receipt_token_account.as_account_info(),
             &ctx.accounts.reward_account,
             ctx.accounts.user_reward_account.as_account_info(),
         )?
@@ -1345,7 +1345,7 @@ pub mod restaking {
     ) -> Result<()> {
         let event = modules::reward::UserRewardConfigurationService::new(
             &ctx.accounts.receipt_token_mint,
-            &ctx.accounts.user_receipt_token_account,
+            ctx.accounts.user_receipt_token_account.as_account_info(),
             &ctx.accounts.reward_account,
             ctx.accounts.user_reward_account.as_account_info(),
         )?
@@ -1423,7 +1423,7 @@ pub mod restaking {
     ) -> Result<()> {
         emit_cpi!(modules::reward::UserRewardConfigurationService::new(
             &ctx.accounts.receipt_token_mint,
-            &ctx.accounts.user_receipt_token_account,
+            ctx.accounts.user_receipt_token_account.as_account_info(),
             &ctx.accounts.reward_account,
             ctx.accounts.user_reward_account.as_account_info(),
         )?
@@ -1440,15 +1440,16 @@ pub mod restaking {
         ctx: Context<UserRewardAccountCloseContext>,
         skip_revert_if_claimable_reward_left: Option<bool>,
     ) -> Result<()> {
-        emit_cpi!(
-            modules::reward::UserRewardConfigurationService::process_close_user_reward_account(
-                &ctx.accounts.reward_account,
-                &ctx.accounts.user_reward_account,
-                &ctx.accounts.user,
-                ctx.accounts.receipt_token_mint.key(),
-                skip_revert_if_claimable_reward_left
-            )?
-        );
+        emit_cpi!(modules::reward::UserRewardConfigurationService::new(
+            &ctx.accounts.receipt_token_mint,
+            ctx.accounts.user_receipt_token_account.as_account_info(),
+            &ctx.accounts.reward_account,
+            ctx.accounts.user_reward_account.as_account_info(),
+        )?
+        .process_close_user_reward_account(
+            &ctx.accounts.user,
+            skip_revert_if_claimable_reward_left
+        )?);
 
         Ok(())
     }

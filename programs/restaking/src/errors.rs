@@ -309,6 +309,12 @@ pub enum ErrorCode {
     #[msg("unexpected pricing source")]
     UnexpectedPricingSourceError,
 
+    #[msg("unexpected associated token account address")]
+    UnexpectedAssociatedTokenAccountAddressException,
+
+    #[msg("reward: user token account not initialized")]
+    RewardUserTokenAccountNotInitializedException,
+
     #[msg("reward: user reward account not synced")]
     RewardUserRewardAccountNotSyncedError,
 
