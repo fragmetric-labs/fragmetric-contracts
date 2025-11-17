@@ -23,7 +23,7 @@ pub struct UserFundAccount {
     _reserved: [u8; 32],
 
     #[max_len(USER_FUND_ACCOUNT_MAX_WITHDRAWAL_REQUESTS_SIZE)]
-    pub(super) withdrawal_requests: Vec<WithdrawalRequest>,
+    withdrawal_requests: Vec<WithdrawalRequest>,
 }
 
 impl PDASeeds<4> for UserFundAccount {
@@ -141,6 +141,10 @@ impl UserFundAccount {
             })
             .ok_or_else(|| error!(ErrorCode::FundWithdrawalRequestNotFoundError))?;
         Ok(self.withdrawal_requests.remove(index))
+    }
+
+    pub(super) fn is_withdrawal_requests_empty(&self) -> bool {
+        self.withdrawal_requests.len() == 0
     }
 }
 

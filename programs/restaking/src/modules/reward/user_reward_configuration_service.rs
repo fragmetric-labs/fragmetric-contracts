@@ -225,7 +225,10 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
             }
         }
 
-        // user should claim total reward before close
+        // Even though user has unclaimed reward amount left,
+        // user still could close the user_reward_account.
+        // If user doesn't want to close user_reward_account
+        // if he/she has unclaimed reward left, then check about it.
         if matches!(skip_revert_if_claimable_reward_left, Some(false)) {
             for user_reward_pool in user_reward_account.get_user_reward_pools_iter() {
                 for user_reward_settlement in user_reward_pool.get_reward_settlements_iter() {
@@ -237,7 +240,7 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
                             < user_reward_settlement.total_settled_amount;
 
                     if has_unclaimed_reward {
-                        return err!(errors::ErrorCode::RewardUserNotClaimedTotalError);
+                        return err!(errors::ErrorCode::RewardUserNotClaimedTotalRewardError);
                     }
                 }
             }
@@ -246,7 +249,7 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
         drop(user_reward_account);
         drop(reward_account);
 
-        // drop reward token_allocated_amount from user_reward_account and reward_account
+        // deduct reward token_allocated_amount from user_reward_account and reward_account
         RewardService::new(self.receipt_token_mint, self.reward_account)?
             .update_reward_pools_token_allocation(
                 Some(&user_reward_account_loader),

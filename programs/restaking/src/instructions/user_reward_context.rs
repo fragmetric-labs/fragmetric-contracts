@@ -180,7 +180,7 @@ pub struct UserRewardAccountCloseContext<'info> {
                 user.key,
                 &receipt_token_mint.key(),
                 &Token2022::id()
-            ) @ ErrorCode::UnexpectedAssociatedTokenAccountAddressException,
+            ) @ error::ErrorCode::AccountNotAssociatedTokenAccount,
     )]
     pub user_receipt_token_account: UncheckedAccount<'info>,
 

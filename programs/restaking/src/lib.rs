@@ -1324,13 +1324,11 @@ pub mod restaking {
     ////////////////////////////////////////////
 
     pub fn user_close_fund_account(ctx: Context<UserFundAccountCloseContext>) -> Result<()> {
-        emit_cpi!(
-            modules::fund::UserFundConfigurationService::process_close_user_fund_account(
-                &mut ctx.accounts.user_fund_account,
-                &ctx.accounts.user,
-                ctx.accounts.receipt_token_mint.key(),
-            )?
-        );
+        emit_cpi!(modules::fund::UserFundConfigurationService::new(
+            &ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.user_fund_account
+        )?
+        .process_close_user_fund_account(&ctx.accounts.user)?);
 
         Ok(())
     }

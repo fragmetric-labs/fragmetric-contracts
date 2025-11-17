@@ -12476,22 +12476,17 @@
     },
     {
       "code": 6100,
-      "name": "UnexpectedAssociatedTokenAccountAddressException",
-      "msg": "unexpected associated token account address"
-    },
-    {
-      "code": 6101,
       "name": "RewardUserTokenAccountNotInitializedException",
       "msg": "reward: user token account not initialized"
     },
     {
-      "code": 6102,
+      "code": 6101,
       "name": "RewardUserRewardAccountNotSyncedError",
       "msg": "reward: user reward account not synced"
     },
     {
-      "code": 6103,
-      "name": "RewardUserNotClaimedTotalError",
+      "code": 6102,
+      "name": "RewardUserNotClaimedTotalRewardError",
       "msg": "reward: user not claimed total reward"
     }
   ],

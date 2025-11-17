@@ -214,14 +214,12 @@ export const RESTAKING_ERROR__FUND_OPERATION_DISABLED_ERROR = 0x17d1; // 6097
 export const RESTAKING_ERROR__FUND_TOKEN_SWAP_STRATEGY_VALIDATION_ERROR = 0x17d2; // 6098
 /** UnexpectedPricingSourceError: unexpected pricing source */
 export const RESTAKING_ERROR__UNEXPECTED_PRICING_SOURCE_ERROR = 0x17d3; // 6099
-/** UnexpectedAssociatedTokenAccountAddressException: unexpected associated token account address */
-export const RESTAKING_ERROR__UNEXPECTED_ASSOCIATED_TOKEN_ACCOUNT_ADDRESS_EXCEPTION = 0x17d4; // 6100
 /** RewardUserTokenAccountNotInitializedException: reward: user token account not initialized */
-export const RESTAKING_ERROR__REWARD_USER_TOKEN_ACCOUNT_NOT_INITIALIZED_EXCEPTION = 0x17d5; // 6101
+export const RESTAKING_ERROR__REWARD_USER_TOKEN_ACCOUNT_NOT_INITIALIZED_EXCEPTION = 0x17d4; // 6100
 /** RewardUserRewardAccountNotSyncedError: reward: user reward account not synced */
-export const RESTAKING_ERROR__REWARD_USER_REWARD_ACCOUNT_NOT_SYNCED_ERROR = 0x17d6; // 6102
-/** RewardUserNotClaimedTotalError: reward: user not claimed total reward */
-export const RESTAKING_ERROR__REWARD_USER_NOT_CLAIMED_TOTAL_ERROR = 0x17d7; // 6103
+export const RESTAKING_ERROR__REWARD_USER_REWARD_ACCOUNT_NOT_SYNCED_ERROR = 0x17d5; // 6101
+/** RewardUserNotClaimedTotalRewardError: reward: user not claimed total reward */
+export const RESTAKING_ERROR__REWARD_USER_NOT_CLAIMED_TOTAL_REWARD_ERROR = 0x17d6; // 6102
 
 export type RestakingError =
   | typeof RESTAKING_ERROR__CALCULATION_ARITHMETIC_EXCEPTION
@@ -315,7 +313,7 @@ export type RestakingError =
   | typeof RESTAKING_ERROR__REWARD_POOL_CLOSE_CONDITION_ERROR
   | typeof RESTAKING_ERROR__REWARD_POOL_NOT_FOUND_ERROR
   | typeof RESTAKING_ERROR__REWARD_SETTLEMENT_NOT_FOUND_ERROR
-  | typeof RESTAKING_ERROR__REWARD_USER_NOT_CLAIMED_TOTAL_ERROR
+  | typeof RESTAKING_ERROR__REWARD_USER_NOT_CLAIMED_TOTAL_REWARD_ERROR
   | typeof RESTAKING_ERROR__REWARD_USER_POOL_NOT_FOUND_ERROR
   | typeof RESTAKING_ERROR__REWARD_USER_REWARD_ACCOUNT_NOT_SYNCED_ERROR
   | typeof RESTAKING_ERROR__REWARD_USER_TOKEN_ACCOUNT_NOT_INITIALIZED_EXCEPTION
@@ -325,7 +323,6 @@ export type RestakingError =
   | typeof RESTAKING_ERROR__TOKEN_NOT_TRANSFERABLE_ERROR
   | typeof RESTAKING_ERROR__TOKEN_NOT_TRANSFERRING_EXCEPTION
   | typeof RESTAKING_ERROR__TOKEN_PRICING_SOURCE_ACCOUNT_NOT_FOUND_ERROR
-  | typeof RESTAKING_ERROR__UNEXPECTED_ASSOCIATED_TOKEN_ACCOUNT_ADDRESS_EXCEPTION
   | typeof RESTAKING_ERROR__UNEXPECTED_PRICING_SOURCE_ERROR
   | typeof RESTAKING_ERROR__U_T_F8_DECODING_EXCEPTION;
 
@@ -423,7 +420,7 @@ if (process.env.NODE_ENV !== 'production') {
     [RESTAKING_ERROR__REWARD_POOL_CLOSE_CONDITION_ERROR]: `reward: cannot close the reward pool`,
     [RESTAKING_ERROR__REWARD_POOL_NOT_FOUND_ERROR]: `reward: pool not found`,
     [RESTAKING_ERROR__REWARD_SETTLEMENT_NOT_FOUND_ERROR]: `reward: settlement not found`,
-    [RESTAKING_ERROR__REWARD_USER_NOT_CLAIMED_TOTAL_ERROR]: `reward: user not claimed total reward`,
+    [RESTAKING_ERROR__REWARD_USER_NOT_CLAIMED_TOTAL_REWARD_ERROR]: `reward: user not claimed total reward`,
     [RESTAKING_ERROR__REWARD_USER_POOL_NOT_FOUND_ERROR]: `reward: user pool not found`,
     [RESTAKING_ERROR__REWARD_USER_REWARD_ACCOUNT_NOT_SYNCED_ERROR]: `reward: user reward account not synced`,
     [RESTAKING_ERROR__REWARD_USER_TOKEN_ACCOUNT_NOT_INITIALIZED_EXCEPTION]: `reward: user token account not initialized`,
@@ -433,7 +430,6 @@ if (process.env.NODE_ENV !== 'production') {
     [RESTAKING_ERROR__TOKEN_NOT_TRANSFERABLE_ERROR]: `token is not transferable currently`,
     [RESTAKING_ERROR__TOKEN_NOT_TRANSFERRING_EXCEPTION]: `token is not transferring currently`,
     [RESTAKING_ERROR__TOKEN_PRICING_SOURCE_ACCOUNT_NOT_FOUND_ERROR]: `pricing: token pricing source is not found`,
-    [RESTAKING_ERROR__UNEXPECTED_ASSOCIATED_TOKEN_ACCOUNT_ADDRESS_EXCEPTION]: `unexpected associated token account address`,
     [RESTAKING_ERROR__UNEXPECTED_PRICING_SOURCE_ERROR]: `unexpected pricing source`,
     [RESTAKING_ERROR__U_T_F8_DECODING_EXCEPTION]: `utf-8 decoding exception`,
   };

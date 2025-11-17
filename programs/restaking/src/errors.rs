@@ -309,9 +309,6 @@ pub enum ErrorCode {
     #[msg("unexpected pricing source")]
     UnexpectedPricingSourceError,
 
-    #[msg("unexpected associated token account address")]
-    UnexpectedAssociatedTokenAccountAddressException,
-
     #[msg("reward: user token account not initialized")]
     RewardUserTokenAccountNotInitializedException,
 
@@ -319,5 +316,5 @@ pub enum ErrorCode {
     RewardUserRewardAccountNotSyncedError,
 
     #[msg("reward: user not claimed total reward")]
-    RewardUserNotClaimedTotalError,
+    RewardUserNotClaimedTotalRewardError,
 }
