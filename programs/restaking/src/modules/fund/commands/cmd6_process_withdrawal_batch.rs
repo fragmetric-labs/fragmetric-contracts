@@ -219,10 +219,10 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
                             | Some(TokenPricingSource::FragmetricRestakingFund { .. })
                             | Some(TokenPricingSource::SolvBTCVault { .. })
                             | Some(TokenPricingSource::VirtualVault { .. })
-                            | Some(TokenPricingSource::DriftVault { .. }) => todo!(),
-                            None => err!(
+                            | None => err!(
                                 errors::ErrorCode::FundOperationCommandExecutionFailedException
                             ),
+                            Some(TokenPricingSource::DriftVault { .. }) => todo!(),
                             #[cfg(all(test, not(feature = "idl-build")))]
                             Some(TokenPricingSource::Mock { .. }) => err!(
                                 errors::ErrorCode::FundOperationCommandExecutionFailedException
