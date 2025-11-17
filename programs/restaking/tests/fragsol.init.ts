@@ -393,7 +393,7 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
       }),
     () =>
       ctx.reward.addReward.execute({
-        mint: 'FSWSBMV5EB7J8JdafNBLZpfSCLiFwpMCqod2RpkU4RNn',
+        mint: 'SW1TCHLmRGTfW5xZknqQdpdarB8PD95sJYWpNp9TbFx',
         decimals: 9,
         name: 'SWTCH',
         description: 'Switchboard Token',
@@ -405,16 +405,9 @@ export function initializeFragSOL(testCtx: TestSuiteContext) {
         amount: 0n,
         isBonus: true,
       }),
-    // NOTE: updateReward ix test
-    // () => receiptToken.reward.updateRewardTransaction.execute({
-    //   mint: 'FSWSBMV5EB7J8JdafNBLZpfSCLiFwpMCqod2RpkU4RNn',
-    //   newMint: 'REALSWTCH7J8JdafNBLZpfSCLiFwpMCqod2RpkU4RNn',
-    //   newDecimals: 9,
-    //   claimable: true,
-    // }),
     () =>
       ctx.reward.settleReward.execute({
-        mint: 'FSWSBMV5EB7J8JdafNBLZpfSCLiFwpMCqod2RpkU4RNn',
+        mint: 'SW1TCHLmRGTfW5xZknqQdpdarB8PD95sJYWpNp9TbFx',
         amount: 0n,
       }),
 
