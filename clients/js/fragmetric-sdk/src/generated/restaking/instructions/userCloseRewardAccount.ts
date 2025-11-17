@@ -96,11 +96,11 @@ export type UserCloseRewardAccountInstruction<
 
 export type UserCloseRewardAccountInstructionData = {
   discriminator: ReadonlyUint8Array;
-  skipRevertIfClaimableRewardLeft: Option<boolean>;
+  forceCloseIfClaimableRewardLeft: Option<boolean>;
 };
 
 export type UserCloseRewardAccountInstructionDataArgs = {
-  skipRevertIfClaimableRewardLeft: OptionOrNullable<boolean>;
+  forceCloseIfClaimableRewardLeft: OptionOrNullable<boolean>;
 };
 
 export function getUserCloseRewardAccountInstructionDataEncoder(): Encoder<UserCloseRewardAccountInstructionDataArgs> {
@@ -108,7 +108,7 @@ export function getUserCloseRewardAccountInstructionDataEncoder(): Encoder<UserC
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
       [
-        'skipRevertIfClaimableRewardLeft',
+        'forceCloseIfClaimableRewardLeft',
         getOptionEncoder(getBooleanEncoder()),
       ],
     ]),
@@ -122,7 +122,7 @@ export function getUserCloseRewardAccountInstructionDataEncoder(): Encoder<UserC
 export function getUserCloseRewardAccountInstructionDataDecoder(): Decoder<UserCloseRewardAccountInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
-    ['skipRevertIfClaimableRewardLeft', getOptionDecoder(getBooleanDecoder())],
+    ['forceCloseIfClaimableRewardLeft', getOptionDecoder(getBooleanDecoder())],
   ]);
 }
 
@@ -152,7 +152,7 @@ export type UserCloseRewardAccountAsyncInput<
   userRewardAccount?: Address<TAccountUserRewardAccount>;
   eventAuthority?: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
-  skipRevertIfClaimableRewardLeft: UserCloseRewardAccountInstructionDataArgs['skipRevertIfClaimableRewardLeft'];
+  forceCloseIfClaimableRewardLeft: UserCloseRewardAccountInstructionDataArgs['forceCloseIfClaimableRewardLeft'];
 };
 
 export async function getUserCloseRewardAccountInstructionAsync<
@@ -300,7 +300,7 @@ export type UserCloseRewardAccountInput<
   userRewardAccount: Address<TAccountUserRewardAccount>;
   eventAuthority: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
-  skipRevertIfClaimableRewardLeft: UserCloseRewardAccountInstructionDataArgs['skipRevertIfClaimableRewardLeft'];
+  forceCloseIfClaimableRewardLeft: UserCloseRewardAccountInstructionDataArgs['forceCloseIfClaimableRewardLeft'];
 };
 
 export function getUserCloseRewardAccountInstruction<

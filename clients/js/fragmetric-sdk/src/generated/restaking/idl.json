@@ -7469,7 +7469,7 @@
       ],
       "args": [
         {
-          "name": "skip_revert_if_claimable_reward_left",
+          "name": "force_close_if_claimable_reward_left",
           "type": {
             "option": "bool"
           }
@@ -12476,7 +12476,7 @@
     },
     {
       "code": 6100,
-      "name": "RewardUserTokenAccountNotInitializedException",
+      "name": "RewardUserTokenAccountNotInitializedError",
       "msg": "reward: user token account not initialized"
     },
     {

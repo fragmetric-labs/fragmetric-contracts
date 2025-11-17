@@ -214,8 +214,8 @@ export const RESTAKING_ERROR__FUND_OPERATION_DISABLED_ERROR = 0x17d1; // 6097
 export const RESTAKING_ERROR__FUND_TOKEN_SWAP_STRATEGY_VALIDATION_ERROR = 0x17d2; // 6098
 /** UnexpectedPricingSourceError: unexpected pricing source */
 export const RESTAKING_ERROR__UNEXPECTED_PRICING_SOURCE_ERROR = 0x17d3; // 6099
-/** RewardUserTokenAccountNotInitializedException: reward: user token account not initialized */
-export const RESTAKING_ERROR__REWARD_USER_TOKEN_ACCOUNT_NOT_INITIALIZED_EXCEPTION = 0x17d4; // 6100
+/** RewardUserTokenAccountNotInitializedError: reward: user token account not initialized */
+export const RESTAKING_ERROR__REWARD_USER_TOKEN_ACCOUNT_NOT_INITIALIZED_ERROR = 0x17d4; // 6100
 /** RewardUserRewardAccountNotSyncedError: reward: user reward account not synced */
 export const RESTAKING_ERROR__REWARD_USER_REWARD_ACCOUNT_NOT_SYNCED_ERROR = 0x17d5; // 6101
 /** RewardUserNotClaimedTotalRewardError: reward: user not claimed total reward */
@@ -316,7 +316,7 @@ export type RestakingError =
   | typeof RESTAKING_ERROR__REWARD_USER_NOT_CLAIMED_TOTAL_REWARD_ERROR
   | typeof RESTAKING_ERROR__REWARD_USER_POOL_NOT_FOUND_ERROR
   | typeof RESTAKING_ERROR__REWARD_USER_REWARD_ACCOUNT_NOT_SYNCED_ERROR
-  | typeof RESTAKING_ERROR__REWARD_USER_TOKEN_ACCOUNT_NOT_INITIALIZED_EXCEPTION
+  | typeof RESTAKING_ERROR__REWARD_USER_TOKEN_ACCOUNT_NOT_INITIALIZED_ERROR
   | typeof RESTAKING_ERROR__STAKING_ACCOUNT_NOT_MATCHED_EXCEPTION
   | typeof RESTAKING_ERROR__STAKING_S_P_L_ACTIVE_STAKE_NOT_AVAILABLE_EXCEPTION
   | typeof RESTAKING_ERROR__STAKING_UNINITIALIZED_WITHDRAW_TICKET_NOT_FOUND_EXCEPTION
@@ -423,7 +423,7 @@ if (process.env.NODE_ENV !== 'production') {
     [RESTAKING_ERROR__REWARD_USER_NOT_CLAIMED_TOTAL_REWARD_ERROR]: `reward: user not claimed total reward`,
     [RESTAKING_ERROR__REWARD_USER_POOL_NOT_FOUND_ERROR]: `reward: user pool not found`,
     [RESTAKING_ERROR__REWARD_USER_REWARD_ACCOUNT_NOT_SYNCED_ERROR]: `reward: user reward account not synced`,
-    [RESTAKING_ERROR__REWARD_USER_TOKEN_ACCOUNT_NOT_INITIALIZED_EXCEPTION]: `reward: user token account not initialized`,
+    [RESTAKING_ERROR__REWARD_USER_TOKEN_ACCOUNT_NOT_INITIALIZED_ERROR]: `reward: user token account not initialized`,
     [RESTAKING_ERROR__STAKING_ACCOUNT_NOT_MATCHED_EXCEPTION]: `staking: account not matched`,
     [RESTAKING_ERROR__STAKING_S_P_L_ACTIVE_STAKE_NOT_AVAILABLE_EXCEPTION]: `staking: spl stake pool's active stake not available`,
     [RESTAKING_ERROR__STAKING_UNINITIALIZED_WITHDRAW_TICKET_NOT_FOUND_EXCEPTION]: `staking: failed to find uninitialized withdraw ticket`,

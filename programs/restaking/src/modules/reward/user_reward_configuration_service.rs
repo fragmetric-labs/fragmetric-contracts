@@ -62,10 +62,10 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
             }
         }
 
-        let user_receipt_token_account =
-            self.user_receipt_token_account.as_deref().ok_or_else(|| {
-                error!(errors::ErrorCode::RewardUserTokenAccountNotInitializedException)
-            })?;
+        let user_receipt_token_account = self
+            .user_receipt_token_account
+            .as_deref()
+            .ok_or_else(|| error!(errors::ErrorCode::RewardUserTokenAccountNotInitializedError))?;
 
         let min_account_size = 8 + core::mem::size_of::<UserRewardAccount>();
         let new_account_size = if self.user_reward_account.is_initialized() {
@@ -190,10 +190,10 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
             .load_mut()?
             .set_delegate(authority.key, delegate)?;
 
-        let user_receipt_token_account =
-            self.user_receipt_token_account.as_deref().ok_or_else(|| {
-                error!(errors::ErrorCode::RewardUserTokenAccountNotInitializedException)
-            })?;
+        let user_receipt_token_account = self
+            .user_receipt_token_account
+            .as_deref()
+            .ok_or_else(|| error!(errors::ErrorCode::RewardUserTokenAccountNotInitializedError))?;
 
         Ok(events::UserDelegatedRewardAccount {
             receipt_token_mint: self.receipt_token_mint.key(),
@@ -207,7 +207,7 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
         &self,
         user: &Signer<'info>,
 
-        skip_revert_if_claimable_reward_left: Option<bool>,
+        force_close_if_claimable_reward_left: Option<bool>,
     ) -> Result<events::UserClosedRewardAccount> {
         let user_reward_account_loader =
             AccountLoader::<UserRewardAccount>::try_from(self.user_reward_account)?;
@@ -227,9 +227,9 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
 
         // Even though user has unclaimed reward amount left,
         // user still could close the user_reward_account.
-        // If user doesn't want to close user_reward_account
+        // If user doesn't want to close the account
         // if he/she has unclaimed reward left, then check about it.
-        if matches!(skip_revert_if_claimable_reward_left, Some(false)) {
+        if matches!(force_close_if_claimable_reward_left, Some(false)) {
             for user_reward_pool in user_reward_account.get_user_reward_pools_iter() {
                 for user_reward_settlement in user_reward_pool.get_reward_settlements_iter() {
                     let has_unclaimed_reward = reward_account

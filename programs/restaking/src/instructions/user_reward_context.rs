@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::associated_token::get_associated_token_address_with_program_id;
+use anchor_spl::associated_token;
 use anchor_spl::token_2022::Token2022;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
@@ -176,7 +176,7 @@ pub struct UserRewardAccountCloseContext<'info> {
     /// CHECK: user might not have receipt_token_account...
     #[account(
         constraint = user_receipt_token_account.key()
-            == get_associated_token_address_with_program_id(
+            == associated_token::get_associated_token_address_with_program_id(
                 user.key,
                 &receipt_token_mint.key(),
                 &Token2022::id()

@@ -1436,7 +1436,7 @@ pub mod restaking {
 
     pub fn user_close_reward_account(
         ctx: Context<UserRewardAccountCloseContext>,
-        skip_revert_if_claimable_reward_left: Option<bool>,
+        force_close_if_claimable_reward_left: Option<bool>,
     ) -> Result<()> {
         emit_cpi!(modules::reward::UserRewardConfigurationService::new(
             &ctx.accounts.receipt_token_mint,
@@ -1446,7 +1446,7 @@ pub mod restaking {
         )?
         .process_close_user_reward_account(
             &ctx.accounts.user,
-            skip_revert_if_claimable_reward_left
+            force_close_if_claimable_reward_left
         )?);
 
         Ok(())

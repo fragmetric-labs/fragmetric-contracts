@@ -534,10 +534,10 @@ abstract class RestakingAbstractUserRewardAccountContext<
   readonly closeAccount = new TransactionTemplateContext(
     this,
     v.object({
-      skipRevertIfClaimableRewardLeft: v.pipe(
+      forceCloseIfClaimableRewardLeft: v.pipe(
         v.nullish(v.boolean(), true),
         v.description(
-          'whether to skip revert if claimable reward is left, default is true'
+          'whether to force close user reward account if claimable reward is left, default is true'
         )
       ),
     }),
@@ -570,8 +570,8 @@ abstract class RestakingAbstractUserRewardAccountContext<
                 user: createNoopSigner(userAddress),
                 receiptTokenMint,
                 userReceiptTokenAccount: userReceiptTokenAccountAddress,
-                skipRevertIfClaimableRewardLeft:
-                  args.skipRevertIfClaimableRewardLeft,
+                forceCloseIfClaimableRewardLeft:
+                  args.forceCloseIfClaimableRewardLeft,
                 program: this.program.address,
               },
               {
