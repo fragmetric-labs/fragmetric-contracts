@@ -2598,7 +2598,7 @@ describe('restaking.fragX unit test', async () => {
       amount: 1_000_000_000n,
     });
 
-    // user1 updates reward pools -> new settlement occurs
+    // user1 updates reward pools -> settlement occurs
     await user1.reward.updatePools.execute({});
 
     // mint claimable fake reward token to reward_token_reserve_account to settle (2)
@@ -2614,14 +2614,26 @@ describe('restaking.fragX unit test', async () => {
       amount: 1_000_000_000n,
     });
 
+    // user1 updates reward pools -> settlement occurs
+    await user1.reward.updatePools.execute({});
+
     // transaction fails because user didn't claimed total reward yet
     // error message: reward: user not claimed total reward
     await expect(
-      user1.reward.closeAccount.execute(
-        { ignoreUnclaimedRewards: false },
-        { signers: [signer1] }
-      )
+      user1.reward.closeAccount.execute({}, { signers: [signer1] })
     ).rejects.toThrow();
+
+    // transaction succeeds
+    await user1.reward.closeAccount.execute(
+      { ignoreUnclaimedRewards: true },
+      { signers: [signer1] }
+    );
+
+    // user1 recreates reward account
+    await user1.reward.initializeOrUpdateAccount.execute(
+      {},
+      { signers: [signer1] }
+    );
 
     // user1 claims reward
     await user1.reward.claim.execute(
@@ -2636,10 +2648,7 @@ describe('restaking.fragX unit test', async () => {
     const user1_4 = await user1.resolve(true);
 
     // now transaction succeeds
-    await user1.reward.closeAccount.execute(
-      { ignoreUnclaimedRewards: false },
-      { signers: [signer1] }
-    );
+    await user1.reward.closeAccount.execute({}, { signers: [signer1] });
 
     const user1_5 = await user1.resolve(true);
 
