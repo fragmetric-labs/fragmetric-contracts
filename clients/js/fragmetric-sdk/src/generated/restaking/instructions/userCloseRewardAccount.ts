@@ -15,8 +15,6 @@ import {
   getBooleanEncoder,
   getBytesDecoder,
   getBytesEncoder,
-  getOptionDecoder,
-  getOptionEncoder,
   getProgramDerivedAddress,
   getStructDecoder,
   getStructEncoder,
@@ -24,14 +22,12 @@ import {
   type AccountMeta,
   type AccountSignerMeta,
   type Address,
-  type Codec,
-  type Decoder,
-  type Encoder,
+  type FixedSizeCodec,
+  type FixedSizeDecoder,
+  type FixedSizeEncoder,
   type Instruction,
   type InstructionWithAccounts,
   type InstructionWithData,
-  type Option,
-  type OptionOrNullable,
   type ReadonlyAccount,
   type ReadonlyUint8Array,
   type TransactionSigner,
@@ -59,7 +55,6 @@ export type UserCloseRewardAccountInstruction<
   TProgram extends string = typeof RESTAKING_PROGRAM_ADDRESS,
   TAccountUser extends string | AccountMeta<string> = string,
   TAccountReceiptTokenMint extends string | AccountMeta<string> = string,
-  TAccountUserReceiptTokenAccount extends string | AccountMeta<string> = string,
   TAccountRewardAccount extends string | AccountMeta<string> = string,
   TAccountUserRewardAccount extends string | AccountMeta<string> = string,
   TAccountEventAuthority extends string | AccountMeta<string> = string,
@@ -75,9 +70,6 @@ export type UserCloseRewardAccountInstruction<
       TAccountReceiptTokenMint extends string
         ? ReadonlyAccount<TAccountReceiptTokenMint>
         : TAccountReceiptTokenMint,
-      TAccountUserReceiptTokenAccount extends string
-        ? ReadonlyAccount<TAccountUserReceiptTokenAccount>
-        : TAccountUserReceiptTokenAccount,
       TAccountRewardAccount extends string
         ? WritableAccount<TAccountRewardAccount>
         : TAccountRewardAccount,
@@ -96,21 +88,18 @@ export type UserCloseRewardAccountInstruction<
 
 export type UserCloseRewardAccountInstructionData = {
   discriminator: ReadonlyUint8Array;
-  forceCloseIfClaimableRewardLeft: Option<boolean>;
+  ignoreUnclaimedRewards: boolean;
 };
 
 export type UserCloseRewardAccountInstructionDataArgs = {
-  forceCloseIfClaimableRewardLeft: OptionOrNullable<boolean>;
+  ignoreUnclaimedRewards: boolean;
 };
 
-export function getUserCloseRewardAccountInstructionDataEncoder(): Encoder<UserCloseRewardAccountInstructionDataArgs> {
+export function getUserCloseRewardAccountInstructionDataEncoder(): FixedSizeEncoder<UserCloseRewardAccountInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
-      [
-        'forceCloseIfClaimableRewardLeft',
-        getOptionEncoder(getBooleanEncoder()),
-      ],
+      ['ignoreUnclaimedRewards', getBooleanEncoder()],
     ]),
     (value) => ({
       ...value,
@@ -119,14 +108,14 @@ export function getUserCloseRewardAccountInstructionDataEncoder(): Encoder<UserC
   );
 }
 
-export function getUserCloseRewardAccountInstructionDataDecoder(): Decoder<UserCloseRewardAccountInstructionData> {
+export function getUserCloseRewardAccountInstructionDataDecoder(): FixedSizeDecoder<UserCloseRewardAccountInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
-    ['forceCloseIfClaimableRewardLeft', getOptionDecoder(getBooleanDecoder())],
+    ['ignoreUnclaimedRewards', getBooleanDecoder()],
   ]);
 }
 
-export function getUserCloseRewardAccountInstructionDataCodec(): Codec<
+export function getUserCloseRewardAccountInstructionDataCodec(): FixedSizeCodec<
   UserCloseRewardAccountInstructionDataArgs,
   UserCloseRewardAccountInstructionData
 > {
@@ -139,7 +128,6 @@ export function getUserCloseRewardAccountInstructionDataCodec(): Codec<
 export type UserCloseRewardAccountAsyncInput<
   TAccountUser extends string = string,
   TAccountReceiptTokenMint extends string = string,
-  TAccountUserReceiptTokenAccount extends string = string,
   TAccountRewardAccount extends string = string,
   TAccountUserRewardAccount extends string = string,
   TAccountEventAuthority extends string = string,
@@ -147,18 +135,16 @@ export type UserCloseRewardAccountAsyncInput<
 > = {
   user: TransactionSigner<TAccountUser>;
   receiptTokenMint: Address<TAccountReceiptTokenMint>;
-  userReceiptTokenAccount: Address<TAccountUserReceiptTokenAccount>;
   rewardAccount?: Address<TAccountRewardAccount>;
   userRewardAccount?: Address<TAccountUserRewardAccount>;
   eventAuthority?: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
-  forceCloseIfClaimableRewardLeft: UserCloseRewardAccountInstructionDataArgs['forceCloseIfClaimableRewardLeft'];
+  ignoreUnclaimedRewards: UserCloseRewardAccountInstructionDataArgs['ignoreUnclaimedRewards'];
 };
 
 export async function getUserCloseRewardAccountInstructionAsync<
   TAccountUser extends string,
   TAccountReceiptTokenMint extends string,
-  TAccountUserReceiptTokenAccount extends string,
   TAccountRewardAccount extends string,
   TAccountUserRewardAccount extends string,
   TAccountEventAuthority extends string,
@@ -168,7 +154,6 @@ export async function getUserCloseRewardAccountInstructionAsync<
   input: UserCloseRewardAccountAsyncInput<
     TAccountUser,
     TAccountReceiptTokenMint,
-    TAccountUserReceiptTokenAccount,
     TAccountRewardAccount,
     TAccountUserRewardAccount,
     TAccountEventAuthority,
@@ -180,7 +165,6 @@ export async function getUserCloseRewardAccountInstructionAsync<
     TProgramAddress,
     TAccountUser,
     TAccountReceiptTokenMint,
-    TAccountUserReceiptTokenAccount,
     TAccountRewardAccount,
     TAccountUserRewardAccount,
     TAccountEventAuthority,
@@ -195,10 +179,6 @@ export async function getUserCloseRewardAccountInstructionAsync<
     user: { value: input.user ?? null, isWritable: true },
     receiptTokenMint: {
       value: input.receiptTokenMint ?? null,
-      isWritable: false,
-    },
-    userReceiptTokenAccount: {
-      value: input.userReceiptTokenAccount ?? null,
       isWritable: false,
     },
     rewardAccount: { value: input.rewardAccount ?? null, isWritable: true },
@@ -262,7 +242,6 @@ export async function getUserCloseRewardAccountInstructionAsync<
     accounts: [
       getAccountMeta(accounts.user),
       getAccountMeta(accounts.receiptTokenMint),
-      getAccountMeta(accounts.userReceiptTokenAccount),
       getAccountMeta(accounts.rewardAccount),
       getAccountMeta(accounts.userRewardAccount),
       getAccountMeta(accounts.eventAuthority),
@@ -276,7 +255,6 @@ export async function getUserCloseRewardAccountInstructionAsync<
     TProgramAddress,
     TAccountUser,
     TAccountReceiptTokenMint,
-    TAccountUserReceiptTokenAccount,
     TAccountRewardAccount,
     TAccountUserRewardAccount,
     TAccountEventAuthority,
@@ -287,7 +265,6 @@ export async function getUserCloseRewardAccountInstructionAsync<
 export type UserCloseRewardAccountInput<
   TAccountUser extends string = string,
   TAccountReceiptTokenMint extends string = string,
-  TAccountUserReceiptTokenAccount extends string = string,
   TAccountRewardAccount extends string = string,
   TAccountUserRewardAccount extends string = string,
   TAccountEventAuthority extends string = string,
@@ -295,18 +272,16 @@ export type UserCloseRewardAccountInput<
 > = {
   user: TransactionSigner<TAccountUser>;
   receiptTokenMint: Address<TAccountReceiptTokenMint>;
-  userReceiptTokenAccount: Address<TAccountUserReceiptTokenAccount>;
   rewardAccount: Address<TAccountRewardAccount>;
   userRewardAccount: Address<TAccountUserRewardAccount>;
   eventAuthority: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
-  forceCloseIfClaimableRewardLeft: UserCloseRewardAccountInstructionDataArgs['forceCloseIfClaimableRewardLeft'];
+  ignoreUnclaimedRewards: UserCloseRewardAccountInstructionDataArgs['ignoreUnclaimedRewards'];
 };
 
 export function getUserCloseRewardAccountInstruction<
   TAccountUser extends string,
   TAccountReceiptTokenMint extends string,
-  TAccountUserReceiptTokenAccount extends string,
   TAccountRewardAccount extends string,
   TAccountUserRewardAccount extends string,
   TAccountEventAuthority extends string,
@@ -316,7 +291,6 @@ export function getUserCloseRewardAccountInstruction<
   input: UserCloseRewardAccountInput<
     TAccountUser,
     TAccountReceiptTokenMint,
-    TAccountUserReceiptTokenAccount,
     TAccountRewardAccount,
     TAccountUserRewardAccount,
     TAccountEventAuthority,
@@ -327,7 +301,6 @@ export function getUserCloseRewardAccountInstruction<
   TProgramAddress,
   TAccountUser,
   TAccountReceiptTokenMint,
-  TAccountUserReceiptTokenAccount,
   TAccountRewardAccount,
   TAccountUserRewardAccount,
   TAccountEventAuthority,
@@ -341,10 +314,6 @@ export function getUserCloseRewardAccountInstruction<
     user: { value: input.user ?? null, isWritable: true },
     receiptTokenMint: {
       value: input.receiptTokenMint ?? null,
-      isWritable: false,
-    },
-    userReceiptTokenAccount: {
-      value: input.userReceiptTokenAccount ?? null,
       isWritable: false,
     },
     rewardAccount: { value: input.rewardAccount ?? null, isWritable: true },
@@ -368,7 +337,6 @@ export function getUserCloseRewardAccountInstruction<
     accounts: [
       getAccountMeta(accounts.user),
       getAccountMeta(accounts.receiptTokenMint),
-      getAccountMeta(accounts.userReceiptTokenAccount),
       getAccountMeta(accounts.rewardAccount),
       getAccountMeta(accounts.userRewardAccount),
       getAccountMeta(accounts.eventAuthority),
@@ -382,7 +350,6 @@ export function getUserCloseRewardAccountInstruction<
     TProgramAddress,
     TAccountUser,
     TAccountReceiptTokenMint,
-    TAccountUserReceiptTokenAccount,
     TAccountRewardAccount,
     TAccountUserRewardAccount,
     TAccountEventAuthority,
@@ -398,11 +365,10 @@ export type ParsedUserCloseRewardAccountInstruction<
   accounts: {
     user: TAccountMetas[0];
     receiptTokenMint: TAccountMetas[1];
-    userReceiptTokenAccount: TAccountMetas[2];
-    rewardAccount: TAccountMetas[3];
-    userRewardAccount: TAccountMetas[4];
-    eventAuthority: TAccountMetas[5];
-    program: TAccountMetas[6];
+    rewardAccount: TAccountMetas[2];
+    userRewardAccount: TAccountMetas[3];
+    eventAuthority: TAccountMetas[4];
+    program: TAccountMetas[5];
   };
   data: UserCloseRewardAccountInstructionData;
 };
@@ -415,7 +381,7 @@ export function parseUserCloseRewardAccountInstruction<
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>
 ): ParsedUserCloseRewardAccountInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 7) {
+  if (instruction.accounts.length < 6) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -430,7 +396,6 @@ export function parseUserCloseRewardAccountInstruction<
     accounts: {
       user: getNextAccount(),
       receiptTokenMint: getNextAccount(),
-      userReceiptTokenAccount: getNextAccount(),
       rewardAccount: getNextAccount(),
       userRewardAccount: getNextAccount(),
       eventAuthority: getNextAccount(),

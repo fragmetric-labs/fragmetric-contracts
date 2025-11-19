@@ -1,5 +1,4 @@
 use anchor_lang::prelude::*;
-use anchor_spl::associated_token;
 use anchor_spl::token_2022::Token2022;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
@@ -172,17 +171,6 @@ pub struct UserRewardAccountCloseContext<'info> {
     pub user: Signer<'info>,
 
     pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
-
-    /// CHECK: user might not have receipt_token_account...
-    #[account(
-        constraint = user_receipt_token_account.key()
-            == associated_token::get_associated_token_address_with_program_id(
-                user.key,
-                &receipt_token_mint.key(),
-                &Token2022::id()
-            ) @ error::ErrorCode::AccountNotAssociatedTokenAccount,
-    )]
-    pub user_receipt_token_account: UncheckedAccount<'info>,
 
     #[account(
         mut,

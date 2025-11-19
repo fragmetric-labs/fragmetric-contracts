@@ -534,10 +534,10 @@ abstract class RestakingAbstractUserRewardAccountContext<
   readonly closeAccount = new TransactionTemplateContext(
     this,
     v.object({
-      forceCloseIfClaimableRewardLeft: v.pipe(
-        v.nullish(v.boolean(), true),
+      ignoreUnclaimedRewards: v.pipe(
+        v.nullish(v.boolean(), false),
         v.description(
-          'whether to force close user reward account if claimable reward is left, default is true'
+          'whether to ignore to check user reward account has unclaimable rewards left, default is false'
         )
       ),
     }),
@@ -555,23 +555,12 @@ abstract class RestakingAbstractUserRewardAccountContext<
           if (!(receiptTokenMint && userAddress))
             throw new Error('invalid context');
 
-          const ix =
-            await token.getCreateAssociatedTokenIdempotentInstructionAsync({
-              payer: createNoopSigner(userAddress),
-              mint: receiptTokenMint,
-              owner: userAddress,
-              tokenProgram: token2022.TOKEN_2022_PROGRAM_ADDRESS,
-            });
-          const userReceiptTokenAccountAddress = ix.accounts[1].address;
-
           return Promise.all([
             restaking.getUserCloseRewardAccountInstructionAsync(
               {
                 user: createNoopSigner(userAddress),
                 receiptTokenMint,
-                userReceiptTokenAccount: userReceiptTokenAccountAddress,
-                forceCloseIfClaimableRewardLeft:
-                  args.forceCloseIfClaimableRewardLeft,
+                ignoreUnclaimedRewards: args.ignoreUnclaimedRewards,
                 program: this.program.address,
               },
               {

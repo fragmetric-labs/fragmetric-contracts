@@ -10,7 +10,6 @@ use super::*;
 
 pub struct UserRewardConfigurationService<'a, 'info> {
     receipt_token_mint: &'a InterfaceAccount<'info, Mint>,
-    user_receipt_token_account: Option<Box<InterfaceAccount<'info, TokenAccount>>>,
     reward_account: &'a AccountLoader<'info, RewardAccount>,
     user_reward_account: &'info AccountInfo<'info>,
 }
@@ -18,16 +17,11 @@ pub struct UserRewardConfigurationService<'a, 'info> {
 impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
     pub fn new(
         receipt_token_mint: &'a InterfaceAccount<'info, Mint>,
-        user_receipt_token_account: &'info AccountInfo<'info>,
         reward_account: &'a AccountLoader<'info, RewardAccount>,
         user_reward_account: &'info AccountInfo<'info>,
     ) -> Result<Self> {
-        let user_receipt_token_account =
-            user_receipt_token_account.parse_optional_interface_account_boxed::<TokenAccount>()?;
-
         Ok(Self {
             receipt_token_mint,
-            user_receipt_token_account,
             reward_account,
             user_reward_account,
         })
@@ -38,6 +32,7 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
         system_program: &Program<'info, System>,
         payer: &Signer<'info>,
         user: &AccountInfo<'info>,
+        user_receipt_token_account: &InterfaceAccount<'info, TokenAccount>,
         user_reward_account_bump: u8,
         delegate: Option<Pubkey>,
         desired_account_size: Option<u32>,
@@ -61,11 +56,6 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
                 require_keys_eq!(user_owner, spl_token::id());
             }
         }
-
-        let user_receipt_token_account = self
-            .user_receipt_token_account
-            .as_deref()
-            .ok_or_else(|| error!(errors::ErrorCode::RewardUserTokenAccountNotInitializedError))?;
 
         let min_account_size = 8 + core::mem::size_of::<UserRewardAccount>();
         let new_account_size = if self.user_reward_account.is_initialized() {
@@ -181,6 +171,7 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
     pub fn process_delegate_user_reward_account(
         &self,
         authority: &Signer,
+        user_receipt_token_account: &InterfaceAccount<'info, TokenAccount>,
         delegate: Option<Pubkey>,
     ) -> Result<events::UserDelegatedRewardAccount> {
         let user_reward_account =
@@ -189,11 +180,6 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
         user_reward_account
             .load_mut()?
             .set_delegate(authority.key, delegate)?;
-
-        let user_receipt_token_account = self
-            .user_receipt_token_account
-            .as_deref()
-            .ok_or_else(|| error!(errors::ErrorCode::RewardUserTokenAccountNotInitializedError))?;
 
         Ok(events::UserDelegatedRewardAccount {
             receipt_token_mint: self.receipt_token_mint.key(),
@@ -207,7 +193,7 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
         &self,
         user: &Signer<'info>,
 
-        force_close_if_claimable_reward_left: Option<bool>,
+        ignore_unclaimed_rewards: bool,
     ) -> Result<events::UserClosedRewardAccount> {
         let user_reward_account_loader =
             AccountLoader::<UserRewardAccount>::try_from(self.user_reward_account)?;
@@ -220,8 +206,15 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
             .get_user_reward_pools_iter()
             .zip(reward_account.get_reward_pools_iter())
         {
-            if user_reward_pool.updated_slot < reward_pool.updated_slot {
-                return err!(errors::ErrorCode::RewardUserRewardAccountNotSyncedError);
+            for user_reward_settlement in user_reward_pool.get_reward_settlements_iter() {
+                let reward_settlement =
+                    reward_pool.get_reward_settlement(user_reward_settlement.reward_id)?;
+
+                if user_reward_settlement.last_settled_slot
+                    < reward_settlement.settlement_blocks_last_slot
+                {
+                    return err!(errors::ErrorCode::RewardUserRewardAccountNotSyncedError);
+                }
             }
         }
 
@@ -229,7 +222,7 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
         // user still could close the user_reward_account.
         // If user doesn't want to close the account
         // if he/she has unclaimed reward left, then check about it.
-        if matches!(force_close_if_claimable_reward_left, Some(false)) {
+        if !ignore_unclaimed_rewards {
             for user_reward_pool in user_reward_account.get_user_reward_pools_iter() {
                 for user_reward_settlement in user_reward_pool.get_reward_settlements_iter() {
                     let has_unclaimed_reward = reward_account
@@ -240,11 +233,16 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
                             < user_reward_settlement.total_settled_amount;
 
                     if has_unclaimed_reward {
-                        return err!(errors::ErrorCode::RewardUserNotClaimedTotalRewardError);
+                        return err!(errors::ErrorCode::RewardUserHasUnclaimedRewardError);
                     }
                 }
             }
         }
+
+        let user_token_allocated_total_amount = user_reward_account
+            .base_user_reward_pool
+            .token_allocated_amount
+            .get_total_amount();
 
         drop(user_reward_account);
         drop(reward_account);
@@ -254,9 +252,7 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
             .update_reward_pools_token_allocation(
                 Some(&user_reward_account_loader),
                 None,
-                self.user_receipt_token_account
-                    .as_deref()
-                    .map_or(0, |token_account| token_account.amount),
+                user_token_allocated_total_amount,
                 None,
             )?;
 

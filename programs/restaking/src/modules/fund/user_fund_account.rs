@@ -144,7 +144,7 @@ impl UserFundAccount {
     }
 
     pub(super) fn is_withdrawal_requests_empty(&self) -> bool {
-        self.withdrawal_requests.len() == 0
+        self.withdrawal_requests.is_empty()
     }
 }
 

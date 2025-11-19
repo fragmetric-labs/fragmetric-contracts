@@ -7377,9 +7377,6 @@
           ]
         },
         {
-          "name": "user_receipt_token_account"
-        },
-        {
           "name": "reward_account",
           "writable": true,
           "pda": {
@@ -7469,10 +7466,8 @@
       ],
       "args": [
         {
-          "name": "force_close_if_claimable_reward_left",
-          "type": {
-            "option": "bool"
-          }
+          "name": "ignore_unclaimed_rewards",
+          "type": "bool"
         }
       ]
     },
@@ -12476,18 +12471,23 @@
     },
     {
       "code": 6100,
+      "name": "FundUserWithdrawalRequestsNotEmptyError",
+      "msg": "fund: user withdrawal requests not empty"
+    },
+    {
+      "code": 6101,
       "name": "RewardUserTokenAccountNotInitializedError",
       "msg": "reward: user token account not initialized"
     },
     {
-      "code": 6101,
+      "code": 6102,
       "name": "RewardUserRewardAccountNotSyncedError",
       "msg": "reward: user reward account not synced"
     },
     {
-      "code": 6102,
-      "name": "RewardUserNotClaimedTotalRewardError",
-      "msg": "reward: user not claimed total reward"
+      "code": 6103,
+      "name": "RewardUserHasUnclaimedRewardError",
+      "msg": "reward: user has unclaimed reward"
     }
   ],
   "types": [

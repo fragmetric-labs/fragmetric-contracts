@@ -1,8 +1,8 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::*;
 
-use crate::events;
 use crate::utils::{AccountInfoExt, AsAccountInfo, PDASeeds, SystemProgramExt};
+use crate::{errors, events};
 
 use super::*;
 
@@ -148,7 +148,10 @@ impl<'a, 'info> UserFundConfigurationService<'a, 'info> {
         &self,
         user: &Signer<'info>,
     ) -> Result<events::UserClosedFundAccount> {
-        require_eq!(self.user_fund_account.is_withdrawal_requests_empty(), true);
+        require!(
+            self.user_fund_account.is_withdrawal_requests_empty(),
+            errors::ErrorCode::FundUserWithdrawalRequestsNotEmptyError
+        );
 
         self.user_fund_account.close(user.to_account_info())?;
 

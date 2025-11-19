@@ -2502,8 +2502,11 @@ describe('restaking.fragX unit test', async () => {
       { signers: [signer1] }
     );
 
-    // operator updates reward pools
-    await ctx.reward.updatePools.execute({});
+    // fund manager settle reward 0
+    await ctx.reward.settleReward.execute({
+      mint: 'SW1TCHLmRGTfW5xZknqQdpdarB8PD95sJYWpNp9TbFx',
+      amount: 0n,
+    });
 
     // transaction fails because user reward account is not synced with the global reward account
     // error message: reward: user reward account not synced
@@ -2511,7 +2514,7 @@ describe('restaking.fragX unit test', async () => {
       user1.reward.closeAccount.execute({}, { signers: [signer1] })
     ).rejects.toThrow();
 
-    // user1 updates reward pools
+    // user1 updates reward pools -> user settlement occurs
     await user1.reward.updatePools.execute({});
 
     // now transaction succeeds
