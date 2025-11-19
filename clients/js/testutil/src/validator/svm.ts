@@ -100,9 +100,9 @@ export class SVMValidator extends TestValidator<'svm'> {
               ['--reset'],
             ]
           : [
-            ['--warp-slot', options.warpSlot.toString()],
-            // ['--log'],
-          ]
+              ['--warp-slot', options.warpSlot.toString()],
+              // ['--log'],
+            ]
       );
 
       if (options.mock && !options.warpSlot) {
@@ -288,7 +288,6 @@ export class SVMValidator extends TestValidator<'svm'> {
     };
   }
 
-
   private quitting: Promise<void> | null = null;
 
   async quit() {
@@ -296,7 +295,7 @@ export class SVMValidator extends TestValidator<'svm'> {
       return this.quitting;
     }
 
-    return this.quitting = new Promise<void>((resolve, reject) => {
+    return (this.quitting = new Promise<void>((resolve, reject) => {
       let i = 0;
       let exited = false;
       const process = this.process;
@@ -324,7 +323,7 @@ export class SVMValidator extends TestValidator<'svm'> {
       }, 1000);
     }).finally(() => {
       this.quitting = null;
-    });
+    }));
   }
 
   async airdrop(pubkey: string, lamports: bigint): Promise<void> {

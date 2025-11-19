@@ -2419,6 +2419,33 @@ describe('restaking.fragX unit test', async () => {
     expect(user1_3!.lamports).toBeGreaterThan(user1_2!.lamports);
   });
 
+  test('reward settlement block is correctly updated after stale block is cleared', async () => {
+    // 1. operator updates globalRewardPool - (clears stale blocks)
+    await ctx.reward.updatePools.execute({});
+
+    // 2. user1 deposits sol
+    await user1.deposit.execute(
+      { assetAmount: 1_000_000_000n },
+      { signers: [signer1] }
+    );
+
+    // 3. settle reward (SWITCH token)
+    await validator.airdropToken(
+      await ctx.reward
+        .resolveAccount(true)
+        .then((rewardAccount) => rewardAccount!.data.reserveAccount),
+      'SW1TCHLmRGTfW5xZknqQdpdarB8PD95sJYWpNp9TbFx',
+      1_000_000_000n
+    );
+    await ctx.reward.settleReward.execute({
+      mint: 'SW1TCHLmRGTfW5xZknqQdpdarB8PD95sJYWpNp9TbFx',
+      amount: 1_000_000_000n,
+    });
+
+    // 4. user1 updates userRewardPool
+    await user1.reward.updatePools.execute({});
+  });
+
   test.skip('user reward pool update fails when there are too many settlement blocks to synchronize', async () => {
     const MAX_REWARD_NUM = 16;
     const MAX_SETTLEMENT_BLOCK_NUM = 64;
