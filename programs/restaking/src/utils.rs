@@ -144,12 +144,6 @@ pub trait AccountInfoExt<'info> {
     where
         T: AccountSerialize + AccountDeserialize + Clone + Owner;
 
-    fn parse_optional_interface_account_boxed<T>(
-        &'info self,
-    ) -> Result<Option<Box<InterfaceAccount<'info, T>>>>
-    where
-        T: AccountSerialize + AccountDeserialize + Clone + CheckOwner;
-
     fn parse_optional_account_loader<T>(&'info self) -> Result<Option<AccountLoader<'info, T>>>
     where
         T: ZeroCopy + Owner;
@@ -189,20 +183,6 @@ impl<'info> AccountInfoExt<'info> for AccountInfo<'info> {
         }
 
         Account::try_from(self).map(Box::new).map(Some)
-    }
-
-    #[inline(never)]
-    fn parse_optional_interface_account_boxed<T>(
-        &'info self,
-    ) -> Result<Option<Box<InterfaceAccount<'info, T>>>>
-    where
-        T: AccountSerialize + AccountDeserialize + Clone + CheckOwner,
-    {
-        if !self.is_initialized() {
-            return Ok(None);
-        }
-
-        InterfaceAccount::try_from(self).map(Box::new).map(Some)
     }
 
     fn parse_optional_account_loader<T>(&'info self) -> Result<Option<AccountLoader<'info, T>>>
