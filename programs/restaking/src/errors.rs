@@ -309,8 +309,8 @@ pub enum ErrorCode {
     #[msg("unexpected pricing source")]
     UnexpectedPricingSourceError,
 
-    #[msg("fund: user withdrawal requests not empty")]
-    FundUserWithdrawalRequestsNotEmptyError,
+    #[msg("fund: user have pending withdrawal requests")]
+    FundUserHavePendingWithdrawalRequestsError,
 
     #[msg("reward: user token account not initialized")]
     RewardUserTokenAccountNotInitializedError,
