@@ -11,7 +11,7 @@ pub use solv_btc_vault_value_provider::*;
 pub use virtual_vault_service::*;
 
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::Mint;
+use anchor_spl::token_interface::{Mint, TokenAccount};
 
 use crate::errors::ErrorCode;
 use crate::modules::pricing::TokenPricingSource;
@@ -19,6 +19,7 @@ use crate::modules::pricing::TokenPricingSource;
 /// Validate restaking vault pricing source
 pub(in crate::modules) fn validate_pricing_source<'info>(
     pricing_source: &TokenPricingSource,
+    vault_vault_supported_token_account: &InterfaceAccount<'info, TokenAccount>,
     vault_account: &'info AccountInfo<'info>,
     vault_supported_token_mint: &InterfaceAccount<Mint>,
     vault_receipt_token_mint: &InterfaceAccount<Mint>,
@@ -28,6 +29,7 @@ pub(in crate::modules) fn validate_pricing_source<'info>(
         TokenPricingSource::JitoRestakingVault { address } => {
             require_keys_eq!(*address, vault_account.key());
             JitoRestakingVaultService::validate_vault(
+                vault_vault_supported_token_account,
                 vault_account,
                 vault_supported_token_mint,
                 vault_receipt_token_mint,
@@ -37,6 +39,7 @@ pub(in crate::modules) fn validate_pricing_source<'info>(
         TokenPricingSource::SolvBTCVault { address } => {
             require_keys_eq!(*address, vault_account.key());
             SolvBTCVaultService::validate_vault(
+                vault_vault_supported_token_account,
                 vault_account,
                 vault_supported_token_mint,
                 vault_receipt_token_mint,
@@ -46,13 +49,16 @@ pub(in crate::modules) fn validate_pricing_source<'info>(
         TokenPricingSource::VirtualVault { address } => {
             require_keys_eq!(*address, vault_account.key());
             VirtualVaultService::validate_vault(
+                vault_vault_supported_token_account,
                 vault_account,
                 vault_supported_token_mint,
                 vault_receipt_token_mint,
                 fund_account,
             )?
         }
-        TokenPricingSource::DriftVault { .. } => {
+        TokenPricingSource::DriftVault { address } => {
+            require_keys_eq!(*address, vault_account.key());
+
             todo!()
         }
         // otherwise fails
@@ -75,6 +81,7 @@ pub(in crate::modules) fn validate_pricing_source<'info>(
 
 pub(in crate::modules) trait ValidateVault {
     fn validate_vault<'info>(
+        vault_vault_supported_token_account: &InterfaceAccount<'info, TokenAccount>,
         vault_account: &'info AccountInfo<'info>,
         vault_supported_token_mint: &InterfaceAccount<Mint>,
         vault_receipt_token_mint: &InterfaceAccount<Mint>,

@@ -373,6 +373,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
     pub fn process_add_restaking_vault(
         &mut self,
         fund_vault_receipt_token_account: &InterfaceAccount<TokenAccount>,
+        vault_vault_supported_token_account: &InterfaceAccount<'info, TokenAccount>,
         vault: &UncheckedAccount<'info>,
         vault_supported_token_mint: &InterfaceAccount<'info, Mint>,
         vault_receipt_token_mint: &InterfaceAccount<'info, Mint>,
@@ -382,6 +383,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
     ) -> Result<events::FundManagerUpdatedFund> {
         restaking::validate_pricing_source(
             &pricing_source,
+            vault_vault_supported_token_account,
             vault.as_account_info(),
             vault_supported_token_mint,
             vault_receipt_token_mint,

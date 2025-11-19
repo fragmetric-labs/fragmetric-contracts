@@ -1,5 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program;
+use anchor_spl::associated_token::get_associated_token_address_with_program_id;
+use anchor_spl::token::Token;
 use anchor_spl::token_interface::{Mint, TokenAccount};
 use jito_vault_core::{
     config::Config, vault::Vault, vault_operator_delegation::VaultOperatorDelegation,
@@ -31,11 +33,22 @@ pub(in crate::modules) struct JitoRestakingVaultService<'info> {
 impl ValidateVault for JitoRestakingVaultService<'_> {
     #[inline(never)]
     fn validate_vault(
+        vault_vault_supported_token_account: &InterfaceAccount<TokenAccount>,
         vault_account: &AccountInfo,
         vault_supported_token_mint: &InterfaceAccount<Mint>,
         vault_receipt_token_mint: &InterfaceAccount<Mint>,
         fund_account: &AccountInfo,
     ) -> Result<()> {
+        // Verify whether vault's supported token account conforms to the ATA specification
+        require_keys_eq!(
+            vault_vault_supported_token_account.key(),
+            get_associated_token_address_with_program_id(
+                vault_account.key,
+                &vault_supported_token_mint.key(),
+                &Token::id(),
+            )
+        );
+
         let data = &Self::borrow_account_data(vault_account)?;
         let vault = Self::deserialize_account_data::<Vault>(data)?;
 

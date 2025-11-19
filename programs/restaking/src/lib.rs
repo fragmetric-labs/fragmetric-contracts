@@ -583,6 +583,7 @@ pub mod restaking {
         )?
         .process_add_restaking_vault(
             &ctx.accounts.fund_vault_receipt_token_account,
+            &ctx.accounts.vault_vault_supported_token_account,
             &ctx.accounts.vault_account,
             &ctx.accounts.vault_supported_token_mint,
             &ctx.accounts.vault_receipt_token_mint,

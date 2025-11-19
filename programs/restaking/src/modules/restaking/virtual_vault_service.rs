@@ -1,5 +1,7 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::Mint;
+use anchor_spl::associated_token::get_associated_token_address_with_program_id;
+use anchor_spl::token::Token;
+use anchor_spl::token_interface::{Mint, TokenAccount};
 
 use crate::errors::ErrorCode;
 use crate::utils::AccountInfoExt;
@@ -10,11 +12,22 @@ pub(in crate::modules) struct VirtualVaultService;
 
 impl ValidateVault for VirtualVaultService {
     fn validate_vault<'info>(
+        vault_vault_supported_token_account: &InterfaceAccount<TokenAccount>,
         vault_account: &'info AccountInfo<'info>,
         vault_supported_token_mint: &InterfaceAccount<Mint>,
         vault_receipt_token_mint: &InterfaceAccount<Mint>,
         fund_account: &AccountInfo,
     ) -> Result<()> {
+        // Verify whether vault's supported token account conforms to the ATA specification
+        require_keys_eq!(
+            vault_vault_supported_token_account.key(),
+            get_associated_token_address_with_program_id(
+                vault_account.key,
+                &vault_supported_token_mint.key(),
+                &Token::id(),
+            )
+        );
+
         // validate vault address
         let vault_address =
             Self::find_vault_address(&vault_receipt_token_mint.key(), fund_account.key)

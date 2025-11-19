@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use anchor_spl::associated_token::get_associated_token_address_with_program_id;
 use anchor_spl::token::Token;
 use anchor_spl::token_interface::{Mint, TokenAccount};
 use solv::states::VaultAccount;
@@ -16,11 +17,22 @@ pub(in crate::modules) struct SolvBTCVaultService<'info> {
 impl ValidateVault for SolvBTCVaultService<'_> {
     #[inline(never)]
     fn validate_vault<'info>(
+        vault_vault_supported_token_account: &InterfaceAccount<TokenAccount>,
         vault_account: &'info AccountInfo<'info>,
         vault_supported_token_mint: &InterfaceAccount<Mint>,
         vault_receipt_token_mint: &InterfaceAccount<Mint>,
         fund_account: &AccountInfo,
     ) -> Result<()> {
+        // Verify whether vault's supported token account conforms to the ATA specification
+        require_keys_eq!(
+            vault_vault_supported_token_account.key(),
+            get_associated_token_address_with_program_id(
+                vault_account.key,
+                &vault_supported_token_mint.key(),
+                &Token::id(),
+            )
+        );
+
         let vault_account = AccountLoader::<VaultAccount>::try_from(vault_account)?;
         let vault = vault_account.load()?;
 
