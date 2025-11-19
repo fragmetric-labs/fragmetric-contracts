@@ -1,11 +1,14 @@
+pub mod drift_vault_service;
 pub mod jito_restaking_vault_service;
 pub mod jito_restaking_vault_value_provider;
 pub mod solv_btc_vault_service;
 pub mod solv_btc_vault_value_provider;
 pub mod virtual_vault_service;
 
+pub use drift_vault_service::*;
 pub use jito_restaking_vault_service::*;
 pub use jito_restaking_vault_value_provider::*;
+use jito_vault_core::vault;
 pub use solv_btc_vault_service::*;
 pub use solv_btc_vault_value_provider::*;
 pub use virtual_vault_service::*;
@@ -58,8 +61,13 @@ pub(in crate::modules) fn validate_pricing_source<'info>(
         }
         TokenPricingSource::DriftVault { address } => {
             require_keys_eq!(*address, vault_account.key());
-
-            todo!()
+            DriftVaultService::validate_vault(
+                vault_vault_supported_token_account,
+                vault_account,
+                vault_supported_token_mint,
+                vault_receipt_token_mint,
+                fund_account,
+            )?
         }
         // otherwise fails
         TokenPricingSource::SPLStakePool { .. }
