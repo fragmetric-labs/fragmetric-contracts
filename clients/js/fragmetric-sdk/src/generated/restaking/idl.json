@@ -12471,8 +12471,8 @@
     },
     {
       "code": 6100,
-      "name": "FundUserHavePendingWithdrawalRequestsError",
-      "msg": "fund: user have pending withdrawal requests"
+      "name": "FundUserHasPendingWithdrawalRequestsError",
+      "msg": "fund: user has pending withdrawal requests"
     },
     {
       "code": 6101,

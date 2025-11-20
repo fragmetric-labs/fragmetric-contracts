@@ -150,7 +150,7 @@ impl<'a, 'info> UserFundConfigurationService<'a, 'info> {
     ) -> Result<events::UserClosedFundAccount> {
         require!(
             self.user_fund_account.is_withdrawal_requests_empty(),
-            errors::ErrorCode::FundUserHavePendingWithdrawalRequestsError
+            errors::ErrorCode::FundUserHasPendingWithdrawalRequestsError
         );
 
         self.user_fund_account.close(user.to_account_info())?;

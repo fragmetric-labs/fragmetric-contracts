@@ -214,8 +214,8 @@ export const RESTAKING_ERROR__FUND_OPERATION_DISABLED_ERROR = 0x17d1; // 6097
 export const RESTAKING_ERROR__FUND_TOKEN_SWAP_STRATEGY_VALIDATION_ERROR = 0x17d2; // 6098
 /** UnexpectedPricingSourceError: unexpected pricing source */
 export const RESTAKING_ERROR__UNEXPECTED_PRICING_SOURCE_ERROR = 0x17d3; // 6099
-/** FundUserHavePendingWithdrawalRequestsError: fund: user have pending withdrawal requests */
-export const RESTAKING_ERROR__FUND_USER_HAVE_PENDING_WITHDRAWAL_REQUESTS_ERROR = 0x17d4; // 6100
+/** FundUserHasPendingWithdrawalRequestsError: fund: user has pending withdrawal requests */
+export const RESTAKING_ERROR__FUND_USER_HAS_PENDING_WITHDRAWAL_REQUESTS_ERROR = 0x17d4; // 6100
 /** RewardUserTokenAccountNotInitializedError: reward: user token account not initialized */
 export const RESTAKING_ERROR__REWARD_USER_TOKEN_ACCOUNT_NOT_INITIALIZED_ERROR = 0x17d5; // 6101
 /** RewardUserRewardAccountNotSyncedError: reward: user reward account not synced */
@@ -263,7 +263,7 @@ export type RestakingError =
   | typeof RESTAKING_ERROR__FUND_TOKEN_SWAP_STRATEGY_ALREADY_REGISTERED
   | typeof RESTAKING_ERROR__FUND_TOKEN_SWAP_STRATEGY_NOT_FOUND_ERROR
   | typeof RESTAKING_ERROR__FUND_TOKEN_SWAP_STRATEGY_VALIDATION_ERROR
-  | typeof RESTAKING_ERROR__FUND_USER_HAVE_PENDING_WITHDRAWAL_REQUESTS_ERROR
+  | typeof RESTAKING_ERROR__FUND_USER_HAS_PENDING_WITHDRAWAL_REQUESTS_ERROR
   | typeof RESTAKING_ERROR__FUND_WITHDRAWAL_DISABLED_ERROR
   | typeof RESTAKING_ERROR__FUND_WITHDRAWAL_NOT_SUPPORTED_ASSET
   | typeof RESTAKING_ERROR__FUND_WITHDRAWAL_REQUEST_ALREADY_QUEUED_ERROR
@@ -371,7 +371,7 @@ if (process.env.NODE_ENV !== 'production') {
     [RESTAKING_ERROR__FUND_TOKEN_SWAP_STRATEGY_ALREADY_REGISTERED]: `fund: token swap strategy already registered`,
     [RESTAKING_ERROR__FUND_TOKEN_SWAP_STRATEGY_NOT_FOUND_ERROR]: `fund: token swap strategy not found`,
     [RESTAKING_ERROR__FUND_TOKEN_SWAP_STRATEGY_VALIDATION_ERROR]: `fund: token swap strategy validation failed`,
-    [RESTAKING_ERROR__FUND_USER_HAVE_PENDING_WITHDRAWAL_REQUESTS_ERROR]: `fund: user have pending withdrawal requests`,
+    [RESTAKING_ERROR__FUND_USER_HAS_PENDING_WITHDRAWAL_REQUESTS_ERROR]: `fund: user has pending withdrawal requests`,
     [RESTAKING_ERROR__FUND_WITHDRAWAL_DISABLED_ERROR]: `fund: withdrawal is currently disabled`,
     [RESTAKING_ERROR__FUND_WITHDRAWAL_NOT_SUPPORTED_ASSET]: `fund: withdrawal is not supported for the given asset`,
     [RESTAKING_ERROR__FUND_WITHDRAWAL_REQUEST_ALREADY_QUEUED_ERROR]: `fund: withdrawal request is already in progress`,

@@ -3,8 +3,9 @@ use anchor_lang::solana_program;
 use anchor_spl::token::spl_token;
 use anchor_spl::token_interface::{Mint, TokenAccount};
 
+use crate::errors::ErrorCode;
 use crate::utils::*;
-use crate::{errors, events, modules};
+use crate::{events, modules};
 
 use super::*;
 
@@ -213,13 +214,13 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
                 if user_reward_settlement.last_settled_slot
                     < reward_settlement.settlement_blocks_last_slot
                 {
-                    return err!(errors::ErrorCode::RewardUserRewardAccountNotSyncedError);
+                    return err!(ErrorCode::RewardUserRewardAccountNotSyncedError);
                 }
             }
         }
 
         // Even though user has unclaimed reward amount left,
-        // user still could close the user_reward_account.
+        // user still can close the user_reward_account.
         // If user doesn't want to close the account
         // if he/she has unclaimed reward left, then check about it.
         if !ignore_unclaimed_rewards {
@@ -233,7 +234,7 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
                             < user_reward_settlement.total_settled_amount;
 
                     if has_unclaimed_reward {
-                        return err!(errors::ErrorCode::RewardUserHasUnclaimedRewardError);
+                        return err!(ErrorCode::RewardUserHasUnclaimedRewardError);
                     }
                 }
             }
