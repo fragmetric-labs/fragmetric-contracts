@@ -163,3 +163,31 @@ pub struct UserRewardAccountDelegateContext<'info> {
     )]
     pub user_reward_account: AccountLoader<'info, UserRewardAccount>,
 }
+
+#[event_cpi]
+#[derive(Accounts)]
+pub struct UserRewardAccountCloseContext<'info> {
+    #[account(mut)]
+    pub user: Signer<'info>,
+
+    pub receipt_token_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    #[account(
+        mut,
+        seeds = [RewardAccount::SEED, receipt_token_mint.key().as_ref()],
+        bump = reward_account.get_bump()?,
+        has_one = receipt_token_mint,
+        constraint = reward_account.load()?.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
+    )]
+    pub reward_account: AccountLoader<'info, RewardAccount>,
+
+    #[account(
+        mut,
+        seeds = [UserRewardAccount::SEED, receipt_token_mint.key().as_ref(), user.key().as_ref()],
+        bump = user_reward_account.get_bump()?,
+        has_one = receipt_token_mint,
+        has_one = user,
+        constraint = user_reward_account.load()?.is_latest_version() @ ErrorCode::InvalidAccountDataVersionError,
+    )]
+    pub user_reward_account: AccountLoader<'info, UserRewardAccount>,
+}

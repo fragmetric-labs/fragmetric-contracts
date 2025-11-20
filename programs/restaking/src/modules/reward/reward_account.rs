@@ -275,6 +275,11 @@ impl RewardAccount {
     }
 
     #[inline(always)]
+    pub(super) fn get_reward_pools_iter(&self) -> impl Iterator<Item = &RewardPool> {
+        [&self.base_reward_pool, &self.bonus_reward_pool].into_iter()
+    }
+
+    #[inline(always)]
     pub(super) fn get_reward_pools_iter_mut(&mut self) -> impl Iterator<Item = &mut RewardPool> {
         [&mut self.base_reward_pool, &mut self.bonus_reward_pool].into_iter()
     }

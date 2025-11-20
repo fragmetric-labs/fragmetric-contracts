@@ -142,6 +142,10 @@ impl UserFundAccount {
             .ok_or_else(|| error!(ErrorCode::FundWithdrawalRequestNotFoundError))?;
         Ok(self.withdrawal_requests.remove(index))
     }
+
+    pub(super) fn is_withdrawal_requests_empty(&self) -> bool {
+        self.withdrawal_requests.is_empty()
+    }
 }
 
 #[derive(InitSpace, AnchorSerialize, AnchorDeserialize, Clone)]

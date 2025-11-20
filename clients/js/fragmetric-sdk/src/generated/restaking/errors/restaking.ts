@@ -214,6 +214,14 @@ export const RESTAKING_ERROR__FUND_OPERATION_DISABLED_ERROR = 0x17d1; // 6097
 export const RESTAKING_ERROR__FUND_TOKEN_SWAP_STRATEGY_VALIDATION_ERROR = 0x17d2; // 6098
 /** UnexpectedPricingSourceError: unexpected pricing source */
 export const RESTAKING_ERROR__UNEXPECTED_PRICING_SOURCE_ERROR = 0x17d3; // 6099
+/** FundUserHasPendingWithdrawalRequestsError: fund: user has pending withdrawal requests */
+export const RESTAKING_ERROR__FUND_USER_HAS_PENDING_WITHDRAWAL_REQUESTS_ERROR = 0x17d4; // 6100
+/** RewardUserTokenAccountNotInitializedError: reward: user token account not initialized */
+export const RESTAKING_ERROR__REWARD_USER_TOKEN_ACCOUNT_NOT_INITIALIZED_ERROR = 0x17d5; // 6101
+/** RewardUserRewardAccountNotSyncedError: reward: user reward account not synced */
+export const RESTAKING_ERROR__REWARD_USER_REWARD_ACCOUNT_NOT_SYNCED_ERROR = 0x17d6; // 6102
+/** RewardUserHasUnclaimedRewardError: reward: user has unclaimed reward */
+export const RESTAKING_ERROR__REWARD_USER_HAS_UNCLAIMED_REWARD_ERROR = 0x17d7; // 6103
 
 export type RestakingError =
   | typeof RESTAKING_ERROR__CALCULATION_ARITHMETIC_EXCEPTION
@@ -255,6 +263,7 @@ export type RestakingError =
   | typeof RESTAKING_ERROR__FUND_TOKEN_SWAP_STRATEGY_ALREADY_REGISTERED
   | typeof RESTAKING_ERROR__FUND_TOKEN_SWAP_STRATEGY_NOT_FOUND_ERROR
   | typeof RESTAKING_ERROR__FUND_TOKEN_SWAP_STRATEGY_VALIDATION_ERROR
+  | typeof RESTAKING_ERROR__FUND_USER_HAS_PENDING_WITHDRAWAL_REQUESTS_ERROR
   | typeof RESTAKING_ERROR__FUND_WITHDRAWAL_DISABLED_ERROR
   | typeof RESTAKING_ERROR__FUND_WITHDRAWAL_NOT_SUPPORTED_ASSET
   | typeof RESTAKING_ERROR__FUND_WITHDRAWAL_REQUEST_ALREADY_QUEUED_ERROR
@@ -307,7 +316,10 @@ export type RestakingError =
   | typeof RESTAKING_ERROR__REWARD_POOL_CLOSE_CONDITION_ERROR
   | typeof RESTAKING_ERROR__REWARD_POOL_NOT_FOUND_ERROR
   | typeof RESTAKING_ERROR__REWARD_SETTLEMENT_NOT_FOUND_ERROR
+  | typeof RESTAKING_ERROR__REWARD_USER_HAS_UNCLAIMED_REWARD_ERROR
   | typeof RESTAKING_ERROR__REWARD_USER_POOL_NOT_FOUND_ERROR
+  | typeof RESTAKING_ERROR__REWARD_USER_REWARD_ACCOUNT_NOT_SYNCED_ERROR
+  | typeof RESTAKING_ERROR__REWARD_USER_TOKEN_ACCOUNT_NOT_INITIALIZED_ERROR
   | typeof RESTAKING_ERROR__STAKING_ACCOUNT_NOT_MATCHED_EXCEPTION
   | typeof RESTAKING_ERROR__STAKING_S_P_L_ACTIVE_STAKE_NOT_AVAILABLE_EXCEPTION
   | typeof RESTAKING_ERROR__STAKING_UNINITIALIZED_WITHDRAW_TICKET_NOT_FOUND_EXCEPTION
@@ -359,6 +371,7 @@ if (process.env.NODE_ENV !== 'production') {
     [RESTAKING_ERROR__FUND_TOKEN_SWAP_STRATEGY_ALREADY_REGISTERED]: `fund: token swap strategy already registered`,
     [RESTAKING_ERROR__FUND_TOKEN_SWAP_STRATEGY_NOT_FOUND_ERROR]: `fund: token swap strategy not found`,
     [RESTAKING_ERROR__FUND_TOKEN_SWAP_STRATEGY_VALIDATION_ERROR]: `fund: token swap strategy validation failed`,
+    [RESTAKING_ERROR__FUND_USER_HAS_PENDING_WITHDRAWAL_REQUESTS_ERROR]: `fund: user has pending withdrawal requests`,
     [RESTAKING_ERROR__FUND_WITHDRAWAL_DISABLED_ERROR]: `fund: withdrawal is currently disabled`,
     [RESTAKING_ERROR__FUND_WITHDRAWAL_NOT_SUPPORTED_ASSET]: `fund: withdrawal is not supported for the given asset`,
     [RESTAKING_ERROR__FUND_WITHDRAWAL_REQUEST_ALREADY_QUEUED_ERROR]: `fund: withdrawal request is already in progress`,
@@ -411,7 +424,10 @@ if (process.env.NODE_ENV !== 'production') {
     [RESTAKING_ERROR__REWARD_POOL_CLOSE_CONDITION_ERROR]: `reward: cannot close the reward pool`,
     [RESTAKING_ERROR__REWARD_POOL_NOT_FOUND_ERROR]: `reward: pool not found`,
     [RESTAKING_ERROR__REWARD_SETTLEMENT_NOT_FOUND_ERROR]: `reward: settlement not found`,
+    [RESTAKING_ERROR__REWARD_USER_HAS_UNCLAIMED_REWARD_ERROR]: `reward: user has unclaimed reward`,
     [RESTAKING_ERROR__REWARD_USER_POOL_NOT_FOUND_ERROR]: `reward: user pool not found`,
+    [RESTAKING_ERROR__REWARD_USER_REWARD_ACCOUNT_NOT_SYNCED_ERROR]: `reward: user reward account not synced`,
+    [RESTAKING_ERROR__REWARD_USER_TOKEN_ACCOUNT_NOT_INITIALIZED_ERROR]: `reward: user token account not initialized`,
     [RESTAKING_ERROR__STAKING_ACCOUNT_NOT_MATCHED_EXCEPTION]: `staking: account not matched`,
     [RESTAKING_ERROR__STAKING_S_P_L_ACTIVE_STAKE_NOT_AVAILABLE_EXCEPTION]: `staking: spl stake pool's active stake not available`,
     [RESTAKING_ERROR__STAKING_UNINITIALIZED_WITHDRAW_TICKET_NOT_FOUND_EXCEPTION]: `staking: failed to find uninitialized withdraw ticket`,

@@ -3,6 +3,7 @@ use anchor_lang::solana_program;
 use anchor_spl::token::spl_token;
 use anchor_spl::token_interface::{Mint, TokenAccount};
 
+use crate::errors::ErrorCode;
 use crate::utils::*;
 use crate::{events, modules};
 
@@ -10,7 +11,6 @@ use super::*;
 
 pub struct UserRewardConfigurationService<'a, 'info> {
     receipt_token_mint: &'a InterfaceAccount<'info, Mint>,
-    user_receipt_token_account: &'a InterfaceAccount<'info, TokenAccount>,
     reward_account: &'a AccountLoader<'info, RewardAccount>,
     user_reward_account: &'info AccountInfo<'info>,
 }
@@ -18,13 +18,11 @@ pub struct UserRewardConfigurationService<'a, 'info> {
 impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
     pub fn new(
         receipt_token_mint: &'a InterfaceAccount<'info, Mint>,
-        user_receipt_token_account: &'a InterfaceAccount<'info, TokenAccount>,
         reward_account: &'a AccountLoader<'info, RewardAccount>,
         user_reward_account: &'info AccountInfo<'info>,
     ) -> Result<Self> {
         Ok(Self {
             receipt_token_mint,
-            user_receipt_token_account,
             reward_account,
             user_reward_account,
         })
@@ -35,6 +33,7 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
         system_program: &Program<'info, System>,
         payer: &Signer<'info>,
         user: &AccountInfo<'info>,
+        user_receipt_token_account: &InterfaceAccount<'info, TokenAccount>,
         user_reward_account_bump: u8,
         delegate: Option<Pubkey>,
         desired_account_size: Option<u32>,
@@ -92,7 +91,7 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
                 &[&[
                     UserRewardAccount::SEED,
                     self.receipt_token_mint.key().as_ref(),
-                    self.user_receipt_token_account.owner.as_ref(),
+                    user_receipt_token_account.owner.as_ref(),
                     &[user_reward_account_bump],
                 ]],
                 new_account_size,
@@ -122,7 +121,7 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
                     user_reward_account.initialize(
                         user_reward_account_bump,
                         &*self.reward_account.load()?,
-                        self.user_receipt_token_account,
+                        user_receipt_token_account,
                         delegate,
                     )?
                 } else {
@@ -133,14 +132,11 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
                         user_reward_account.receipt_token_mint,
                         self.receipt_token_mint.key(),
                     );
-                    require_keys_eq!(
-                        user_reward_account.user,
-                        self.user_receipt_token_account.owner,
-                    );
+                    require_keys_eq!(user_reward_account.user, user_receipt_token_account.owner,);
 
                     user_reward_account.update_if_needed(
                         &*self.reward_account.load()?,
-                        self.user_receipt_token_account,
+                        user_receipt_token_account,
                         delegate,
                     )?
                 };
@@ -154,7 +150,7 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
                     .update_reward_pools_token_allocation(
                         None,
                         Some(&user_reward_account),
-                        self.user_receipt_token_account.amount,
+                        user_receipt_token_account.amount,
                         None,
                     )?;
             }
@@ -162,9 +158,9 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
             if updated {
                 return Ok(Some(events::UserCreatedOrUpdatedRewardAccount {
                     receipt_token_mint: self.receipt_token_mint.key(),
-                    user: self.user_receipt_token_account.owner,
+                    user: user_receipt_token_account.owner,
                     user_reward_account: user_reward_account.key(),
-                    receipt_token_amount: self.user_receipt_token_account.amount,
+                    receipt_token_amount: user_receipt_token_account.amount,
                     created: initializing,
                 }));
             }
@@ -176,6 +172,7 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
     pub fn process_delegate_user_reward_account(
         &self,
         authority: &Signer,
+        user_receipt_token_account: &InterfaceAccount<'info, TokenAccount>,
         delegate: Option<Pubkey>,
     ) -> Result<events::UserDelegatedRewardAccount> {
         let user_reward_account =
@@ -187,9 +184,85 @@ impl<'a, 'info> UserRewardConfigurationService<'a, 'info> {
 
         Ok(events::UserDelegatedRewardAccount {
             receipt_token_mint: self.receipt_token_mint.key(),
-            user: self.user_receipt_token_account.owner,
+            user: user_receipt_token_account.owner,
             user_reward_account: self.user_reward_account.key(),
             delegate,
+        })
+    }
+
+    pub fn process_close_user_reward_account(
+        &self,
+        user: &Signer<'info>,
+
+        ignore_unclaimed_rewards: bool,
+    ) -> Result<events::UserClosedRewardAccount> {
+        let user_reward_account_loader =
+            AccountLoader::<UserRewardAccount>::try_from(self.user_reward_account)?;
+        let user_reward_account = user_reward_account_loader.load()?;
+
+        let reward_account = self.reward_account.load()?;
+
+        // user_reward_account should be synced before close
+        for (user_reward_pool, reward_pool) in user_reward_account
+            .get_user_reward_pools_iter()
+            .zip(reward_account.get_reward_pools_iter())
+        {
+            for user_reward_settlement in user_reward_pool.get_reward_settlements_iter() {
+                let reward_settlement =
+                    reward_pool.get_reward_settlement(user_reward_settlement.reward_id)?;
+
+                if user_reward_settlement.last_settled_slot
+                    < reward_settlement.settlement_blocks_last_slot
+                {
+                    return err!(ErrorCode::RewardUserRewardAccountNotSyncedError);
+                }
+            }
+        }
+
+        // Even though user has unclaimed reward amount left,
+        // user still can close the user_reward_account.
+        // If user doesn't want to close the account
+        // if he/she has unclaimed reward left, then check about it.
+        if !ignore_unclaimed_rewards {
+            for user_reward_pool in user_reward_account.get_user_reward_pools_iter() {
+                for user_reward_settlement in user_reward_pool.get_reward_settlements_iter() {
+                    let has_unclaimed_reward = reward_account
+                        .get_reward(user_reward_settlement.reward_id)?
+                        .claimable
+                        == 1
+                        && user_reward_settlement.total_claimed_amount
+                            < user_reward_settlement.total_settled_amount;
+
+                    if has_unclaimed_reward {
+                        return err!(ErrorCode::RewardUserHasUnclaimedRewardError);
+                    }
+                }
+            }
+        }
+
+        let user_token_allocated_total_amount = user_reward_account
+            .base_user_reward_pool
+            .token_allocated_amount
+            .get_total_amount();
+
+        drop(user_reward_account);
+        drop(reward_account);
+
+        // deduct reward token_allocated_amount from user_reward_account and reward_account
+        RewardService::new(self.receipt_token_mint, self.reward_account)?
+            .update_reward_pools_token_allocation(
+                Some(&user_reward_account_loader),
+                None,
+                user_token_allocated_total_amount,
+                None,
+            )?;
+
+        user_reward_account_loader.close(user.to_account_info())?;
+
+        Ok(events::UserClosedRewardAccount {
+            receipt_token_mint: self.receipt_token_mint.key(),
+            user: user.key(),
+            user_reward_account: self.user_reward_account.key(),
         })
     }
 }

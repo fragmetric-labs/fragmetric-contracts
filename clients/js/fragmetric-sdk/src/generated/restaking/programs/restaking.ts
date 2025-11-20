@@ -64,6 +64,8 @@ import {
   type ParsedTokenTransferHookInstruction,
   type ParsedUserCancelWithdrawalRequestInstruction,
   type ParsedUserClaimRewardInstruction,
+  type ParsedUserCloseFundAccountInstruction,
+  type ParsedUserCloseRewardAccountInstruction,
   type ParsedUserCreateFundAccountIdempotentInstruction,
   type ParsedUserCreateRewardAccountIdempotentInstruction,
   type ParsedUserDelegateRewardAccountInstruction,
@@ -99,6 +101,8 @@ export enum RestakingAccount {
   OperatorUpdatedRewardPools,
   UserCanceledWithdrawalRequestFromFund,
   UserClaimedReward,
+  UserClosedFundAccount,
+  UserClosedRewardAccount,
   UserCreatedOrUpdatedFundAccount,
   UserCreatedOrUpdatedRewardAccount,
   UserDelegatedRewardAccount,
@@ -296,6 +300,28 @@ export function identifyRestakingAccount(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([190, 20, 28, 58, 115, 223, 158, 56])
+      ),
+      0
+    )
+  ) {
+    return RestakingAccount.UserClosedFundAccount;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([170, 225, 119, 0, 51, 94, 4, 132])
+      ),
+      0
+    )
+  ) {
+    return RestakingAccount.UserClosedRewardAccount;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
         new Uint8Array([26, 206, 120, 214, 227, 187, 182, 0])
       ),
       0
@@ -469,6 +495,8 @@ export enum RestakingInstruction {
   TokenTransferHook,
   UserCancelWithdrawalRequest,
   UserClaimReward,
+  UserCloseFundAccount,
+  UserCloseRewardAccount,
   UserCreateFundAccountIdempotent,
   UserCreateRewardAccountIdempotent,
   UserDelegateRewardAccount,
@@ -1042,6 +1070,28 @@ export function identifyRestakingInstruction(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([145, 29, 105, 203, 153, 69, 102, 197])
+      ),
+      0
+    )
+  ) {
+    return RestakingInstruction.UserCloseFundAccount;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([16, 26, 2, 72, 168, 122, 128, 251])
+      ),
+      0
+    )
+  ) {
+    return RestakingInstruction.UserCloseRewardAccount;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
         new Uint8Array([18, 13, 182, 219, 153, 232, 60, 152])
       ),
       0
@@ -1339,6 +1389,12 @@ export type ParsedRestakingInstruction<
   | ({
       instructionType: RestakingInstruction.UserClaimReward;
     } & ParsedUserClaimRewardInstruction<TProgram>)
+  | ({
+      instructionType: RestakingInstruction.UserCloseFundAccount;
+    } & ParsedUserCloseFundAccountInstruction<TProgram>)
+  | ({
+      instructionType: RestakingInstruction.UserCloseRewardAccount;
+    } & ParsedUserCloseRewardAccountInstruction<TProgram>)
   | ({
       instructionType: RestakingInstruction.UserCreateFundAccountIdempotent;
     } & ParsedUserCreateFundAccountIdempotentInstruction<TProgram>)

@@ -179,7 +179,6 @@ pub mod restaking {
     ) -> Result<()> {
         let event = modules::reward::UserRewardConfigurationService::new(
             &ctx.accounts.receipt_token_mint,
-            &ctx.accounts.user_receipt_token_account,
             &ctx.accounts.reward_account,
             ctx.accounts.user_reward_account.as_account_info(),
         )?
@@ -187,6 +186,7 @@ pub mod restaking {
             &ctx.accounts.system_program,
             &ctx.accounts.payer,
             &ctx.accounts.user,
+            &ctx.accounts.user_receipt_token_account,
             ctx.bumps.user_reward_account,
             Some(FUND_MANAGER_PUBKEY),
             desired_account_size,
@@ -1320,6 +1320,20 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
+    // UserFundAccountCloseContext
+    ////////////////////////////////////////////
+
+    pub fn user_close_fund_account(ctx: Context<UserFundAccountCloseContext>) -> Result<()> {
+        emit_cpi!(modules::fund::UserFundConfigurationService::new(
+            &ctx.accounts.receipt_token_mint,
+            &mut ctx.accounts.user_fund_account
+        )?
+        .process_close_user_fund_account(&ctx.accounts.user)?);
+
+        Ok(())
+    }
+
+    ////////////////////////////////////////////
     // UserRewardAccountInitOrUpdateContext
     ////////////////////////////////////////////
 
@@ -1329,7 +1343,6 @@ pub mod restaking {
     ) -> Result<()> {
         let event = modules::reward::UserRewardConfigurationService::new(
             &ctx.accounts.receipt_token_mint,
-            &ctx.accounts.user_receipt_token_account,
             &ctx.accounts.reward_account,
             ctx.accounts.user_reward_account.as_account_info(),
         )?
@@ -1337,6 +1350,7 @@ pub mod restaking {
             &ctx.accounts.system_program,
             &ctx.accounts.user,
             &ctx.accounts.user,
+            &ctx.accounts.user_receipt_token_account,
             ctx.bumps.user_reward_account,
             None,
             desired_account_size,
@@ -1407,11 +1421,32 @@ pub mod restaking {
     ) -> Result<()> {
         emit_cpi!(modules::reward::UserRewardConfigurationService::new(
             &ctx.accounts.receipt_token_mint,
-            &ctx.accounts.user_receipt_token_account,
             &ctx.accounts.reward_account,
             ctx.accounts.user_reward_account.as_account_info(),
         )?
-        .process_delegate_user_reward_account(&ctx.accounts.delegate_authority, delegate)?);
+        .process_delegate_user_reward_account(
+            &ctx.accounts.delegate_authority,
+            &ctx.accounts.user_receipt_token_account,
+            delegate
+        )?);
+
+        Ok(())
+    }
+
+    ////////////////////////////////////////////
+    // UserRewardAccountCloseContext
+    ////////////////////////////////////////////
+
+    pub fn user_close_reward_account(
+        ctx: Context<UserRewardAccountCloseContext>,
+        ignore_unclaimed_rewards: bool,
+    ) -> Result<()> {
+        emit_cpi!(modules::reward::UserRewardConfigurationService::new(
+            &ctx.accounts.receipt_token_mint,
+            &ctx.accounts.reward_account,
+            ctx.accounts.user_reward_account.as_account_info(),
+        )?
+        .process_close_user_reward_account(&ctx.accounts.user, ignore_unclaimed_rewards)?);
 
         Ok(())
     }

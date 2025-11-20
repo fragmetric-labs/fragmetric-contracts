@@ -24,6 +24,10 @@ impl TokenAllocatedAmount {
         })
     }
 
+    pub fn get_total_amount(&self) -> u64 {
+        self.total_amount
+    }
+
     #[inline(always)]
     fn get_records_iter_mut(&mut self) -> impl Iterator<Item = &mut TokenAllocatedAmountRecord> {
         self.records[..self.num_records as usize].iter_mut()

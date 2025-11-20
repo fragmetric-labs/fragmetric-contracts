@@ -56,6 +56,8 @@ export * from './slasherWithdrawNormalizedToken';
 export * from './tokenTransferHook';
 export * from './userCancelWithdrawalRequest';
 export * from './userClaimReward';
+export * from './userCloseFundAccount';
+export * from './userCloseRewardAccount';
 export * from './userCreateFundAccountIdempotent';
 export * from './userCreateRewardAccountIdempotent';
 export * from './userDelegateRewardAccount';
