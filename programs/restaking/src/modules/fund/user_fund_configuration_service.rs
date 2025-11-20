@@ -1,8 +1,9 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::*;
 
+use crate::errors::ErrorCode;
+use crate::events;
 use crate::utils::{AccountInfoExt, AsAccountInfo, PDASeeds, SystemProgramExt};
-use crate::{errors, events};
 
 use super::*;
 
@@ -150,7 +151,7 @@ impl<'a, 'info> UserFundConfigurationService<'a, 'info> {
     ) -> Result<events::UserClosedFundAccount> {
         require!(
             self.user_fund_account.is_withdrawal_requests_empty(),
-            errors::ErrorCode::FundUserHasPendingWithdrawalRequestsError
+            ErrorCode::FundUserHasPendingWithdrawalRequestsError
         );
 
         self.user_fund_account.close(user.to_account_info())?;
