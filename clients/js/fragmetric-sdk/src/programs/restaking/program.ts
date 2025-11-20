@@ -64,8 +64,8 @@ export class RestakingProgram extends ProgramContext {
     ),
     fragUSD: address(
       this.runtime.cluster != 'local'
-        ? '???' // TODO: pubkey needs to be changed
-        : 'Bo3iD5rndRom65jSze7bD3pKbHJcnq4V9mVH9KTH5ToX' // TODO: pubkey needs to be changed
+        ? 'FRAGUvv77ZeHaU67GYUCn6ugSs7a88Mwn4DeBXLnwQnH'
+        : 'Bo3iD5rndRom65jSze7bD3pKbHJcnq4V9mVH9KTH5ToX'
     ),
   });
 

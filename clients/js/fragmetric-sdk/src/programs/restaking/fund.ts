@@ -1635,7 +1635,7 @@ export class RestakingFundAccountContext extends AccountContext<
             }
 
             const vrtMint =
-              (await vaultContext?.vaultReceiptTokenMint.resolveAddress())!;
+              (await vaultContext?.receiptTokenMint.resolveAddress())!;
             const driftVaultTokenAccountAddress =
               vaultAccount.data.tokenAccount;
             const driftVaultTokenAccountContext = new TokenAccountContext(
@@ -1687,7 +1687,6 @@ export class RestakingFundAccountContext extends AccountContext<
             const fundReserve = ix.accounts[3].address;
 
             return Promise.all([
-              // *** TODO: need to be removed (drift vault does not use ATA for Token Account) ***
               token.getCreateAssociatedTokenIdempotentInstructionAsync({
                 payer: createNoopSigner(payer as Address),
                 mint: supportedTokenMint,

@@ -15,13 +15,10 @@ export class DriftVaultAccountContext extends AccountContext<
     return driftVault.decodeVault(account);
   }
 
-  readonly vaultReceiptTokenMint = new TokenMintAccountContext(
-    this,
-    'A4npkVMUk88rX4iMQ32QALivUiWZr1GoNQGHbfygitZt' // TODO: This address need to be replaced
-  );
-
   readonly receiptTokenMint = new TokenMintAccountContext(
     this,
-    'A4npkVMUk88rX4iMQ32QALivUiWZr1GoNQGHbfygitZt' // TODO: This address need to be replaced
+    this.runtime.cluster != 'local'
+      ? 'UVRT7fFA6hnDb4MPeW7z7gfedcGgkVyhTHaqZzpLYf9'
+      : 'HqZT3PvbUtYN8teegyunhvZGK7YLwtmFvyr9927SgCK7'
   );
 }

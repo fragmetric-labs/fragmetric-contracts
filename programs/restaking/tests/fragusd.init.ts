@@ -84,10 +84,10 @@ export function initializeFragUSD(testCtx: TestSuiteContext) {
       }),
     () =>
       ctx.fund.addRestakingVault.execute({
-        vault: 'CoHd9JpwfcA76XQGA4AYfnjvAtWKoBQ6eWBkFzR1A2ui', // TODO: This address need to be replaced
+        vault: 'CoHd9JpwfcA76XQGA4AYfnjvAtWKoBQ6eWBkFzR1A2ui',
         pricingSource: {
           __kind: 'DriftVault',
-          address: 'CoHd9JpwfcA76XQGA4AYfnjvAtWKoBQ6eWBkFzR1A2ui', // TODO: This address need to be replaced
+          address: 'CoHd9JpwfcA76XQGA4AYfnjvAtWKoBQ6eWBkFzR1A2ui',
         },
       }),
     () =>
