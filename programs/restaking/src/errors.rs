@@ -82,6 +82,7 @@ pub enum ErrorCode {
     #[msg("reward: exceeded max rewards")]
     RewardExceededMaxRewardsError,
 
+    // deprecated
     #[msg("reward: exceeded max reward pools")]
     RewardExceededMaxRewardPoolsError,
 

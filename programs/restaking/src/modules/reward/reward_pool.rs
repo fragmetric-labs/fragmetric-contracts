@@ -102,7 +102,7 @@ impl RewardPool {
                 require_gt!(
                     REWARD_POOL_REWARD_SETTLEMENTS_MAX_LEN_1,
                     self.num_reward_settlements as usize,
-                    ErrorCode::RewardExceededMaxRewardPoolsError,
+                    ErrorCode::RewardExceededMaxRewardSettlementError,
                 );
 
                 self.reward_settlements_1[self.num_reward_settlements as usize].initialize(
