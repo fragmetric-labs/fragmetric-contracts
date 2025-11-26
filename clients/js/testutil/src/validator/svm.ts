@@ -57,7 +57,7 @@ export class SVMValidator extends TestValidator<'svm'> {
         (resolve, reject) => {
           try {
             child_process.execSync(
-              `cat ~/.config/solana/id.json >/dev/null 2>&1 || (mkdir -p ~/.config/solana && solana-keygen new --no-bip39-passphrase -o ~/.config/solana/id.json)`
+              `solana-keygen pubkey ~/.config/solana/id.json || (mkdir -p ~/.config/solana && solana-keygen new --no-bip39-passphrase -o ~/.config/solana/id.json)`
             );
             resolve();
           } catch (e) {

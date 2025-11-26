@@ -14,5 +14,5 @@ onlyBuiltDependencies:
   - tiny-secp256k1
   - usb
   - utf-8-validate
-useNodeVersion: 20.19.0
+useNodeVersion: 24.11.1
 engineStrict: true
