@@ -1,30 +1,36 @@
 # Fragmetric Solana Programs
 
-This repository contains the full business logic of Fragmetric on-chain programs and it's test codes.
+This repository contains the full business logic of Fragmetric on-chain programs, test codes and client SDK.
 
 # Contribution Guide
 
 ## 1. Install Requirements
-```shell
-# install Solana CLI
-$ sh -c "$(curl -sSfL https://release.anza.xyz/stable/install)"
+Refer to the [Dockerfile](./.github/anchor.Dockerfile) of verifiable builder image.
 
-# install Rust toolchain
+```shell
+# install Solana CLI (v3.0.6 target)
+$ sh -c "$(curl -sSfL https://release.anza.xyz/v3.0.6/install)"
+
+# install Rust toolchain (v1.91.1 target)
 $ sh -c "$(curl -sSfL https://sh.rustup.rs)"
 $ rustup default stable
 $ rustup update
 
+# if toolchain 'solana' is uninstalled
+$ cargo-build-sbf --force-tools-install
+
 # install AVM (anchor version manager)
 $ cargo install --git https://github.com/coral-xyz/anchor avm --force
-$ avm use latest
+$ avm use 0.31.1
 
-# install PNPM (kinda node package manager)
+# Setup nodejs env (v24.11.1 target)
+# install pnpm (v20.19.0 target)
 $ sh -c "$(curl -fsSL https://get.pnpm.io/install.sh)"
 
 # install js packages
 $ pnpm i
 ```
- 
+
 ## 2. Configure Program KeyPairs
 ```shell
 # to sync shared local keypairs
@@ -42,7 +48,7 @@ $ anchor build
 # to build a single program
 $ anchor build -p restaking
 
-# for releases
+# to build release candidates, verifiable release artifacts will be built from CI workflow
 $ anchor build -p restaking -- --features mainnet
 $ anchor build -p solv -- --features devnet 
 ```

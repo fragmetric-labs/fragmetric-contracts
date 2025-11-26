@@ -12,11 +12,7 @@
 name: fragmetric-contracts CI
 
 env:
-  RUSTUP_TOOLCHAIN_VERSION: stable
-  RUSTUP_PERMIT_COPY_RENAME: 1
-  SOLANA_VERSION: stable
-  ANCHOR_VERSION: 0.31.1
-  NODE_VERSION: 20.19.0
+  # Variables being injected to integration test suites
   CI: true
   DEBUG: true
   RUNTIME: ${{(github.ref_name == 'main' || github.ref_name == 'dev' ||
@@ -38,73 +34,37 @@ jobs:
   ci:
     if: ${{ github.event_name != 'workflow_dispatch' && !contains(github.event.head_commit.message, '[skip ci]') }}
     name: build and test
-#    runs-on: macos-latest-xlarge
-    runs-on: ${{(github.ref_name == 'main' || github.ref_name == 'dev' ||
-      (github.event_name == 'push' && contains(github.event.head_commit.message, '[svm]')) ||
-      (github.event_name == 'pull_request' && contains(github.event.pull_request.title, '[svm]'))) && 'ubuntu-latest-32core-x86' || 'macos-latest-xlarge' }}
+    runs-on: ubuntu-latest-32core-x86
+    strategy:
+      matrix:
+        image:
+          - ghcr.io/fragmetric-labs/solana-anchor:v0.31.1
+    container:
+      image: ${{ matrix.image }}
+      env:
+        HOME: /root
+        RUSTUP_HOME: /root/.rustup
+        CARGO_HOME: /root/.cargo
     steps:
-      # checkout
       - uses: actions/checkout@v4
-
-      # setup Node runtime
-      - name: setup Node $PATH
-        run: |
-          NODE_BIN=$(command -v node || true)
-          if [ -n "$NODE_BIN" ]; then
-            NODE_DIR=$(dirname "$NODE_BIN")
-            echo "Detected node at: $NODE_DIR"
-            echo "$NODE_DIR" >> $GITHUB_PATH
-          else
-            echo "Node not found, skipping PATH patch"
-          fi
       - uses: pnpm/action-setup@v2
         with:
           version: 10
           run_install: true
       - uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
-          #cache-dependency-path: ./pnpm-lock.yaml
+          cache-dependency-path: ./pnpm-lock.yaml
 
-      # setup Ubuntu deps
-      - run: |
-          if [[ "$(uname -s)" == "Linux" ]]; then
-            echo "Detected Ubuntu/Linux — installing libudev deps"
-            sudo apt-get update
-            sudo apt-get install -y pkg-config libudev-dev libusb-1.0-0-dev build-essential
-          else
-            echo "Not Linux, skipping libudev install"
-          fi
-
-      # setup Rust and Solana runtime
-      - run: |
-          sh -c "$(curl -sSfL https://release.anza.xyz/${{ env.SOLANA_VERSION }}/install)"
-          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          toolchain: ${{ env.RUSTUP_TOOLCHAIN_VERSION }}
-          components: rustfmt, clippy
-          override: true
-          #cache-key: ./Cargo.lock
+      - run: rustup show && cargo --version
       - uses: baptiste0928/cargo-install@v3
         with:
           crate: cargo-audit
-          version: "0.21.2"
-          locked: true
-      - uses: baptiste0928/cargo-install@v3
-        with:
-          crate: avm
-          git: https://github.com/coral-xyz/anchor
+          version: "0.22.0"
           locked: true
       - uses: baptiste0928/cargo-install@v3
         with:
           crate: solana-verify
-
-      # activate anchor version
-      - run: avm install ${{ env.ANCHOR_VERSION }} && avm use ${{ env.ANCHOR_VERSION }}
-
-      # lint Rust codes and audit dependencies
       - run: cargo audit --ignore RUSTSEC-2022-0093 --ignore RUSTSEC-2024-0344 --ignore RUSTSEC-2024-0421 --ignore RUSTSEC-2025-0022
       - run: cargo fmt --check
       - run: cargo clippy -- --allow warnings
@@ -120,7 +80,6 @@ jobs:
           pnpm test "${files[@]}"
 
       # build artifacts
-      # TODO: anchor build --verifiable
       - name: build and package release candidates
         if: github.ref_name == 'dev' || github.ref_name == 'main'
         id: package
@@ -188,16 +147,25 @@ jobs:
           
           {
             echo "### Hash Verification Example"
-            echo "The program binary hashes listed above were computed on a macOS-arm system for now."
+            echo "The program binary hashes listed above were created by docker image ${{ matrix.image }}."
             echo '```'
             echo "# install solana-verify"
             echo "$ cargo install solana-verify"
+            echo ""
             echo "# verify local build"
             echo "$ solana-verify get-executable-hash ./target/deploy/restaking.so"
+            echo ""
             echo "# verify program buffer"
             echo "$ solana-verify get-buffer-hash tg1aXtRpWgbLP7PtyqrJoeaVfB67rMRbyqnRF8SjSSH -u mainnet"
+            echo ""
             echo "# verify deployed program"
             echo "$ solana-verify get-program-hash fragnAis7Bp6FTsMoa6YcH8UffhEw43Ph79qAiK3iF3 -u mainnet"
+            echo ""
+            echo "# verify deployed program from source code"
+            echo "$ solana-verify verify-from-repo -u mainnet --base-image ${{ matrix.image }} --commit-hash ${{ github.sha }} --program-id fragnAis7Bp6FTsMoa6YcH8UffhEw43Ph79qAiK3iF3 --library-name restaking https://github.com/fragmetric-labs/fragmetric-contracts -- --features mainnet"
+            echo ""
+            echo "# update deployed program verification"
+            echo "$ solana-verify verify-from-repo --remote --keypair ./keypairs/wallet.json -u mainnet --base-image ${{ matrix.image }} --commit-hash ${{ github.sha }} --program-id fragnAis7Bp6FTsMoa6YcH8UffhEw43Ph79qAiK3iF3 --library-name restaking https://github.com/fragmetric-labs/fragmetric-contracts -- --features mainnet"
             echo '```'
           } >> $GITHUB_STEP_SUMMARY
           
@@ -224,11 +192,10 @@ jobs:
 
       - if: github.ref_name == 'main'
         uses: softprops/action-gh-release@v2
-        continue-on-error: true # idk why but release draft created but failed with Not Found error, ref: https://github.com/softprops/action-gh-release/issues/373
+        continue-on-error: true # ref: https://github.com/softprops/action-gh-release/issues/373
         with:
           token: '${{ secrets.RELEASE_GITHUB_PAT }}'
           files: release-artifacts/**
           fail_on_unmatched_files: true
           draft: true
-
           body_path: "${{ steps.package.outputs.path }}/README.md"
