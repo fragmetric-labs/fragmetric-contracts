@@ -42,6 +42,7 @@ pub struct WeightedAllocationStrategy<const N: usize> {
 }
 
 impl<const N: usize> WeightedAllocationStrategy<N> {
+    #[inline(never)]
     pub fn new(participants: impl IntoIterator<Item = WeightedAllocationParticipant>) -> Self {
         let mut strategy = Self {
             participants: [WeightedAllocationParticipant::default(); N],
