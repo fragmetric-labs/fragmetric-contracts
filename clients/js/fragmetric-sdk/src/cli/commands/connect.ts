@@ -233,8 +233,8 @@ export const connectCommand = new Command()
           }
         });
 
-        readline.clearLine(process.stdout, 0);
-        readline.cursorTo(process.stdout, 0);
+        // readline.clearLine(process.stdout, 0);
+        // readline.cursorTo(process.stdout, 0);
         callback(null, result);
       } catch (err) {
         readline.clearLine(process.stdout, 0);
