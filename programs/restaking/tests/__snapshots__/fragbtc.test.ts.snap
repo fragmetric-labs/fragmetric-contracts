@@ -17,6 +17,10 @@ exports[`restaking.fragBTC test > restaking.fragBTC initializationTasks snapshot
     "Program log: Instruction: InitializeMint2",
     "MASKED(/^Program \\w{32,44} consumed \\d+ of \\d+ compute units$/)",
     "Program TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb success",
+    "Program TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb invoke [1]",
+    "Program log: TokenMetadataInstruction: Initialize",
+    "MASKED(/^Program \\w{32,44} consumed \\d+ of \\d+ compute units$/)",
+    "Program TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb success",
   ],
   [
     "Program 4qEHCzsLFUnw8jmhmRSmAK5VhZVoSD1iVqukAf92yHi5 invoke [1]",
