@@ -319,12 +319,11 @@ export class RestakingReceiptTokenMintAccountContext extends TokenMintAccountCon
               freezeAuthority: null,
               mintAuthority: admin,
             }),
-            // TODO: ...
-            // ...token2022.getPostInitializeInstructionsForMintExtensions(
-            //   receiptTokenMint,
-            //   createNoopSigner(admin),
-            //   extensions
-            // ),
+            ...token2022.getPostInitializeInstructionsForMintExtensions(
+              receiptTokenMint,
+              createNoopSigner(admin),
+              extensions
+            ),
           ];
         },
       ],

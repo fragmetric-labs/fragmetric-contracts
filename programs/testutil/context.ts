@@ -98,6 +98,13 @@ export async function createTestSuiteContext(config?: {
           pubkey: '9beGuWXNoKPKCApT6xJUm5435Fz8EMGzoTTXgkcf3zAz',
           soFilePath: '../../target/deploy/solv.so',
         },
+        // TODO: remove this overriding when upgraded token2022 program is builtin into both solana-test-validator and liteSVM.
+        // ref: https://github.com/solana-program/token-2022/pull/479
+        // ref: https://github.com/fragmetric-labs/fragmetric-contracts/issues/539
+        {
+          pubkey: 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb',
+          soFilePath: '../restaking/tests/mocks/spl_token_2022.so',
+        },
       ],
       accounts: [
         {
