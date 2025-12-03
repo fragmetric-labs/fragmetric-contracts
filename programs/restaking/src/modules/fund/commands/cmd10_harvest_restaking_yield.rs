@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program::program_option::COption;
 use anchor_spl::associated_token;
 use anchor_spl::token_interface::TokenAccount;
 
@@ -607,9 +608,12 @@ impl HarvestRestakingYieldCommand {
         };
 
         let reward_token_amount = self.get_reward_token_amount(
+            ctx,
+            vault,
             vault_reward_token_account,
             &vault_reward_token_account_signer,
-            &reward_token_mints[0],
+            reward_token_mint,
+            HarvestType::CompoundReward,
         )?;
 
         let available_reward_token_amount_to_harvest = self.apply_reward_harvest_threshold(
@@ -847,9 +851,12 @@ impl HarvestRestakingYieldCommand {
         };
 
         let reward_token_amount = self.get_reward_token_amount(
+            ctx,
+            vault,
             vault_reward_token_account,
             &vault_reward_token_account_signer,
-            &reward_token_mints[0],
+            reward_token_mint,
+            HarvestType::DistributeReward,
         )?;
 
         let available_reward_token_amount_to_harvest = self.apply_reward_harvest_threshold(
@@ -964,15 +971,15 @@ impl HarvestRestakingYieldCommand {
         let available_reward_token_amount_to_harvest = self
             .get_available_reward_token_amount_to_harvest(
                 ctx,
-                &common_accounts,
                 vault,
-                &reward_token_mints[0],
+                &common_accounts,
+                None,
                 HarvestType::CompoundReward,
             )?;
 
         let result = if available_reward_token_amount_to_harvest > 0 {
             let fund_account = ctx.fund_account.load()?;
-            let fund_supported_token_account_address = fund_account
+            let fund_supported_token_reserve_account_address = fund_account
                 .find_supported_token_reserve_account_address(&reward_token_mints[0])?;
             let restaking_vault = fund_account.get_restaking_vault(vault)?;
             let receipt_token_pricing_source = restaking_vault
@@ -989,7 +996,7 @@ impl HarvestRestakingYieldCommand {
                             &common_accounts,
                             vault,
                             &fund_account.get_seeds(),
-                            &fund_supported_token_account_address,
+                            &fund_supported_token_reserve_account_address,
                             available_reward_token_amount_to_harvest,
                         )?,
                     Some(TokenPricingSource::VirtualVault { .. }) => self
@@ -1003,7 +1010,7 @@ impl HarvestRestakingYieldCommand {
                                 &ctx.fund_account.key(),
                             )
                             .get_seeds(),
-                            &fund_supported_token_account_address,
+                            &fund_supported_token_reserve_account_address,
                             available_reward_token_amount_to_harvest,
                         )?,
                     // otherwise fails
@@ -1097,9 +1104,9 @@ impl HarvestRestakingYieldCommand {
         let available_reward_token_amount_to_harvest = self
             .get_available_reward_token_amount_to_harvest(
                 ctx,
-                &common_accounts,
                 vault,
-                &reward_token_mints[0],
+                &common_accounts,
+                None,
                 HarvestType::CompoundReward,
             )?;
 
@@ -1232,169 +1239,225 @@ impl HarvestRestakingYieldCommand {
         }
         let common_accounts = CommonAccounts::pop_from(&mut accounts, &reward_token_mints[0])?;
 
-        // check harvest threshold
-        let available_reward_token_amount_to_harvest = self
-            .get_available_reward_token_amount_to_harvest(
-                ctx,
-                &common_accounts,
-                vault,
-                &reward_token_mints[0],
-                HarvestType::DistributeReward,
-            )?;
-
         let result = (|| {
-            if available_reward_token_amount_to_harvest > 0 {
-                // get reward related accounts in advance for validation
-                let [_, _, _, _, reward_token_reserve_account, reward_account, reward_reserve_account, ..] =
-                    accounts
-                else {
-                    err!(error::ErrorCode::AccountNotEnoughKeys)?
-                };
+            // get reward related accounts in advance for validation
+            let [_, _, _, _, reward_token_reserve_account, reward_account, reward_reserve_account, ..] =
+                accounts
+            else {
+                err!(error::ErrorCode::AccountNotEnoughKeys)?
+            };
 
-                let reward_account = AccountLoader::<RewardAccount>::try_from(reward_account)?;
-                let reward_account_data = reward_account.load()?;
+            let reward_account = AccountLoader::<RewardAccount>::try_from(reward_account)?;
+            let reward_account_data = reward_account.load()?;
 
-                require_keys_eq!(
-                    reward_account.key(),
-                    RewardAccount::find_account_address(&ctx.receipt_token_mint.key()),
-                );
+            require_keys_eq!(
+                reward_account.key(),
+                RewardAccount::find_account_address(&ctx.receipt_token_mint.key()),
+            );
 
-                require_keys_eq!(
-                    reward_reserve_account.key(),
-                    reward_account_data.get_reserve_account_address()?
-                );
+            require_keys_eq!(
+                reward_reserve_account.key(),
+                reward_account_data.get_reserve_account_address()?
+            );
 
-                let Some(to_reward_token_account_address) = reward_account_data
-                    .get_reward_token_reserve_account_address(&reward_token_mints[0])?
-                else {
-                    // reward isn't claimable
-                    return Ok(None);
-                };
+            let Some(to_reward_token_account_address) = reward_account_data
+                .get_reward_token_reserve_account_address(&reward_token_mints[0])?
+            else {
+                // reward isn't claimable
+                return Ok(None);
+            };
 
-                drop(reward_account_data);
+            drop(reward_account_data);
 
-                let fund_account = ctx.fund_account.load()?;
-                let restaking_vault = fund_account.get_restaking_vault(vault)?;
-                let receipt_token_pricing_source = restaking_vault
-                    .receipt_token_pricing_source
-                    .try_deserialize()?;
+            let fund_account = ctx.fund_account.load()?;
+            let restaking_vault = fund_account.get_restaking_vault(vault)?;
+            let receipt_token_pricing_source = restaking_vault
+                .receipt_token_pricing_source
+                .try_deserialize()?;
 
-                let (token_commission_amount, token_distributed_amount) =
-                    match receipt_token_pricing_source {
-                        Some(TokenPricingSource::JitoRestakingVault { .. })
-                        | Some(TokenPricingSource::SolvBTCVault { .. }) => self
-                            .apply_commission_and_transfer_reward(
+            let (token_commission_amount, token_distributed_amount) =
+                match receipt_token_pricing_source {
+                    Some(TokenPricingSource::JitoRestakingVault { .. })
+                    | Some(TokenPricingSource::SolvBTCVault { .. }) => {
+                        let fund_account_seeds = fund_account.get_seeds();
+                        let mint_authority_signer_seeds: Option<&[&[u8]]> = if self
+                            .is_token_mintable_by_restaking_program(
+                                ctx,
+                                vault,
+                                common_accounts.reward_token_mint,
+                            )? {
+                            let reward_token_mint = InterfaceAccount::<Mint>::try_from(
+                                common_accounts.reward_token_mint,
+                            )?;
+
+                            require_keys_eq!(
+                                reward_token_mint.mint_authority.unwrap(),
+                                ctx.fund_account.key()
+                            );
+
+                            Some(&fund_account_seeds)
+                        } else {
+                            None
+                        };
+
+                        // check harvest threshold
+                        let available_reward_token_amount_to_harvest = self
+                            .get_available_reward_token_amount_to_harvest(
+                                ctx,
+                                vault,
+                                &common_accounts,
+                                mint_authority_signer_seeds,
+                                HarvestType::DistributeReward,
+                            )?;
+
+                        if available_reward_token_amount_to_harvest > 0 {
+                            self.apply_commission_and_transfer_reward(
                                 ctx,
                                 &mut accounts,
                                 &common_accounts,
                                 vault,
-                                &fund_account.get_seeds(),
+                                &fund_account_seeds,
                                 &to_reward_token_account_address,
                                 available_reward_token_amount_to_harvest,
-                            )?,
-                        Some(TokenPricingSource::VirtualVault { .. }) => self
-                            .apply_commission_and_transfer_reward(
+                            )?
+                        } else {
+                            (0, 0)
+                        }
+                    }
+                    Some(TokenPricingSource::VirtualVault { .. }) => {
+                        let fund_account_key = &ctx.fund_account.key();
+                        let virtual_vault = VirtualVaultService::find_vault_address(
+                            &restaking_vault.receipt_token_mint,
+                            fund_account_key,
+                        );
+                        let virtual_vault_seeds = virtual_vault.get_seeds();
+
+                        let mint_authority_signer_seeds: Option<&[&[u8]]> = if self
+                            .is_token_mintable_by_restaking_program(
+                                ctx,
+                                vault,
+                                common_accounts.reward_token_mint,
+                            )? {
+                            let reward_token_mint = InterfaceAccount::<Mint>::try_from(
+                                common_accounts.reward_token_mint,
+                            )?;
+
+                            require_keys_eq!(reward_token_mint.mint_authority.unwrap(), *vault);
+
+                            Some(&virtual_vault_seeds)
+                        } else {
+                            None
+                        };
+
+                        // check harvest threshold
+                        let available_reward_token_amount_to_harvest = self
+                            .get_available_reward_token_amount_to_harvest(
+                                ctx,
+                                vault,
+                                &common_accounts,
+                                mint_authority_signer_seeds,
+                                HarvestType::DistributeReward,
+                            )?;
+
+                        if available_reward_token_amount_to_harvest > 0 {
+                            self.apply_commission_and_transfer_reward(
                                 ctx,
                                 &mut accounts,
                                 &common_accounts,
                                 vault,
-                                &VirtualVaultService::find_vault_address(
-                                    &restaking_vault.receipt_token_mint,
-                                    &ctx.fund_account.key(),
-                                )
-                                .get_seeds(),
+                                &virtual_vault_seeds,
                                 &to_reward_token_account_address,
                                 available_reward_token_amount_to_harvest,
-                            )?,
-                        // otherwise fails
-                        Some(TokenPricingSource::SPLStakePool { .. })
-                        | Some(TokenPricingSource::MarinadeStakePool { .. })
-                        | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. })
-                        | Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { .. })
-                        | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
-                        | Some(TokenPricingSource::FragmetricRestakingFund { .. })
-                        | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
-                        | Some(TokenPricingSource::PeggedToken { .. })
-                        | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
-                        #[cfg(all(test, not(feature = "idl-build")))]
-                        Some(TokenPricingSource::Mock { .. }) => {
-                            err!(ErrorCode::FundOperationCommandExecutionFailedException)?
+                            )?
+                        } else {
+                            (0, 0)
                         }
-                    };
+                    }
+                    // otherwise fails
+                    Some(TokenPricingSource::SPLStakePool { .. })
+                    | Some(TokenPricingSource::MarinadeStakePool { .. })
+                    | Some(TokenPricingSource::SanctumSingleValidatorSPLStakePool { .. })
+                    | Some(TokenPricingSource::SanctumMultiValidatorSPLStakePool { .. })
+                    | Some(TokenPricingSource::FragmetricNormalizedTokenPool { .. })
+                    | Some(TokenPricingSource::FragmetricRestakingFund { .. })
+                    | Some(TokenPricingSource::OrcaDEXLiquidityPool { .. })
+                    | Some(TokenPricingSource::PeggedToken { .. })
+                    | None => err!(ErrorCode::FundOperationCommandExecutionFailedException)?,
+                    #[cfg(all(test, not(feature = "idl-build")))]
+                    Some(TokenPricingSource::Mock { .. }) => {
+                        err!(ErrorCode::FundOperationCommandExecutionFailedException)?
+                    }
+                };
 
-                drop(fund_account);
+            drop(fund_account);
 
-                Ok(if token_distributed_amount > 0 {
-                    let [_, _, program_reward_token_revenue_account, ..] = accounts else {
-                        return err!(error::ErrorCode::AccountNotEnoughKeys)?;
-                    };
+            Ok(if token_distributed_amount > 0 {
+                let [_, _, program_reward_token_revenue_account, ..] = accounts else {
+                    return err!(error::ErrorCode::AccountNotEnoughKeys)?;
+                };
 
-                    require_keys_eq!(
-                        program_reward_token_revenue_account.key(),
-                        anchor_spl::associated_token::get_associated_token_address_with_program_id(
-                            &PROGRAM_REVENUE_ADDRESS,
-                            common_accounts.reward_token_mint.key,
-                            common_accounts.reward_token_program.key,
-                        )
-                    );
-
-                    let reward_reserve_account = SystemAccount::try_from(reward_reserve_account)?;
-                    let program_reward_token_revenue_account =
-                        InterfaceAccount::try_from(program_reward_token_revenue_account)?;
-                    let reward_token_mint =
-                        InterfaceAccount::try_from(common_accounts.reward_token_mint)?;
-                    let reward_token_reserve_account =
-                        InterfaceAccount::try_from(reward_token_reserve_account)?;
-                    let reward_token_program =
-                        Interface::try_from(common_accounts.reward_token_program)?;
-
-                    let reward_service =
-                        RewardService::new(ctx.receipt_token_mint, &reward_account)?;
-                    reward_service.settle_reward(
-                        Some(&reward_token_mint),
-                        Some(&reward_token_program),
-                        Some(&reward_token_reserve_account),
-                        reward_token_mint.key(),
-                        false,
-                        token_distributed_amount,
-                    )?;
-
-                    reward_service.claim_remaining_reward(
-                        &reward_token_mint,
-                        &reward_token_program,
-                        &reward_reserve_account,
-                        &reward_token_reserve_account,
-                        &program_reward_token_revenue_account,
-                    )?;
-
-                    ctx.fund_account
-                        .load_mut()?
-                        .get_restaking_vault_mut(vault)?
-                        .get_distributing_reward_token_mut(&reward_token_mint.key())?
-                        .last_harvested_at = Clock::get()?.unix_timestamp;
-
-                    Some(
-                        HarvestRestakingYieldCommandResult {
-                            vault: *vault,
-                            yield_token_mint: reward_token_mint.key(),
-                            yield_token_total_harvested_amount: (token_commission_amount
-                                + token_distributed_amount)
-                                as i128,
-                            yield_token_commission_amount: token_commission_amount,
-                            fund_supported_token_compounded_amount: 0,
-                            swapped_token_mint: None,
-                            reward_token_distributed_amount: token_distributed_amount,
-                            updated_reward_account: Some(reward_account.key()),
-                            vault_supported_token_compounded_amount: 0,
-                        }
-                        .into(),
+                require_keys_eq!(
+                    program_reward_token_revenue_account.key(),
+                    anchor_spl::associated_token::get_associated_token_address_with_program_id(
+                        &PROGRAM_REVENUE_ADDRESS,
+                        common_accounts.reward_token_mint.key,
+                        common_accounts.reward_token_program.key,
                     )
-                } else {
-                    None
-                })
+                );
+
+                let reward_reserve_account = SystemAccount::try_from(reward_reserve_account)?;
+                let program_reward_token_revenue_account =
+                    InterfaceAccount::try_from(program_reward_token_revenue_account)?;
+                let reward_token_mint =
+                    InterfaceAccount::try_from(common_accounts.reward_token_mint)?;
+                let reward_token_reserve_account =
+                    InterfaceAccount::try_from(reward_token_reserve_account)?;
+                let reward_token_program =
+                    Interface::try_from(common_accounts.reward_token_program)?;
+
+                let reward_service = RewardService::new(ctx.receipt_token_mint, &reward_account)?;
+                reward_service.settle_reward(
+                    Some(&reward_token_mint),
+                    Some(&reward_token_program),
+                    Some(&reward_token_reserve_account),
+                    reward_token_mint.key(),
+                    false,
+                    token_distributed_amount,
+                )?;
+
+                reward_service.claim_remaining_reward(
+                    &reward_token_mint,
+                    &reward_token_program,
+                    &reward_reserve_account,
+                    &reward_token_reserve_account,
+                    &program_reward_token_revenue_account,
+                )?;
+
+                ctx.fund_account
+                    .load_mut()?
+                    .get_restaking_vault_mut(vault)?
+                    .get_distributing_reward_token_mut(&reward_token_mint.key())?
+                    .last_harvested_at = Clock::get()?.unix_timestamp;
+
+                Some(
+                    HarvestRestakingYieldCommandResult {
+                        vault: *vault,
+                        yield_token_mint: reward_token_mint.key(),
+                        yield_token_total_harvested_amount: (token_commission_amount
+                            + token_distributed_amount)
+                            as i128,
+                        yield_token_commission_amount: token_commission_amount,
+                        fund_supported_token_compounded_amount: 0,
+                        swapped_token_mint: None,
+                        reward_token_distributed_amount: token_distributed_amount,
+                        updated_reward_account: Some(reward_account.key()),
+                        vault_supported_token_compounded_amount: 0,
+                    }
+                    .into(),
+                )
             } else {
-                Ok(None)
-            }
+                None
+            })
         })()?;
 
         // move on to next item
@@ -1518,45 +1581,136 @@ impl HarvestRestakingYieldCommand {
     fn get_available_reward_token_amount_to_harvest(
         &self,
         ctx: &OperationCommandContext,
-        common_accounts: &CommonAccounts,
         vault: &Pubkey,
-        mint: &Pubkey,
+        common_accounts: &CommonAccounts,
+        mint_authority_signer_seeds: Option<&[&[u8]]>,
         harvest_type: HarvestType,
     ) -> Result<u64> {
         let reward_token_amount = self.get_reward_token_amount(
+            ctx,
+            vault,
             common_accounts.from_reward_token_account,
             common_accounts.from_reward_token_account_signer.key,
-            common_accounts.reward_token_mint.key,
+            common_accounts.reward_token_mint,
+            harvest_type,
         )?;
 
-        self.apply_reward_harvest_threshold(ctx, vault, mint, harvest_type, reward_token_amount)
+        let reward_token_amount = match harvest_type {
+            HarvestType::DistributeReward
+                if self.is_token_mintable_by_restaking_program(
+                    ctx,
+                    vault,
+                    common_accounts.reward_token_mint,
+                )? =>
+            {
+                self.mint_distributing_reward_to_vault(
+                    common_accounts,
+                    mint_authority_signer_seeds
+                        .ok_or(ErrorCode::FundOperationCommandExecutionFailedException)?,
+                    reward_token_amount,
+                )?
+            }
+            _ => reward_token_amount,
+        };
+
+        self.apply_reward_harvest_threshold(
+            ctx,
+            vault,
+            common_accounts.reward_token_mint.key,
+            harvest_type,
+            reward_token_amount,
+        )
     }
 
     fn get_reward_token_amount<'info>(
         &self,
+        ctx: &OperationCommandContext,
+        vault: &Pubkey,
         reward_token_account: &'info AccountInfo<'info>,
         reward_token_account_signer: &Pubkey,
-        reward_token_mint: &Pubkey,
+        reward_token_mint: &'info AccountInfo<'info>,
+        harvest_type: HarvestType,
     ) -> Result<u64> {
-        // Validate vault reward token account
-        let reward_token_account =
-            InterfaceAccount::<TokenAccount>::try_from(reward_token_account)?;
-        require_keys_eq!(reward_token_account.mint, reward_token_mint.key());
-
-        let mut reward_token_amount = reward_token_account.amount;
-        if reward_token_account.owner != *reward_token_account_signer {
-            reward_token_amount = if reward_token_account
-                .delegate
-                .contains(reward_token_account_signer)
+        let reward_token_amount = match harvest_type {
+            HarvestType::DistributeReward
+                if self.is_token_mintable_by_restaking_program(
+                    ctx,
+                    vault,
+                    reward_token_mint,
+                )? =>
             {
-                reward_token_amount.min(reward_token_account.delegated_amount)
-            } else {
-                // Signer is neither owner nor delegate, so move on to next reward
-                0
-            };
-        }
+                let fund_account = ctx.fund_account.load()?;
+                let restaking_vault = fund_account.get_restaking_vault(vault)?;
+                let reward_token =
+                    restaking_vault.get_distributing_reward_token(reward_token_mint.key)?;
+
+                reward_token.harvest_threshold_max_amount
+            }
+            _ => {
+                // Validate vault reward token account
+                let reward_token_account =
+                    InterfaceAccount::<TokenAccount>::try_from(reward_token_account)?;
+                require_keys_eq!(reward_token_account.mint, reward_token_mint.key());
+
+                let mut reward_token_amount = reward_token_account.amount;
+                if reward_token_account.owner != *reward_token_account_signer {
+                    reward_token_amount = if reward_token_account
+                        .delegate
+                        .contains(reward_token_account_signer)
+                    {
+                        reward_token_amount.min(reward_token_account.delegated_amount)
+                    } else {
+                        // Signer is neither owner nor delegate, so move on to next reward
+                        0
+                    };
+                }
+
+                reward_token_amount
+            }
+        };
 
         Ok(reward_token_amount)
+    }
+
+    fn is_token_mintable_by_restaking_program<'info>(
+        &self,
+        ctx: &OperationCommandContext,
+        vault: &Pubkey,
+        token_mint: &'info AccountInfo<'info>,
+    ) -> Result<bool> {
+        let token_mint = InterfaceAccount::<Mint>::try_from(token_mint)?;
+
+        Ok(matches!(
+            token_mint.mint_authority,
+            COption::Some(mint_authority)
+                if mint_authority == ctx.fund_account.key() || mint_authority == *vault
+        ))
+    }
+
+    fn mint_distributing_reward_to_vault(
+        &self,
+        common_accounts: &CommonAccounts,
+        mint_authority_signer_seeds: &[&[u8]],
+        amount_to_mint: u64,
+    ) -> Result<u64> {
+        if amount_to_mint > 0 {
+            anchor_spl::token_interface::mint_to(
+                CpiContext::new_with_signer(
+                    common_accounts.reward_token_program.to_account_info(),
+                    anchor_spl::token_interface::MintTo {
+                        mint: common_accounts.reward_token_mint.to_account_info(),
+                        authority: common_accounts
+                            .from_reward_token_account_signer
+                            .to_account_info(),
+                        to: common_accounts.from_reward_token_account.to_account_info(),
+                    },
+                    &[mint_authority_signer_seeds],
+                ),
+                amount_to_mint,
+            )?;
+        }
+
+        Ok(amount_to_mint)
     }
 
     fn apply_reward_harvest_threshold(
@@ -1900,7 +2054,7 @@ impl<'info> CommonAccounts<'info> {
     ) -> impl Iterator<Item = (Pubkey, bool)> {
         let required_accounts = [
             (*reward_token_mint.owner, false),
-            (reward_token_mint.key(), false),
+            (reward_token_mint.key(), true),
             (vault_reward_token_account.key(), true),
             (*vault_reward_token_account_signer, false),
         ]
