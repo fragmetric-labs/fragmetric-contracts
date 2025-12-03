@@ -3,12 +3,12 @@
 #
 # Ubuntu: 22 -> 24.04 due to LiteSVM contraints.
 # SOLANA_CLI: 2.1.0 -> 3.0.6
-# ANCHOR_CLI: 0.31.1
-# RUSTUP_TOOLCHAIN_VERSION: 1.28.1
+# ANCHOR_CLI: 0.32.1
+# RUSTUP_TOOLCHAIN_VERSION: 1.91.1
 # NODE_VERSION: 20.16.0 -> 24.11.1
 # others: installed zip
 #
-# e.g. docker build . -f ./.github/anchor.Dockerfile --platform=linux/amd64 -t ghcr.io/fragmetric-labs/solana-anchor:v0.31.1
+# e.g. docker build . -f ./.github/anchor.Dockerfile --platform=linux/amd64 -t ghcr.io/fragmetric-labs/solana-anchor:v0.32.1
 
 FROM ubuntu:24.04@sha256:4fdf0125919d24aec972544669dcd7d6a26a8ad7e6561c73d5549bd6db258ac2
 
@@ -18,7 +18,7 @@ LABEL org.opencontainers.image.description="Verifiable builder image for Anchor 
 ARG DEBIAN_FRONTEND=noninteractive
 
 ARG SOLANA_CLI="3.0.6"
-ARG ANCHOR_CLI="0.31.1"
+ARG ANCHOR_CLI="0.32.1"
 ARG NODE_VERSION="24.11.1"
 
 ENV HOME="/root"
