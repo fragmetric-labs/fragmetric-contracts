@@ -1,8 +1,9 @@
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::ed25519_program;
 use anchor_lang::solana_program::sysvar::instructions;
 
 use crate::errors::ErrorCode;
+
+pub const ED25519_PROGRAM_ADDRESS: Pubkey = pubkey!("Ed25519SigVerify111111111111111111111111111");
 
 /// Verify preceding Ed25519Program instruction data with given payload and payload_signer_key
 pub struct SignatureVerificationService {}
@@ -20,7 +21,7 @@ impl SignatureVerificationService {
             .checked_sub(1)
             .ok_or(ProgramError::InvalidArgument)?;
         let ix = instructions::load_instruction_at_checked(previous_ix_index, instructions_sysvar)?;
-        require_eq!(ix.program_id, ed25519_program::ID);
+        require_eq!(ix.program_id, ED25519_PROGRAM_ADDRESS);
         require_eq!(ix.accounts.len(), 0);
 
         // According to this layout used by the Ed25519Program
