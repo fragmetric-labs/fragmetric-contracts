@@ -1644,7 +1644,10 @@ impl HarvestRestakingYieldCommand {
                 let reward_token =
                     restaking_vault.get_distributing_reward_token(reward_token_mint.key)?;
 
-                reward_token.harvest_threshold_max_amount
+                reward_token.get_available_amount_to_harvest(
+                    reward_token.harvest_threshold_max_amount,
+                    Clock::get()?.unix_timestamp,
+                )
             }
             _ => {
                 // Validate vault reward token account
