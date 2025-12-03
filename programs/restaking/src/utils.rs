@@ -426,7 +426,7 @@ impl<'info> SystemProgramExt<'info> for Program<'info, System> {
             );
             let new_account_size = current_account_size + increase;
 
-            account_to_realloc.realloc(new_account_size, false)?;
+            account_to_realloc.resize(new_account_size)?;
             msg!(
                 "account reallocated: current={}, target={}, required={}",
                 new_account_size,

@@ -27,6 +27,9 @@ idl-build = [
     "anchor-lang/idl-build",
     "anchor-spl/idl-build",
 ]
+anchor-debug = []
+custom-heap = []
+custom-panic = []
 
 # own features
 devnet = ["solv/devnet"]
@@ -44,6 +47,7 @@ spl-tlv-account-resolution = { workspace = true }
 spl-transfer-hook-interface = { workspace = true }
 spl-discriminator = { workspace = true }
 spl-stake-pool = { workspace = true }
+solana-stake-interface = { workspace = true }
 marinade-cpi = { workspace = true }
 whirlpool-cpi = { workspace = true }
 primitive-types = { workspace = true }

@@ -3,8 +3,9 @@ use core::num::NonZeroU32;
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program;
 use anchor_spl::token_interface::TokenAccount;
-use solana_program::stake::state::StakeStateV2;
+use solana_stake_interface::state::StakeStateV2;
 use spl_stake_pool::error::StakePoolError;
+use spl_stake_pool::solana_program::borsh1;
 use spl_stake_pool::state::{StakePool, ValidatorListHeader, ValidatorStakeInfo};
 
 use crate::errors::ErrorCode;
@@ -72,10 +73,9 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
     }
 
     pub(super) fn deserialize_pool_account(pool_account: &AccountInfo) -> Result<StakePool> {
-        let pool_account_data = solana_program::borsh1::try_from_slice_unchecked::<StakePool>(
-            &pool_account.try_borrow_data()?,
-        )
-        .map_err(|_| error!(error::ErrorCode::AccountDidNotDeserialize))?;
+        let pool_account_data =
+            borsh1::try_from_slice_unchecked::<StakePool>(&pool_account.try_borrow_data()?)
+                .map_err(|_| error!(error::ErrorCode::AccountDidNotDeserialize))?;
 
         require_keys_eq!(*pool_account.owner, T::id());
         require_eq!(pool_account_data.is_valid(), true);
@@ -88,7 +88,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
     }
 
     pub(super) fn deserialize_stake_account(stake_account: &AccountInfo) -> Result<StakeStateV2> {
-        require_keys_eq!(*stake_account.owner, solana_program::stake::program::ID);
+        require_keys_eq!(*stake_account.owner, solana_stake_interface::program::ID);
         StakeStateV2::deserialize(&mut stake_account.try_borrow_data()?.as_ref())
             .map_err(|_| error!(error::ErrorCode::AccountDidNotDeserialize))
     }
@@ -193,7 +193,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
                 (pool_account_data.validator_list, true),
                 (solana_program::sysvar::clock::ID, false),
                 (solana_program::sysvar::stake_history::ID, false),
-                (solana_program::stake::program::ID, false),
+                (solana_stake_interface::program::ID, false),
             ]);
 
         Ok(accounts)
@@ -217,7 +217,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
         Ok([
             (solana_program::sysvar::clock::ID, false),
             (solana_program::sysvar::stake_history::ID, false),
-            (solana_program::stake::program::ID, false),
+            (solana_stake_interface::program::ID, false),
         ]
         .into_iter())
     }
@@ -660,7 +660,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
             to_stake_account_seeds,
             StakeStateV2::size_of(),
             None,
-            &solana_program::stake::program::ID,
+            &solana_stake_interface::program::ID,
         )?;
 
         let rent = to_stake_account.lamports();
@@ -706,7 +706,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
         // deactivate `to_stake_account` - since it's state is active now as
         // it has been splitted from active stake account
 
-        let deactivate_ix = solana_program::stake::instruction::deactivate_stake(
+        let deactivate_ix = solana_stake_interface::instruction::deactivate_stake(
             to_stake_account.key,
             to_stake_account_withdraw_authority.key,
         );
@@ -743,7 +743,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
             return Err(ProgramError::from(StakePoolError::WrongStakeStake))?;
         };
 
-        let stake_minimum_delegation = solana_program::stake::tools::get_minimum_delegation()?;
+        let stake_minimum_delegation = solana_stake_interface::tools::get_minimum_delegation()?;
         let available_delegation_amount = stake
             .delegation
             .stake
@@ -825,7 +825,7 @@ impl<'info, T: SPLStakePoolInterface> SPLStakePoolService<'info, T> {
         let from_stake_account_rent = stake_account_data.meta().unwrap().rent_exempt_reserve;
         let unstaked_sol_amount = from_stake_account.lamports() - from_stake_account_rent;
 
-        let withdraw_ix = solana_program::stake::instruction::withdraw(
+        let withdraw_ix = solana_stake_interface::instruction::withdraw(
             from_stake_account.key,
             from_stake_account_withdraw_authority.key,
             to_sol_account.key,

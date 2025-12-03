@@ -25,7 +25,7 @@ readme = "README.md"
 edition = "2021"
 
 [workspace.lints.rust]
-unexpected-cfgs = "allow"
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("solana"))'] }
 
 [workspace.lints.clippy]
 too-many-arguments = "allow"
@@ -39,28 +39,23 @@ wildcard-enum-match-arm = "deny"
 comparison-chain = "allow"
 
 [workspace.dependencies]
-anchor-lang = { version = "0.31.1", features = ["event-cpi"] }
-anchor-spl = { version = "0.31.1", features = ["memo"] }
+anchor-lang = { version = "0.32.1", features = ["event-cpi"] }
+anchor-spl = { version = "0.32.1", features = ["memo"] }
 anyhow = "1.0.97"
 bytemuck = { version = "1", features = ["derive", "min_const_generics"] }
-jito-vault-sdk = { git = "https://github.com/jito-foundation/restaking.git", rev = "0cbf8f83012bd5d18183c45ed128302b4aee4dca" }
-jito-vault-core = { git = "https://github.com/jito-foundation/restaking.git", rev = "0cbf8f83012bd5d18183c45ed128302b4aee4dca" }
-jito-bytemuck = { git = "https://github.com/jito-foundation/restaking.git", rev = "0cbf8f83012bd5d18183c45ed128302b4aee4dca" }
+jito-vault-sdk = { git = "https://github.com/fragmetric-labs/solana-jito-restaking.git", rev = "f19bfb7d5660928bf624b1cd76b1f6acbdb38d96" }
+jito-vault-core = { git = "https://github.com/fragmetric-labs/solana-jito-restaking.git", rev = "f19bfb7d5660928bf624b1cd76b1f6acbdb38d96" }
+jito-bytemuck = { git = "https://github.com/fragmetric-labs/solana-jito-restaking.git", rev = "f19bfb7d5660928bf624b1cd76b1f6acbdb38d96" }
 spl-tlv-account-resolution = "0.9.0"
 spl-transfer-hook-interface = "0.9.0"
 spl-discriminator = "0.4.1"
-spl-stake-pool = { version = "2.0.1", features = ["no-entrypoint"] }
+spl-stake-pool = { version = "2.0.3", features = ["no-entrypoint"] }
+solana-stake-interface = { version = "1.2.1", features = ["bincode"] }
 proptest = "1.6.0"
 primitive-types = "0.13.1"
 once_cell = "1.21.3"
 rust_decimal = "1.37.1"
 rust_decimal_macros = "1.37.1"
-
-#borsh = "0.10.3"
-#thiserror = "1"
-#solana-program = "2"
-#solana-sdk = "2"
-#solana-program-test = "2"
 
 marinade-cpi = { path = "./clients/rust/marinade-cpi" }
 whirlpool-cpi = { path = "./clients/rust/whirlpool-cpi" }
