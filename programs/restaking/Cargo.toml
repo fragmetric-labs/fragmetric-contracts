@@ -44,6 +44,7 @@ spl-tlv-account-resolution = { workspace = true }
 spl-transfer-hook-interface = { workspace = true }
 spl-discriminator = { workspace = true }
 spl-stake-pool = { workspace = true }
+solana-stake-interface = { workspace = true }
 marinade-cpi = { workspace = true }
 whirlpool-cpi = { workspace = true }
 primitive-types = { workspace = true }
