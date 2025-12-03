@@ -1610,7 +1610,9 @@ impl HarvestRestakingYieldCommand {
                     reward_token_amount,
                 )?
             }
-            _ => reward_token_amount,
+            HarvestType::CompoundReward
+            | HarvestType::DistributeReward
+            | HarvestType::CompoundVaultSupportedToken => reward_token_amount,
         };
 
         self.apply_reward_harvest_threshold(
@@ -1649,7 +1651,9 @@ impl HarvestRestakingYieldCommand {
                     Clock::get()?.unix_timestamp,
                 )
             }
-            _ => {
+            HarvestType::CompoundReward
+            | HarvestType::DistributeReward
+            | HarvestType::CompoundVaultSupportedToken => {
                 // Validate vault reward token account
                 let reward_token_account =
                     InterfaceAccount::<TokenAccount>::try_from(reward_token_account)?;
