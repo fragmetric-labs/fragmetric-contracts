@@ -856,23 +856,34 @@ impl HarvestRestakingYieldCommand {
             *vault
         };
 
-        let reward_token_amount = self.get_reward_token_amount(
-            vault_reward_token_account,
-            &vault_reward_token_account_signer,
-            &reward_token_mints[0],
-        )?;
+        let reward_token_mint_account = InterfaceAccount::<Mint>::try_from(reward_token_mint)?;
+        let is_token_mintable_by_fund = reward_token_mint_account
+            .mint_authority
+            .map(|authority| authority == ctx.fund_account.key())
+            .unwrap_or(false);
 
-        let available_reward_token_amount_to_harvest = self.apply_reward_harvest_threshold(
-            ctx,
-            vault,
-            &reward_token_mints[0],
-            HarvestType::DistributeReward,
-            reward_token_amount,
-        )?;
+        // if reward token is distributing reward token and mintable by fund,
+        // then reward_token_amount would be minted to vault reward ATA
+        // at ExecuteDistributeReward step.
+        if !is_token_mintable_by_fund {
+            let reward_token_amount = self.get_reward_token_amount(
+                vault_reward_token_account,
+                &vault_reward_token_account_signer,
+                &reward_token_mints[0],
+            )?;
 
-        // No reward to harvest (or threshold unmet), so move on to next item
-        if available_reward_token_amount_to_harvest == 0 {
-            return Ok(None);
+            let available_reward_token_amount_to_harvest = self.apply_reward_harvest_threshold(
+                ctx,
+                vault,
+                &reward_token_mints[0],
+                HarvestType::DistributeReward,
+                reward_token_amount,
+            )?;
+
+            // No reward to harvest (or threshold unmet), so move on to next item
+            if available_reward_token_amount_to_harvest == 0 {
+                return Ok(None);
+            }
         }
 
         let program_reward_token_revenue_account =
@@ -1243,6 +1254,44 @@ impl HarvestRestakingYieldCommand {
             return self.execute_new_distribute_reward_command(ctx, Some(vault), None);
         }
         let common_accounts = CommonAccounts::pop_from(&mut accounts, &reward_token_mints[0])?;
+
+        // program mintable distributing reward token's mint automation
+        // 1. check mint authority
+        let reward_token_mint = common_accounts.reward_token_mint;
+        let token_mint = InterfaceAccount::<Mint>::try_from(reward_token_mint)?;
+        let is_token_mintable_by_fund = token_mint
+            .mint_authority
+            .map(|authority| authority == ctx.fund_account.key())
+            .unwrap_or(false);
+
+        if is_token_mintable_by_fund {
+            let fund_account = ctx.fund_account.load()?;
+            let restaking_vault = fund_account.get_restaking_vault(vault)?;
+
+            // 2. calculate mint amount
+            let reward_token =
+                restaking_vault.get_distributing_reward_token(reward_token_mint.key)?;
+            let reward_token_mint_amount = reward_token.get_available_amount_to_harvest(
+                reward_token.harvest_threshold_max_amount,
+                Clock::get()?.unix_timestamp,
+            );
+
+            // 3. mint
+            if reward_token_mint_amount > 0 {
+                anchor_spl::token_interface::mint_to(
+                    CpiContext::new_with_signer(
+                        common_accounts.reward_token_program.to_account_info(),
+                        anchor_spl::token_interface::MintTo {
+                            mint: common_accounts.reward_token_mint.to_account_info(),
+                            authority: ctx.fund_account.to_account_info(),
+                            to: common_accounts.from_reward_token_account.to_account_info(),
+                        },
+                        &[&fund_account.get_seeds()],
+                    ),
+                    reward_token_mint_amount,
+                )?;
+            }
+        }
 
         // check harvest threshold
         let available_reward_token_amount_to_harvest = self
@@ -1935,7 +1984,7 @@ impl<'info> CommonAccounts<'info> {
     ) -> impl Iterator<Item = (Pubkey, bool)> {
         let required_accounts = [
             (*reward_token_mint.owner, false),
-            (reward_token_mint.key(), false),
+            (reward_token_mint.key(), true),
             (vault_reward_token_account.key(), true),
             (*vault_reward_token_account_signer, false),
         ]
