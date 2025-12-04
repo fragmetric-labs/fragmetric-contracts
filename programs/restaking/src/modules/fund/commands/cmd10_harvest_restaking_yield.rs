@@ -992,7 +992,7 @@ impl HarvestRestakingYieldCommand {
 
         let result = if available_reward_token_amount_to_harvest > 0 {
             let fund_account = ctx.fund_account.load()?;
-            let fund_supported_token_account_address = fund_account
+            let fund_supported_token_reserve_account_address = fund_account
                 .find_supported_token_reserve_account_address(&reward_token_mints[0])?;
             let restaking_vault = fund_account.get_restaking_vault(vault)?;
             let receipt_token_pricing_source = restaking_vault
@@ -1009,7 +1009,7 @@ impl HarvestRestakingYieldCommand {
                             &common_accounts,
                             vault,
                             &fund_account.get_seeds(),
-                            &fund_supported_token_account_address,
+                            &fund_supported_token_reserve_account_address,
                             available_reward_token_amount_to_harvest,
                         )?,
                     Some(TokenPricingSource::VirtualVault { .. }) => self
@@ -1023,7 +1023,7 @@ impl HarvestRestakingYieldCommand {
                                 &ctx.fund_account.key(),
                             )
                             .get_seeds(),
-                            &fund_supported_token_account_address,
+                            &fund_supported_token_reserve_account_address,
                             available_reward_token_amount_to_harvest,
                         )?,
                     // otherwise fails
