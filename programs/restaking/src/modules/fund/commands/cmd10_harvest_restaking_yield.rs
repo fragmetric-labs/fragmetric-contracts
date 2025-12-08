@@ -1261,10 +1261,17 @@ impl HarvestRestakingYieldCommand {
             let restaking_vault = fund_account.get_restaking_vault(vault)?;
 
             // 2. calculate mint amount
+            let from_reward_token_account = InterfaceAccount::<TokenAccount>::try_from(
+                common_accounts.from_reward_token_account,
+            )?;
+
+            // just mint max(reward_token.harvest_threshold_max_amount - from_reward_token_account.amount, 0)
             let reward_token =
                 restaking_vault.get_distributing_reward_token(reward_token_mint.key)?;
             let reward_token_mint_amount = reward_token.get_available_amount_to_harvest(
-                reward_token.harvest_threshold_max_amount,
+                reward_token
+                    .harvest_threshold_max_amount
+                    .saturating_sub(from_reward_token_account.amount),
                 Clock::get()?.unix_timestamp,
             );
 
