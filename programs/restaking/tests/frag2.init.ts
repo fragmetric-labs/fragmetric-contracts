@@ -1,3 +1,6 @@
+import * as token from '@solana-program/token';
+import { Address, createNoopSigner, isSome } from '@solana/kit';
+import * as v from 'valibot';
 import { TestSuiteContext } from '../../testutil';
 
 export async function initializeFrag2(testCtx: TestSuiteContext) {
@@ -70,6 +73,46 @@ export async function initializeFrag2(testCtx: TestSuiteContext) {
       ctx.reward.initializeOrUpdateAccount.executeChained({
         targetVersion: 35,
       }),
+    () => {
+      const setMintAuthority = new sdk.TransactionTemplateContext(
+        restaking,
+        v.object({
+          mint: v.string(),
+          newAuthority: v.string(),
+        }),
+        {
+          description: 'transfer mint authority to input new authority',
+          instructions: [
+            async (parent, args, overrides) => {
+              const [mint, payer] = await Promise.all([
+                token.fetchMint(restaking.runtime.rpc, args.mint as Address),
+                sdk.transformAddressResolverVariant(
+                  overrides.feePayer ??
+                    restaking.runtime.options.transaction.feePayer ??
+                    (() => Promise.resolve(null))
+                )(restaking),
+              ]);
+              if (!(mint && payer)) throw new Error('invalid context');
+
+              const ix = token.getSetAuthorityInstruction({
+                owned: mint.address,
+                owner: isSome(mint.data.mintAuthority)
+                  ? createNoopSigner(mint.data.mintAuthority.value)
+                  : ('' as Address),
+                authorityType: token.AuthorityType.MintTokens,
+                newAuthority: args.newAuthority as Address,
+              });
+              return Promise.all([ix]);
+            },
+          ],
+        }
+      );
+
+      return setMintAuthority.execute({
+        mint: 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF', // fvt
+        newAuthority: ctx.fund.address!, // fund
+      });
+    },
     () =>
       ctx.reward.addReward.execute({
         mint: 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF',
