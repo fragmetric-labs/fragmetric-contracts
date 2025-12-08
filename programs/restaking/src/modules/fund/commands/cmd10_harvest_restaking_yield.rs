@@ -628,7 +628,6 @@ impl HarvestRestakingYieldCommand {
             &reward_token_mints[0],
             HarvestType::CompoundReward,
             reward_token_amount,
-            Clock::get()?.unix_timestamp,
         )?;
 
         // No reward to harvest (or threshold unmet), so move on to next item
@@ -875,7 +874,6 @@ impl HarvestRestakingYieldCommand {
                 &reward_token_mints[0],
                 HarvestType::DistributeReward,
                 reward_token_amount,
-                Clock::get()?.unix_timestamp,
             )?;
 
             // No reward to harvest (or threshold unmet), so move on to next item
@@ -987,7 +985,6 @@ impl HarvestRestakingYieldCommand {
                 vault,
                 &reward_token_mints[0],
                 HarvestType::CompoundReward,
-                Clock::get()?.unix_timestamp,
             )?;
 
         let result = if available_reward_token_amount_to_harvest > 0 {
@@ -1122,7 +1119,6 @@ impl HarvestRestakingYieldCommand {
                 vault,
                 &reward_token_mints[0],
                 HarvestType::CompoundReward,
-                Clock::get()?.unix_timestamp,
             )?;
 
         let result = if available_reward_token_amount_to_harvest > 0 {
@@ -1260,8 +1256,6 @@ impl HarvestRestakingYieldCommand {
         let reward_token_mint = common_accounts.reward_token_mint;
         let token_mint = InterfaceAccount::<Mint>::try_from(reward_token_mint)?;
 
-        let current_timestamp = Clock::get()?.unix_timestamp;
-
         if self.is_token_mintable_by_fund(&token_mint, &ctx.fund_account.key()) {
             let fund_account = ctx.fund_account.load()?;
             let restaking_vault = fund_account.get_restaking_vault(vault)?;
@@ -1271,7 +1265,7 @@ impl HarvestRestakingYieldCommand {
                 restaking_vault.get_distributing_reward_token(reward_token_mint.key)?;
             let reward_token_mint_amount = reward_token.get_available_amount_to_harvest(
                 reward_token.harvest_threshold_max_amount,
-                current_timestamp,
+                Clock::get()?.unix_timestamp,
             );
 
             // 3. mint
@@ -1299,7 +1293,6 @@ impl HarvestRestakingYieldCommand {
                 vault,
                 &reward_token_mints[0],
                 HarvestType::DistributeReward,
-                current_timestamp,
             )?;
 
         let result = (|| {
@@ -1615,7 +1608,6 @@ impl HarvestRestakingYieldCommand {
         vault: &Pubkey,
         mint: &Pubkey,
         harvest_type: HarvestType,
-        current_timestamp: i64,
     ) -> Result<u64> {
         let reward_token_amount = self.get_reward_token_amount(
             common_accounts.from_reward_token_account,
@@ -1623,14 +1615,7 @@ impl HarvestRestakingYieldCommand {
             common_accounts.reward_token_mint.key,
         )?;
 
-        self.apply_reward_harvest_threshold(
-            ctx,
-            vault,
-            mint,
-            harvest_type,
-            reward_token_amount,
-            current_timestamp,
-        )
+        self.apply_reward_harvest_threshold(ctx, vault, mint, harvest_type, reward_token_amount)
     }
 
     fn get_reward_token_amount<'info>(
@@ -1667,9 +1652,10 @@ impl HarvestRestakingYieldCommand {
         mint: &Pubkey,
         harvest_type: HarvestType,
         reward_token_amount: u64,
-        current_timestamp: i64,
     ) -> Result<u64> {
         // check harvest threshold
+        let current_timestamp = Clock::get()?.unix_timestamp;
+
         let fund_account = ctx.fund_account.load()?;
         let restaking_vault = fund_account.get_restaking_vault(vault)?;
         let reward_token = match harvest_type {
