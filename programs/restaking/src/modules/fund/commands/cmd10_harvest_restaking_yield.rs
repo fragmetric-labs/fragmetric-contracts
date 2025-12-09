@@ -1272,8 +1272,7 @@ impl HarvestRestakingYieldCommand {
                 reward_token
                     .harvest_threshold_max_amount
                     .saturating_sub(from_reward_token_account.amount),
-                Clock::get()?.unix_timestamp,
-            );
+            )?;
 
             // 3. mint
             if reward_token_mint_amount > 0 {
@@ -1661,8 +1660,6 @@ impl HarvestRestakingYieldCommand {
         reward_token_amount: u64,
     ) -> Result<u64> {
         // check harvest threshold
-        let current_timestamp = Clock::get()?.unix_timestamp;
-
         let fund_account = ctx.fund_account.load()?;
         let restaking_vault = fund_account.get_restaking_vault(vault)?;
         let reward_token = match harvest_type {
@@ -1673,7 +1670,7 @@ impl HarvestRestakingYieldCommand {
             }
         };
 
-        Ok(reward_token.get_available_amount_to_harvest(reward_token_amount, current_timestamp))
+        reward_token.get_available_amount_to_harvest(reward_token_amount)
     }
 
     /// returns [deducted_amount, transferred_token_amount]
