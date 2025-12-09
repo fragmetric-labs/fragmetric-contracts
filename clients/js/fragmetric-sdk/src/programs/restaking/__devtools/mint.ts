@@ -63,13 +63,14 @@ export function createTokenTool(program: RestakingProgram) {
         ],
       }
     ),
-    setMintAuthorityToAdmin: new TransactionTemplateContext(
+    setMintAuthority: new TransactionTemplateContext(
       program,
       v.object({
         mint: v.string(),
+        newAuthority: v.string(),
       }),
       {
-        description: 'transfer mint authority to admin account',
+        description: 'transfer mint authority to input new authority',
         instructions: [
           async (parent, args, overrides) => {
             const [mint, payer] = await Promise.all([
@@ -81,7 +82,6 @@ export function createTokenTool(program: RestakingProgram) {
               )(program),
             ]);
             if (!(mint && payer)) throw new Error('invalid context');
-            const admin = program.knownAddresses.admin;
 
             const ix = token.getSetAuthorityInstruction({
               owned: mint.address,
@@ -89,7 +89,7 @@ export function createTokenTool(program: RestakingProgram) {
                 ? createNoopSigner(mint.data.mintAuthority.value)
                 : ('' as Address),
               authorityType: token.AuthorityType.MintTokens,
-              newAuthority: admin,
+              newAuthority: args.newAuthority as Address,
             });
             return Promise.all([ix]);
           },
