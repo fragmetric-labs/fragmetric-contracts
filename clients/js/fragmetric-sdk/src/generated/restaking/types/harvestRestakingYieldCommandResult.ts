@@ -25,6 +25,12 @@ import {
   type Option,
   type OptionOrNullable,
 } from '@solana/kit';
+import {
+  getRewardDistributionSettlementBlockContributionDecoder,
+  getRewardDistributionSettlementBlockContributionEncoder,
+  type RewardDistributionSettlementBlockContribution,
+  type RewardDistributionSettlementBlockContributionArgs,
+} from '.';
 
 export type HarvestRestakingYieldCommandResult = {
   vault: Address;
@@ -35,6 +41,7 @@ export type HarvestRestakingYieldCommandResult = {
   swappedTokenMint: Option<Address>;
   rewardTokenDistributedAmount: bigint;
   updatedRewardAccount: Option<Address>;
+  rewardDistributionSettlementBlockContribution: Option<RewardDistributionSettlementBlockContribution>;
   vaultSupportedTokenCompoundedAmount: bigint;
 };
 
@@ -47,6 +54,7 @@ export type HarvestRestakingYieldCommandResultArgs = {
   swappedTokenMint: OptionOrNullable<Address>;
   rewardTokenDistributedAmount: number | bigint;
   updatedRewardAccount: OptionOrNullable<Address>;
+  rewardDistributionSettlementBlockContribution: OptionOrNullable<RewardDistributionSettlementBlockContributionArgs>;
   vaultSupportedTokenCompoundedAmount: number | bigint;
 };
 
@@ -60,6 +68,12 @@ export function getHarvestRestakingYieldCommandResultEncoder(): Encoder<HarvestR
     ['swappedTokenMint', getOptionEncoder(getAddressEncoder())],
     ['rewardTokenDistributedAmount', getU64Encoder()],
     ['updatedRewardAccount', getOptionEncoder(getAddressEncoder())],
+    [
+      'rewardDistributionSettlementBlockContribution',
+      getOptionEncoder(
+        getRewardDistributionSettlementBlockContributionEncoder()
+      ),
+    ],
     ['vaultSupportedTokenCompoundedAmount', getI128Encoder()],
   ]);
 }
@@ -74,6 +88,12 @@ export function getHarvestRestakingYieldCommandResultDecoder(): Decoder<HarvestR
     ['swappedTokenMint', getOptionDecoder(getAddressDecoder())],
     ['rewardTokenDistributedAmount', getU64Decoder()],
     ['updatedRewardAccount', getOptionDecoder(getAddressDecoder())],
+    [
+      'rewardDistributionSettlementBlockContribution',
+      getOptionDecoder(
+        getRewardDistributionSettlementBlockContributionDecoder()
+      ),
+    ],
     ['vaultSupportedTokenCompoundedAmount', getI128Decoder()],
   ]);
 }

@@ -13,6 +13,13 @@ pub struct RewardService<'a, 'info> {
     current_slot: u64,
 }
 
+pub(in crate::modules) struct RewardSettlementBlockContributionResult {
+    pub starting_slot: u64,
+    pub ending_slot: u64,
+    pub starting_reward_pool_contribution: u128,
+    pub ending_reward_pool_contribution: u128,
+}
+
 impl<'a, 'info> RewardService<'a, 'info> {
     pub fn new(
         receipt_token_mint: &'a InterfaceAccount<'info, Mint>,
@@ -165,12 +172,13 @@ impl<'a, 'info> RewardService<'a, 'info> {
         mint: Pubkey,
         is_bonus_pool: bool,
         amount: u64,
-    ) -> Result<()> {
+    ) -> Result<RewardSettlementBlockContributionResult> {
         let mut reward_account = self.reward_account.load_mut()?;
         let reward_id = reward_account.get_reward_id(&mint)?;
         let claimable = reward_account.get_reward(reward_id)?.claimable;
 
-        reward_account.settle_reward(reward_id, is_bonus_pool, amount, self.current_slot)?;
+        let latest_settlement_block =
+            reward_account.settle_reward(reward_id, is_bonus_pool, amount, self.current_slot)?;
 
         drop(reward_account);
 
@@ -183,7 +191,14 @@ impl<'a, 'info> RewardService<'a, 'info> {
             )?;
         }
 
-        Ok(())
+        Ok(RewardSettlementBlockContributionResult {
+            starting_slot: latest_settlement_block.starting_slot,
+            ending_slot: latest_settlement_block.ending_slot,
+            starting_reward_pool_contribution: latest_settlement_block
+                .starting_reward_pool_contribution,
+            ending_reward_pool_contribution: latest_settlement_block
+                .ending_reward_pool_contribution,
+        })
     }
 
     pub fn process_claim_remaining_reward(

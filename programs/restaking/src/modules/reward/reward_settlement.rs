@@ -82,15 +82,16 @@ impl RewardSettlement {
         amount: u64,
         current_reward_pool_contribution: u128,
         current_slot: u64,
-    ) -> Result<()> {
+    ) -> Result<RewardSettlementBlock> {
         self.clear_stale_settlement_blocks();
-        self.add_settlement_block(amount, current_reward_pool_contribution, current_slot)?;
+        let settlement_block =
+            self.add_settlement_block(amount, current_reward_pool_contribution, current_slot)?;
 
         self.settled_amount += amount;
         self.settlement_blocks_last_slot = current_slot;
         self.settlement_blocks_last_reward_pool_contribution = current_reward_pool_contribution;
 
-        Ok(())
+        Ok(settlement_block)
     }
 
     fn add_settlement_block(
@@ -98,7 +99,7 @@ impl RewardSettlement {
         amount: u64,
         current_reward_pool_contribution: u128,
         current_slot: u64,
-    ) -> Result<()> {
+    ) -> Result<RewardSettlementBlock> {
         // Prevent settlement block with non-positive block height
         require_gt!(
             current_slot,
@@ -129,7 +130,9 @@ impl RewardSettlement {
             (self.settlement_blocks_tail + 1) % REWARD_ACCOUNT_SETTLEMENT_BLOCK_MAX_LEN as u8;
         self.num_settlement_blocks += 1;
 
-        Ok(())
+        let tail_settlement_block = self.settlement_blocks[self.settlement_blocks_tail as usize];
+
+        Ok(tail_settlement_block)
     }
 
     fn force_clear_settlement_block(&mut self) {

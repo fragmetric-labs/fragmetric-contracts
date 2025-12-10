@@ -13777,6 +13777,16 @@
             }
           },
           {
+            "name": "reward_distribution_settlement_block_contribution",
+            "type": {
+              "option": {
+                "defined": {
+                  "name": "RewardDistributionSettlementBlockContribution"
+                }
+              }
+            }
+          },
+          {
             "name": "vault_supported_token_compounded_amount",
             "type": "i128"
           }
@@ -15820,6 +15830,30 @@
                 83440
               ]
             }
+          }
+        ]
+      }
+    },
+    {
+      "name": "RewardDistributionSettlementBlockContribution",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "starting_slot",
+            "type": "u64"
+          },
+          {
+            "name": "ending_slot",
+            "type": "u64"
+          },
+          {
+            "name": "starting_reward_pool_contribution",
+            "type": "u128"
+          },
+          {
+            "name": "ending_reward_pool_contribution",
+            "type": "u128"
           }
         ]
       }

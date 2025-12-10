@@ -67,6 +67,7 @@ export * from './restakeVSTCommandState';
 export * from './restakingVault';
 export * from './restakingVaultDelegation';
 export * from './reward';
+export * from './rewardDistributionSettlementBlockContribution';
 export * from './rewardPool';
 export * from './rewardSettlement';
 export * from './rewardSettlementBlock';
