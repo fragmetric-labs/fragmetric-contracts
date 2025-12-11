@@ -31,6 +31,8 @@ import {
   getDenormalizeNTCommandResultEncoder,
   getEnqueueWithdrawalBatchCommandResultDecoder,
   getEnqueueWithdrawalBatchCommandResultEncoder,
+  getHarvestPerformanceFeeCommandResultDecoder,
+  getHarvestPerformanceFeeCommandResultEncoder,
   getHarvestRestakingYieldCommandResultDecoder,
   getHarvestRestakingYieldCommandResultEncoder,
   getInitializeCommandResultDecoder,
@@ -59,6 +61,8 @@ import {
   type DenormalizeNTCommandResultArgs,
   type EnqueueWithdrawalBatchCommandResult,
   type EnqueueWithdrawalBatchCommandResultArgs,
+  type HarvestPerformanceFeeCommandResult,
+  type HarvestPerformanceFeeCommandResultArgs,
   type HarvestRestakingYieldCommandResult,
   type HarvestRestakingYieldCommandResultArgs,
   type InitializeCommandResult,
@@ -102,6 +106,10 @@ export type OperationCommandResult =
   | { __kind: 'UnrestakeVRT'; fields: readonly [UnrestakeVRTCommandResult] }
   | { __kind: 'UndelegateVST'; fields: readonly [UndelegateVSTCommandResult] }
   | {
+      __kind: 'HarvestPerformanceFee';
+      fields: readonly [HarvestPerformanceFeeCommandResult];
+    }
+  | {
       __kind: 'HarvestRestakingYield';
       fields: readonly [HarvestRestakingYieldCommandResult];
     }
@@ -137,6 +145,10 @@ export type OperationCommandResultArgs =
   | {
       __kind: 'UndelegateVST';
       fields: readonly [UndelegateVSTCommandResultArgs];
+    }
+  | {
+      __kind: 'HarvestPerformanceFee';
+      fields: readonly [HarvestPerformanceFeeCommandResultArgs];
     }
   | {
       __kind: 'HarvestRestakingYield';
@@ -213,6 +225,15 @@ export function getOperationCommandResultEncoder(): Encoder<OperationCommandResu
       'UndelegateVST',
       getStructEncoder([
         ['fields', getTupleEncoder([getUndelegateVSTCommandResultEncoder()])],
+      ]),
+    ],
+    [
+      'HarvestPerformanceFee',
+      getStructEncoder([
+        [
+          'fields',
+          getTupleEncoder([getHarvestPerformanceFeeCommandResultEncoder()]),
+        ],
       ]),
     ],
     [
@@ -317,6 +338,15 @@ export function getOperationCommandResultDecoder(): Decoder<OperationCommandResu
       'UndelegateVST',
       getStructDecoder([
         ['fields', getTupleDecoder([getUndelegateVSTCommandResultDecoder()])],
+      ]),
+    ],
+    [
+      'HarvestPerformanceFee',
+      getStructDecoder([
+        [
+          'fields',
+          getTupleDecoder([getHarvestPerformanceFeeCommandResultDecoder()]),
+        ],
       ]),
     ],
     [
@@ -473,6 +503,18 @@ export function operationCommandResult(
   OperationCommandResultArgs,
   '__kind',
   'UndelegateVST'
+>;
+export function operationCommandResult(
+  kind: 'HarvestPerformanceFee',
+  data: GetDiscriminatedUnionVariantContent<
+    OperationCommandResultArgs,
+    '__kind',
+    'HarvestPerformanceFee'
+  >['fields']
+): GetDiscriminatedUnionVariant<
+  OperationCommandResultArgs,
+  '__kind',
+  'HarvestPerformanceFee'
 >;
 export function operationCommandResult(
   kind: 'HarvestRestakingYield',
