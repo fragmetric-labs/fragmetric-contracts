@@ -278,6 +278,7 @@ describe('restaking.fragBTC test', async () => {
           "depositEnabled": true,
           "donationEnabled": false,
           "operationEnabled": true,
+          "performanceFeeRateBps": 0,
           "transferEnabled": true,
           "withdrawalBatchThresholdSeconds": 1n,
           "withdrawalEnabled": true,

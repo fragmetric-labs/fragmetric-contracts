@@ -699,6 +699,7 @@ export class RestakingFundAccountContext extends AccountContext<
         fund.data.withdrawalBatchThresholdIntervalSeconds,
       withdrawalEnabled: fund.data.withdrawalEnabled == 1,
       withdrawalFeeRateBps: fund.data.withdrawalFeeRateBps,
+      performanceFeeRateBps: fund.data.performanceFeeRateBps,
     };
   }
 
@@ -713,6 +714,10 @@ export class RestakingFundAccountContext extends AccountContext<
         operationEnabled: v.boolean(),
         withdrawalBatchThresholdSeconds: v.number(),
         withdrawalFeeRateBps: v.pipe(
+          v.number(),
+          v.description('1 fee rate = 1bps = 0.01%')
+        ),
+        performanceFeeRateBps: v.pipe(
           v.number(),
           v.description('1 fee rate = 1bps = 0.01%')
         ),

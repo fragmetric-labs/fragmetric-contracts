@@ -4452,6 +4452,10 @@
         {
           "name": "withdrawal_batch_threshold_seconds",
           "type": "i64"
+        },
+        {
+          "name": "performance_fee_rate_bps",
+          "type": "u16"
         }
       ]
     },
@@ -13593,11 +13597,31 @@
             "type": "u64"
           },
           {
+            "name": "fee_harvested_one_receipt_token_as_sol",
+            "docs": [
+              "`one_receipt_token_as_sol` value at the last fee harvest.",
+              "Acts as a high-water mark so fees are only charged on new gains",
+              "(applies to both performance and commission fees)."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "performance_fee_last_harvested_at",
+            "docs": [
+              "performance fee"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "performance_fee_rate_bps",
+            "type": "u16"
+          },
+          {
             "name": "_reserved1",
             "type": {
               "array": [
                 "u8",
-                3608
+                3590
               ]
             }
           }
