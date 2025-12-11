@@ -1,3 +1,4 @@
+mod cmd10_harvest_performance_fee;
 mod cmd10_harvest_restaking_yield;
 mod cmd11_stake_sol;
 mod cmd12_normalize_st;
@@ -13,6 +14,7 @@ mod cmd7_unstake_lst;
 mod cmd8_unrestake_vrt;
 mod cmd9_undelegate_vst;
 
+pub use cmd10_harvest_performance_fee::*;
 pub use cmd10_harvest_restaking_yield::*;
 pub use cmd11_stake_sol::*;
 pub use cmd12_normalize_st::*;
@@ -63,6 +65,7 @@ pub enum OperationCommand {
     NormalizeST(NormalizeSTCommand),
     RestakeVST(RestakeVSTCommand),
     DelegateVST(DelegateVSTCommand),
+    HarvestPerformanceFee(HarvestPerformanceFeeCommand),
 }
 
 impl core::fmt::Debug for OperationCommand {
@@ -82,6 +85,7 @@ impl core::fmt::Debug for OperationCommand {
             OperationCommand::NormalizeST(command) => command.fmt(f),
             OperationCommand::RestakeVST(command) => command.fmt(f),
             OperationCommand::DelegateVST(command) => command.fmt(f),
+            OperationCommand::HarvestPerformanceFee(command) => command.fmt(f),
         }
     }
 }
@@ -103,6 +107,7 @@ impl OperationCommand {
             OperationCommand::NormalizeST(..) => "NormalizeST",
             OperationCommand::RestakeVST(..) => "RestakeVST",
             OperationCommand::DelegateVST(..) => "DelegateVST",
+            OperationCommand::HarvestPerformanceFee(..) => "HarvestPerformanceFee",
         }
     }
 }
@@ -123,6 +128,7 @@ pub enum OperationCommandResult {
     NormalizeST(NormalizeSTCommandResult),
     RestakeVST(RestakeVSTCommandResult),
     DelegateVST(DelegateVSTCommandResult),
+    HarvestPerformanceFee(HarvestPerformanceFeeCommandResult),
 }
 
 // cmd1
@@ -307,6 +313,19 @@ impl From<HarvestRestakingYieldCommandResult> for OperationCommandResult {
     }
 }
 
+// cmd 15
+impl From<HarvestPerformanceFeeCommand> for OperationCommand {
+    fn from(command: HarvestPerformanceFeeCommand) -> Self {
+        Self::HarvestPerformanceFee(command)
+    }
+}
+
+impl From<HarvestPerformanceFeeCommandResult> for OperationCommandResult {
+    fn from(result: HarvestPerformanceFeeCommandResult) -> Self {
+        Self::HarvestPerformanceFee(result)
+    }
+}
+
 impl OperationCommand {
     pub fn discriminant(&self) -> u8 {
         match self {
@@ -324,6 +343,7 @@ impl OperationCommand {
             OperationCommand::NormalizeST(_) => 12,
             OperationCommand::RestakeVST(_) => 13,
             OperationCommand::DelegateVST(_) => 14,
+            OperationCommand::HarvestPerformanceFee(_) => 15,
         }
     }
 
@@ -525,6 +545,7 @@ impl SelfExecutable for OperationCommand {
             OperationCommand::NormalizeST(command) => command.execute(ctx, accounts),
             OperationCommand::RestakeVST(command) => command.execute(ctx, accounts),
             OperationCommand::DelegateVST(command) => command.execute(ctx, accounts),
+            OperationCommand::HarvestPerformanceFee(command) => command.execute(ctx, accounts),
         }
     }
 }
