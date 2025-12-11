@@ -8,7 +8,9 @@ use crate::modules::pricing::TokenPricingSource;
 use crate::modules::restaking::{
     JitoRestakingVaultService, SolvBTCVaultService, VirtualVaultService,
 };
-use crate::modules::reward::{RewardAccount, RewardService};
+use crate::modules::reward::{
+    RewardAccount, RewardService, RewardSettlementBlockContributionResult,
+};
 use crate::modules::swap::{OrcaDEXLiquidityPoolService, TokenSwapSource};
 use crate::utils::{AccountInfoExt, PDASeeds};
 
@@ -166,6 +168,19 @@ pub struct RewardDistributionSettlementBlockContribution {
     pub ending_slot: u64,
     pub starting_reward_pool_contribution: u128,
     pub ending_reward_pool_contribution: u128,
+}
+
+impl From<RewardSettlementBlockContributionResult>
+    for RewardDistributionSettlementBlockContribution
+{
+    fn from(result: RewardSettlementBlockContributionResult) -> Self {
+        Self {
+            starting_slot: result.starting_slot,
+            ending_slot: result.ending_slot,
+            starting_reward_pool_contribution: result.starting_reward_pool_contribution,
+            ending_reward_pool_contribution: result.ending_reward_pool_contribution,
+        }
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -1371,13 +1386,7 @@ impl HarvestRestakingYieldCommand {
                             false,
                             token_distributed_amount,
                         )
-                        .map(|result| RewardDistributionSettlementBlockContribution {
-                            starting_slot: result.starting_slot,
-                            ending_slot: result.ending_slot,
-                            starting_reward_pool_contribution: result
-                                .starting_reward_pool_contribution,
-                            ending_reward_pool_contribution: result.ending_reward_pool_contribution,
-                        })?;
+                        .map(Into::into)?;
 
                     reward_service.claim_remaining_reward(
                         &reward_token_mint,
