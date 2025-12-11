@@ -71,7 +71,7 @@ impl SelfExecutable for UndelegateVSTCommand {
         Ok((
             result,
             entry.or_else(|| {
-                Some(HarvestRestakingYieldCommand::default().without_required_accounts())
+                Some(HarvestPerformanceFeeCommand::default().without_required_accounts())
             }),
         ))
     }
