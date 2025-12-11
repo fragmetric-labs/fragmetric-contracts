@@ -71,11 +71,6 @@ export async function initializeFrag2(testCtx: TestSuiteContext) {
         targetVersion: 35,
       }),
     () =>
-      restaking.__dev.token.setMintAuthority.execute({
-        mint: 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF', // fvt
-        newAuthority: ctx.fund.address!, // fund
-      }),
-    () =>
       ctx.reward.addReward.execute({
         mint: 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF',
         decimals: 9,

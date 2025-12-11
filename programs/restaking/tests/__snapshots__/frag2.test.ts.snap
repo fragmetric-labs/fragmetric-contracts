@@ -411,12 +411,6 @@ exports[`restaking.frag2 test > restaking.frag2 initializationTasks snapshot 1`]
     "Log truncated",
   ],
   [
-    "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [1]",
-    "Program log: Instruction: SetAuthority",
-    "MASKED(/^Program \\w{32,44} consumed \\d+ of \\d+ compute units$/)",
-    "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success",
-  ],
-  [
     "Program 4qEHCzsLFUnw8jmhmRSmAK5VhZVoSD1iVqukAf92yHi5 invoke [1]",
     "Program log: Instruction: FundManagerAddReward",
     "Program 4qEHCzsLFUnw8jmhmRSmAK5VhZVoSD1iVqukAf92yHi5 invoke [2]",

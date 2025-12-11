@@ -70,7 +70,7 @@ export function createTokenTool(program: RestakingProgram) {
         newAuthority: v.string(),
       }),
       {
-        description: 'transfer mint authority to input new authority',
+        description: 'transfer mint authority to new authority',
         instructions: [
           async (parent, args, overrides) => {
             const [mint, payer] = await Promise.all([
