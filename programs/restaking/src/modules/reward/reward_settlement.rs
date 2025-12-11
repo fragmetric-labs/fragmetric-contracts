@@ -126,11 +126,11 @@ impl RewardSettlement {
             current_reward_pool_contribution,
             current_slot,
         );
+        let tail_settlement_block = self.settlement_blocks[self.settlement_blocks_tail as usize];
+
         self.settlement_blocks_tail =
             (self.settlement_blocks_tail + 1) % REWARD_ACCOUNT_SETTLEMENT_BLOCK_MAX_LEN as u8;
         self.num_settlement_blocks += 1;
-
-        let tail_settlement_block = self.settlement_blocks[self.settlement_blocks_tail as usize];
 
         Ok(tail_settlement_block)
     }
