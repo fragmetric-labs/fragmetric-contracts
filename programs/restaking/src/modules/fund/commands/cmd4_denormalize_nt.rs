@@ -50,10 +50,7 @@ impl SelfExecutable for DenormalizeNTCommand {
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )> {
+    ) -> ExecutionResult {
         let (result, entry) = match &self.state {
             DenormalizeNTCommandState::New => self.execute_new(ctx, accounts)?,
             DenormalizeNTCommandState::Prepare { items } => {
@@ -76,10 +73,7 @@ impl DenormalizeNTCommand {
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )> {
+    ) -> ExecutionResult {
         let pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
             .new_pricing_service(accounts.iter().copied(), true)?;
         let fund_account = ctx.fund_account.load()?;
@@ -214,10 +208,7 @@ impl DenormalizeNTCommand {
         accounts: &[&'info AccountInfo<'info>],
         items: Vec<DenormalizeNTCommandItem>,
         previous_execution_result: Option<OperationCommandResult>,
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )> {
+    ) -> ExecutionResult {
         if items.is_empty() {
             return Ok((previous_execution_result, None));
         }
@@ -270,10 +261,7 @@ impl DenormalizeNTCommand {
         ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
         items: &[DenormalizeNTCommandItem],
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )> {
+    ) -> ExecutionResult {
         if items.is_empty() {
             return Ok((None, None));
         }

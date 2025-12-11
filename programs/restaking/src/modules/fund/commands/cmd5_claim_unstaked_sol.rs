@@ -98,10 +98,7 @@ impl SelfExecutable for ClaimUnstakedSOLCommand {
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )> {
+    ) -> ExecutionResult {
         let (result, entry) = match &self.state {
             New => self.execute_new(ctx, accounts)?,
             Prepare { pool_token_mints } => {
@@ -140,10 +137,7 @@ impl ClaimUnstakedSOLCommand {
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )> {
+    ) -> ExecutionResult {
         let items = ctx
             .fund_account
             .load()?
@@ -172,10 +166,7 @@ impl ClaimUnstakedSOLCommand {
         accounts: &[&'info AccountInfo<'info>],
         pool_token_mints: Vec<Pubkey>,
         previous_execution_result: Option<OperationCommandResult>,
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )> {
+    ) -> ExecutionResult {
         if pool_token_mints.is_empty() {
             return Ok((previous_execution_result, None));
         }
@@ -309,10 +300,7 @@ impl ClaimUnstakedSOLCommand {
         ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
         pool_token_mints: &[Pubkey],
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )> {
+    ) -> ExecutionResult {
         if pool_token_mints.is_empty() {
             return Ok((None, None));
         }
@@ -437,10 +425,7 @@ impl ClaimUnstakedSOLCommand {
         accounts: &[&'info AccountInfo<'info>],
         pool_token_mints: &[Pubkey],
         claimable_stake_account_indices: &[u8],
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )> {
+    ) -> ExecutionResult {
         if pool_token_mints.is_empty() {
             return Ok((None, None));
         }

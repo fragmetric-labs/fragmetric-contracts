@@ -169,10 +169,7 @@ impl UnstakeLSTCommand {
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )> {
+    ) -> ExecutionResult {
         let mut pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
             .new_pricing_service(accounts.iter().copied(), false)?;
         let fund_account = ctx.fund_account.load()?;
@@ -280,10 +277,7 @@ impl UnstakeLSTCommand {
         accounts: &[&'info AccountInfo<'info>],
         items: Vec<UnstakeLSTCommandItem>,
         previous_execution_result: Option<OperationCommandResult>,
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )> {
+    ) -> ExecutionResult {
         if items.is_empty() {
             return Ok((previous_execution_result, None));
         }
@@ -427,10 +421,7 @@ impl UnstakeLSTCommand {
         ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
         items: &[UnstakeLSTCommandItem],
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )> {
+    ) -> ExecutionResult {
         if items.is_empty() {
             return Ok((None, None));
         }
@@ -584,10 +575,7 @@ impl UnstakeLSTCommand {
         unstake_command_items: &[UnstakeLSTCommandItem],
         withdraw_sol: bool,
         withdraw_stake_items: &[WithdrawStakeItem],
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )> {
+    ) -> ExecutionResult {
         if unstake_command_items.is_empty() {
             return Ok((None, None));
         }

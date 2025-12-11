@@ -58,10 +58,7 @@ impl SelfExecutable for UndelegateVSTCommand {
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )> {
+    ) -> ExecutionResult {
         let (result, entry) = match &self.state {
             New => self.execute_new(ctx)?,
             Prepare { vaults } => self.execute_prepare(ctx, accounts, vaults)?,
@@ -79,13 +76,7 @@ impl SelfExecutable for UndelegateVSTCommand {
 
 impl UndelegateVSTCommand {
     #[inline(never)]
-    fn execute_new(
-        &self,
-        ctx: &OperationCommandContext,
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )> {
+    fn execute_new(&self, ctx: &OperationCommandContext) -> ExecutionResult {
         let fund_account = ctx.fund_account.load()?;
         let mut vaults = Vec::with_capacity(FUND_ACCOUNT_MAX_RESTAKING_VAULTS);
         for restaking_vault in fund_account.get_restaking_vaults_iter() {
@@ -144,10 +135,7 @@ impl UndelegateVSTCommand {
         ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
         vaults: &[Pubkey],
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )> {
+    ) -> ExecutionResult {
         if vaults.is_empty() {
             return Ok((None, None));
         }
@@ -250,10 +238,7 @@ impl UndelegateVSTCommand {
         accounts: &[&'info AccountInfo<'info>],
         vaults: &[Pubkey],
         items: &[UndelegateVSTCommandItem],
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )> {
+    ) -> ExecutionResult {
         if vaults.is_empty() {
             return Ok((None, None));
         }

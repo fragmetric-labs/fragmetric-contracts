@@ -54,10 +54,7 @@ impl SelfExecutable for RestakeVSTCommand {
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )> {
+    ) -> ExecutionResult {
         let mut remaining_items: Option<Vec<RestakeVSTCommandItem>> = None;
         let mut result: Option<OperationCommandResult> = None;
 

@@ -60,10 +60,7 @@ impl SelfExecutable for ProcessWithdrawalBatchCommand {
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )> {
+    ) -> ExecutionResult {
         let mut result: Option<OperationCommandResult> = None;
 
         match self.state {

@@ -27,10 +27,7 @@ impl SelfExecutable for EnqueueWithdrawalBatchCommand {
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
         _accounts: &[&'info AccountInfo<'info>],
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )> {
+    ) -> ExecutionResult {
         let enqueued_receipt_token_amount =
             FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
                 .enqueue_withdrawal_batches(self.forced)?;
