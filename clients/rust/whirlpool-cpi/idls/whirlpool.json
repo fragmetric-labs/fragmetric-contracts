@@ -5401,19 +5401,6 @@
             ]
         },
         {
-            "name": "DynamicTickArray",
-            "discriminator": [
-                17,
-                216,
-                246,
-                142,
-                225,
-                199,
-                218,
-                56
-            ]
-        },
-        {
             "name": "FeeTier",
             "discriminator": [
                 56,
@@ -5476,19 +5463,6 @@
                 95,
                 32,
                 100
-            ]
-        },
-        {
-            "name": "TickArray",
-            "discriminator": [
-                69,
-                97,
-                189,
-                190,
-                110,
-                7,
-                66,
-                187
             ]
         },
         {
@@ -6164,39 +6138,6 @@
             }
         },
         {
-            "name": "DynamicTickArray",
-            "type": {
-                "kind": "struct",
-                "fields": [
-                    {
-                        "name": "start_tick_index",
-                        "type": "i32"
-                    },
-                    {
-                        "name": "whirlpool",
-                        "type": "pubkey"
-                    },
-                    {
-                        "name": "tick_bitmap",
-                        "type": "u128"
-                    },
-                    {
-                        "name": "ticks",
-                        "type": {
-                            "array": [
-                                {
-                                    "defined": {
-                                        "name": "DynamicTick"
-                                    }
-                                },
-                                88
-                            ]
-                        }
-                    }
-                ]
-            }
-        },
-        {
             "name": "DynamicTickData",
             "type": {
                 "kind": "struct",
@@ -6683,40 +6624,6 @@
                                 3
                             ]
                         }
-                    }
-                ]
-            }
-        },
-        {
-            "name": "TickArray",
-            "serialization": "bytemuckunsafe",
-            "repr": {
-                "kind": "c",
-                "packed": true
-            },
-            "type": {
-                "kind": "struct",
-                "fields": [
-                    {
-                        "name": "start_tick_index",
-                        "type": "i32"
-                    },
-                    {
-                        "name": "ticks",
-                        "type": {
-                            "array": [
-                                {
-                                    "defined": {
-                                        "name": "Tick"
-                                    }
-                                },
-                                88
-                            ]
-                        }
-                    },
-                    {
-                        "name": "whirlpool",
-                        "type": "pubkey"
                     }
                 ]
             }
