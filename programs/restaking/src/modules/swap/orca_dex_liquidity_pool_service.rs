@@ -128,9 +128,9 @@ impl<'info> OrcaDEXLiquidityPoolService<'info> {
     }
 
     /// ref: https://github.com/orca-so/whirlpools/blob/main/programs/whirlpool/src/util/sparse_swap.rs#L315
-    /// * tick_array0(writable)
-    /// * tick_array1(writable)
-    /// * tick_array2(writable)
+    /// * tick_array_0(writable)
+    /// * tick_array_1(writable)
+    /// * tick_array_2(writable)
     fn find_tick_array_accounts_to_swap(
         pool_account: &Account<Whirlpool>,
         a_to_b: bool,
@@ -177,9 +177,9 @@ impl<'info> OrcaDEXLiquidityPoolService<'info> {
     /// * (7) token_program_b
     /// * (8) memo_program
     /// * (9) oracle(writable)
-    /// * (10) tick_array0(writable)
-    /// * (11) tick_array1(writable)
-    /// * (12) tick_array2(writable)
+    /// * (10) tick_array_0(writable)
+    /// * (11) tick_array_1(writable)
+    /// * (12) tick_array_2(writable)
     #[inline(never)]
     pub fn find_accounts_to_swap(
         pool_account: &'info AccountInfo<'info>,
@@ -226,9 +226,9 @@ impl<'info> OrcaDEXLiquidityPoolService<'info> {
         // fixed
         memo_program: &AccountInfo<'info>,
         oracle: &AccountInfo<'info>,
-        tick_array0: &AccountInfo<'info>,
-        tick_array1: &AccountInfo<'info>,
-        tick_array2: &AccountInfo<'info>,
+        tick_array_0: &AccountInfo<'info>,
+        tick_array_1: &AccountInfo<'info>,
+        tick_array_2: &AccountInfo<'info>,
 
         // variant
         from_token_account: &'info AccountInfo<'info>,
@@ -274,9 +274,9 @@ impl<'info> OrcaDEXLiquidityPoolService<'info> {
                     token_vault_a: self.token_vault_a.to_account_info(),
                     token_owner_account_b: token_owner_account_b.to_account_info(),
                     token_vault_b: self.token_vault_b.to_account_info(),
-                    tick_array0: tick_array0.to_account_info(),
-                    tick_array1: tick_array1.to_account_info(),
-                    tick_array2: tick_array2.to_account_info(),
+                    tick_array_0: tick_array_0.to_account_info(),
+                    tick_array_1: tick_array_1.to_account_info(),
+                    tick_array_2: tick_array_2.to_account_info(),
                     oracle: oracle.to_account_info(),
                 },
                 token_account_signer_seeds,

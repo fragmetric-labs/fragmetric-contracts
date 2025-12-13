@@ -1777,7 +1777,7 @@ impl HarvestRestakingYieldCommand {
 
         match swap_source {
             TokenSwapSource::OrcaDEXLiquidityPool { address } => {
-                let [to_supported_token_account, pool_program, pool_account, token_mint_a, token_vault_a, token_program_a, token_mint_b, token_vault_b, token_program_b, memo_program, oracle, tick_array0, tick_array1, tick_array2, remaining_accounts @ ..] =
+                let [to_supported_token_account, pool_program, pool_account, token_mint_a, token_vault_a, token_program_a, token_mint_b, token_vault_b, token_program_b, memo_program, oracle, tick_array_0, tick_array_1, tick_array_2, remaining_accounts @ ..] =
                     accounts
                 else {
                     err!(error::ErrorCode::AccountNotEnoughKeys)?
@@ -1804,9 +1804,9 @@ impl HarvestRestakingYieldCommand {
                     .swap(
                         memo_program,
                         oracle,
-                        tick_array0,
-                        tick_array1,
-                        tick_array2,
+                        tick_array_0,
+                        tick_array_1,
+                        tick_array_2,
                         common_accounts.from_reward_token_account,
                         to_supported_token_account,
                         common_accounts.from_reward_token_account_signer,
