@@ -483,7 +483,7 @@ pub(crate) use debug_msg_heap_size;
 
 #[allow(unused_imports)]
 pub(crate) use debug_msg_stack_size;
-use primitive_types::U256;
+use primitive_types_solana::U256;
 
 /// Test utils.
 #[cfg(test)]

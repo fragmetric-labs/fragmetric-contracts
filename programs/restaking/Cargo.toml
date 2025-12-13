@@ -50,7 +50,7 @@ spl-stake-pool = { workspace = true }
 solana-stake-interface = { workspace = true }
 marinade-cpi = { workspace = true }
 whirlpool-cpi = { workspace = true }
-primitive-types = { workspace = true }
+primitive-types-solana = { workspace = true }
 once_cell = { workspace = true }
 
 [dev-dependencies]

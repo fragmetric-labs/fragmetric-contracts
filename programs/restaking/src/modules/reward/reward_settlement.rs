@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use bytemuck::Zeroable;
-use primitive_types::U256;
+use primitive_types_solana::U256;
 
 use crate::errors::ErrorCode;
 
