@@ -69,7 +69,7 @@ impl HarvestPerformanceFeeCommand {
         // * (0) receipt token program
         // * (1) program revenue account
         // * (2) program receipt token revenue account
-        let required_accounts: std::array::IntoIter<(Pubkey, bool), 3> = [
+        let required_accounts = [
             (anchor_spl::token_2022::ID, false),
             (PROGRAM_REVENUE_ADDRESS, false),
             (
@@ -142,7 +142,7 @@ impl HarvestPerformanceFeeCommand {
         drop(fund_account);
 
         let mut pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-            .new_pricing_service(accounts.iter().copied(), true)?;
+            .new_pricing_service(accounts.iter().copied(), false)?;
 
         let performance_fee_in_receipt_token_amount = pricing_service.get_sol_amount_as_token(
             &ctx.receipt_token_mint.key(),

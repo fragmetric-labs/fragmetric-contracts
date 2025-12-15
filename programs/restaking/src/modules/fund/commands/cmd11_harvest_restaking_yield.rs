@@ -1045,9 +1045,8 @@ impl HarvestRestakingYieldCommand {
                 drop(fund_account);
 
                 // Update pricing & high water mark
-                let mut fund_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?;
-                fund_service.update_asset_values(&mut pricing_service, true)?;
-                drop(fund_service);
+                FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+                    .update_asset_values(&mut pricing_service, true)?;
 
                 let mut fund_account = ctx.fund_account.load_mut()?;
                 let one_receipt_token_as_sol_after_token_compounded =
@@ -1199,9 +1198,8 @@ impl HarvestRestakingYieldCommand {
                 drop(fund_account);
 
                 // Update pricing & high water mark
-                let mut fund_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?;
-                fund_service.update_asset_values(&mut pricing_service, true)?;
-                drop(fund_service);
+                FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+                    .update_asset_values(&mut pricing_service, true)?;
 
                 let mut fund_account = ctx.fund_account.load_mut()?;
                 let one_receipt_token_as_sol_after_token_compouned =
