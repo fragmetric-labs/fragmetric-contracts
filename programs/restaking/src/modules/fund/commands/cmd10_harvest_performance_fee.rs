@@ -5,7 +5,7 @@ use spl_stake_pool::solana_program::native_token::LAMPORTS_PER_SOL;
 use crate::constants::PROGRAM_REVENUE_ADDRESS;
 use crate::errors::ErrorCode;
 use crate::modules::pricing::TokenPricingSource;
-use crate::utils::PDASeeds;
+use crate::utils::{AccountInfoExt, PDASeeds};
 
 use super::*;
 
@@ -69,6 +69,8 @@ impl HarvestPerformanceFeeCommand {
         // * (0) receipt token program
         // * (1) program revenue account
         // * (2) program receipt token revenue account
+        // * (3) associated token program
+        // * (4) system program
         let required_accounts = [
             (anchor_spl::token_2022::ID, false),
             (PROGRAM_REVENUE_ADDRESS, false),
@@ -80,6 +82,8 @@ impl HarvestPerformanceFeeCommand {
                 ),
                 true,
             ),
+            (anchor_spl::associated_token::ID, false),
+            (system_program::ID, false),
         ]
         .into_iter();
 
@@ -98,7 +102,7 @@ impl HarvestPerformanceFeeCommand {
             return Ok((None, None));
         }
 
-        let [receipt_token_program, program_revenue_account, program_receipt_token_revenue_account, remaining_accounts @ ..] =
+        let [receipt_token_program, program_revenue_account, program_receipt_token_revenue_account, associated_token_program, system_program, remaining_accounts @ ..] =
             accounts
         else {
             err!(error::ErrorCode::AccountNotEnoughKeys)?
@@ -155,6 +159,21 @@ impl HarvestPerformanceFeeCommand {
             fund_account.fee_harvested_one_receipt_token_as_sol = one_receipt_token_as_sol;
             fund_account.performance_fee_last_harvested_at = Clock::get()?.unix_timestamp;
             drop(fund_account);
+
+            // create receipt token revenue account if not initialized
+            if !program_receipt_token_revenue_account.is_initialized() {
+                anchor_spl::associated_token::create(CpiContext::new(
+                    associated_token_program.to_account_info(),
+                    anchor_spl::associated_token::Create {
+                        payer: ctx.operator.to_account_info(),
+                        associated_token: program_receipt_token_revenue_account.to_account_info(),
+                        authority: program_revenue_account.to_account_info(),
+                        mint: ctx.receipt_token_mint.to_account_info(),
+                        system_program: system_program.to_account_info(),
+                        token_program: receipt_token_program.to_account_info(),
+                    },
+                ))?;
+            }
 
             // mint receipt token to revenue account
             anchor_spl::token_2022::mint_to(
