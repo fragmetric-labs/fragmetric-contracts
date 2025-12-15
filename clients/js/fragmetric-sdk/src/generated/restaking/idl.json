@@ -13777,11 +13777,11 @@
             }
           },
           {
-            "name": "reward_distribution_settlement_block_contribution",
+            "name": "reward_distribution_settlement_block_slot_and_contribution",
             "type": {
               "option": {
                 "defined": {
-                  "name": "RewardDistributionSettlementBlockContribution"
+                  "name": "RewardSettlementBlockSlotAndContribution"
                 }
               }
             }
@@ -15835,30 +15835,6 @@
       }
     },
     {
-      "name": "RewardDistributionSettlementBlockContribution",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "starting_slot",
-            "type": "u64"
-          },
-          {
-            "name": "ending_slot",
-            "type": "u64"
-          },
-          {
-            "name": "starting_reward_pool_contribution",
-            "type": "u128"
-          },
-          {
-            "name": "ending_reward_pool_contribution",
-            "type": "u128"
-          }
-        ]
-      }
-    },
-    {
       "name": "RewardPool",
       "serialization": "bytemuck",
       "repr": {
@@ -16071,6 +16047,30 @@
           },
           {
             "name": "user_settled_contribution",
+            "type": "u128"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RewardSettlementBlockSlotAndContribution",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "starting_slot",
+            "type": "u64"
+          },
+          {
+            "name": "ending_slot",
+            "type": "u64"
+          },
+          {
+            "name": "starting_reward_pool_contribution",
+            "type": "u128"
+          },
+          {
+            "name": "ending_reward_pool_contribution",
             "type": "u128"
           }
         ]

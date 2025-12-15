@@ -269,7 +269,7 @@ impl RewardAccount {
         is_bonus_pool: bool,
         amount: u64,
         current_slot: u64,
-    ) -> Result<RewardSettlementBlock> {
+    ) -> Result<()> {
         self.get_reward_pool_mut(is_bonus_pool)
             .settle_reward(reward_id, amount, current_slot)
     }
@@ -282,6 +282,14 @@ impl RewardAccount {
     #[inline(always)]
     pub(super) fn get_reward_pools_iter_mut(&mut self) -> impl Iterator<Item = &mut RewardPool> {
         [&mut self.base_reward_pool, &mut self.bonus_reward_pool].into_iter()
+    }
+
+    pub(super) fn get_reward_pool(&self, is_bonus_pool: bool) -> &RewardPool {
+        if !is_bonus_pool {
+            &self.base_reward_pool
+        } else {
+            &self.bonus_reward_pool
+        }
     }
 
     pub(super) fn get_reward_pool_mut(&mut self, is_bonus_pool: bool) -> &mut RewardPool {

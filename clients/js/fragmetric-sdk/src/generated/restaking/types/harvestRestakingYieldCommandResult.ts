@@ -26,10 +26,10 @@ import {
   type OptionOrNullable,
 } from '@solana/kit';
 import {
-  getRewardDistributionSettlementBlockContributionDecoder,
-  getRewardDistributionSettlementBlockContributionEncoder,
-  type RewardDistributionSettlementBlockContribution,
-  type RewardDistributionSettlementBlockContributionArgs,
+  getRewardSettlementBlockSlotAndContributionDecoder,
+  getRewardSettlementBlockSlotAndContributionEncoder,
+  type RewardSettlementBlockSlotAndContribution,
+  type RewardSettlementBlockSlotAndContributionArgs,
 } from '.';
 
 export type HarvestRestakingYieldCommandResult = {
@@ -41,7 +41,7 @@ export type HarvestRestakingYieldCommandResult = {
   swappedTokenMint: Option<Address>;
   rewardTokenDistributedAmount: bigint;
   updatedRewardAccount: Option<Address>;
-  rewardDistributionSettlementBlockContribution: Option<RewardDistributionSettlementBlockContribution>;
+  rewardDistributionSettlementBlockSlotAndContribution: Option<RewardSettlementBlockSlotAndContribution>;
   vaultSupportedTokenCompoundedAmount: bigint;
 };
 
@@ -54,7 +54,7 @@ export type HarvestRestakingYieldCommandResultArgs = {
   swappedTokenMint: OptionOrNullable<Address>;
   rewardTokenDistributedAmount: number | bigint;
   updatedRewardAccount: OptionOrNullable<Address>;
-  rewardDistributionSettlementBlockContribution: OptionOrNullable<RewardDistributionSettlementBlockContributionArgs>;
+  rewardDistributionSettlementBlockSlotAndContribution: OptionOrNullable<RewardSettlementBlockSlotAndContributionArgs>;
   vaultSupportedTokenCompoundedAmount: number | bigint;
 };
 
@@ -69,10 +69,8 @@ export function getHarvestRestakingYieldCommandResultEncoder(): Encoder<HarvestR
     ['rewardTokenDistributedAmount', getU64Encoder()],
     ['updatedRewardAccount', getOptionEncoder(getAddressEncoder())],
     [
-      'rewardDistributionSettlementBlockContribution',
-      getOptionEncoder(
-        getRewardDistributionSettlementBlockContributionEncoder()
-      ),
+      'rewardDistributionSettlementBlockSlotAndContribution',
+      getOptionEncoder(getRewardSettlementBlockSlotAndContributionEncoder()),
     ],
     ['vaultSupportedTokenCompoundedAmount', getI128Encoder()],
   ]);
@@ -89,10 +87,8 @@ export function getHarvestRestakingYieldCommandResultDecoder(): Decoder<HarvestR
     ['rewardTokenDistributedAmount', getU64Decoder()],
     ['updatedRewardAccount', getOptionDecoder(getAddressDecoder())],
     [
-      'rewardDistributionSettlementBlockContribution',
-      getOptionDecoder(
-        getRewardDistributionSettlementBlockContributionDecoder()
-      ),
+      'rewardDistributionSettlementBlockSlotAndContribution',
+      getOptionDecoder(getRewardSettlementBlockSlotAndContributionDecoder()),
     ],
     ['vaultSupportedTokenCompoundedAmount', getI128Decoder()],
   ]);

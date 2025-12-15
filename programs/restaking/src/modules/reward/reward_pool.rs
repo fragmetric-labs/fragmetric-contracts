@@ -154,12 +154,7 @@ impl RewardPool {
     }
 
     /// add new settlement block to corresponding reward settlement
-    pub fn settle_reward(
-        &mut self,
-        reward_id: u16,
-        amount: u64,
-        current_slot: u64,
-    ) -> Result<RewardSettlementBlock> {
+    pub fn settle_reward(&mut self, reward_id: u16, amount: u64, current_slot: u64) -> Result<()> {
         // First update contribution
         self.update_contribution(current_slot);
 

@@ -44,6 +44,14 @@ impl RewardSettlement {
         self.settlement_blocks_last_slot = reward_pool_initial_slot;
     }
 
+    pub fn get_tail_settlement_block(&self) -> RewardSettlementBlock {
+        // `settlement_blocks_tail` points to the next write position, so the last
+        // actual block lives at tail - 1 with wrap-around.
+        let tail_settlement_block_index = self.settlement_blocks_tail.wrapping_sub(1)
+            % REWARD_ACCOUNT_SETTLEMENT_BLOCK_MAX_LEN as u8;
+        self.settlement_blocks[tail_settlement_block_index as usize]
+    }
+
     pub fn get_settlement_blocks_iter_mut(
         &mut self,
     ) -> impl Iterator<Item = &mut RewardSettlementBlock> {
@@ -82,16 +90,15 @@ impl RewardSettlement {
         amount: u64,
         current_reward_pool_contribution: u128,
         current_slot: u64,
-    ) -> Result<RewardSettlementBlock> {
+    ) -> Result<()> {
         self.clear_stale_settlement_blocks();
-        let settlement_block =
-            self.add_settlement_block(amount, current_reward_pool_contribution, current_slot)?;
+        self.add_settlement_block(amount, current_reward_pool_contribution, current_slot)?;
 
         self.settled_amount += amount;
         self.settlement_blocks_last_slot = current_slot;
         self.settlement_blocks_last_reward_pool_contribution = current_reward_pool_contribution;
 
-        Ok(settlement_block)
+        Ok(())
     }
 
     fn add_settlement_block(
@@ -99,7 +106,7 @@ impl RewardSettlement {
         amount: u64,
         current_reward_pool_contribution: u128,
         current_slot: u64,
-    ) -> Result<RewardSettlementBlock> {
+    ) -> Result<()> {
         // Prevent settlement block with non-positive block height
         require_gt!(
             current_slot,
@@ -126,13 +133,11 @@ impl RewardSettlement {
             current_reward_pool_contribution,
             current_slot,
         );
-        let tail_settlement_block = self.settlement_blocks[self.settlement_blocks_tail as usize];
-
         self.settlement_blocks_tail =
             (self.settlement_blocks_tail + 1) % REWARD_ACCOUNT_SETTLEMENT_BLOCK_MAX_LEN as u8;
         self.num_settlement_blocks += 1;
 
-        Ok(tail_settlement_block)
+        Ok(())
     }
 
     fn force_clear_settlement_block(&mut self) {

@@ -19,21 +19,21 @@ import {
   type FixedSizeEncoder,
 } from '@solana/kit';
 
-export type RewardDistributionSettlementBlockContribution = {
+export type RewardSettlementBlockSlotAndContribution = {
   startingSlot: bigint;
   endingSlot: bigint;
   startingRewardPoolContribution: bigint;
   endingRewardPoolContribution: bigint;
 };
 
-export type RewardDistributionSettlementBlockContributionArgs = {
+export type RewardSettlementBlockSlotAndContributionArgs = {
   startingSlot: number | bigint;
   endingSlot: number | bigint;
   startingRewardPoolContribution: number | bigint;
   endingRewardPoolContribution: number | bigint;
 };
 
-export function getRewardDistributionSettlementBlockContributionEncoder(): FixedSizeEncoder<RewardDistributionSettlementBlockContributionArgs> {
+export function getRewardSettlementBlockSlotAndContributionEncoder(): FixedSizeEncoder<RewardSettlementBlockSlotAndContributionArgs> {
   return getStructEncoder([
     ['startingSlot', getU64Encoder()],
     ['endingSlot', getU64Encoder()],
@@ -42,7 +42,7 @@ export function getRewardDistributionSettlementBlockContributionEncoder(): Fixed
   ]);
 }
 
-export function getRewardDistributionSettlementBlockContributionDecoder(): FixedSizeDecoder<RewardDistributionSettlementBlockContribution> {
+export function getRewardSettlementBlockSlotAndContributionDecoder(): FixedSizeDecoder<RewardSettlementBlockSlotAndContribution> {
   return getStructDecoder([
     ['startingSlot', getU64Decoder()],
     ['endingSlot', getU64Decoder()],
@@ -51,12 +51,12 @@ export function getRewardDistributionSettlementBlockContributionDecoder(): Fixed
   ]);
 }
 
-export function getRewardDistributionSettlementBlockContributionCodec(): FixedSizeCodec<
-  RewardDistributionSettlementBlockContributionArgs,
-  RewardDistributionSettlementBlockContribution
+export function getRewardSettlementBlockSlotAndContributionCodec(): FixedSizeCodec<
+  RewardSettlementBlockSlotAndContributionArgs,
+  RewardSettlementBlockSlotAndContribution
 > {
   return combineCodec(
-    getRewardDistributionSettlementBlockContributionEncoder(),
-    getRewardDistributionSettlementBlockContributionDecoder()
+    getRewardSettlementBlockSlotAndContributionEncoder(),
+    getRewardSettlementBlockSlotAndContributionDecoder()
   );
 }
