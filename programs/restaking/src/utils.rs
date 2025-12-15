@@ -2,6 +2,7 @@ use crate::errors;
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::{entrypoint, system_program};
 use anchor_lang::{CheckOwner, ZeroCopy};
+use spl_math::uint::U256;
 
 pub trait PDASeeds<const N: usize> {
     const SEED: &'static [u8];
@@ -483,7 +484,6 @@ pub(crate) use debug_msg_heap_size;
 
 #[allow(unused_imports)]
 pub(crate) use debug_msg_stack_size;
-use primitive_types::U256;
 
 /// Test utils.
 #[cfg(test)]

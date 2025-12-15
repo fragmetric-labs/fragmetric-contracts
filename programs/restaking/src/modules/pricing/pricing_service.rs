@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use bytemuck::Zeroable;
 use once_cell::unsync::OnceCell;
-use primitive_types::U256;
+use spl_math::uint::U256;
 
 use crate::errors::ErrorCode;
 use crate::modules::fund::FundReceiptTokenValueProvider;
