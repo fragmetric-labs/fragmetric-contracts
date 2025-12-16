@@ -486,7 +486,7 @@ describe('restaking.frag2 test', async () => {
 
     expect(
       fund_2_frag!.token.operationReservedAmount -
-      fund_1_frag!.token.operationReservedAmount
+        fund_1_frag!.token.operationReservedAmount
     ).toEqual(fragRewardAmount);
 
     await expectMasked(ctx.resolve(true)).resolves.toMatchInlineSnapshot(`
@@ -676,13 +676,13 @@ describe('restaking.frag2 test', async () => {
 
     expect(
       globalReward_2!.basePool.settlements[0].blocks[0].amount -
-      globalReward_1!.basePool.settlements[0].blocks[0].amount
+        globalReward_1!.basePool.settlements[0].blocks[0].amount
     ).toEqual(voteRewardAmount);
 
     const event = res.events!.operatorRanFundCommand!;
     const result = isSome(event.result)
       ? (event.result.value
-        .fields[0] as restakingTypes.HarvestRestakingYieldCommandResult)
+          .fields[0] as restakingTypes.HarvestRestakingYieldCommandResult)
       : null;
     if (
       result !== null &&
@@ -924,8 +924,8 @@ describe('restaking.frag2 test', async () => {
     ).toEqual(
       user1.reward.account!.data.baseUserRewardPool.rewardSettlements1[0]
         .totalSettledContribution +
-      user2.reward.account!.data.baseUserRewardPool.rewardSettlements1[0]
-        .totalSettledContribution
+        user2.reward.account!.data.baseUserRewardPool.rewardSettlements1[0]
+          .totalSettledContribution
     );
   });
 
@@ -1047,27 +1047,20 @@ describe('restaking.frag2 test', async () => {
       remainingAmount + claimedAmount + clearingBlockRemainingAmount
     );
 
-    const fund = await ctx.fund.resolveAccount(true);
-    const rewardToken =
-      fund!.data.restakingVaults[0].distributingRewardTokens.filter(
-        (rewardToken) =>
-          rewardToken.mint == 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF'
-      )[0];
-
     await expect(
       rewardTokenReserveAccount.resolve(true).then((res) => res!.amount)
     ).resolves.toEqual(
       rewardTokenReserveAccountBalance +
-      voteRewardAmount -
-      remainingAmount -
-      clearingBlockRemainingAmount
+        voteRewardAmount -
+        remainingAmount -
+        clearingBlockRemainingAmount
     );
     await expect(
       programRewardTokenRevenueAccount.resolve(true).then((res) => res!.amount)
     ).resolves.toEqual(
       programRewardTokenRevenueAccountBalance +
-      remainingAmount +
-      clearingBlockRemainingAmount
+        remainingAmount +
+        clearingBlockRemainingAmount
     );
   });
 
@@ -1257,7 +1250,7 @@ describe('restaking.frag2 test', async () => {
       );
       expect(
         programRevenueCompoundRewardTokenAmountDelta +
-        supportedTokenAccountBalanceDelta
+          supportedTokenAccountBalanceDelta
       ).toEqual(5_000_000_000_000n);
 
       // 2) distribute reward (frag vote Token)
@@ -1310,7 +1303,7 @@ describe('restaking.frag2 test', async () => {
       );
       expect(
         programRevenueDistributeRewardTokenAmountDelta +
-        rewardTokenAccountBalanceDelta
+          rewardTokenAccountBalanceDelta
       ).toEqual(123_456_789_987_654_321n);
     }
 
@@ -1470,13 +1463,13 @@ describe('restaking.frag2 test', async () => {
     if (vaultRewardToken_2!.amount > fvtRewardToken.harvestThresholdMaxAmount) {
       expect(reward_3_fvtSettlement.settledAmount).toEqual(
         reward_2_fvtSettlement.settledAmount +
-        fvtRewardToken.harvestThresholdMaxAmount
+          fvtRewardToken.harvestThresholdMaxAmount
       );
     } else {
       expect(reward_3_fvtSettlement.settledAmount).toEqual(
         reward_2_fvtSettlement.settledAmount +
-        fvtRewardToken.harvestThresholdMinAmount +
-        vaultRewardToken_2!.amount
+          fvtRewardToken.harvestThresholdMinAmount +
+          vaultRewardToken_2!.amount
       );
     }
 
@@ -1511,6 +1504,16 @@ describe('restaking.frag2 test', async () => {
       reward_3_fvtSettlement!.settledAmount + vaultRewardToken_3!.amount
     );
 
-    // TODO: set fvt authority to fund manager
+    // set fvt authority to fund manager
+    await ctx.fund.revokeFundDistributingRewardTokenMintAuthority.execute({
+      vault: '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
+      rewardTokenMint: 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF',
+    });
+
+    const rewardTokenMint_5 = await rewardTokenMintAccount.resolve(true);
+
+    expect(rewardTokenMint_5!.mintAuthority.value).toEqual(
+      restaking.knownAddresses.fundManager
+    );
   });
 });
