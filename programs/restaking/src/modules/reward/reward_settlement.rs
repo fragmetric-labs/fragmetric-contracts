@@ -44,12 +44,15 @@ impl RewardSettlement {
         self.settlement_blocks_last_slot = reward_pool_initial_slot;
     }
 
-    pub fn get_tail_settlement_block(&self) -> RewardSettlementBlock {
-        // `settlement_blocks_tail` points to the next write position, so the last
-        // actual block lives at tail - 1 with wrap-around.
-        let tail_settlement_block_index = self.settlement_blocks_tail.wrapping_sub(1)
+    pub fn get_last_settled_block(&self) -> Option<RewardSettlementBlock> {
+        if self.num_settlement_blocks == 0 {
+            return None;
+        }
+
+        let last_settled_block_index = (self.settlement_blocks_head + self.num_settlement_blocks
+            - 1)
             % REWARD_ACCOUNT_SETTLEMENT_BLOCK_MAX_LEN as u8;
-        self.settlement_blocks[tail_settlement_block_index as usize]
+        Some(self.settlement_blocks[last_settled_block_index as usize])
     }
 
     pub fn get_settlement_blocks_iter_mut(

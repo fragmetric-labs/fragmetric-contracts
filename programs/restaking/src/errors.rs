@@ -321,4 +321,7 @@ pub enum ErrorCode {
 
     #[msg("reward: user has unclaimed reward")]
     RewardUserHasUnclaimedRewardError,
+
+    #[msg("reward: settlement block not found")]
+    RewardSettlementBlockNotFoundError,
 }

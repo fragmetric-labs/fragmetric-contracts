@@ -13,14 +13,6 @@ pub struct RewardService<'a, 'info> {
     current_slot: u64,
 }
 
-#[derive(Clone, AnchorSerialize, AnchorDeserialize)]
-pub struct RewardSettlementBlockSlotAndContribution {
-    pub starting_slot: u64,
-    pub ending_slot: u64,
-    pub starting_reward_pool_contribution: u128,
-    pub ending_reward_pool_contribution: u128,
-}
-
 impl<'a, 'info> RewardService<'a, 'info> {
     pub fn new(
         receipt_token_mint: &'a InterfaceAccount<'info, Mint>,
@@ -198,19 +190,23 @@ impl<'a, 'info> RewardService<'a, 'info> {
         &self,
         reward_token_mint: &Pubkey,
         is_bonus_pool: bool,
-    ) -> Result<RewardSettlementBlockSlotAndContribution> {
+    ) -> Result<Option<(u64, u64, u128, u128)>> {
         let reward_account = self.reward_account.load()?;
         let reward_id = reward_account.get_reward_id(reward_token_mint)?;
         let reward_pool = reward_account.get_reward_pool(is_bonus_pool);
         let reward_settlement = reward_pool.get_reward_settlement(reward_id)?;
-        let last_settled_block = reward_settlement.get_tail_settlement_block();
+        let last_settled_block = reward_settlement.get_last_settled_block();
 
-        Ok(RewardSettlementBlockSlotAndContribution {
-            starting_slot: last_settled_block.starting_slot,
-            ending_slot: last_settled_block.ending_slot,
-            starting_reward_pool_contribution: last_settled_block.starting_reward_pool_contribution,
-            ending_reward_pool_contribution: last_settled_block.ending_reward_pool_contribution,
-        })
+        if let Some(last_settled_block) = last_settled_block {
+            Ok(Some((
+                last_settled_block.starting_slot,
+                last_settled_block.ending_slot,
+                last_settled_block.starting_reward_pool_contribution,
+                last_settled_block.ending_reward_pool_contribution,
+            )))
+        } else {
+            Ok(None)
+        }
     }
 
     pub fn process_claim_remaining_reward(

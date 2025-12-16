@@ -12488,6 +12488,11 @@
       "code": 6103,
       "name": "RewardUserHasUnclaimedRewardError",
       "msg": "reward: user has unclaimed reward"
+    },
+    {
+      "code": 6104,
+      "name": "RewardSettlementBlockNotFoundError",
+      "msg": "reward: settlement block not found"
     }
   ],
   "types": [
