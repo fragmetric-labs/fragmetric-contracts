@@ -189,6 +189,10 @@ impl HarvestPerformanceFeeCommand {
                 performance_fee_in_receipt_token_amount,
             )?;
 
+            let mut fund_account = ctx.fund_account.load_mut()?;
+            fund_account.reload_receipt_token_supply(ctx.receipt_token_mint)?;
+            drop(fund_account);
+
             // get updated receipt token price
             FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
                 .update_asset_values(&mut pricing_service, true)?;
