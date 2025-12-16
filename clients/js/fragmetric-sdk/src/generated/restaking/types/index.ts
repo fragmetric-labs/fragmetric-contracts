@@ -73,6 +73,7 @@ export * from './reward';
 export * from './rewardPool';
 export * from './rewardSettlement';
 export * from './rewardSettlementBlock';
+export * from './rewardSettlementBlockSlotAndContribution';
 export * from './rewardToken';
 export * from './stakeSOLCommand';
 export * from './stakeSOLCommandItem';

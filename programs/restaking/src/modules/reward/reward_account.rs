@@ -284,6 +284,14 @@ impl RewardAccount {
         [&mut self.base_reward_pool, &mut self.bonus_reward_pool].into_iter()
     }
 
+    pub(super) fn get_reward_pool(&self, is_bonus_pool: bool) -> &RewardPool {
+        if !is_bonus_pool {
+            &self.base_reward_pool
+        } else {
+            &self.bonus_reward_pool
+        }
+    }
+
     pub(super) fn get_reward_pool_mut(&mut self, is_bonus_pool: bool) -> &mut RewardPool {
         if !is_bonus_pool {
             &mut self.base_reward_pool

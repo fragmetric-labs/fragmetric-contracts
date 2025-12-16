@@ -1,3 +1,5 @@
+import { restakingTypes } from '@fragmetric-labs/sdk';
+import { isSome } from '@solana/kit';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { createTestSuiteContext, expectMasked } from '../../testutil';
 import { initializeFrag2 } from './frag2.init';
@@ -659,7 +661,7 @@ describe('restaking.frag2 test', async () => {
     const globalReward_1 = await ctx.reward.resolve(true);
 
     // run operator harvest
-    await ctx.fund.runCommand.executeChained({
+    const res = await ctx.fund.runCommand.executeChained({
       forceResetCommand: 'HarvestRestakingYield',
       operator: restaking.knownAddresses.fundManager,
     });
@@ -670,6 +672,36 @@ describe('restaking.frag2 test', async () => {
       globalReward_2!.basePool.settlements[0].blocks[0].amount -
         globalReward_1!.basePool.settlements[0].blocks[0].amount
     ).toEqual(voteRewardAmount);
+
+    const event = res.events!.operatorRanFundCommand!;
+    const result = isSome(event.result)
+      ? (event.result.value
+          .fields[0] as restakingTypes.HarvestRestakingYieldCommandResult)
+      : null;
+    if (
+      result !== null &&
+      isSome(result!.distributingRewardSettlementBlockSlotAndContribution)
+    ) {
+      const distributingRewardSettlementBlockSlotAndContribution =
+        result.distributingRewardSettlementBlockSlotAndContribution.value;
+
+      expect(
+        distributingRewardSettlementBlockSlotAndContribution.startingSlot
+      ).toEqual(globalReward_2!.basePool.settlements[0].blocks[0].startingSlot);
+      expect(
+        distributingRewardSettlementBlockSlotAndContribution.endingSlot
+      ).toEqual(globalReward_2!.basePool.settlements[0].blocks[0].endingSlot);
+      expect(
+        distributingRewardSettlementBlockSlotAndContribution.startingRewardPoolContribution
+      ).toEqual(
+        globalReward_2!.basePool.settlements[0].blocks[0].startingContribution
+      );
+      expect(
+        distributingRewardSettlementBlockSlotAndContribution.endingRewardPoolContribution
+      ).toEqual(
+        globalReward_2!.basePool.settlements[0].blocks[0].endingContribution
+      );
+    }
   });
 
   /** 5. reward **/

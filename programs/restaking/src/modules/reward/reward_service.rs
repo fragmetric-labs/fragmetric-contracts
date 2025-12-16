@@ -186,6 +186,27 @@ impl<'a, 'info> RewardService<'a, 'info> {
         Ok(())
     }
 
+    pub fn get_last_settled_block_slot_and_contribution(
+        &self,
+        reward_token_mint: &Pubkey,
+        is_bonus_pool: bool,
+    ) -> Result<Option<(u64, u64, u128, u128)>> {
+        let reward_account = self.reward_account.load()?;
+        let reward_id = reward_account.get_reward_id(reward_token_mint)?;
+        let reward_pool = reward_account.get_reward_pool(is_bonus_pool);
+        let reward_settlement = reward_pool.get_reward_settlement(reward_id)?;
+        let last_settled_block = reward_settlement.get_last_settled_block();
+
+        Ok(last_settled_block.map(|block| {
+            (
+                block.starting_slot,
+                block.ending_slot,
+                block.starting_reward_pool_contribution,
+                block.ending_reward_pool_contribution,
+            )
+        }))
+    }
+
     pub fn process_claim_remaining_reward(
         &self,
         reward_token_mint: &InterfaceAccount<'info, Mint>,
