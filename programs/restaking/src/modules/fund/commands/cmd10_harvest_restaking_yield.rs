@@ -155,7 +155,17 @@ pub struct HarvestRestakingYieldCommandResult {
     pub swapped_token_mint: Option<Pubkey>,
     pub reward_token_distributed_amount: u64,
     pub updated_reward_account: Option<Pubkey>,
+    pub distributing_reward_settlement_block_slot_and_contribution:
+        Option<RewardSettlementBlockSlotAndContribution>,
     pub vault_supported_token_compounded_amount: i128,
+}
+
+#[derive(Clone, AnchorSerialize, AnchorDeserialize)]
+pub struct RewardSettlementBlockSlotAndContribution {
+    starting_slot: u64,
+    ending_slot: u64,
+    starting_reward_pool_contribution: u128,
+    ending_reward_pool_contribution: u128,
 }
 
 #[derive(Clone, Copy)]
@@ -1054,6 +1064,7 @@ impl HarvestRestakingYieldCommand {
                         swapped_token_mint: None,
                         reward_token_distributed_amount: 0,
                         updated_reward_account: None,
+                        distributing_reward_settlement_block_slot_and_contribution: None,
                         vault_supported_token_compounded_amount: 0,
                     }
                     .into(),
@@ -1193,6 +1204,7 @@ impl HarvestRestakingYieldCommand {
                         fund_supported_token_compounded_amount: token_compounded_amount,
                         reward_token_distributed_amount: 0,
                         updated_reward_account: None,
+                        distributing_reward_settlement_block_slot_and_contribution: None,
                         vault_supported_token_compounded_amount: 0,
                     }
                     .into(),
@@ -1348,6 +1360,7 @@ impl HarvestRestakingYieldCommand {
                     let reward_token_program =
                         Interface::try_from(common_accounts.reward_token_program)?;
 
+                    let is_bonus_reward_pool = false;
                     let reward_service =
                         RewardService::new(ctx.receipt_token_mint, &reward_account)?;
                     reward_service.settle_reward(
@@ -1355,9 +1368,20 @@ impl HarvestRestakingYieldCommand {
                         Some(&reward_token_program),
                         Some(&reward_token_reserve_account),
                         reward_token_mint.key(),
-                        false,
+                        is_bonus_reward_pool,
                         token_distributed_amount,
                     )?;
+                    let (
+                        settled_block_starting_slot,
+                        settled_block_ending_slot,
+                        settled_block_starting_reward_pool_contribution,
+                        settled_block_ending_reward_pool_contribution,
+                    ) = reward_service
+                        .get_last_settled_block_slot_and_contribution(
+                            &reward_token_mint.key(),
+                            is_bonus_reward_pool,
+                        )?
+                        .ok_or(ErrorCode::RewardSettlementBlockNotFoundError)?;
 
                     reward_service.claim_remaining_reward(
                         &reward_token_mint,
@@ -1385,6 +1409,16 @@ impl HarvestRestakingYieldCommand {
                             swapped_token_mint: None,
                             reward_token_distributed_amount: token_distributed_amount,
                             updated_reward_account: Some(reward_account.key()),
+                            distributing_reward_settlement_block_slot_and_contribution: Some(
+                                RewardSettlementBlockSlotAndContribution {
+                                    starting_slot: settled_block_starting_slot,
+                                    ending_slot: settled_block_ending_slot,
+                                    starting_reward_pool_contribution:
+                                        settled_block_starting_reward_pool_contribution,
+                                    ending_reward_pool_contribution:
+                                        settled_block_ending_reward_pool_contribution,
+                                },
+                            ),
                             vault_supported_token_compounded_amount: 0,
                         }
                         .into(),
@@ -1503,6 +1537,7 @@ impl HarvestRestakingYieldCommand {
                     swapped_token_mint: None,
                     reward_token_distributed_amount: 0,
                     updated_reward_account: None,
+                    distributing_reward_settlement_block_slot_and_contribution: None,
                     vault_supported_token_compounded_amount,
                 }
                 .into(),

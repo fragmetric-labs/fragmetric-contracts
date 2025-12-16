@@ -222,6 +222,8 @@ export const RESTAKING_ERROR__REWARD_USER_TOKEN_ACCOUNT_NOT_INITIALIZED_ERROR = 
 export const RESTAKING_ERROR__REWARD_USER_REWARD_ACCOUNT_NOT_SYNCED_ERROR = 0x17d6; // 6102
 /** RewardUserHasUnclaimedRewardError: reward: user has unclaimed reward */
 export const RESTAKING_ERROR__REWARD_USER_HAS_UNCLAIMED_REWARD_ERROR = 0x17d7; // 6103
+/** RewardSettlementBlockNotFoundError: reward: settlement block not found */
+export const RESTAKING_ERROR__REWARD_SETTLEMENT_BLOCK_NOT_FOUND_ERROR = 0x17d8; // 6104
 
 export type RestakingError =
   | typeof RESTAKING_ERROR__CALCULATION_ARITHMETIC_EXCEPTION
@@ -315,6 +317,7 @@ export type RestakingError =
   | typeof RESTAKING_ERROR__REWARD_NOT_FOUND_ERROR
   | typeof RESTAKING_ERROR__REWARD_POOL_CLOSE_CONDITION_ERROR
   | typeof RESTAKING_ERROR__REWARD_POOL_NOT_FOUND_ERROR
+  | typeof RESTAKING_ERROR__REWARD_SETTLEMENT_BLOCK_NOT_FOUND_ERROR
   | typeof RESTAKING_ERROR__REWARD_SETTLEMENT_NOT_FOUND_ERROR
   | typeof RESTAKING_ERROR__REWARD_USER_HAS_UNCLAIMED_REWARD_ERROR
   | typeof RESTAKING_ERROR__REWARD_USER_POOL_NOT_FOUND_ERROR
@@ -423,6 +426,7 @@ if (process.env.NODE_ENV !== 'production') {
     [RESTAKING_ERROR__REWARD_NOT_FOUND_ERROR]: `reward: reward not found`,
     [RESTAKING_ERROR__REWARD_POOL_CLOSE_CONDITION_ERROR]: `reward: cannot close the reward pool`,
     [RESTAKING_ERROR__REWARD_POOL_NOT_FOUND_ERROR]: `reward: pool not found`,
+    [RESTAKING_ERROR__REWARD_SETTLEMENT_BLOCK_NOT_FOUND_ERROR]: `reward: settlement block not found`,
     [RESTAKING_ERROR__REWARD_SETTLEMENT_NOT_FOUND_ERROR]: `reward: settlement not found`,
     [RESTAKING_ERROR__REWARD_USER_HAS_UNCLAIMED_REWARD_ERROR]: `reward: user has unclaimed reward`,
     [RESTAKING_ERROR__REWARD_USER_POOL_NOT_FOUND_ERROR]: `reward: user pool not found`,

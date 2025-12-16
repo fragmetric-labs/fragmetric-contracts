@@ -44,6 +44,17 @@ impl RewardSettlement {
         self.settlement_blocks_last_slot = reward_pool_initial_slot;
     }
 
+    pub fn get_last_settled_block(&self) -> Option<RewardSettlementBlock> {
+        if self.num_settlement_blocks == 0 {
+            return None;
+        }
+
+        let last_settled_block_index = (self.settlement_blocks_head + self.num_settlement_blocks
+            - 1)
+            % REWARD_ACCOUNT_SETTLEMENT_BLOCK_MAX_LEN as u8;
+        Some(self.settlement_blocks[last_settled_block_index as usize])
+    }
+
     pub fn get_settlement_blocks_iter_mut(
         &mut self,
     ) -> impl Iterator<Item = &mut RewardSettlementBlock> {
