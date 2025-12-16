@@ -13782,7 +13782,7 @@
             }
           },
           {
-            "name": "reward_distribution_settlement_block_slot_and_contribution",
+            "name": "distributing_reward_settlement_block_slot_and_contribution",
             "type": {
               "option": {
                 "defined": {

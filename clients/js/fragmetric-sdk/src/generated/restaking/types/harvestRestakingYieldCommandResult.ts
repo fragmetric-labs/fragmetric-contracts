@@ -41,7 +41,7 @@ export type HarvestRestakingYieldCommandResult = {
   swappedTokenMint: Option<Address>;
   rewardTokenDistributedAmount: bigint;
   updatedRewardAccount: Option<Address>;
-  rewardDistributionSettlementBlockSlotAndContribution: Option<RewardSettlementBlockSlotAndContribution>;
+  distributingRewardSettlementBlockSlotAndContribution: Option<RewardSettlementBlockSlotAndContribution>;
   vaultSupportedTokenCompoundedAmount: bigint;
 };
 
@@ -54,7 +54,7 @@ export type HarvestRestakingYieldCommandResultArgs = {
   swappedTokenMint: OptionOrNullable<Address>;
   rewardTokenDistributedAmount: number | bigint;
   updatedRewardAccount: OptionOrNullable<Address>;
-  rewardDistributionSettlementBlockSlotAndContribution: OptionOrNullable<RewardSettlementBlockSlotAndContributionArgs>;
+  distributingRewardSettlementBlockSlotAndContribution: OptionOrNullable<RewardSettlementBlockSlotAndContributionArgs>;
   vaultSupportedTokenCompoundedAmount: number | bigint;
 };
 
@@ -69,7 +69,7 @@ export function getHarvestRestakingYieldCommandResultEncoder(): Encoder<HarvestR
     ['rewardTokenDistributedAmount', getU64Encoder()],
     ['updatedRewardAccount', getOptionEncoder(getAddressEncoder())],
     [
-      'rewardDistributionSettlementBlockSlotAndContribution',
+      'distributingRewardSettlementBlockSlotAndContribution',
       getOptionEncoder(getRewardSettlementBlockSlotAndContributionEncoder()),
     ],
     ['vaultSupportedTokenCompoundedAmount', getI128Encoder()],
@@ -87,7 +87,7 @@ export function getHarvestRestakingYieldCommandResultDecoder(): Decoder<HarvestR
     ['rewardTokenDistributedAmount', getU64Decoder()],
     ['updatedRewardAccount', getOptionDecoder(getAddressDecoder())],
     [
-      'rewardDistributionSettlementBlockSlotAndContribution',
+      'distributingRewardSettlementBlockSlotAndContribution',
       getOptionDecoder(getRewardSettlementBlockSlotAndContributionDecoder()),
     ],
     ['vaultSupportedTokenCompoundedAmount', getI128Decoder()],

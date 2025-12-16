@@ -155,7 +155,7 @@ pub struct HarvestRestakingYieldCommandResult {
     pub swapped_token_mint: Option<Pubkey>,
     pub reward_token_distributed_amount: u64,
     pub updated_reward_account: Option<Pubkey>,
-    pub reward_distribution_settlement_block_slot_and_contribution:
+    pub distributing_reward_settlement_block_slot_and_contribution:
         Option<RewardSettlementBlockSlotAndContribution>,
     pub vault_supported_token_compounded_amount: i128,
 }
@@ -1064,7 +1064,7 @@ impl HarvestRestakingYieldCommand {
                         swapped_token_mint: None,
                         reward_token_distributed_amount: 0,
                         updated_reward_account: None,
-                        reward_distribution_settlement_block_slot_and_contribution: None,
+                        distributing_reward_settlement_block_slot_and_contribution: None,
                         vault_supported_token_compounded_amount: 0,
                     }
                     .into(),
@@ -1204,7 +1204,7 @@ impl HarvestRestakingYieldCommand {
                         fund_supported_token_compounded_amount: token_compounded_amount,
                         reward_token_distributed_amount: 0,
                         updated_reward_account: None,
-                        reward_distribution_settlement_block_slot_and_contribution: None,
+                        distributing_reward_settlement_block_slot_and_contribution: None,
                         vault_supported_token_compounded_amount: 0,
                     }
                     .into(),
@@ -1409,7 +1409,7 @@ impl HarvestRestakingYieldCommand {
                             swapped_token_mint: None,
                             reward_token_distributed_amount: token_distributed_amount,
                             updated_reward_account: Some(reward_account.key()),
-                            reward_distribution_settlement_block_slot_and_contribution: Some(
+                            distributing_reward_settlement_block_slot_and_contribution: Some(
                                 RewardSettlementBlockSlotAndContribution {
                                     starting_slot: settled_block_starting_slot,
                                     ending_slot: settled_block_ending_slot,
@@ -1537,7 +1537,7 @@ impl HarvestRestakingYieldCommand {
                     swapped_token_mint: None,
                     reward_token_distributed_amount: 0,
                     updated_reward_account: None,
-                    reward_distribution_settlement_block_slot_and_contribution: None,
+                    distributing_reward_settlement_block_slot_and_contribution: None,
                     vault_supported_token_compounded_amount,
                 }
                 .into(),

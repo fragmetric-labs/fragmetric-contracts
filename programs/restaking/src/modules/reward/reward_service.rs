@@ -197,16 +197,14 @@ impl<'a, 'info> RewardService<'a, 'info> {
         let reward_settlement = reward_pool.get_reward_settlement(reward_id)?;
         let last_settled_block = reward_settlement.get_last_settled_block();
 
-        if let Some(last_settled_block) = last_settled_block {
-            Ok(Some((
-                last_settled_block.starting_slot,
-                last_settled_block.ending_slot,
-                last_settled_block.starting_reward_pool_contribution,
-                last_settled_block.ending_reward_pool_contribution,
-            )))
-        } else {
-            Ok(None)
-        }
+        Ok(last_settled_block.map(|block| {
+            (
+                block.starting_slot,
+                block.ending_slot,
+                block.starting_reward_pool_contribution,
+                block.ending_reward_pool_contribution,
+            )
+        }))
     }
 
     pub fn process_claim_remaining_reward(

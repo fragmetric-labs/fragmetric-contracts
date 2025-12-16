@@ -679,24 +679,24 @@ describe('restaking.frag2 test', async () => {
       : null;
     if (
       result !== null &&
-      isSome(result!.rewardDistributionSettlementBlockSlotAndContribution)
+      isSome(result!.distributingRewardSettlementBlockSlotAndContribution)
     ) {
-      const rewardDistributionSettlementBlockSlotAndContribution =
-        result.rewardDistributionSettlementBlockSlotAndContribution.value;
+      const distributingRewardSettlementBlockSlotAndContribution =
+        result.distributingRewardSettlementBlockSlotAndContribution.value;
 
       expect(
-        rewardDistributionSettlementBlockSlotAndContribution.startingSlot
+        distributingRewardSettlementBlockSlotAndContribution.startingSlot
       ).toEqual(globalReward_2!.basePool.settlements[0].blocks[0].startingSlot);
       expect(
-        rewardDistributionSettlementBlockSlotAndContribution.endingSlot
+        distributingRewardSettlementBlockSlotAndContribution.endingSlot
       ).toEqual(globalReward_2!.basePool.settlements[0].blocks[0].endingSlot);
       expect(
-        rewardDistributionSettlementBlockSlotAndContribution.startingRewardPoolContribution
+        distributingRewardSettlementBlockSlotAndContribution.startingRewardPoolContribution
       ).toEqual(
         globalReward_2!.basePool.settlements[0].blocks[0].startingContribution
       );
       expect(
-        rewardDistributionSettlementBlockSlotAndContribution.endingRewardPoolContribution
+        distributingRewardSettlementBlockSlotAndContribution.endingRewardPoolContribution
       ).toEqual(
         globalReward_2!.basePool.settlements[0].blocks[0].endingContribution
       );
