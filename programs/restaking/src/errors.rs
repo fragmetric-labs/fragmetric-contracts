@@ -324,4 +324,7 @@ pub enum ErrorCode {
 
     #[msg("reward: settlement block not found")]
     RewardSettlementBlockNotFoundError,
+
+    #[msg("fund: token mint authority is not at fund")]
+    FundTokenMintAuthorityNotAtFundError,
 }

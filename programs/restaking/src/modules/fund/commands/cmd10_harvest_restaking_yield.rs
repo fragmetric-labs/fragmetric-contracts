@@ -747,7 +747,7 @@ impl HarvestRestakingYieldCommand {
     #[inline(never)]
     fn execute_prepare_distribute_reward_command<'info>(
         &self,
-        ctx: &OperationCommandContext,
+        ctx: &mut OperationCommandContext,
         accounts: &[&'info AccountInfo<'info>],
         vault: &Pubkey,
         reward_token_mints: &[Pubkey],
@@ -762,6 +762,8 @@ impl HarvestRestakingYieldCommand {
             .get_restaking_vault(vault)?
             .receipt_token_pricing_source
             .try_deserialize()?;
+
+        drop(fund_account);
 
         let Some(entry) = (match receipt_token_pricing_source {
             Some(TokenPricingSource::JitoRestakingVault { .. })
@@ -816,7 +818,7 @@ impl HarvestRestakingYieldCommand {
     /// Create an ExecuteDistributeReward command given that vault's ATA is the source reward token account.
     fn create_execute_distribute_reward_command_from_vault_ata<'info>(
         &self,
-        ctx: &OperationCommandContext,
+        ctx: &mut OperationCommandContext,
         mut accounts: &[&'info AccountInfo<'info>],
         vault: &Pubkey,
         reward_token_mints: &[Pubkey],
@@ -861,7 +863,9 @@ impl HarvestRestakingYieldCommand {
         // if reward token is distributing reward token and mintable by fund,
         // then reward_token_amount would be minted to vault reward ATA
         // at ExecuteDistributeReward step.
-        if !self.is_token_mintable_by_fund(&reward_token_mint_account, &ctx.fund_account.key()) {
+        if !FundConfigurationService::new(ctx.receipt_token_mint, ctx.fund_account)?
+            .is_token_mintable_by_fund(&reward_token_mint_account)
+        {
             let reward_token_amount = self.get_reward_token_amount(
                 vault_reward_token_account,
                 &vault_reward_token_account_signer,
@@ -1256,7 +1260,9 @@ impl HarvestRestakingYieldCommand {
         let reward_token_mint = common_accounts.reward_token_mint;
         let token_mint = InterfaceAccount::<Mint>::try_from(reward_token_mint)?;
 
-        if self.is_token_mintable_by_fund(&token_mint, &ctx.fund_account.key()) {
+        if FundConfigurationService::new(ctx.receipt_token_mint, ctx.fund_account)?
+            .is_token_mintable_by_fund(&token_mint)
+        {
             let fund_account = ctx.fund_account.load()?;
             let restaking_vault = fund_account.get_restaking_vault(vault)?;
 
@@ -1587,16 +1593,6 @@ impl HarvestRestakingYieldCommand {
 
         // next vault
         self.execute_new_compound_vault_supported_token_command(ctx, Some(vault), result)
-    }
-
-    fn is_token_mintable_by_fund(
-        &self,
-        mint: &InterfaceAccount<Mint>,
-        fund_account_key: &Pubkey,
-    ) -> bool {
-        mint.mint_authority
-            .map(|authority| authority == *fund_account_key)
-            .unwrap_or(false)
     }
 
     fn get_available_reward_token_amount_to_harvest(
