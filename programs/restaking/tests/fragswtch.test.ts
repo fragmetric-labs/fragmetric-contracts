@@ -1,6 +1,8 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { createTestSuiteContext, expectMasked } from '../../testutil';
 import { initializeFragSwitch } from './fragswtch.init';
+import { isSome } from '@solana/kit';
+import { restakingTypes } from '@fragmetric-labs/sdk';
 
 describe('restaking.fragSWTCH test', async () => {
   const testCtx = await initializeFragSwitch(await createTestSuiteContext());
@@ -501,5 +503,16 @@ describe('restaking.fragSWTCH test', async () => {
     // however this test case is to prevent breaking changes in other commands that affects the full cycle.
     // For example, due to virtual vault's edge case, restaking-related command might be broken unless properly handled
     await ctx.fund.runCommand.executeChained(null);
+  });
+
+  test('performance fee is not charged', async () => {
+    const res = await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestPerformanceFee',
+      operator: restaking.knownAddresses.fundManager,
+    });
+    const evt = res.events!.operatorRanFundCommand!;
+    const result = isSome(evt.result)
+      ? (evt.result.value.fields[0] as restakingTypes.HarvestPerformanceFeeCommandResult) : null;
+    expect(result).toBeNull();
   });
 });

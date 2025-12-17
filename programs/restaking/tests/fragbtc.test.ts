@@ -4773,4 +4773,15 @@ describe('restaking.fragBTC test', async () => {
       mint: '6DNSN2BJsaPFdFFc1zP37kkeNe4Usc1Sqkzr9C9vPWcU',
     });
   });
+
+  test('performance fee is not charged', async () => {
+    const res = await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestPerformanceFee',
+      operator: restaking.knownAddresses.fundManager,
+    });
+    const evt = res.events!.operatorRanFundCommand!;
+    const result = isSome(evt.result)
+      ? (evt.result.value.fields[0] as restakingTypes.HarvestPerformanceFeeCommandResult) : null;
+    expect(result).toBeNull();
+  });
 });

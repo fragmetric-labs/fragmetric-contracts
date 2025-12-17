@@ -1333,4 +1333,15 @@ describe('restaking.frag2 test', async () => {
     // For example, due to virtual vault's edge case, restaking-related command might be broken unless properly handled
     await ctx.fund.runCommand.executeChained(null);
   });
+
+  test('performance fee is not charged', async () => {
+    const res = await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestPerformanceFee',
+      operator: restaking.knownAddresses.fundManager,
+    });
+    const evt = res.events!.operatorRanFundCommand!;
+    const result = isSome(evt.result)
+      ? (evt.result.value.fields[0] as restakingTypes.HarvestPerformanceFeeCommandResult) : null;
+    expect(result).toBeNull();
+  });
 });
