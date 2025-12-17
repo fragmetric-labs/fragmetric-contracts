@@ -540,6 +540,12 @@ impl FundAccount {
             performance_fee_rate_bps
         );
 
+        // If the previous fee rate was zero, or if the high-water mark was uninitialized,
+        // update the high-water mark to prevent charging an excessive fee.
+        if self.performance_fee_rate_bps == 0 || self.fee_harvested_one_receipt_token_as_sol == 0 {
+            self.fee_harvested_one_receipt_token_as_sol = self.one_receipt_token_as_sol;
+        }
+
         self.performance_fee_rate_bps = performance_fee_rate_bps;
 
         Ok(self)

@@ -161,12 +161,6 @@ impl<'a, 'info> FundService<'a, 'info> {
             // the values being written below are informative, only for event emission.
             let mut fund_account = self.fund_account.load_mut()?;
 
-            // initialize the high-water mark if it's currently unset (== 0)
-            if fund_account.fee_harvested_one_receipt_token_as_sol == 0 {
-                fund_account.fee_harvested_one_receipt_token_as_sol =
-                    fund_account.one_receipt_token_as_sol;
-            }
-
             pricing_service.flatten_token_value_pod(
                 &self.receipt_token_mint.key(),
                 &mut fund_account.receipt_token_value,
