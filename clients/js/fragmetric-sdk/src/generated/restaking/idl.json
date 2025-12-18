@@ -13613,7 +13613,9 @@
           {
             "name": "performance_fee_last_harvested_at",
             "docs": [
-              "performance fee"
+              "Performance fee configuration and state.",
+              "- `performance_fee_last_harvested_at`: Unix timestamp of the most recent performance fee harvest",
+              "- `performance_fee_rate_bps`: Performance fee rate in basis points (bps)"
             ],
             "type": "i64"
           },

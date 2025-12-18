@@ -154,7 +154,11 @@ export type FundAccount = {
    * (applies to both performance and commission fees).
    */
   feeHarvestedOneReceiptTokenAsSol: bigint;
-  /** performance fee */
+  /**
+   * Performance fee configuration and state.
+   * - `performance_fee_last_harvested_at`: Unix timestamp of the most recent performance fee harvest
+   * - `performance_fee_rate_bps`: Performance fee rate in basis points (bps)
+   */
   performanceFeeLastHarvestedAt: bigint;
   performanceFeeRateBps: number;
   reserved1: ReadonlyUint8Array;
@@ -224,7 +228,11 @@ export type FundAccountArgs = {
    * (applies to both performance and commission fees).
    */
   feeHarvestedOneReceiptTokenAsSol: number | bigint;
-  /** performance fee */
+  /**
+   * Performance fee configuration and state.
+   * - `performance_fee_last_harvested_at`: Unix timestamp of the most recent performance fee harvest
+   * - `performance_fee_rate_bps`: Performance fee rate in basis points (bps)
+   */
   performanceFeeLastHarvestedAt: number | bigint;
   performanceFeeRateBps: number;
   reserved1: ReadonlyUint8Array;

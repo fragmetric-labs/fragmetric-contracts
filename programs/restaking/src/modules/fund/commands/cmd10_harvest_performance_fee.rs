@@ -253,9 +253,7 @@ impl HarvestPerformanceFeeCommand {
             }
         }
 
-        if !((is_sol_depositable || is_all_supported_tokens_stakable)
-            && fund_account.performance_fee_rate_bps > 0)
-        {
+        if !(is_sol_depositable || is_all_supported_tokens_stakable) {
             return Ok(false);
         }
 
@@ -264,7 +262,12 @@ impl HarvestPerformanceFeeCommand {
         FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
             .new_pricing_service(accounts.iter().copied(), true)?;
 
-        let fund_account = ctx.fund_account.load()?;
+        let mut fund_account = ctx.fund_account.load_mut()?;
+        let one_receipt_token_as_sol = fund_account.one_receipt_token_as_sol;
+        if fund_account.performance_fee_rate_bps == 0 {
+            fund_account.fee_harvested_one_receipt_token_as_sol = one_receipt_token_as_sol;
+        }
+
         if fund_account.fee_harvested_one_receipt_token_as_sol
             >= fund_account.one_receipt_token_as_sol
         {

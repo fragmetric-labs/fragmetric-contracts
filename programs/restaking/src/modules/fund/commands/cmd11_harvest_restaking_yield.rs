@@ -1213,11 +1213,11 @@ impl HarvestRestakingYieldCommand {
                     .update_asset_values(&mut pricing_service, true)?;
 
                 let mut fund_account = ctx.fund_account.load_mut()?;
-                let one_receipt_token_as_sol_after_token_compouned =
+                let one_receipt_token_as_sol_after_token_compounded =
                     fund_account.one_receipt_token_as_sol;
 
                 fund_account.fee_harvested_one_receipt_token_as_sol +=
-                    one_receipt_token_as_sol_after_token_compouned
+                    one_receipt_token_as_sol_after_token_compounded
                         - one_receipt_token_as_sol_before_token_compounded;
 
                 Some(

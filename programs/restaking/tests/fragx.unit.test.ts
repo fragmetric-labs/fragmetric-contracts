@@ -2741,7 +2741,9 @@ describe('restaking.fragX unit test', async () => {
     });
     const evt = res.events!.operatorRanFundCommand!;
     const result = isSome(evt.result)
-      ? (evt.result.value.fields[0] as restakingTypes.HarvestPerformanceFeeCommandResult) : null;
+      ? (evt.result.value
+          .fields[0] as restakingTypes.HarvestPerformanceFeeCommandResult)
+      : null;
     expect(result).toBeNull();
   });
 });

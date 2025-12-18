@@ -1,8 +1,8 @@
+import { restakingTypes } from '@fragmetric-labs/sdk';
 import { createKeyPairSignerFromBytes, isSome } from '@solana/kit';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { createTestSuiteContext, expectMasked } from '../../testutil';
 import { initializeFragJTO } from './fragjto.init';
-import { restakingTypes } from '@fragmetric-labs/sdk';
 
 describe('restaking.fragJTO test', async () => {
   const testCtx = initializeFragJTO(await createTestSuiteContext());
@@ -2186,7 +2186,9 @@ describe('restaking.fragJTO test', async () => {
     });
     const evt = res.events!.operatorRanFundCommand!;
     const result = isSome(evt.result)
-      ? (evt.result.value.fields[0] as restakingTypes.HarvestPerformanceFeeCommandResult) : null;
+      ? (evt.result.value
+          .fields[0] as restakingTypes.HarvestPerformanceFeeCommandResult)
+      : null;
     expect(result).toBeNull();
   });
 });
