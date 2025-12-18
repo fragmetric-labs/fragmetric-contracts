@@ -667,13 +667,6 @@ describe('restaking.frag2 test', async () => {
 
     const globalReward_2 = await ctx.reward.resolve(true);
 
-    const fund = await ctx.fund.resolveAccount(true);
-    const fvtRewardToken =
-      fund!.data.restakingVaults[0].distributingRewardTokens.filter(
-        (rewardToken) =>
-          rewardToken.mint == 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF'
-      )[0];
-
     expect(
       globalReward_2!.basePool.settlements[0].blocks[0].amount -
         globalReward_1!.basePool.settlements[0].blocks[0].amount
