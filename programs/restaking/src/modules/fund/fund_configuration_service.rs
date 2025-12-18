@@ -6,6 +6,7 @@ use anchor_spl::token_2022::Token2022;
 use anchor_spl::token_interface::TokenInterface;
 use anchor_spl::token_interface::{Mint, TokenAccount};
 
+use crate::constants::FUND_MANAGER_PUBKEY;
 use crate::errors::ErrorCode;
 use crate::events;
 use crate::modules::normalization;
@@ -764,41 +765,28 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
             .unwrap_or(false)
     }
 
-    pub fn process_revoke_distributing_reward_token_mint_authority(
+    pub fn process_revoke_reward_token_mint_authority(
         &self,
-        distributing_reward_token_mint: &InterfaceAccount<'info, Mint>,
+        reward_token_mint: &InterfaceAccount<'info, Mint>,
         reward_token_program: &Interface<'info, TokenInterface>,
-        fund_manager: &Signer<'info>,
-        vault: &Pubkey,
     ) -> Result<()> {
         // check if reward token mint is NOT wrapped token mint
         let fund_account = self.fund_account.load()?;
         if let Some(wrapped_token_mint) = fund_account.get_wrapped_token_mint_address() {
-            require_keys_neq!(*wrapped_token_mint, distributing_reward_token_mint.key());
+            require_keys_neq!(*wrapped_token_mint, reward_token_mint.key());
         }
-
-        // check if reward token mint is distributing reward token at fund's restaking vault
-        fund_account
-            .get_restaking_vault(vault)?
-            .get_distributing_reward_token(&distributing_reward_token_mint.key())?;
-
-        // check if reward token mint's mint authority is at fund
-        require!(
-            self.is_token_mintable_by_fund(distributing_reward_token_mint),
-            ErrorCode::FundTokenMintAuthorityNotAtFundError
-        );
 
         anchor_spl::token::set_authority(
             CpiContext::new_with_signer(
                 reward_token_program.to_account_info(),
                 anchor_spl::token::SetAuthority {
                     current_authority: self.fund_account.to_account_info(),
-                    account_or_mint: distributing_reward_token_mint.to_account_info(),
+                    account_or_mint: reward_token_mint.to_account_info(),
                 },
                 &[&fund_account.get_seeds()],
             ),
             anchor_spl::token::spl_token::instruction::AuthorityType::MintTokens,
-            Some(fund_manager.key()),
+            Some(FUND_MANAGER_PUBKEY),
         )?;
 
         Ok(())

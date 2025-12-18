@@ -785,22 +785,19 @@ pub mod restaking {
     }
 
     ////////////////////////////////////////////
-    // FundManagerFundDistributingRewardTokenContext
+    // FundManagerFundRewardTokenContext
     ////////////////////////////////////////////
 
-    pub fn fund_manager_revoke_fund_distributing_reward_token_mint_authority(
-        ctx: Context<FundManagerFundDistributingRewardTokenContext>,
-        vault: Pubkey,
+    pub fn fund_manager_revoke_fund_reward_token_mint_authority(
+        ctx: Context<FundManagerFundRewardTokenContext>,
     ) -> Result<()> {
         modules::fund::FundConfigurationService::new(
             &mut ctx.accounts.receipt_token_mint,
             &mut ctx.accounts.fund_account,
         )?
-        .process_revoke_distributing_reward_token_mint_authority(
+        .process_revoke_reward_token_mint_authority(
             &ctx.accounts.reward_token_mint,
             &ctx.accounts.reward_token_program,
-            &ctx.accounts.fund_manager,
-            &vault,
         )
     }
 

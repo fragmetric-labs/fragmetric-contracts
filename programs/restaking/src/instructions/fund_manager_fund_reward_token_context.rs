@@ -7,7 +7,7 @@ use crate::modules::fund::FundAccount;
 use crate::utils::{AccountLoaderExt, PDASeeds};
 
 #[derive(Accounts)]
-pub struct FundManagerFundDistributingRewardTokenContext<'info> {
+pub struct FundManagerFundRewardTokenContext<'info> {
     #[account(address = FUND_MANAGER_PUBKEY)]
     pub fund_manager: Signer<'info>,
 

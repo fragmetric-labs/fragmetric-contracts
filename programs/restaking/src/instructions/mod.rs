@@ -5,9 +5,9 @@ mod admin_reward_context;
 mod admin_user_reward_context;
 
 mod fund_manager_fund_context;
-mod fund_manager_fund_distributing_reward_token_context;
 mod fund_manager_fund_normalized_token_context;
 mod fund_manager_fund_restaking_vault_context;
+mod fund_manager_fund_reward_token_context;
 mod fund_manager_fund_supported_token_context;
 mod fund_manager_fund_token_swap_strategy_context;
 mod fund_manager_fund_wrapped_token_context;
@@ -35,9 +35,9 @@ pub use admin_reward_context::*;
 pub use admin_user_reward_context::*;
 
 pub use fund_manager_fund_context::*;
-pub use fund_manager_fund_distributing_reward_token_context::*;
 pub use fund_manager_fund_normalized_token_context::*;
 pub use fund_manager_fund_restaking_vault_context::*;
+pub use fund_manager_fund_reward_token_context::*;
 pub use fund_manager_fund_supported_token_context::*;
 pub use fund_manager_fund_token_swap_strategy_context::*;
 pub use fund_manager_fund_wrapped_token_context::*;
