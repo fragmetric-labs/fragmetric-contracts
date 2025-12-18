@@ -3,8 +3,7 @@ use anchor_spl::token::spl_token;
 use anchor_spl::token::Token;
 use anchor_spl::token_2022::spl_token_2022;
 use anchor_spl::token_2022::Token2022;
-use anchor_spl::token_interface::TokenInterface;
-use anchor_spl::token_interface::{Mint, TokenAccount};
+use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::constants::FUND_MANAGER_PUBKEY;
 use crate::errors::ErrorCode;
@@ -16,8 +15,7 @@ use crate::modules::restaking;
 use crate::modules::reward;
 use crate::modules::staking;
 use crate::modules::swap;
-use crate::utils::PDASeeds;
-use crate::utils::{AccountLoaderExt, AsAccountInfo, SystemProgramExt};
+use crate::utils::{AccountLoaderExt, AsAccountInfo, PDASeeds, SystemProgramExt};
 
 use super::*;
 
