@@ -2582,7 +2582,7 @@ describe('restaking.fragSOL test', async () => {
   test('charges performance fee correctly', async () => {
     await ctx.fund.runCommand.executeChained(null); // refresh previous operation cycles
     /*
-    * For testing convenience, this block artificially increases the RT price
+    * For testing convenience, this test block artificially increases the RT price
     * by donating to the fund.
     *
     * In production, the RT price increases naturally as the underlying LSTs
@@ -2713,5 +2713,44 @@ describe('restaking.fragSOL test', async () => {
     const feeHarvestedOneReceiptTokenAsSol4AfterHarvestPerformanceFee
       = await ctx.fund.resolveAccount(true).then((fundAccount) => fundAccount!.data.feeHarvestedOneReceiptTokenAsSol);
     expect(feeHarvestedOneReceiptTokenAsSol4AfterHarvestPerformanceFee).toEqual(feeHarvestedOneReceiptTokenAsSol4);
+
+    // 5. *** Verify that if the previous performance fee was zero,
+    //    setting it to a non-zero value does not cause overcharging
+    //    in the next harvest step. ***
+    await ctx.fund.updateGeneralStrategy.execute({
+      performanceFeeRateBps: 0,
+    });
+
+    // RT price goes up
+    await validator.skipEpoch();
+    await ctx.fund.donate.execute({
+      assetAmount: rewardSOLAmountPerEpoch * 5n
+    });
+
+    await ctx.fund.updateGeneralStrategy.execute({
+      performanceFeeRateBps: PERFORMANCE_FEE_RATE_BPS,
+    });
+
+    // RT price goes up
+    await validator.skipEpoch();
+    await ctx.fund.donate.execute({
+      assetAmount: rewardSOLAmountPerEpoch,
+    });
+
+    const oneReceiptTokenAsSol5 = await ctx.fund.resolveAccount(true).then((fundAccount) => fundAccount!.data.oneReceiptTokenAsSol);
+
+    const res5 = await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestPerformanceFee',
+      operator: restaking.knownAddresses.fundManager,
+    });
+    const evt5 = res5.events!.operatorRanFundCommand!;
+    const result5 = isSome(evt5.result)
+      ? (evt5.result.value.fields[0] as restakingTypes.HarvestPerformanceFeeCommandResult) : null;
+    
+    const mintedReceiptTokenAmount5 = result5!.receiptTokenMintedAmount;
+    const simulatedMintedReceiptTokenAmount5 = rewardSOLAmountPerEpoch * BigInt(PERFORMANCE_FEE_RATE_BPS) / 10_000n * LAMPORTS_PER_SOL / oneReceiptTokenAsSol5;
+
+    // compare actually minted amount with simulated amount
+    expectTokenAmountCloseTo(mintedReceiptTokenAmount5, simulatedMintedReceiptTokenAmount5, 5000n);
   });
 });
