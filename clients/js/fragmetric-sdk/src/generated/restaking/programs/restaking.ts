@@ -43,7 +43,7 @@ import {
   type ParsedFundManagerRemoveWrappedTokenHolderInstruction,
   type ParsedFundManagerResetFundWrapAccountRewardAccountDelegateInstruction,
   type ParsedFundManagerResetWrappedTokenHolderRewardAccountDelegateInstruction,
-  type ParsedFundManagerRevokeFundDistributingRewardTokenMintAuthorityInstruction,
+  type ParsedFundManagerRevokeFundRewardTokenMintAuthorityInstruction,
   type ParsedFundManagerSettleRewardInstruction,
   type ParsedFundManagerUpdateFundStrategyInstruction,
   type ParsedFundManagerUpdateRestakingVaultDelegationStrategyInstruction,
@@ -475,7 +475,7 @@ export enum RestakingInstruction {
   FundManagerRemoveWrappedTokenHolder,
   FundManagerResetFundWrapAccountRewardAccountDelegate,
   FundManagerResetWrappedTokenHolderRewardAccountDelegate,
-  FundManagerRevokeFundDistributingRewardTokenMintAuthority,
+  FundManagerRevokeFundRewardTokenMintAuthority,
   FundManagerSettleReward,
   FundManagerUpdateFundStrategy,
   FundManagerUpdateRestakingVaultDelegationStrategy,
@@ -841,12 +841,12 @@ export function identifyRestakingInstruction(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([222, 235, 142, 41, 73, 72, 59, 144])
+        new Uint8Array([224, 250, 206, 71, 222, 208, 103, 96])
       ),
       0
     )
   ) {
-    return RestakingInstruction.FundManagerRevokeFundDistributingRewardTokenMintAuthority;
+    return RestakingInstruction.FundManagerRevokeFundRewardTokenMintAuthority;
   }
   if (
     containsBytes(
@@ -1340,8 +1340,8 @@ export type ParsedRestakingInstruction<
       instructionType: RestakingInstruction.FundManagerResetWrappedTokenHolderRewardAccountDelegate;
     } & ParsedFundManagerResetWrappedTokenHolderRewardAccountDelegateInstruction<TProgram>)
   | ({
-      instructionType: RestakingInstruction.FundManagerRevokeFundDistributingRewardTokenMintAuthority;
-    } & ParsedFundManagerRevokeFundDistributingRewardTokenMintAuthorityInstruction<TProgram>)
+      instructionType: RestakingInstruction.FundManagerRevokeFundRewardTokenMintAuthority;
+    } & ParsedFundManagerRevokeFundRewardTokenMintAuthorityInstruction<TProgram>)
   | ({
       instructionType: RestakingInstruction.FundManagerSettleReward;
     } & ParsedFundManagerSettleRewardInstruction<TProgram>)

@@ -1505,8 +1505,7 @@ describe('restaking.frag2 test', async () => {
     );
 
     // set fvt authority to fund manager
-    await ctx.fund.revokeFundDistributingRewardTokenMintAuthority.execute({
-      vault: '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
+    await ctx.fund.revokeFundRewardTokenMintAuthority.execute({
       rewardTokenMint: 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF',
     });
 

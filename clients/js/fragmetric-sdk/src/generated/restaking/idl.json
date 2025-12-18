@@ -4210,16 +4210,16 @@
       "args": []
     },
     {
-      "name": "fund_manager_revoke_fund_distributing_reward_token_mint_authority",
+      "name": "fund_manager_revoke_fund_reward_token_mint_authority",
       "discriminator": [
+        224,
+        250,
+        206,
+        71,
         222,
-        235,
-        142,
-        41,
-        73,
-        72,
-        59,
-        144
+        208,
+        103,
+        96
       ],
       "accounts": [
         {
@@ -4262,12 +4262,7 @@
           "name": "reward_token_program"
         }
       ],
-      "args": [
-        {
-          "name": "vault",
-          "type": "pubkey"
-        }
-      ]
+      "args": []
     },
     {
       "name": "fund_manager_settle_reward",
@@ -12553,11 +12548,6 @@
       "code": 6104,
       "name": "RewardSettlementBlockNotFoundError",
       "msg": "reward: settlement block not found"
-    },
-    {
-      "code": 6105,
-      "name": "FundTokenMintAuthorityNotAtFundError",
-      "msg": "fund: token mint authority is not at fund"
     }
   ],
   "types": [

@@ -2287,46 +2287,43 @@ export class RestakingFundAccountContext extends AccountContext<
     }
   );
 
-  readonly revokeFundDistributingRewardTokenMintAuthority =
-    new TransactionTemplateContext(
-      this,
-      v.object({
-        vault: v.string(),
-        rewardTokenMint: v.string(),
-      }),
-      {
-        description:
-          'revoke the fund’s mint authority at the distributing reward token and set it to the fund manager',
-        instructions: [
-          async (parent, args, overrides) => {
-            const [receiptTokenMint, rewardAccount] = await Promise.all([
-              parent.parent.resolveAddress(),
-              parent.parent.reward.resolveAccount(true),
-            ]);
-            const reward = rewardAccount?.data.rewards1
-              .slice(0, rewardAccount.data.numRewards)
-              .find((r) => r.mint == args.rewardTokenMint);
-            if (!(receiptTokenMint && rewardAccount && reward))
-              throw new Error('invalid context');
-            const fundManager = (this.program as RestakingProgram)
-              .knownAddresses.fundManager;
+  readonly revokeFundRewardTokenMintAuthority = new TransactionTemplateContext(
+    this,
+    v.object({
+      rewardTokenMint: v.string(),
+    }),
+    {
+      description:
+        'revoke the fund’s mint authority at the reward token and set it to the fund manager',
+      instructions: [
+        async (parent, args, overrides) => {
+          const [receiptTokenMint, rewardAccount] = await Promise.all([
+            parent.parent.resolveAddress(),
+            parent.parent.reward.resolveAccount(true),
+          ]);
+          const reward = rewardAccount?.data.rewards1
+            .slice(0, rewardAccount.data.numRewards)
+            .find((r) => r.mint == args.rewardTokenMint);
+          if (!(receiptTokenMint && rewardAccount && reward))
+            throw new Error('invalid context');
+          const fundManager = (this.program as RestakingProgram).knownAddresses
+            .fundManager;
 
-            return Promise.all([
-              restaking.getFundManagerRevokeFundDistributingRewardTokenMintAuthorityInstructionAsync(
-                {
-                  fundManager: createNoopSigner(fundManager),
-                  receiptTokenMint,
-                  rewardTokenMint: args.rewardTokenMint as Address,
-                  rewardTokenProgram: reward.program,
-                  vault: args.vault as Address,
-                },
-                {
-                  programAddress: this.program.address,
-                }
-              ),
-            ]);
-          },
-        ],
-      }
-    );
+          return Promise.all([
+            restaking.getFundManagerRevokeFundRewardTokenMintAuthorityInstructionAsync(
+              {
+                fundManager: createNoopSigner(fundManager),
+                receiptTokenMint,
+                rewardTokenMint: args.rewardTokenMint as Address,
+                rewardTokenProgram: reward.program,
+              },
+              {
+                programAddress: this.program.address,
+              }
+            ),
+          ]);
+        },
+      ],
+    }
+  );
 }

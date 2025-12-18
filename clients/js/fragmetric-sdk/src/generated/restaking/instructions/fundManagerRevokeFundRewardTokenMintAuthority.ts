@@ -10,7 +10,6 @@ import {
   combineCodec,
   fixDecoderSize,
   fixEncoderSize,
-  getAddressDecoder,
   getAddressEncoder,
   getBytesDecoder,
   getBytesEncoder,
@@ -40,16 +39,16 @@ import {
   type ResolvedAccount,
 } from '../shared';
 
-export const FUND_MANAGER_REVOKE_FUND_DISTRIBUTING_REWARD_TOKEN_MINT_AUTHORITY_DISCRIMINATOR =
-  new Uint8Array([222, 235, 142, 41, 73, 72, 59, 144]);
+export const FUND_MANAGER_REVOKE_FUND_REWARD_TOKEN_MINT_AUTHORITY_DISCRIMINATOR =
+  new Uint8Array([224, 250, 206, 71, 222, 208, 103, 96]);
 
-export function getFundManagerRevokeFundDistributingRewardTokenMintAuthorityDiscriminatorBytes() {
+export function getFundManagerRevokeFundRewardTokenMintAuthorityDiscriminatorBytes() {
   return fixEncoderSize(getBytesEncoder(), 8).encode(
-    FUND_MANAGER_REVOKE_FUND_DISTRIBUTING_REWARD_TOKEN_MINT_AUTHORITY_DISCRIMINATOR
+    FUND_MANAGER_REVOKE_FUND_REWARD_TOKEN_MINT_AUTHORITY_DISCRIMINATOR
   );
 }
 
-export type FundManagerRevokeFundDistributingRewardTokenMintAuthorityInstruction<
+export type FundManagerRevokeFundRewardTokenMintAuthorityInstruction<
   TProgram extends string = typeof RESTAKING_PROGRAM_ADDRESS,
   TAccountFundManager extends
     | string
@@ -83,44 +82,41 @@ export type FundManagerRevokeFundDistributingRewardTokenMintAuthorityInstruction
     ]
   >;
 
-export type FundManagerRevokeFundDistributingRewardTokenMintAuthorityInstructionData =
-  { discriminator: ReadonlyUint8Array; vault: Address };
+export type FundManagerRevokeFundRewardTokenMintAuthorityInstructionData = {
+  discriminator: ReadonlyUint8Array;
+};
 
-export type FundManagerRevokeFundDistributingRewardTokenMintAuthorityInstructionDataArgs =
-  { vault: Address };
+export type FundManagerRevokeFundRewardTokenMintAuthorityInstructionDataArgs =
+  {};
 
-export function getFundManagerRevokeFundDistributingRewardTokenMintAuthorityInstructionDataEncoder(): FixedSizeEncoder<FundManagerRevokeFundDistributingRewardTokenMintAuthorityInstructionDataArgs> {
+export function getFundManagerRevokeFundRewardTokenMintAuthorityInstructionDataEncoder(): FixedSizeEncoder<FundManagerRevokeFundRewardTokenMintAuthorityInstructionDataArgs> {
   return transformEncoder(
-    getStructEncoder([
-      ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
-      ['vault', getAddressEncoder()],
-    ]),
+    getStructEncoder([['discriminator', fixEncoderSize(getBytesEncoder(), 8)]]),
     (value) => ({
       ...value,
       discriminator:
-        FUND_MANAGER_REVOKE_FUND_DISTRIBUTING_REWARD_TOKEN_MINT_AUTHORITY_DISCRIMINATOR,
+        FUND_MANAGER_REVOKE_FUND_REWARD_TOKEN_MINT_AUTHORITY_DISCRIMINATOR,
     })
   );
 }
 
-export function getFundManagerRevokeFundDistributingRewardTokenMintAuthorityInstructionDataDecoder(): FixedSizeDecoder<FundManagerRevokeFundDistributingRewardTokenMintAuthorityInstructionData> {
+export function getFundManagerRevokeFundRewardTokenMintAuthorityInstructionDataDecoder(): FixedSizeDecoder<FundManagerRevokeFundRewardTokenMintAuthorityInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
-    ['vault', getAddressDecoder()],
   ]);
 }
 
-export function getFundManagerRevokeFundDistributingRewardTokenMintAuthorityInstructionDataCodec(): FixedSizeCodec<
-  FundManagerRevokeFundDistributingRewardTokenMintAuthorityInstructionDataArgs,
-  FundManagerRevokeFundDistributingRewardTokenMintAuthorityInstructionData
+export function getFundManagerRevokeFundRewardTokenMintAuthorityInstructionDataCodec(): FixedSizeCodec<
+  FundManagerRevokeFundRewardTokenMintAuthorityInstructionDataArgs,
+  FundManagerRevokeFundRewardTokenMintAuthorityInstructionData
 > {
   return combineCodec(
-    getFundManagerRevokeFundDistributingRewardTokenMintAuthorityInstructionDataEncoder(),
-    getFundManagerRevokeFundDistributingRewardTokenMintAuthorityInstructionDataDecoder()
+    getFundManagerRevokeFundRewardTokenMintAuthorityInstructionDataEncoder(),
+    getFundManagerRevokeFundRewardTokenMintAuthorityInstructionDataDecoder()
   );
 }
 
-export type FundManagerRevokeFundDistributingRewardTokenMintAuthorityAsyncInput<
+export type FundManagerRevokeFundRewardTokenMintAuthorityAsyncInput<
   TAccountFundManager extends string = string,
   TAccountReceiptTokenMint extends string = string,
   TAccountFundAccount extends string = string,
@@ -132,10 +128,9 @@ export type FundManagerRevokeFundDistributingRewardTokenMintAuthorityAsyncInput<
   fundAccount?: Address<TAccountFundAccount>;
   rewardTokenMint: Address<TAccountRewardTokenMint>;
   rewardTokenProgram: Address<TAccountRewardTokenProgram>;
-  vault: FundManagerRevokeFundDistributingRewardTokenMintAuthorityInstructionDataArgs['vault'];
 };
 
-export async function getFundManagerRevokeFundDistributingRewardTokenMintAuthorityInstructionAsync<
+export async function getFundManagerRevokeFundRewardTokenMintAuthorityInstructionAsync<
   TAccountFundManager extends string,
   TAccountReceiptTokenMint extends string,
   TAccountFundAccount extends string,
@@ -143,7 +138,7 @@ export async function getFundManagerRevokeFundDistributingRewardTokenMintAuthori
   TAccountRewardTokenProgram extends string,
   TProgramAddress extends Address = typeof RESTAKING_PROGRAM_ADDRESS,
 >(
-  input: FundManagerRevokeFundDistributingRewardTokenMintAuthorityAsyncInput<
+  input: FundManagerRevokeFundRewardTokenMintAuthorityAsyncInput<
     TAccountFundManager,
     TAccountReceiptTokenMint,
     TAccountFundAccount,
@@ -152,7 +147,7 @@ export async function getFundManagerRevokeFundDistributingRewardTokenMintAuthori
   >,
   config?: { programAddress?: TProgramAddress }
 ): Promise<
-  FundManagerRevokeFundDistributingRewardTokenMintAuthorityInstruction<
+  FundManagerRevokeFundRewardTokenMintAuthorityInstruction<
     TProgramAddress,
     TAccountFundManager,
     TAccountReceiptTokenMint,
@@ -183,9 +178,6 @@ export async function getFundManagerRevokeFundDistributingRewardTokenMintAuthori
     ResolvedAccount
   >;
 
-  // Original args.
-  const args = { ...input };
-
   // Resolve default values.
   if (!accounts.fundManager.value) {
     accounts.fundManager.value =
@@ -212,11 +204,11 @@ export async function getFundManagerRevokeFundDistributingRewardTokenMintAuthori
       getAccountMeta(accounts.rewardTokenMint),
       getAccountMeta(accounts.rewardTokenProgram),
     ],
-    data: getFundManagerRevokeFundDistributingRewardTokenMintAuthorityInstructionDataEncoder().encode(
-      args as FundManagerRevokeFundDistributingRewardTokenMintAuthorityInstructionDataArgs
+    data: getFundManagerRevokeFundRewardTokenMintAuthorityInstructionDataEncoder().encode(
+      {}
     ),
     programAddress,
-  } as FundManagerRevokeFundDistributingRewardTokenMintAuthorityInstruction<
+  } as FundManagerRevokeFundRewardTokenMintAuthorityInstruction<
     TProgramAddress,
     TAccountFundManager,
     TAccountReceiptTokenMint,
@@ -226,7 +218,7 @@ export async function getFundManagerRevokeFundDistributingRewardTokenMintAuthori
   >);
 }
 
-export type FundManagerRevokeFundDistributingRewardTokenMintAuthorityInput<
+export type FundManagerRevokeFundRewardTokenMintAuthorityInput<
   TAccountFundManager extends string = string,
   TAccountReceiptTokenMint extends string = string,
   TAccountFundAccount extends string = string,
@@ -238,10 +230,9 @@ export type FundManagerRevokeFundDistributingRewardTokenMintAuthorityInput<
   fundAccount: Address<TAccountFundAccount>;
   rewardTokenMint: Address<TAccountRewardTokenMint>;
   rewardTokenProgram: Address<TAccountRewardTokenProgram>;
-  vault: FundManagerRevokeFundDistributingRewardTokenMintAuthorityInstructionDataArgs['vault'];
 };
 
-export function getFundManagerRevokeFundDistributingRewardTokenMintAuthorityInstruction<
+export function getFundManagerRevokeFundRewardTokenMintAuthorityInstruction<
   TAccountFundManager extends string,
   TAccountReceiptTokenMint extends string,
   TAccountFundAccount extends string,
@@ -249,7 +240,7 @@ export function getFundManagerRevokeFundDistributingRewardTokenMintAuthorityInst
   TAccountRewardTokenProgram extends string,
   TProgramAddress extends Address = typeof RESTAKING_PROGRAM_ADDRESS,
 >(
-  input: FundManagerRevokeFundDistributingRewardTokenMintAuthorityInput<
+  input: FundManagerRevokeFundRewardTokenMintAuthorityInput<
     TAccountFundManager,
     TAccountReceiptTokenMint,
     TAccountFundAccount,
@@ -257,7 +248,7 @@ export function getFundManagerRevokeFundDistributingRewardTokenMintAuthorityInst
     TAccountRewardTokenProgram
   >,
   config?: { programAddress?: TProgramAddress }
-): FundManagerRevokeFundDistributingRewardTokenMintAuthorityInstruction<
+): FundManagerRevokeFundRewardTokenMintAuthorityInstruction<
   TProgramAddress,
   TAccountFundManager,
   TAccountReceiptTokenMint,
@@ -287,9 +278,6 @@ export function getFundManagerRevokeFundDistributingRewardTokenMintAuthorityInst
     ResolvedAccount
   >;
 
-  // Original args.
-  const args = { ...input };
-
   // Resolve default values.
   if (!accounts.fundManager.value) {
     accounts.fundManager.value =
@@ -305,11 +293,11 @@ export function getFundManagerRevokeFundDistributingRewardTokenMintAuthorityInst
       getAccountMeta(accounts.rewardTokenMint),
       getAccountMeta(accounts.rewardTokenProgram),
     ],
-    data: getFundManagerRevokeFundDistributingRewardTokenMintAuthorityInstructionDataEncoder().encode(
-      args as FundManagerRevokeFundDistributingRewardTokenMintAuthorityInstructionDataArgs
+    data: getFundManagerRevokeFundRewardTokenMintAuthorityInstructionDataEncoder().encode(
+      {}
     ),
     programAddress,
-  } as FundManagerRevokeFundDistributingRewardTokenMintAuthorityInstruction<
+  } as FundManagerRevokeFundRewardTokenMintAuthorityInstruction<
     TProgramAddress,
     TAccountFundManager,
     TAccountReceiptTokenMint,
@@ -319,7 +307,7 @@ export function getFundManagerRevokeFundDistributingRewardTokenMintAuthorityInst
   >);
 }
 
-export type ParsedFundManagerRevokeFundDistributingRewardTokenMintAuthorityInstruction<
+export type ParsedFundManagerRevokeFundRewardTokenMintAuthorityInstruction<
   TProgram extends string = typeof RESTAKING_PROGRAM_ADDRESS,
   TAccountMetas extends readonly AccountMeta[] = readonly AccountMeta[],
 > = {
@@ -331,17 +319,17 @@ export type ParsedFundManagerRevokeFundDistributingRewardTokenMintAuthorityInstr
     rewardTokenMint: TAccountMetas[3];
     rewardTokenProgram: TAccountMetas[4];
   };
-  data: FundManagerRevokeFundDistributingRewardTokenMintAuthorityInstructionData;
+  data: FundManagerRevokeFundRewardTokenMintAuthorityInstructionData;
 };
 
-export function parseFundManagerRevokeFundDistributingRewardTokenMintAuthorityInstruction<
+export function parseFundManagerRevokeFundRewardTokenMintAuthorityInstruction<
   TProgram extends string,
   TAccountMetas extends readonly AccountMeta[],
 >(
   instruction: Instruction<TProgram> &
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>
-): ParsedFundManagerRevokeFundDistributingRewardTokenMintAuthorityInstruction<
+): ParsedFundManagerRevokeFundRewardTokenMintAuthorityInstruction<
   TProgram,
   TAccountMetas
 > {
@@ -364,7 +352,7 @@ export function parseFundManagerRevokeFundDistributingRewardTokenMintAuthorityIn
       rewardTokenMint: getNextAccount(),
       rewardTokenProgram: getNextAccount(),
     },
-    data: getFundManagerRevokeFundDistributingRewardTokenMintAuthorityInstructionDataDecoder().decode(
+    data: getFundManagerRevokeFundRewardTokenMintAuthorityInstructionDataDecoder().decode(
       instruction.data
     ),
   };
