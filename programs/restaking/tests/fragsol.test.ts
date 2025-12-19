@@ -1,5 +1,5 @@
 import { LAMPORTS_PER_SOL, restakingTypes } from '@fragmetric-labs/sdk';
-import { isSome } from '@solana/kit';
+import { createNoopSigner, isSome } from '@solana/kit';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { createTestSuiteContext, expectMasked } from '../../testutil';
 import { initializeFragSOL } from './fragsol.init';
@@ -2820,6 +2820,74 @@ describe('restaking.fragSOL test', async () => {
       mintedReceiptTokenAmount5,
       simulatedMintedReceiptTokenAmount5,
       5000n
+    );
+
+    // 6. *** Reward test
+    // - If the revenue account has a user reward account, the global reward pool should increase.
+    // - Otherwise, the global reward pool's allocated token amount should remain unchanged. ***
+
+    // case 1: revenue account does not have user reward account
+    // RT price goes up
+    await validator.skipEpoch();
+    await ctx.fund.donate.execute({
+      assetAmount: rewardSOLAmountPerEpoch,
+    });
+
+    let tokenAllocatedAmountBefore = await ctx.reward
+      .resolveAccount(true)
+      .then(
+        (rewardAccount) =>
+          rewardAccount!.data.baseRewardPool.tokenAllocatedAmount.totalAmount
+      );
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestPerformanceFee',
+      operator: restaking.knownAddresses.fundManager,
+    });
+    let tokenAllocatedAmountAfter = await ctx.reward
+      .resolveAccount(true)
+      .then(
+        (rewardAccount) =>
+          rewardAccount!.data.baseRewardPool.tokenAllocatedAmount.totalAmount
+      );
+
+    expect(tokenAllocatedAmountAfter).toEqual(tokenAllocatedAmountBefore);
+
+    // case 2: revenue account has user reward account
+    const programRevenueAccount = ctx.user(
+      'GuSruSKKCmAGuWMeMsiw3mbNhjeiRtNhnh9Eatgz33NA'
+    );
+    await programRevenueAccount.deposit.execute(
+      {
+        assetAmount: 1_000_000_000n,
+      },
+      { signers: [createNoopSigner(programRevenueAccount.address!)] }
+    );
+
+    // RT price goes up
+    await validator.skipEpoch();
+    await ctx.fund.donate.execute({
+      assetAmount: rewardSOLAmountPerEpoch,
+    });
+
+    tokenAllocatedAmountBefore = await ctx.reward
+      .resolveAccount(true)
+      .then(
+        (rewardAccount) =>
+          rewardAccount!.data.baseRewardPool.tokenAllocatedAmount.totalAmount
+      );
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestPerformanceFee',
+      operator: restaking.knownAddresses.fundManager,
+    });
+    tokenAllocatedAmountAfter = await ctx.reward
+      .resolveAccount(true)
+      .then(
+        (rewardAccount) =>
+          rewardAccount!.data.baseRewardPool.tokenAllocatedAmount.totalAmount
+      );
+
+    expect(tokenAllocatedAmountAfter).toBeGreaterThan(
+      tokenAllocatedAmountBefore
     );
   });
 });

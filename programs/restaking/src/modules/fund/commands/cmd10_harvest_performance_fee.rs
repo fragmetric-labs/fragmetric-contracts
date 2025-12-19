@@ -5,6 +5,7 @@ use spl_stake_pool::solana_program::native_token::LAMPORTS_PER_SOL;
 use crate::constants::PROGRAM_REVENUE_ADDRESS;
 use crate::errors::ErrorCode;
 use crate::modules::pricing::TokenPricingSource;
+use crate::modules::reward::{RewardAccount, RewardService, UserRewardAccount};
 use crate::utils::{AccountInfoExt, PDASeeds};
 
 use super::*;
@@ -69,9 +70,11 @@ impl HarvestPerformanceFeeCommand {
 
         // * (0) receipt token program
         // * (1) program revenue account
-        // * (2) program receipt token revenue account
-        // * (3) associated token program
-        // * (4) system program
+        // * (2) program revenue receipt token account
+        // * (3) program revenue user reward account
+        // * (4) reward account
+        // * (5) associated token program
+        // * (6) system program
         let required_accounts = [
             (anchor_spl::token_2022::ID, false),
             (PROGRAM_REVENUE_ADDRESS, false),
@@ -81,6 +84,17 @@ impl HarvestPerformanceFeeCommand {
                     &ctx.receipt_token_mint.key(),
                     &anchor_spl::token_2022::ID,
                 ),
+                true,
+            ),
+            (
+                UserRewardAccount::find_account_address(
+                    &ctx.receipt_token_mint.key(),
+                    &PROGRAM_REVENUE_ADDRESS,
+                ),
+                true,
+            ),
+            (
+                RewardAccount::find_account_address(&ctx.receipt_token_mint.key()),
                 true,
             ),
             (anchor_spl::associated_token::ID, false),
@@ -103,7 +117,7 @@ impl HarvestPerformanceFeeCommand {
             return Ok((None, None));
         }
 
-        let [receipt_token_program, program_revenue_account, program_receipt_token_revenue_account, associated_token_program, system_program, remaining_accounts @ ..] =
+        let [receipt_token_program, program_revenue_account, program_revenue_receipt_token_account, program_revenue_user_reward_account, reward_account, associated_token_program, system_program, remaining_accounts @ ..] =
             accounts
         else {
             err!(error::ErrorCode::AccountNotEnoughKeys)?
@@ -114,12 +128,23 @@ impl HarvestPerformanceFeeCommand {
         require_keys_eq!(receipt_token_program.key(), anchor_spl::token_2022::ID);
         require_keys_eq!(program_revenue_account.key(), PROGRAM_REVENUE_ADDRESS);
         require_keys_eq!(
-            program_receipt_token_revenue_account.key(),
+            program_revenue_receipt_token_account.key(),
             associated_token::get_associated_token_address_with_program_id(
                 &PROGRAM_REVENUE_ADDRESS,
                 &ctx.receipt_token_mint.key(),
                 &anchor_spl::token_2022::ID,
             )
+        );
+        require_keys_eq!(
+            program_revenue_user_reward_account.key(),
+            UserRewardAccount::find_account_address(
+                &ctx.receipt_token_mint.key(),
+                &PROGRAM_REVENUE_ADDRESS,
+            )
+        );
+        require_keys_eq!(
+            reward_account.key(),
+            RewardAccount::find_account_address(&ctx.receipt_token_mint.key()),
         );
 
         let fund_account = ctx.fund_account.load()?;
@@ -164,13 +189,13 @@ impl HarvestPerformanceFeeCommand {
             fund_account.performance_fee_last_harvested_at = Clock::get()?.unix_timestamp;
             drop(fund_account);
 
-            // create receipt token revenue account if not initialized
-            if !program_receipt_token_revenue_account.is_initialized() {
+            // create program revenue receipt token account if not initialized
+            if !program_revenue_receipt_token_account.is_initialized() {
                 anchor_spl::associated_token::create(CpiContext::new(
                     associated_token_program.to_account_info(),
                     anchor_spl::associated_token::Create {
                         payer: ctx.operator.to_account_info(),
-                        associated_token: program_receipt_token_revenue_account.to_account_info(),
+                        associated_token: program_revenue_receipt_token_account.to_account_info(),
                         authority: program_revenue_account.to_account_info(),
                         mint: ctx.receipt_token_mint.to_account_info(),
                         system_program: system_program.to_account_info(),
@@ -185,7 +210,7 @@ impl HarvestPerformanceFeeCommand {
                     receipt_token_program.to_account_info(),
                     anchor_spl::token_2022::MintTo {
                         mint: ctx.receipt_token_mint.to_account_info(),
-                        to: program_receipt_token_revenue_account.to_account_info(),
+                        to: program_revenue_receipt_token_account.to_account_info(),
                         authority: ctx.fund_account.to_account_info(),
                     },
                     &[ctx.fund_account.load()?.get_seeds().as_ref()],
@@ -193,11 +218,30 @@ impl HarvestPerformanceFeeCommand {
                 performance_fee_in_receipt_token_amount,
             )?;
 
+            // update reward pool
+            let reward_account = AccountLoader::<RewardAccount>::try_from(reward_account)?;
+            let program_revenue_user_reward_account =
+                if program_revenue_user_reward_account.is_initialized() {
+                    Some(AccountLoader::<UserRewardAccount>::try_from(
+                        program_revenue_user_reward_account,
+                    )?)
+                } else {
+                    None
+                };
+
+            RewardService::new(ctx.receipt_token_mint, &reward_account)?
+                .update_reward_pools_token_allocation(
+                    None,
+                    program_revenue_user_reward_account.as_ref(),
+                    performance_fee_in_receipt_token_amount,
+                    None,
+                )?;
+
+            // get updated receipt token price
             let mut fund_account = ctx.fund_account.load_mut()?;
             fund_account.reload_receipt_token_supply(ctx.receipt_token_mint)?;
             drop(fund_account);
 
-            // get updated receipt token price
             FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
                 .update_asset_values(&mut pricing_service, true)?;
             let fund_account = ctx.fund_account.load()?;
