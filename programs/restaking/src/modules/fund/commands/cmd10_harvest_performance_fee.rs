@@ -26,13 +26,14 @@ pub enum HarvestPerformanceFeeState {
 
 use HarvestPerformanceFeeState::*;
 
-const RESTAKING_MINIMUM_PERFORMANCE_FEE_LAMPORTS: u64 = 1_000_000_000;
+const MINIMUM_PERFORMANCE_FEE_LAMPORTS: u64 = 1_000_000_000;
 
 #[derive(Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct HarvestPerformanceFeeCommandResult {
     pub receipt_token_mint: Pubkey,
     pub receipt_token_minted_amount: u64,
-    pub receipt_token_price: u64,
+    pub one_receipt_token_as_sol_before_performance_fee_harvested: u64,
+    pub one_receipt_token_as_sol_after_performance_fee_harvested: u64,
 }
 
 impl SelfExecutable for HarvestPerformanceFeeCommand {
@@ -123,13 +124,15 @@ impl HarvestPerformanceFeeCommand {
 
         let fund_account = ctx.fund_account.load()?;
 
-        let one_receipt_token_as_sol = fund_account.one_receipt_token_as_sol;
+        let one_receipt_token_as_sol_before_performance_fee_harvested =
+            fund_account.one_receipt_token_as_sol;
         let fee_harvested_one_receipt_token_as_sol =
             fund_account.fee_harvested_one_receipt_token_as_sol;
 
         let performance_gain_in_sol_amount = crate::utils::get_proportional_amount_u64(
             ctx.receipt_token_mint.supply,
-            one_receipt_token_as_sol - fee_harvested_one_receipt_token_as_sol,
+            one_receipt_token_as_sol_before_performance_fee_harvested
+                - fee_harvested_one_receipt_token_as_sol,
             LAMPORTS_PER_SOL,
         )?;
 
@@ -139,7 +142,7 @@ impl HarvestPerformanceFeeCommand {
             10_000,
         )?;
 
-        if performance_fee_in_sol_amount < RESTAKING_MINIMUM_PERFORMANCE_FEE_LAMPORTS {
+        if performance_fee_in_sol_amount < MINIMUM_PERFORMANCE_FEE_LAMPORTS {
             return Ok((None, None));
         }
 
@@ -156,7 +159,8 @@ impl HarvestPerformanceFeeCommand {
         let result = if performance_fee_in_receipt_token_amount > 0 {
             // update high-water mark
             let mut fund_account = ctx.fund_account.load_mut()?;
-            fund_account.fee_harvested_one_receipt_token_as_sol = one_receipt_token_as_sol;
+            fund_account.fee_harvested_one_receipt_token_as_sol =
+                one_receipt_token_as_sol_before_performance_fee_harvested;
             fund_account.performance_fee_last_harvested_at = Clock::get()?.unix_timestamp;
             drop(fund_account);
 
@@ -197,13 +201,21 @@ impl HarvestPerformanceFeeCommand {
             FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
                 .update_asset_values(&mut pricing_service, true)?;
             let fund_account = ctx.fund_account.load()?;
-            let one_receipt_token_as_sol = fund_account.one_receipt_token_as_sol;
+
+            let one_receipt_token_as_sol_after_performance_fee_harvested =
+                fund_account.one_receipt_token_as_sol;
+
+            require_gte!(
+                one_receipt_token_as_sol_before_performance_fee_harvested,
+                one_receipt_token_as_sol_after_performance_fee_harvested,
+            );
 
             Some(
                 HarvestPerformanceFeeCommandResult {
                     receipt_token_mint: ctx.receipt_token_mint.key(),
                     receipt_token_minted_amount: performance_fee_in_receipt_token_amount,
-                    receipt_token_price: one_receipt_token_as_sol,
+                    one_receipt_token_as_sol_before_performance_fee_harvested,
+                    one_receipt_token_as_sol_after_performance_fee_harvested,
                 }
                 .into(),
             )

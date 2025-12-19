@@ -13780,7 +13780,11 @@
             "type": "u64"
           },
           {
-            "name": "receipt_token_price",
+            "name": "one_receipt_token_as_sol_before_performance_fee_harvested",
+            "type": "u64"
+          },
+          {
+            "name": "one_receipt_token_as_sol_after_performance_fee_harvested",
             "type": "u64"
           }
         ]

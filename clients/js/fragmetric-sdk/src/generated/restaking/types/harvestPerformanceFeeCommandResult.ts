@@ -23,20 +23,23 @@ import {
 export type HarvestPerformanceFeeCommandResult = {
   receiptTokenMint: Address;
   receiptTokenMintedAmount: bigint;
-  receiptTokenPrice: bigint;
+  oneReceiptTokenAsSolBeforePerformanceFeeHarvested: bigint;
+  oneReceiptTokenAsSolAfterPerformanceFeeHarvested: bigint;
 };
 
 export type HarvestPerformanceFeeCommandResultArgs = {
   receiptTokenMint: Address;
   receiptTokenMintedAmount: number | bigint;
-  receiptTokenPrice: number | bigint;
+  oneReceiptTokenAsSolBeforePerformanceFeeHarvested: number | bigint;
+  oneReceiptTokenAsSolAfterPerformanceFeeHarvested: number | bigint;
 };
 
 export function getHarvestPerformanceFeeCommandResultEncoder(): FixedSizeEncoder<HarvestPerformanceFeeCommandResultArgs> {
   return getStructEncoder([
     ['receiptTokenMint', getAddressEncoder()],
     ['receiptTokenMintedAmount', getU64Encoder()],
-    ['receiptTokenPrice', getU64Encoder()],
+    ['oneReceiptTokenAsSolBeforePerformanceFeeHarvested', getU64Encoder()],
+    ['oneReceiptTokenAsSolAfterPerformanceFeeHarvested', getU64Encoder()],
   ]);
 }
 
@@ -44,7 +47,8 @@ export function getHarvestPerformanceFeeCommandResultDecoder(): FixedSizeDecoder
   return getStructDecoder([
     ['receiptTokenMint', getAddressDecoder()],
     ['receiptTokenMintedAmount', getU64Decoder()],
-    ['receiptTokenPrice', getU64Decoder()],
+    ['oneReceiptTokenAsSolBeforePerformanceFeeHarvested', getU64Decoder()],
+    ['oneReceiptTokenAsSolAfterPerformanceFeeHarvested', getU64Decoder()],
   ]);
 }
 
