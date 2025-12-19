@@ -1062,6 +1062,11 @@ impl HarvestRestakingYieldCommand {
                 let one_receipt_token_as_sol_after_token_compounded =
                     fund_account.one_receipt_token_as_sol;
 
+                require_gte!(
+                    one_receipt_token_as_sol_after_token_compounded,
+                    one_receipt_token_as_sol_before_token_compounded
+                );
+
                 fund_account.fee_harvested_one_receipt_token_as_sol +=
                     one_receipt_token_as_sol_after_token_compounded
                         - one_receipt_token_as_sol_before_token_compounded;
@@ -1215,6 +1220,11 @@ impl HarvestRestakingYieldCommand {
                 let mut fund_account = ctx.fund_account.load_mut()?;
                 let one_receipt_token_as_sol_after_token_compounded =
                     fund_account.one_receipt_token_as_sol;
+
+                require_gte!(
+                    one_receipt_token_as_sol_after_token_compounded,
+                    one_receipt_token_as_sol_before_token_compounded
+                );
 
                 fund_account.fee_harvested_one_receipt_token_as_sol +=
                     one_receipt_token_as_sol_after_token_compounded
