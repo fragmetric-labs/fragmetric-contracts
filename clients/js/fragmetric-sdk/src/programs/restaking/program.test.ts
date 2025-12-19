@@ -154,7 +154,7 @@ test('can traverse context graph', async () => {
     │   │   ├── initializeNormalizedToken                     TransactionTemplate args=mint, events=fundManagerUpdatedFund, description=initialize normalized token pool account and enable
     │   │   ├── initializeWrappedToken                        TransactionTemplate args=mint, events=fundManagerUpdatedFund, description=enable wrapped token
     │   │   ├── initializeWrappedTokenHolder                  TransactionTemplate args=wrappedTokenAccount, events=userCreatedOrUpdatedRewardAccount,fundManagerUpdatedFund, description=add new wrapped tok
-    │   │   └── revokeFundRewardTokenMintAuthority            TransactionTemplate args=rewardTokenMint, events=undefined, description=revoke the fund’s mint authority at the reward token and set it to the
+    │   │   └── revokeRewardTokenMintAuthority                TransactionTemplate args=rewardTokenMint, events=undefined, description=revoke the fund’s mint authority at the reward token and set it to the
     │   ├── reward                                            RestakingRewardAccount address=undefined
     │   │   ├── reserve                                       RestakingRewardReserveAccount address=undefined, lamports=undefined
     │   │   │   └── rewardTokens                              IterativeAccount length=undefined, types=undefined
@@ -244,7 +244,7 @@ test('can traverse context graph', async () => {
     │   │   ├── initializeNormalizedToken                     TransactionTemplate args=mint, events=fundManagerUpdatedFund, description=initialize normalized token pool account and enable
     │   │   ├── initializeWrappedToken                        TransactionTemplate args=mint, events=fundManagerUpdatedFund, description=enable wrapped token
     │   │   ├── initializeWrappedTokenHolder                  TransactionTemplate args=wrappedTokenAccount, events=userCreatedOrUpdatedRewardAccount,fundManagerUpdatedFund, description=add new wrapped tok
-    │   │   └── revokeFundRewardTokenMintAuthority            TransactionTemplate args=rewardTokenMint, events=undefined, description=revoke the fund’s mint authority at the reward token and set it to the
+    │   │   └── revokeRewardTokenMintAuthority                TransactionTemplate args=rewardTokenMint, events=undefined, description=revoke the fund’s mint authority at the reward token and set it to the
     │   ├── reward                                            RestakingRewardAccount address=undefined
     │   │   ├── reserve                                       RestakingRewardReserveAccount address=undefined, lamports=undefined
     │   │   │   └── rewardTokens                              IterativeAccount length=undefined, types=undefined
@@ -334,7 +334,7 @@ test('can traverse context graph', async () => {
     │   │   ├── initializeNormalizedToken                     TransactionTemplate args=mint, events=fundManagerUpdatedFund, description=initialize normalized token pool account and enable
     │   │   ├── initializeWrappedToken                        TransactionTemplate args=mint, events=fundManagerUpdatedFund, description=enable wrapped token
     │   │   ├── initializeWrappedTokenHolder                  TransactionTemplate args=wrappedTokenAccount, events=userCreatedOrUpdatedRewardAccount,fundManagerUpdatedFund, description=add new wrapped tok
-    │   │   └── revokeFundRewardTokenMintAuthority            TransactionTemplate args=rewardTokenMint, events=undefined, description=revoke the fund’s mint authority at the reward token and set it to the
+    │   │   └── revokeRewardTokenMintAuthority                TransactionTemplate args=rewardTokenMint, events=undefined, description=revoke the fund’s mint authority at the reward token and set it to the
     │   ├── reward                                            RestakingRewardAccount address=undefined
     │   │   ├── reserve                                       RestakingRewardReserveAccount address=undefined, lamports=undefined
     │   │   │   └── rewardTokens                              IterativeAccount length=undefined, types=undefined
@@ -424,7 +424,7 @@ test('can traverse context graph', async () => {
     │   │   ├── initializeNormalizedToken                     TransactionTemplate args=mint, events=fundManagerUpdatedFund, description=initialize normalized token pool account and enable
     │   │   ├── initializeWrappedToken                        TransactionTemplate args=mint, events=fundManagerUpdatedFund, description=enable wrapped token
     │   │   ├── initializeWrappedTokenHolder                  TransactionTemplate args=wrappedTokenAccount, events=userCreatedOrUpdatedRewardAccount,fundManagerUpdatedFund, description=add new wrapped tok
-    │   │   └── revokeFundRewardTokenMintAuthority            TransactionTemplate args=rewardTokenMint, events=undefined, description=revoke the fund’s mint authority at the reward token and set it to the
+    │   │   └── revokeRewardTokenMintAuthority                TransactionTemplate args=rewardTokenMint, events=undefined, description=revoke the fund’s mint authority at the reward token and set it to the
     │   ├── reward                                            RestakingRewardAccount address=undefined
     │   │   ├── reserve                                       RestakingRewardReserveAccount address=undefined, lamports=undefined
     │   │   │   └── rewardTokens                              IterativeAccount length=undefined, types=undefined
@@ -514,7 +514,7 @@ test('can traverse context graph', async () => {
     │   │   ├── initializeNormalizedToken                     TransactionTemplate args=mint, events=fundManagerUpdatedFund, description=initialize normalized token pool account and enable
     │   │   ├── initializeWrappedToken                        TransactionTemplate args=mint, events=fundManagerUpdatedFund, description=enable wrapped token
     │   │   ├── initializeWrappedTokenHolder                  TransactionTemplate args=wrappedTokenAccount, events=userCreatedOrUpdatedRewardAccount,fundManagerUpdatedFund, description=add new wrapped tok
-    │   │   └── revokeFundRewardTokenMintAuthority            TransactionTemplate args=rewardTokenMint, events=undefined, description=revoke the fund’s mint authority at the reward token and set it to the
+    │   │   └── revokeRewardTokenMintAuthority                TransactionTemplate args=rewardTokenMint, events=undefined, description=revoke the fund’s mint authority at the reward token and set it to the
     │   ├── reward                                            RestakingRewardAccount address=undefined
     │   │   ├── reserve                                       RestakingRewardReserveAccount address=undefined, lamports=undefined
     │   │   │   └── rewardTokens                              IterativeAccount length=undefined, types=undefined

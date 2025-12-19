@@ -2287,7 +2287,7 @@ export class RestakingFundAccountContext extends AccountContext<
     }
   );
 
-  readonly revokeFundRewardTokenMintAuthority = new TransactionTemplateContext(
+  readonly revokeRewardTokenMintAuthority = new TransactionTemplateContext(
     this,
     v.object({
       rewardTokenMint: v.string(),

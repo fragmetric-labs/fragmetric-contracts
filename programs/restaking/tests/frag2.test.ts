@@ -1498,7 +1498,7 @@ describe('restaking.frag2 test', async () => {
     );
 
     // set fvt authority to fund manager
-    await ctx.fund.revokeFundRewardTokenMintAuthority.execute({
+    await ctx.fund.revokeRewardTokenMintAuthority.execute({
       rewardTokenMint: 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF',
     });
 
