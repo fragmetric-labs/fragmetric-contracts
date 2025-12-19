@@ -506,6 +506,25 @@ describe('restaking.fragSWTCH test', async () => {
   });
 
   test('performance fee is not charged', async () => {
+    // trigger receipt token price to go up by 10%
+    await ctx.fund.updateGeneralStrategy.execute({
+      donationEnabled: true,
+      performanceFeeRateBps: 400,
+    });
+
+    const donateAmount = await ctx
+      .resolve(true)
+      .then((data) => data!.receiptTokenSupply / 10n);
+    await validator.airdropToken(
+      ctx.payer.address!,
+      'SW1TCHLmRGTfW5xZknqQdpdarB8PD95sJYWpNp9TbFx',
+      donateAmount
+    );
+    await ctx.fund.donate.execute({
+      assetMint: 'SW1TCHLmRGTfW5xZknqQdpdarB8PD95sJYWpNp9TbFx',
+      assetAmount: donateAmount,
+    });
+
     const res = await ctx.fund.runCommand.executeChained({
       forceResetCommand: 'HarvestPerformanceFee',
       operator: restaking.knownAddresses.fundManager,

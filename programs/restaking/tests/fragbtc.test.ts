@@ -4775,6 +4775,25 @@ describe('restaking.fragBTC test', async () => {
   });
 
   test('performance fee is not charged', async () => {
+    // trigger receipt token price to go up by 10%
+    await ctx.fund.updateGeneralStrategy.execute({
+      donationEnabled: true,
+      performanceFeeRateBps: 400,
+    });
+
+    const donateAmount = await ctx
+      .resolve(true)
+      .then((data) => data!.receiptTokenSupply / 10n);
+    await validator.airdropToken(
+      ctx.payer.address!,
+      'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+      donateAmount
+    );
+    await ctx.fund.donate.execute({
+      assetMint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+      assetAmount: donateAmount,
+    });
+
     const res = await ctx.fund.runCommand.executeChained({
       forceResetCommand: 'HarvestPerformanceFee',
       operator: restaking.knownAddresses.fundManager,
