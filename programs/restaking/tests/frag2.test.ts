@@ -1331,4 +1331,181 @@ describe('restaking.frag2 test', async () => {
     // For example, due to virtual vault's edge case, restaking-related command might be broken unless properly handled
     await ctx.fund.runCommand.executeChained(null);
   });
+
+  test('fvt is minted and harvested at the operation cycle', async () => {
+    // set fvt authority to fund
+    await restaking.__dev.token.setMintAuthority.execute({
+      mint: 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF', // fvt
+      newAuthority: ctx.fund.address!, // fund
+    });
+
+    const rewardTokenMintAccount = new sdk.TokenMintAccountContext(
+      ctx.fund,
+      async (parent) => {
+        const [fund] = await Promise.all([parent.resolveAccount(true)]);
+        if (fund) {
+          return fund.data.restakingVaults[0].distributingRewardTokens.filter(
+            (rewardToken) =>
+              rewardToken.mint == 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF'
+          )[0].mint;
+        }
+        return null;
+      }
+    );
+
+    const reward_1 = await ctx.reward.resolve(true);
+
+    const reward_1_fvtSettlement = reward_1!.basePool.settlements.filter(
+      (settlement) =>
+        settlement.reward.mint == 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF'
+    )[0];
+
+    const rewardTokenMint_1 = await rewardTokenMintAccount.resolve(true);
+
+    // set fvt reward token threshold interval seconds more longer
+    await ctx.fund.updateRestakingVaultRewardHarvestThreshold.execute({
+      vault: '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
+      rewardTokenMint: 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF',
+      harvestThresholdMinAmount: 100_000_000_000n,
+      harvestThresholdMaxAmount: 1_000_000_000_000n,
+      harvestThresholdIntervalSeconds: 1000n, // set threshold interval seconds more longer
+    });
+
+    const fund = await ctx.fund.resolveAccount(true);
+
+    // create vault reward ATA
+    await validator.airdropToken(
+      fund!.data.restakingVaults[0].vault,
+      'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF',
+      0n
+    );
+
+    // operator runs (nothing happens - no fvt minting nor harvesting)
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestRestakingYield',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    const reward_2 = await ctx.reward.resolve(true);
+
+    const reward_2_fvtSettlement = reward_2!.basePool.settlements.filter(
+      (settlement) =>
+        settlement.reward.mint == 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF'
+    )[0];
+
+    const rewardTokenMint_2 = await rewardTokenMintAccount.resolve(true);
+
+    // fvt mint doesn't occur by harvest threshold interval seconds
+    // and no harvest/settle occurs because any fvt hasn't been minted
+    // nor transferred from vault reward token account to reward reserve token account
+    expect(rewardTokenMint_2!.supply).toEqual(rewardTokenMint_1!.supply);
+    expect(reward_2_fvtSettlement.settledAmount).toEqual(
+      reward_1_fvtSettlement.settledAmount
+    );
+
+    const vaultRewardTokenAccount =
+      sdk.TokenAccountContext.fromAssociatedTokenSeeds(restaking, () =>
+        Promise.resolve({
+          owner: fund!.data.restakingVaults[0].vault,
+          mint: 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF',
+        })
+      );
+
+    const vaultRewardToken_2 = await vaultRewardTokenAccount.resolve(true);
+
+    // set fvt reward token threshold interval seconds to 0 to execute distribute anytime
+    await ctx.fund.updateRestakingVaultRewardHarvestThreshold.execute({
+      vault: '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
+      rewardTokenMint: 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF',
+      harvestThresholdMinAmount: 100_000_000_000n,
+      harvestThresholdMaxAmount: 1_000_000_000_000n,
+      harvestThresholdIntervalSeconds: 0n, // set interval seconds to 0
+    });
+
+    // operator runs (fvt mint/harvest/settle occurs)
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestRestakingYield',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    const reward_3 = await ctx.reward.resolve(true);
+
+    const reward_3_fvtSettlement = reward_3!.basePool.settlements.filter(
+      (settlement) =>
+        settlement.reward.mint == 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF'
+    )[0];
+
+    const rewardTokenMint_3 = await rewardTokenMintAccount.resolve(true);
+
+    const fvtRewardToken =
+      fund!.data.restakingVaults[0].distributingRewardTokens.filter(
+        (token) => token.mint == 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF'
+      )[0];
+
+    const vaultRewardToken_3 = await vaultRewardTokenAccount.resolve(true);
+
+    // fvt mint occurs and remaining amount at vault reward token account is harvested/settled.
+    expect(rewardTokenMint_3!.supply).toEqual(
+      rewardTokenMint_2!.supply + fvtRewardToken.harvestThresholdMinAmount
+    );
+
+    // if harvested amount (vault reward token amount) > threshold max amount
+    //  -> current settled amount = last settled amount + threshold max amount
+    // else
+    //  -> current settled amount = last settled amount + threshold min amount (minted amount) + vault reward token amount
+    if (vaultRewardToken_2!.amount > fvtRewardToken.harvestThresholdMaxAmount) {
+      expect(reward_3_fvtSettlement.settledAmount).toEqual(
+        reward_2_fvtSettlement.settledAmount +
+          fvtRewardToken.harvestThresholdMaxAmount
+      );
+    } else {
+      expect(reward_3_fvtSettlement.settledAmount).toEqual(
+        reward_2_fvtSettlement.settledAmount +
+          fvtRewardToken.harvestThresholdMinAmount +
+          vaultRewardToken_2!.amount
+      );
+    }
+
+    // set fvt reward token threshold min amount to 0 to skip mint process
+    await ctx.fund.updateRestakingVaultRewardHarvestThreshold.execute({
+      vault: '6f4bndUq1ct6s7QxiHFk98b1Q7JdJw3zTTZBGbSPP6gK',
+      rewardTokenMint: 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF',
+      harvestThresholdMinAmount: 0n, // to skip mint process
+      harvestThresholdMaxAmount: 1_000_000_000_000n,
+      harvestThresholdIntervalSeconds: 0n,
+    });
+
+    // operator runs (fvt mint skips, only harvest/settle occurs)
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestRestakingYield',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    const reward_4 = await ctx.reward.resolve(true);
+
+    const reward_4_fvtSettlement = reward_4!.basePool.settlements.filter(
+      (settlement) =>
+        settlement.reward.mint == 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF'
+    )[0];
+
+    const rewardTokenMint_4 = await rewardTokenMintAccount.resolve(true);
+
+    // fvt mint doesn't occur by harvest threshold min amount is 0
+    // so harvest/settle occurs on vault reward token account's remaining amount
+    expect(rewardTokenMint_4!.supply).toEqual(rewardTokenMint_3!.supply);
+    expect(reward_4_fvtSettlement!.settledAmount).toEqual(
+      reward_3_fvtSettlement!.settledAmount + vaultRewardToken_3!.amount
+    );
+
+    // set fvt authority to fund manager
+    await ctx.fund.revokeRewardTokenMintAuthority.execute({
+      rewardTokenMint: 'FRAGV56ChY2z2EuWmVquTtgDBdyKPBLEBpXx4U9SKTaF',
+    });
+
+    const rewardTokenMint_5 = await rewardTokenMintAccount.resolve(true);
+
+    expect(rewardTokenMint_5!.mintAuthority.value).toEqual(
+      restaking.knownAddresses.fundManager
+    );
+  });
 });

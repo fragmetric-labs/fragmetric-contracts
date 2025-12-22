@@ -747,7 +747,7 @@ impl HarvestRestakingYieldCommand {
     #[inline(never)]
     fn execute_prepare_distribute_reward_command<'info>(
         &self,
-        ctx: &OperationCommandContext,
+        ctx: &mut OperationCommandContext,
         accounts: &[&'info AccountInfo<'info>],
         vault: &Pubkey,
         reward_token_mints: &[Pubkey],
@@ -762,6 +762,8 @@ impl HarvestRestakingYieldCommand {
             .get_restaking_vault(vault)?
             .receipt_token_pricing_source
             .try_deserialize()?;
+
+        drop(fund_account);
 
         let Some(entry) = (match receipt_token_pricing_source {
             Some(TokenPricingSource::JitoRestakingVault { .. })
@@ -816,7 +818,7 @@ impl HarvestRestakingYieldCommand {
     /// Create an ExecuteDistributeReward command given that vault's ATA is the source reward token account.
     fn create_execute_distribute_reward_command_from_vault_ata<'info>(
         &self,
-        ctx: &OperationCommandContext,
+        ctx: &mut OperationCommandContext,
         mut accounts: &[&'info AccountInfo<'info>],
         vault: &Pubkey,
         reward_token_mints: &[Pubkey],
@@ -856,23 +858,32 @@ impl HarvestRestakingYieldCommand {
             *vault
         };
 
-        let reward_token_amount = self.get_reward_token_amount(
-            vault_reward_token_account,
-            &vault_reward_token_account_signer,
-            &reward_token_mints[0],
-        )?;
+        let reward_token_mint_account = InterfaceAccount::<Mint>::try_from(reward_token_mint)?;
 
-        let available_reward_token_amount_to_harvest = self.apply_reward_harvest_threshold(
-            ctx,
-            vault,
-            &reward_token_mints[0],
-            HarvestType::DistributeReward,
-            reward_token_amount,
-        )?;
+        // if reward token is distributing reward token and mintable by fund,
+        // then reward_token_amount would be minted to vault reward ATA
+        // at ExecuteDistributeReward step.
+        if !FundConfigurationService::new(ctx.receipt_token_mint, ctx.fund_account)?
+            .is_token_mintable_by_fund(&reward_token_mint_account)
+        {
+            let reward_token_amount = self.get_reward_token_amount(
+                vault_reward_token_account,
+                &vault_reward_token_account_signer,
+                &reward_token_mints[0],
+            )?;
 
-        // No reward to harvest (or threshold unmet), so move on to next item
-        if available_reward_token_amount_to_harvest == 0 {
-            return Ok(None);
+            let available_reward_token_amount_to_harvest = self.apply_reward_harvest_threshold(
+                ctx,
+                vault,
+                &reward_token_mints[0],
+                HarvestType::DistributeReward,
+                reward_token_amount,
+            )?;
+
+            // No reward to harvest (or threshold unmet), so move on to next item
+            if available_reward_token_amount_to_harvest == 0 {
+                return Ok(None);
+            }
         }
 
         let program_reward_token_revenue_account =
@@ -982,7 +993,7 @@ impl HarvestRestakingYieldCommand {
 
         let result = if available_reward_token_amount_to_harvest > 0 {
             let fund_account = ctx.fund_account.load()?;
-            let fund_supported_token_account_address = fund_account
+            let fund_supported_token_reserve_account_address = fund_account
                 .find_supported_token_reserve_account_address(&reward_token_mints[0])?;
             let restaking_vault = fund_account.get_restaking_vault(vault)?;
             let receipt_token_pricing_source = restaking_vault
@@ -999,7 +1010,7 @@ impl HarvestRestakingYieldCommand {
                             &common_accounts,
                             vault,
                             &fund_account.get_seeds(),
-                            &fund_supported_token_account_address,
+                            &fund_supported_token_reserve_account_address,
                             available_reward_token_amount_to_harvest,
                         )?,
                     Some(TokenPricingSource::VirtualVault { .. }) => self
@@ -1013,7 +1024,7 @@ impl HarvestRestakingYieldCommand {
                                 &ctx.fund_account.key(),
                             )
                             .get_seeds(),
-                            &fund_supported_token_account_address,
+                            &fund_supported_token_reserve_account_address,
                             available_reward_token_amount_to_harvest,
                         )?,
                     // otherwise fails
@@ -1243,6 +1254,40 @@ impl HarvestRestakingYieldCommand {
             return self.execute_new_distribute_reward_command(ctx, Some(vault), None);
         }
         let common_accounts = CommonAccounts::pop_from(&mut accounts, &reward_token_mints[0])?;
+
+        // program mintable distributing reward token's mint automation
+        // 1. check mint authority
+        let reward_token_mint = common_accounts.reward_token_mint;
+        let token_mint = InterfaceAccount::<Mint>::try_from(reward_token_mint)?;
+
+        if FundConfigurationService::new(ctx.receipt_token_mint, ctx.fund_account)?
+            .is_token_mintable_by_fund(&token_mint)
+        {
+            let fund_account = ctx.fund_account.load()?;
+            let restaking_vault = fund_account.get_restaking_vault(vault)?;
+
+            // 2. calculate mint amount
+            let reward_token =
+                restaking_vault.get_distributing_reward_token(reward_token_mint.key)?;
+            let reward_token_mint_amount = reward_token
+                .get_available_amount_to_harvest(reward_token.harvest_threshold_min_amount)?;
+
+            // 3. mint
+            if reward_token_mint_amount > 0 {
+                anchor_spl::token_interface::mint_to(
+                    CpiContext::new_with_signer(
+                        common_accounts.reward_token_program.to_account_info(),
+                        anchor_spl::token_interface::MintTo {
+                            mint: common_accounts.reward_token_mint.to_account_info(),
+                            authority: ctx.fund_account.to_account_info(),
+                            to: common_accounts.from_reward_token_account.to_account_info(),
+                        },
+                        &[&fund_account.get_seeds()],
+                    ),
+                    reward_token_mint_amount,
+                )?;
+            }
+        }
 
         // check harvest threshold
         let available_reward_token_amount_to_harvest = self
@@ -1603,8 +1648,6 @@ impl HarvestRestakingYieldCommand {
         reward_token_amount: u64,
     ) -> Result<u64> {
         // check harvest threshold
-        let current_timestamp = Clock::get()?.unix_timestamp;
-
         let fund_account = ctx.fund_account.load()?;
         let restaking_vault = fund_account.get_restaking_vault(vault)?;
         let reward_token = match harvest_type {
@@ -1615,7 +1658,7 @@ impl HarvestRestakingYieldCommand {
             }
         };
 
-        Ok(reward_token.get_available_amount_to_harvest(reward_token_amount, current_timestamp))
+        reward_token.get_available_amount_to_harvest(reward_token_amount)
     }
 
     /// returns [deducted_amount, transferred_token_amount]
@@ -1935,7 +1978,7 @@ impl<'info> CommonAccounts<'info> {
     ) -> impl Iterator<Item = (Pubkey, bool)> {
         let required_accounts = [
             (*reward_token_mint.owner, false),
-            (reward_token_mint.key(), false),
+            (reward_token_mint.key(), true),
             (vault_reward_token_account.key(), true),
             (*vault_reward_token_account_signer, false),
         ]

@@ -3,8 +3,9 @@ use anchor_spl::token::spl_token;
 use anchor_spl::token::Token;
 use anchor_spl::token_2022::spl_token_2022;
 use anchor_spl::token_2022::Token2022;
-use anchor_spl::token_interface::{Mint, TokenAccount};
+use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
+use crate::constants::FUND_MANAGER_PUBKEY;
 use crate::errors::ErrorCode;
 use crate::events;
 use crate::modules::normalization;
@@ -14,7 +15,7 @@ use crate::modules::restaking;
 use crate::modules::reward;
 use crate::modules::staking;
 use crate::modules::swap;
-use crate::utils::{AccountLoaderExt, AsAccountInfo, SystemProgramExt};
+use crate::utils::{AccountLoaderExt, AsAccountInfo, PDASeeds, SystemProgramExt};
 
 use super::*;
 
@@ -754,6 +755,39 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
             .remove_distributing_reward_token(distributing_reward_token_mint)?;
 
         self.create_fund_manager_updated_fund_event()
+    }
+
+    pub(super) fn is_token_mintable_by_fund(&self, mint: &InterfaceAccount<Mint>) -> bool {
+        mint.mint_authority
+            .map(|authority| authority == self.fund_account.key())
+            .unwrap_or(false)
+    }
+
+    pub fn process_revoke_reward_token_mint_authority(
+        &self,
+        reward_token_mint: &InterfaceAccount<'info, Mint>,
+        reward_token_program: &Interface<'info, TokenInterface>,
+    ) -> Result<()> {
+        // check if reward token mint is NOT wrapped token mint
+        let fund_account = self.fund_account.load()?;
+        if let Some(wrapped_token_mint) = fund_account.get_wrapped_token_mint_address() {
+            require_keys_neq!(*wrapped_token_mint, reward_token_mint.key());
+        }
+
+        anchor_spl::token::set_authority(
+            CpiContext::new_with_signer(
+                reward_token_program.to_account_info(),
+                anchor_spl::token::SetAuthority {
+                    current_authority: self.fund_account.to_account_info(),
+                    account_or_mint: reward_token_mint.to_account_info(),
+                },
+                &[&fund_account.get_seeds()],
+            ),
+            anchor_spl::token::spl_token::instruction::AuthorityType::MintTokens,
+            Some(FUND_MANAGER_PUBKEY),
+        )?;
+
+        Ok(())
     }
 
     pub fn process_add_wrapped_token_holder(

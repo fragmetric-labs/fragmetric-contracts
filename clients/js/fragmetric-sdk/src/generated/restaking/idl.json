@@ -4210,6 +4210,61 @@
       "args": []
     },
     {
+      "name": "fund_manager_revoke_fund_reward_token_mint_authority",
+      "discriminator": [
+        224,
+        250,
+        206,
+        71,
+        222,
+        208,
+        103,
+        96
+      ],
+      "accounts": [
+        {
+          "name": "fund_manager",
+          "signer": true,
+          "address": "5FjrErTQ9P1ThYVdY9RamrPUCQGTMCcczUjH21iKzbwx"
+        },
+        {
+          "name": "receipt_token_mint",
+          "relations": [
+            "fund_account"
+          ]
+        },
+        {
+          "name": "fund_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  117,
+                  110,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "reward_token_mint",
+          "writable": true
+        },
+        {
+          "name": "reward_token_program"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "fund_manager_settle_reward",
       "discriminator": [
         105,

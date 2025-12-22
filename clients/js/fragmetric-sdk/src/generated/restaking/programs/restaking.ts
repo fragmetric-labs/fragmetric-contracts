@@ -43,6 +43,7 @@ import {
   type ParsedFundManagerRemoveWrappedTokenHolderInstruction,
   type ParsedFundManagerResetFundWrapAccountRewardAccountDelegateInstruction,
   type ParsedFundManagerResetWrappedTokenHolderRewardAccountDelegateInstruction,
+  type ParsedFundManagerRevokeFundRewardTokenMintAuthorityInstruction,
   type ParsedFundManagerSettleRewardInstruction,
   type ParsedFundManagerUpdateFundStrategyInstruction,
   type ParsedFundManagerUpdateRestakingVaultDelegationStrategyInstruction,
@@ -474,6 +475,7 @@ export enum RestakingInstruction {
   FundManagerRemoveWrappedTokenHolder,
   FundManagerResetFundWrapAccountRewardAccountDelegate,
   FundManagerResetWrappedTokenHolderRewardAccountDelegate,
+  FundManagerRevokeFundRewardTokenMintAuthority,
   FundManagerSettleReward,
   FundManagerUpdateFundStrategy,
   FundManagerUpdateRestakingVaultDelegationStrategy,
@@ -834,6 +836,17 @@ export function identifyRestakingInstruction(
     )
   ) {
     return RestakingInstruction.FundManagerResetWrappedTokenHolderRewardAccountDelegate;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([224, 250, 206, 71, 222, 208, 103, 96])
+      ),
+      0
+    )
+  ) {
+    return RestakingInstruction.FundManagerRevokeFundRewardTokenMintAuthority;
   }
   if (
     containsBytes(
@@ -1326,6 +1339,9 @@ export type ParsedRestakingInstruction<
   | ({
       instructionType: RestakingInstruction.FundManagerResetWrappedTokenHolderRewardAccountDelegate;
     } & ParsedFundManagerResetWrappedTokenHolderRewardAccountDelegateInstruction<TProgram>)
+  | ({
+      instructionType: RestakingInstruction.FundManagerRevokeFundRewardTokenMintAuthority;
+    } & ParsedFundManagerRevokeFundRewardTokenMintAuthorityInstruction<TProgram>)
   | ({
       instructionType: RestakingInstruction.FundManagerSettleReward;
     } & ParsedFundManagerSettleRewardInstruction<TProgram>)
