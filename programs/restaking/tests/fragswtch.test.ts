@@ -1,3 +1,5 @@
+import { restakingTypes } from '@fragmetric-labs/sdk';
+import { isSome } from '@solana/kit';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { createTestSuiteContext, expectMasked } from '../../testutil';
 import { initializeFragSwitch } from './fragswtch.init';
@@ -131,6 +133,7 @@ describe('restaking.fragSWTCH test', async () => {
           "depositEnabled": true,
           "donationEnabled": false,
           "operationEnabled": true,
+          "performanceFeeRateBps": 0,
           "transferEnabled": true,
           "withdrawalBatchThresholdSeconds": 1n,
           "withdrawalEnabled": true,
@@ -500,5 +503,37 @@ describe('restaking.fragSWTCH test', async () => {
     // however this test case is to prevent breaking changes in other commands that affects the full cycle.
     // For example, due to virtual vault's edge case, restaking-related command might be broken unless properly handled
     await ctx.fund.runCommand.executeChained(null);
+  });
+
+  test('performance fee is not charged', async () => {
+    // trigger receipt token price to go up by 10%
+    await ctx.fund.updateGeneralStrategy.execute({
+      donationEnabled: true,
+      performanceFeeRateBps: 400,
+    });
+
+    const donateAmount = await ctx
+      .resolve(true)
+      .then((data) => data!.receiptTokenSupply / 10n);
+    await validator.airdropToken(
+      ctx.payer.address!,
+      'SW1TCHLmRGTfW5xZknqQdpdarB8PD95sJYWpNp9TbFx',
+      donateAmount
+    );
+    await ctx.fund.donate.execute({
+      assetMint: 'SW1TCHLmRGTfW5xZknqQdpdarB8PD95sJYWpNp9TbFx',
+      assetAmount: donateAmount,
+    });
+
+    const res = await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestPerformanceFee',
+      operator: restaking.knownAddresses.fundManager,
+    });
+    const evt = res.events!.operatorRanFundCommand!;
+    const result = isSome(evt.result)
+      ? (evt.result.value
+          .fields[0] as restakingTypes.HarvestPerformanceFeeCommandResult)
+      : null;
+    expect(result).toBeNull();
   });
 });

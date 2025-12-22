@@ -55,10 +55,7 @@ impl SelfExecutable for UnrestakeVRTCommand {
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )> {
+    ) -> ExecutionResult {
         let (result, entry) = match &self.state {
             UnrestakeVRTCommandState::New => self.execute_new(ctx, accounts)?,
             UnrestakeVRTCommandState::Prepare { items } => {
@@ -82,10 +79,7 @@ impl UnrestakeVRTCommand {
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )> {
+    ) -> ExecutionResult {
         let mut pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
             .new_pricing_service(accounts.iter().copied(), false)?;
         let fund_account = ctx.fund_account.load()?;
@@ -439,10 +433,7 @@ impl UnrestakeVRTCommand {
         ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
         items: &[UnrestakeVRTCommandItem],
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )> {
+    ) -> ExecutionResult {
         if items.is_empty() {
             return Ok((None, None));
         }
@@ -568,10 +559,7 @@ impl UnrestakeVRTCommand {
         ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
         items: &[UnrestakeVRTCommandItem],
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )> {
+    ) -> ExecutionResult {
         if items.is_empty() {
             return Ok((None, None));
         }

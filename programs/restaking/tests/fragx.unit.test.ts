@@ -1,5 +1,5 @@
-import { MAX_U64 } from '@fragmetric-labs/sdk';
-import { address, getAddressDecoder, KeyPairSigner } from '@solana/kit';
+import { MAX_U64, restakingTypes } from '@fragmetric-labs/sdk';
+import { address, getAddressDecoder, isSome, KeyPairSigner } from '@solana/kit';
 import { afterAll, beforeEach, describe, expect, test } from 'vitest';
 import { RestakingUserAccountContext } from '../../../clients/js/fragmetric-sdk/dist/programs/restaking/user';
 import { createTestSuiteContext, expectMasked } from '../../testutil';
@@ -2732,5 +2732,37 @@ describe('restaking.fragX unit test', async () => {
       },
       { signers: [signer1] }
     );
+  });
+
+  test('performance fee is not charged', async () => {
+    // trigger receipt token price to go up by 10%
+    await ctx.fund.updateGeneralStrategy.execute({
+      donationEnabled: true,
+      performanceFeeRateBps: 400,
+    });
+
+    const donateAmount = await ctx
+      .resolve(true)
+      .then((data) => data!.receiptTokenSupply / 10n);
+    await validator.airdropToken(
+      ctx.payer.address!,
+      'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+      donateAmount
+    );
+    await ctx.fund.donate.execute({
+      assetMint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+      assetAmount: donateAmount,
+    });
+
+    const res = await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestPerformanceFee',
+      operator: restaking.knownAddresses.fundManager,
+    });
+    const evt = res.events!.operatorRanFundCommand!;
+    const result = isSome(evt.result)
+      ? (evt.result.value
+          .fields[0] as restakingTypes.HarvestPerformanceFeeCommandResult)
+      : null;
+    expect(result).toBeNull();
   });
 });

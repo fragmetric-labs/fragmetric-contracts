@@ -83,10 +83,7 @@ impl SelfExecutable for StakeSOLCommand {
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )> {
+    ) -> ExecutionResult {
         let (result, entry) = match &self.state {
             StakeSOLCommandState::New => self.execute_new(ctx, accounts)?,
             StakeSOLCommandState::Prepare { items } => {
@@ -114,10 +111,7 @@ impl StakeSOLCommand {
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )> {
+    ) -> ExecutionResult {
         let mut pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
             .new_pricing_service(accounts.iter().copied(), false)?;
         let fund_account = ctx.fund_account.load()?;
@@ -204,10 +198,7 @@ impl StakeSOLCommand {
         accounts: &[&'info AccountInfo<'info>],
         items: Vec<StakeSOLCommandItem>,
         previous_execution_result: Option<OperationCommandResult>,
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )> {
+    ) -> ExecutionResult {
         if items.is_empty() {
             return Ok((previous_execution_result, None));
         }
@@ -303,10 +294,7 @@ impl StakeSOLCommand {
         ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
         items: &[StakeSOLCommandItem],
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )> {
+    ) -> ExecutionResult {
         if items.is_empty() {
             return Ok((None, None));
         }

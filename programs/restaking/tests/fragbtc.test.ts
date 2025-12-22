@@ -278,6 +278,7 @@ describe('restaking.fragBTC test', async () => {
           "depositEnabled": true,
           "donationEnabled": false,
           "operationEnabled": true,
+          "performanceFeeRateBps": 0,
           "transferEnabled": true,
           "withdrawalBatchThresholdSeconds": 1n,
           "withdrawalEnabled": true,
@@ -4771,5 +4772,37 @@ describe('restaking.fragBTC test', async () => {
     await ctx.fund.removeSupportedToken.execute({
       mint: '6DNSN2BJsaPFdFFc1zP37kkeNe4Usc1Sqkzr9C9vPWcU',
     });
+  });
+
+  test('performance fee is not charged', async () => {
+    // trigger receipt token price to go up by 10%
+    await ctx.fund.updateGeneralStrategy.execute({
+      donationEnabled: true,
+      performanceFeeRateBps: 400,
+    });
+
+    const donateAmount = await ctx
+      .resolve(true)
+      .then((data) => data!.receiptTokenSupply / 10n);
+    await validator.airdropToken(
+      ctx.payer.address!,
+      'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+      donateAmount
+    );
+    await ctx.fund.donate.execute({
+      assetMint: 'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg',
+      assetAmount: donateAmount,
+    });
+
+    const res = await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestPerformanceFee',
+      operator: restaking.knownAddresses.fundManager,
+    });
+    const evt = res.events!.operatorRanFundCommand!;
+    const result = isSome(evt.result)
+      ? (evt.result.value
+          .fields[0] as restakingTypes.HarvestPerformanceFeeCommandResult)
+      : null;
+    expect(result).toBeNull();
   });
 });

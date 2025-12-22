@@ -509,6 +509,7 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
         operation_enabled: bool,
         withdrawal_fee_rate_bps: u16,
         withdrawal_batch_threshold_interval_seconds: i64,
+        performance_fee_rate_bps: u16,
     ) -> Result<events::FundManagerUpdatedFund> {
         self.fund_account
             .load_mut()?
@@ -518,7 +519,8 @@ impl<'a, 'info> FundConfigurationService<'a, 'info> {
             .set_transfer_enabled(transfer_enabled)
             .set_operation_enabled(operation_enabled)
             .set_withdrawal_fee_rate_bps(withdrawal_fee_rate_bps)?
-            .set_withdrawal_batch_threshold(withdrawal_batch_threshold_interval_seconds)?;
+            .set_withdrawal_batch_threshold(withdrawal_batch_threshold_interval_seconds)?
+            .set_performance_fee_rate_bps(performance_fee_rate_bps)?;
 
         self.create_fund_manager_updated_fund_event()
     }

@@ -1,4 +1,5 @@
-import { createKeyPairSignerFromBytes } from '@solana/kit';
+import { restakingTypes } from '@fragmetric-labs/sdk';
+import { createKeyPairSignerFromBytes, isSome } from '@solana/kit';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { createTestSuiteContext, expectMasked } from '../../testutil';
 import { initializeFragJTO } from './fragjto.init';
@@ -173,6 +174,7 @@ describe('restaking.fragJTO test', async () => {
           "depositEnabled": true,
           "donationEnabled": true,
           "operationEnabled": true,
+          "performanceFeeRateBps": 0,
           "transferEnabled": true,
           "withdrawalBatchThresholdSeconds": 1n,
           "withdrawalEnabled": true,
@@ -2175,5 +2177,37 @@ describe('restaking.fragJTO test', async () => {
         },
       ]
     `);
+  });
+
+  test('performance fee is not charged', async () => {
+    // trigger receipt token price to go up by 10%
+    await ctx.fund.updateGeneralStrategy.execute({
+      donationEnabled: true,
+      performanceFeeRateBps: 400,
+    });
+
+    const donateAmount = await ctx
+      .resolve(true)
+      .then((data) => data!.receiptTokenSupply / 10n);
+    await validator.airdropToken(
+      ctx.payer.address!,
+      'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
+      donateAmount
+    );
+    await ctx.fund.donate.execute({
+      assetMint: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL',
+      assetAmount: donateAmount,
+    });
+
+    const res = await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestPerformanceFee',
+      operator: restaking.knownAddresses.fundManager,
+    });
+    const evt = res.events!.operatorRanFundCommand!;
+    const result = isSome(evt.result)
+      ? (evt.result.value
+          .fields[0] as restakingTypes.HarvestPerformanceFeeCommandResult)
+      : null;
+    expect(result).toBeNull();
   });
 });

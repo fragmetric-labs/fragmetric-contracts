@@ -992,7 +992,13 @@ impl HarvestRestakingYieldCommand {
             )?;
 
         let result = if available_reward_token_amount_to_harvest > 0 {
+            let mut pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+                .new_pricing_service(accounts.iter().copied(), true)?;
+
             let fund_account = ctx.fund_account.load()?;
+            let one_receipt_token_as_sol_before_token_compounded =
+                fund_account.one_receipt_token_as_sol;
+
             let fund_supported_token_reserve_account_address = fund_account
                 .find_supported_token_reserve_account_address(&reward_token_mints[0])?;
             let restaking_vault = fund_account.get_restaking_vault(vault)?;
@@ -1059,9 +1065,22 @@ impl HarvestRestakingYieldCommand {
 
                 drop(fund_account);
 
-                // Update pricing
+                // Update pricing & high water mark
                 FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-                    .new_pricing_service(accounts.iter().copied(), true)?;
+                    .update_asset_values(&mut pricing_service, true)?;
+
+                let mut fund_account = ctx.fund_account.load_mut()?;
+                let one_receipt_token_as_sol_after_token_compounded =
+                    fund_account.one_receipt_token_as_sol;
+
+                require_gte!(
+                    one_receipt_token_as_sol_after_token_compounded,
+                    one_receipt_token_as_sol_before_token_compounded
+                );
+
+                fund_account.fee_harvested_one_receipt_token_as_sol +=
+                    one_receipt_token_as_sol_after_token_compounded
+                        - one_receipt_token_as_sol_before_token_compounded;
 
                 Some(
                     HarvestRestakingYieldCommandResult {
@@ -1126,7 +1145,13 @@ impl HarvestRestakingYieldCommand {
             )?;
 
         let result = if available_reward_token_amount_to_harvest > 0 {
+            let mut pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
+                .new_pricing_service(accounts.iter().copied(), true)?;
+
             let fund_account = ctx.fund_account.load()?;
+            let one_receipt_token_as_sol_before_token_compounded =
+                fund_account.one_receipt_token_as_sol;
+
             let supported_token_mint = fund_account
                 .get_token_swap_strategy(&reward_token_mints[0])?
                 .to_token_mint;
@@ -1199,9 +1224,22 @@ impl HarvestRestakingYieldCommand {
 
                 drop(fund_account);
 
-                // Update pricing
+                // Update pricing & high water mark
                 FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
-                    .new_pricing_service(accounts.iter().copied(), true)?;
+                    .update_asset_values(&mut pricing_service, true)?;
+
+                let mut fund_account = ctx.fund_account.load_mut()?;
+                let one_receipt_token_as_sol_after_token_compounded =
+                    fund_account.one_receipt_token_as_sol;
+
+                require_gte!(
+                    one_receipt_token_as_sol_after_token_compounded,
+                    one_receipt_token_as_sol_before_token_compounded
+                );
+
+                fund_account.fee_harvested_one_receipt_token_as_sol +=
+                    one_receipt_token_as_sol_after_token_compounded
+                        - one_receipt_token_as_sol_before_token_compounded;
 
                 Some(
                     HarvestRestakingYieldCommandResult {

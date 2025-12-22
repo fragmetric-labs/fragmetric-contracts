@@ -148,6 +148,19 @@ export type FundAccount = {
   tokenSwapStrategies: Array<TokenSwapStrategy>;
   /** for pricing precision enhancement in deposit */
   depositResidualMicroReceiptTokenAmount: bigint;
+  /**
+   * `one_receipt_token_as_sol` value at the last fee harvest.
+   * Acts as a high-water mark so fees are only charged on new gains
+   * (applies to both performance and commission fees).
+   */
+  feeHarvestedOneReceiptTokenAsSol: bigint;
+  /**
+   * Performance fee configuration and state.
+   * - `performance_fee_last_harvested_at`: Unix timestamp of the most recent performance fee harvest
+   * - `performance_fee_rate_bps`: Performance fee rate in basis points (bps)
+   */
+  performanceFeeLastHarvestedAt: bigint;
+  performanceFeeRateBps: number;
   reserved1: ReadonlyUint8Array;
 };
 
@@ -209,6 +222,19 @@ export type FundAccountArgs = {
   tokenSwapStrategies: Array<TokenSwapStrategyArgs>;
   /** for pricing precision enhancement in deposit */
   depositResidualMicroReceiptTokenAmount: number | bigint;
+  /**
+   * `one_receipt_token_as_sol` value at the last fee harvest.
+   * Acts as a high-water mark so fees are only charged on new gains
+   * (applies to both performance and commission fees).
+   */
+  feeHarvestedOneReceiptTokenAsSol: number | bigint;
+  /**
+   * Performance fee configuration and state.
+   * - `performance_fee_last_harvested_at`: Unix timestamp of the most recent performance fee harvest
+   * - `performance_fee_rate_bps`: Performance fee rate in basis points (bps)
+   */
+  performanceFeeLastHarvestedAt: number | bigint;
+  performanceFeeRateBps: number;
   reserved1: ReadonlyUint8Array;
 };
 
@@ -274,7 +300,10 @@ export function getFundAccountEncoder(): FixedSizeEncoder<FundAccountArgs> {
         getArrayEncoder(getTokenSwapStrategyEncoder(), { size: 30 }),
       ],
       ['depositResidualMicroReceiptTokenAmount', getU64Encoder()],
-      ['reserved1', fixEncoderSize(getBytesEncoder(), 3608)],
+      ['feeHarvestedOneReceiptTokenAsSol', getU64Encoder()],
+      ['performanceFeeLastHarvestedAt', getI64Encoder()],
+      ['performanceFeeRateBps', getU16Encoder()],
+      ['reserved1', fixEncoderSize(getBytesEncoder(), 3590)],
     ]),
     (value) => ({ ...value, discriminator: FUND_ACCOUNT_DISCRIMINATOR })
   );
@@ -341,7 +370,10 @@ export function getFundAccountDecoder(): FixedSizeDecoder<FundAccount> {
       getArrayDecoder(getTokenSwapStrategyDecoder(), { size: 30 }),
     ],
     ['depositResidualMicroReceiptTokenAmount', getU64Decoder()],
-    ['reserved1', fixDecoderSize(getBytesDecoder(), 3608)],
+    ['feeHarvestedOneReceiptTokenAsSol', getU64Decoder()],
+    ['performanceFeeLastHarvestedAt', getI64Decoder()],
+    ['performanceFeeRateBps', getU16Decoder()],
+    ['reserved1', fixDecoderSize(getBytesDecoder(), 3590)],
   ]);
 }
 

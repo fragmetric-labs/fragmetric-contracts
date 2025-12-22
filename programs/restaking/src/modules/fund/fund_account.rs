@@ -22,6 +22,7 @@ use super::*;
 pub const FUND_ACCOUNT_CURRENT_VERSION: u16 = 19;
 
 pub const FUND_WITHDRAWAL_FEE_RATE_BPS_LIMIT: u16 = 500;
+pub const FUND_PERFORMANCE_FEE_RATE_BPS_LIMIT: u16 = 10_000;
 pub const FUND_ACCOUNT_MAX_SUPPORTED_TOKENS: usize = 16;
 pub const FUND_ACCOUNT_MAX_RESTAKING_VAULTS: usize = 16;
 pub const FUND_ACCOUNT_MAX_PRICING_SOURCE_ADDRESSES: usize = 33;
@@ -102,7 +103,19 @@ pub struct FundAccount {
 
     /// for pricing precision enhancement in deposit
     pub(super) deposit_residual_micro_receipt_token_amount: u64,
-    _reserved1: [u8; 3608],
+
+    /// `one_receipt_token_as_sol` value at the last fee harvest.
+    /// Acts as a high-water mark so fees are only charged on new gains
+    /// (applies to both performance and commission fees).
+    pub(super) fee_harvested_one_receipt_token_as_sol: u64,
+
+    /// Performance fee configuration and state.
+    /// - `performance_fee_last_harvested_at`: Unix timestamp of the most recent performance fee harvest
+    /// - `performance_fee_rate_bps`: Performance fee rate in basis points (bps)
+    pub(super) performance_fee_last_harvested_at: i64,
+    pub(super) performance_fee_rate_bps: u16,
+
+    _reserved1: [u8; 3590],
 }
 
 impl PDASeeds<3> for FundAccount {
@@ -516,6 +529,21 @@ impl FundAccount {
         require_gte!(interval_seconds, 0);
 
         self.withdrawal_batch_threshold_interval_seconds = interval_seconds;
+
+        Ok(self)
+    }
+
+    pub(super) fn set_performance_fee_rate_bps(
+        &mut self,
+        performance_fee_rate_bps: u16,
+    ) -> Result<&mut Self> {
+        require_gte!(
+            FUND_PERFORMANCE_FEE_RATE_BPS_LIMIT,
+            performance_fee_rate_bps
+        );
+
+        self.fee_harvested_one_receipt_token_as_sol = self.one_receipt_token_as_sol;
+        self.performance_fee_rate_bps = performance_fee_rate_bps;
 
         Ok(self)
     }

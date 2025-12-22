@@ -1,3 +1,5 @@
+import { LAMPORTS_PER_SOL, restakingTypes } from '@fragmetric-labs/sdk';
+import { createNoopSigner, isSome } from '@solana/kit';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { createTestSuiteContext, expectMasked } from '../../testutil';
 import { initializeFragSOL } from './fragsol.init';
@@ -641,6 +643,7 @@ describe('restaking.fragSOL test', async () => {
           "depositEnabled": true,
           "donationEnabled": true,
           "operationEnabled": true,
+          "performanceFeeRateBps": 0,
           "transferEnabled": true,
           "withdrawalBatchThresholdSeconds": 1n,
           "withdrawalEnabled": true,
@@ -2575,4 +2578,316 @@ describe('restaking.fragSOL test', async () => {
       );
     }
   );
+
+  test('charges performance fee correctly', async () => {
+    await ctx.fund.runCommand.executeChained(null); // refresh previous operation cycles
+    /*
+     * For testing convenience, this test block artificially increases the RT price
+     * by donating to the fund.
+     *
+     * In production, the RT price increases naturally as the underlying LSTs
+     * accrue staking yield (i.e., when the stake pool receives SOL each epoch).
+     */
+
+    // Assumptions for this test:
+    // - APY: 8%
+    // - 1 year = 365 days
+    // - 1 epoch = 2 days
+    // - Performance fee rate: 4% (400 bps)
+    // - RT (Receipt Token) supply: 243,015,197,139,659 (recent fragSOL total supply)
+    const APY_PERCENT = 8n;
+    const DAYS_PER_YEAR = 365n;
+    const DAYS_PER_EPOCH = 2n;
+    const PERFORMANCE_FEE_RATE_BPS = 400;
+    let targetReceiptTokenSupply = 243_015_197_139_659n;
+    const currentReceiptTokenSupply = await ctx
+      .resolve(true)
+      .then((data) => data!.receiptTokenSupply);
+
+    await validator.airdrop(signer1.address, targetReceiptTokenSupply);
+    await user1.deposit.execute(
+      {
+        assetAmount: targetReceiptTokenSupply - currentReceiptTokenSupply,
+      },
+      { signers: [signer1] }
+    );
+    targetReceiptTokenSupply = await ctx
+      .resolve(true)
+      .then((data) => data!.receiptTokenSupply);
+
+    // Assume the RT price increases by a constant amount each epoch,
+    // simulated via a donation, based on:
+    // RT supply × APY × (DAYS_PER_EPOCH / DAYS_PER_YEAR).
+    const rewardSOLAmountPerEpoch =
+      (((targetReceiptTokenSupply * APY_PERCENT) / 100n) * DAYS_PER_EPOCH) /
+      DAYS_PER_YEAR;
+
+    const expectTokenAmountCloseTo = (
+      actual: bigint,
+      expected: bigint,
+      tolerance: bigint
+    ) => {
+      const diff = actual > expected ? actual - expected : expected - actual;
+      expect(diff <= tolerance).toBe(true);
+    };
+
+    // apply performance fee to the fund
+    await ctx.fund.updateGeneralStrategy.execute({
+      performanceFeeRateBps: PERFORMANCE_FEE_RATE_BPS,
+    });
+
+    // 1. ***Verify that the performance fee is correctly charged. ***
+    // RT price goes up
+    await validator.skipEpoch();
+    await ctx.fund.donate.execute({
+      assetAmount: rewardSOLAmountPerEpoch,
+    });
+
+    const oneReceiptTokenAsSol1 = await ctx.fund
+      .resolveAccount(true)
+      .then((fundAccount) => fundAccount!.data.oneReceiptTokenAsSol);
+
+    const res1 = await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestPerformanceFee',
+      operator: restaking.knownAddresses.fundManager,
+    });
+    const evt1 = res1.events!.operatorRanFundCommand!;
+    const result1 = isSome(evt1.result)
+      ? (evt1.result.value
+          .fields[0] as restakingTypes.HarvestPerformanceFeeCommandResult)
+      : null;
+
+    const mintedReceiptTokenAmount1 = result1!.receiptTokenMintedAmount;
+    const simulatedMintedReceiptTokenAmount1 =
+      (((rewardSOLAmountPerEpoch * BigInt(PERFORMANCE_FEE_RATE_BPS)) /
+        10_000n) *
+        LAMPORTS_PER_SOL) /
+      oneReceiptTokenAsSol1;
+    const feeHarvestedOneReceiptTokenAsSol1 = await ctx.fund
+      .resolveAccount(true)
+      .then(
+        (fundAccount) => fundAccount!.data.feeHarvestedOneReceiptTokenAsSol
+      );
+
+    // compare actually minted amount with simulated amount
+    expectTokenAmountCloseTo(
+      mintedReceiptTokenAmount1,
+      simulatedMintedReceiptTokenAmount1,
+      5000n
+    );
+
+    // 2. ***Verify that a slight value dilution occurs when new tokens are minted. ***
+    const oneReceiptTokenAsSol2 = await ctx.fund
+      .resolveAccount(true)
+      .then((fundAccount) => fundAccount!.data.oneReceiptTokenAsSol);
+    expect(oneReceiptTokenAsSol1).toBeGreaterThan(oneReceiptTokenAsSol2);
+    expect(oneReceiptTokenAsSol2).toBeLessThan(
+      feeHarvestedOneReceiptTokenAsSol1
+    );
+
+    // 3. *** Collect the fee only if the fee amount in SOL is at least 1 SOL; otherwise, skip collection. ***
+    // RT price goes up
+    await validator.skipEpoch();
+    await ctx.fund.donate.execute({
+      assetAmount: rewardSOLAmountPerEpoch / 10n, // fee approximates to 0.4 SOL which does not satisfy minimum sol amount to harvest
+    });
+
+    const res3 = await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestPerformanceFee',
+      operator: restaking.knownAddresses.fundManager,
+    });
+    const evt3 = res3.events!.operatorRanFundCommand!;
+    const result3 = isSome(evt3.result)
+      ? (evt3.result.value
+          .fields[0] as restakingTypes.HarvestPerformanceFeeCommandResult)
+      : null;
+    expect(result3).toBeNull();
+
+    const oneReceiptTokenAsSol3 = await ctx.fund
+      .resolveAccount(true)
+      .then((fundAccount) => fundAccount!.data.oneReceiptTokenAsSol);
+    const feeHarvestedOneReceiptTokenAsSol3 = await ctx.fund
+      .resolveAccount(true)
+      .then(
+        (fundAccount) => fundAccount!.data.feeHarvestedOneReceiptTokenAsSol
+      );
+    // high-water mark remains same
+    expect(feeHarvestedOneReceiptTokenAsSol1).toEqual(
+      feeHarvestedOneReceiptTokenAsSol3
+    );
+
+    // 4. *** Verify that no performance fee is charged when the RT price increases due to compounding rewards. ***
+    // airdrop JitoSOL to trigger compound reward
+    await validator.airdropToken(
+      'HR1ANmDHjaEhknvsTaK48M5xZtbBiwNdXM5NTiWhAb4S',
+      'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+      10_000_000_000n
+    );
+    await ctx.fund
+      .restakingVault(
+        'HR1ANmDHjaEhknvsTaK48M5xZtbBiwNdXM5NTiWhAb4S',
+        'Vau1t6sLNxnzB7ZDsef8TLbPLfyZMYXH8WTNqUdm9g8'
+      )!
+      // @ts-ignore - Property 'delegateRewardTokenAccount' does not exist on type 'SolvVaultAccountContext | JitoVaultAccountContext | VirtualVaultAccountContext'.
+      .delegateRewardTokenAccount.execute({
+        mint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+        newDelegate: '7xraTDZ4QWgvgJ5SCZp4hyJN2XEfyGRySQjdG49iZfU8',
+      });
+
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestRestakingYield',
+      operator: restaking.knownAddresses.fundManager,
+    });
+
+    const feeHarvestedOneReceiptTokenAsSol4 = await ctx.fund
+      .resolveAccount(true)
+      .then(
+        (fundAccount) => fundAccount!.data.feeHarvestedOneReceiptTokenAsSol
+      );
+
+    // high-water mark increases after compounding reward is harvested
+    expect(feeHarvestedOneReceiptTokenAsSol4).toBeGreaterThan(
+      feeHarvestedOneReceiptTokenAsSol3
+    );
+
+    const res4 = await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestPerformanceFee',
+      operator: restaking.knownAddresses.fundManager,
+    });
+    const evt4 = res4.events!.operatorRanFundCommand!;
+    const result4 = isSome(evt4.result)
+      ? (evt4.result.value
+          .fields[0] as restakingTypes.HarvestPerformanceFeeCommandResult)
+      : null;
+    expect(result4).toBeNull();
+
+    const feeHarvestedOneReceiptTokenAsSol4AfterHarvestPerformanceFee =
+      await ctx.fund
+        .resolveAccount(true)
+        .then(
+          (fundAccount) => fundAccount!.data.feeHarvestedOneReceiptTokenAsSol
+        );
+    expect(feeHarvestedOneReceiptTokenAsSol4AfterHarvestPerformanceFee).toEqual(
+      feeHarvestedOneReceiptTokenAsSol4
+    );
+
+    // 5. *** Verify that if the previous performance fee was zero,
+    //    setting it to a non-zero value does not cause overcharging
+    //    in the next harvest step. ***
+    await ctx.fund.updateGeneralStrategy.execute({
+      performanceFeeRateBps: 0,
+    });
+
+    // RT price goes up
+    await validator.skipEpoch();
+    await ctx.fund.donate.execute({
+      assetAmount: rewardSOLAmountPerEpoch * 5n,
+    });
+
+    await ctx.fund.updateGeneralStrategy.execute({
+      performanceFeeRateBps: PERFORMANCE_FEE_RATE_BPS,
+    });
+
+    // RT price goes up
+    await validator.skipEpoch();
+    await ctx.fund.donate.execute({
+      assetAmount: rewardSOLAmountPerEpoch,
+    });
+
+    const oneReceiptTokenAsSol5 = await ctx.fund
+      .resolveAccount(true)
+      .then((fundAccount) => fundAccount!.data.oneReceiptTokenAsSol);
+
+    const res5 = await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestPerformanceFee',
+      operator: restaking.knownAddresses.fundManager,
+    });
+    const evt5 = res5.events!.operatorRanFundCommand!;
+    const result5 = isSome(evt5.result)
+      ? (evt5.result.value
+          .fields[0] as restakingTypes.HarvestPerformanceFeeCommandResult)
+      : null;
+
+    const mintedReceiptTokenAmount5 = result5!.receiptTokenMintedAmount;
+    const simulatedMintedReceiptTokenAmount5 =
+      (((rewardSOLAmountPerEpoch * BigInt(PERFORMANCE_FEE_RATE_BPS)) /
+        10_000n) *
+        LAMPORTS_PER_SOL) /
+      oneReceiptTokenAsSol5;
+
+    // compare actually minted amount with simulated amount
+    expectTokenAmountCloseTo(
+      mintedReceiptTokenAmount5,
+      simulatedMintedReceiptTokenAmount5,
+      5000n
+    );
+
+    // 6. *** Reward test
+    // - If the revenue account has a user reward account, the global reward pool should increase.
+    // - Otherwise, the global reward pool's allocated token amount should remain unchanged. ***
+
+    // case 1: revenue account does not have user reward account
+    // RT price goes up
+    await validator.skipEpoch();
+    await ctx.fund.donate.execute({
+      assetAmount: rewardSOLAmountPerEpoch,
+    });
+
+    let tokenAllocatedAmountBefore = await ctx.reward
+      .resolveAccount(true)
+      .then(
+        (rewardAccount) =>
+          rewardAccount!.data.baseRewardPool.tokenAllocatedAmount.totalAmount
+      );
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestPerformanceFee',
+      operator: restaking.knownAddresses.fundManager,
+    });
+    let tokenAllocatedAmountAfter = await ctx.reward
+      .resolveAccount(true)
+      .then(
+        (rewardAccount) =>
+          rewardAccount!.data.baseRewardPool.tokenAllocatedAmount.totalAmount
+      );
+
+    expect(tokenAllocatedAmountAfter).toEqual(tokenAllocatedAmountBefore);
+
+    // case 2: revenue account has user reward account
+    const programRevenueAccount = ctx.user(
+      'GuSruSKKCmAGuWMeMsiw3mbNhjeiRtNhnh9Eatgz33NA'
+    );
+    await programRevenueAccount.deposit.execute(
+      {
+        assetAmount: 1_000_000_000n,
+      },
+      { signers: [createNoopSigner(programRevenueAccount.address!)] }
+    );
+
+    // RT price goes up
+    await validator.skipEpoch();
+    await ctx.fund.donate.execute({
+      assetAmount: rewardSOLAmountPerEpoch,
+    });
+
+    tokenAllocatedAmountBefore = await ctx.reward
+      .resolveAccount(true)
+      .then(
+        (rewardAccount) =>
+          rewardAccount!.data.baseRewardPool.tokenAllocatedAmount.totalAmount
+      );
+    await ctx.fund.runCommand.executeChained({
+      forceResetCommand: 'HarvestPerformanceFee',
+      operator: restaking.knownAddresses.fundManager,
+    });
+    tokenAllocatedAmountAfter = await ctx.reward
+      .resolveAccount(true)
+      .then(
+        (rewardAccount) =>
+          rewardAccount!.data.baseRewardPool.tokenAllocatedAmount.totalAmount
+      );
+
+    expect(tokenAllocatedAmountAfter).toBeGreaterThan(
+      tokenAllocatedAmountBefore
+    );
+  });
 });

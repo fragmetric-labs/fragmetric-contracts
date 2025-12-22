@@ -98,6 +98,7 @@ export type FundManagerUpdateFundStrategyInstructionData = {
   operationEnabled: boolean;
   withdrawalFeeRateBps: number;
   withdrawalBatchThresholdSeconds: bigint;
+  performanceFeeRateBps: number;
 };
 
 export type FundManagerUpdateFundStrategyInstructionDataArgs = {
@@ -108,6 +109,7 @@ export type FundManagerUpdateFundStrategyInstructionDataArgs = {
   operationEnabled: boolean;
   withdrawalFeeRateBps: number;
   withdrawalBatchThresholdSeconds: number | bigint;
+  performanceFeeRateBps: number;
 };
 
 export function getFundManagerUpdateFundStrategyInstructionDataEncoder(): FixedSizeEncoder<FundManagerUpdateFundStrategyInstructionDataArgs> {
@@ -121,6 +123,7 @@ export function getFundManagerUpdateFundStrategyInstructionDataEncoder(): FixedS
       ['operationEnabled', getBooleanEncoder()],
       ['withdrawalFeeRateBps', getU16Encoder()],
       ['withdrawalBatchThresholdSeconds', getI64Encoder()],
+      ['performanceFeeRateBps', getU16Encoder()],
     ]),
     (value) => ({
       ...value,
@@ -139,6 +142,7 @@ export function getFundManagerUpdateFundStrategyInstructionDataDecoder(): FixedS
     ['operationEnabled', getBooleanDecoder()],
     ['withdrawalFeeRateBps', getU16Decoder()],
     ['withdrawalBatchThresholdSeconds', getI64Decoder()],
+    ['performanceFeeRateBps', getU16Decoder()],
   ]);
 }
 
@@ -171,6 +175,7 @@ export type FundManagerUpdateFundStrategyAsyncInput<
   operationEnabled: FundManagerUpdateFundStrategyInstructionDataArgs['operationEnabled'];
   withdrawalFeeRateBps: FundManagerUpdateFundStrategyInstructionDataArgs['withdrawalFeeRateBps'];
   withdrawalBatchThresholdSeconds: FundManagerUpdateFundStrategyInstructionDataArgs['withdrawalBatchThresholdSeconds'];
+  performanceFeeRateBps: FundManagerUpdateFundStrategyInstructionDataArgs['performanceFeeRateBps'];
 };
 
 export async function getFundManagerUpdateFundStrategyInstructionAsync<
@@ -293,6 +298,7 @@ export type FundManagerUpdateFundStrategyInput<
   operationEnabled: FundManagerUpdateFundStrategyInstructionDataArgs['operationEnabled'];
   withdrawalFeeRateBps: FundManagerUpdateFundStrategyInstructionDataArgs['withdrawalFeeRateBps'];
   withdrawalBatchThresholdSeconds: FundManagerUpdateFundStrategyInstructionDataArgs['withdrawalBatchThresholdSeconds'];
+  performanceFeeRateBps: FundManagerUpdateFundStrategyInstructionDataArgs['performanceFeeRateBps'];
 };
 
 export function getFundManagerUpdateFundStrategyInstruction<

@@ -212,6 +212,7 @@ pub mod restaking {
         operation_enabled: bool,
         withdrawal_fee_rate_bps: u16,
         withdrawal_batch_threshold_seconds: i64,
+        performance_fee_rate_bps: u16,
     ) -> Result<()> {
         emit_cpi!(modules::fund::FundConfigurationService::new(
             &mut ctx.accounts.receipt_token_mint,
@@ -225,6 +226,7 @@ pub mod restaking {
             operation_enabled,
             withdrawal_fee_rate_bps,
             withdrawal_batch_threshold_seconds,
+            performance_fee_rate_bps,
         )?);
 
         Ok(())

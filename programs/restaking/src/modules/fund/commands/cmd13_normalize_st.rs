@@ -85,10 +85,7 @@ impl SelfExecutable for NormalizeSTCommand {
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )> {
+    ) -> ExecutionResult {
         let (result, entry) = match &self.state {
             NormalizeSTCommandState::New => self.execute_new(ctx, accounts)?,
             NormalizeSTCommandState::Prepare { items } => {
@@ -116,10 +113,7 @@ impl NormalizeSTCommand {
         &self,
         ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )> {
+    ) -> ExecutionResult {
         let mut pricing_service = FundService::new(ctx.receipt_token_mint, ctx.fund_account)?
             .new_pricing_service(accounts.iter().copied(), false)?;
         let fund_account = ctx.fund_account.load()?;
@@ -278,10 +272,7 @@ impl NormalizeSTCommand {
         accounts: &[&'info AccountInfo<'info>],
         items: Vec<NormalizeSTCommandItem>,
         previous_execution_result: Option<OperationCommandResult>,
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )> {
+    ) -> ExecutionResult {
         if items.is_empty() {
             return Ok((previous_execution_result, None));
         }
@@ -336,10 +327,7 @@ impl NormalizeSTCommand {
         ctx: &mut OperationCommandContext<'info, '_>,
         accounts: &[&'info AccountInfo<'info>],
         items: &[NormalizeSTCommandItem],
-    ) -> Result<(
-        Option<OperationCommandResult>,
-        Option<OperationCommandEntry>,
-    )> {
+    ) -> ExecutionResult {
         if items.is_empty() {
             return Ok((None, None));
         }

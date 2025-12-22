@@ -4507,6 +4507,10 @@
         {
           "name": "withdrawal_batch_threshold_seconds",
           "type": "i64"
+        },
+        {
+          "name": "performance_fee_rate_bps",
+          "type": "u16"
         }
       ]
     },
@@ -13653,11 +13657,33 @@
             "type": "u64"
           },
           {
+            "name": "fee_harvested_one_receipt_token_as_sol",
+            "docs": [
+              "`one_receipt_token_as_sol` value at the last fee harvest.",
+              "Acts as a high-water mark so fees are only charged on new gains",
+              "(applies to both performance and commission fees)."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "performance_fee_last_harvested_at",
+            "docs": [
+              "Performance fee configuration and state.",
+              "- `performance_fee_last_harvested_at`: Unix timestamp of the most recent performance fee harvest",
+              "- `performance_fee_rate_bps`: Performance fee rate in basis points (bps)"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "performance_fee_rate_bps",
+            "type": "u16"
+          },
+          {
             "name": "_reserved1",
             "type": {
               "array": [
                 "u8",
-                3608
+                3590
               ]
             }
           }
@@ -13775,6 +13801,69 @@
                 32
               ]
             }
+          }
+        ]
+      }
+    },
+    {
+      "name": "HarvestPerformanceFeeCommand",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "state",
+            "type": {
+              "defined": {
+                "name": "HarvestPerformanceFeeState"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "HarvestPerformanceFeeCommandResult",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "receipt_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "receipt_token_minted_amount",
+            "type": "u64"
+          },
+          {
+            "name": "one_receipt_token_as_sol_before_performance_fee_harvested",
+            "type": "u64"
+          },
+          {
+            "name": "one_receipt_token_as_sol_after_performance_fee_harvested",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "HarvestPerformanceFeeState",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "New"
+          },
+          {
+            "name": "Execute"
+          },
+          {
+            "name": "Unused",
+            "fields": [
+              {
+                "name": "unused",
+                "type": "bool"
+              }
+            ]
           }
         ]
       }
@@ -14667,6 +14756,16 @@
             ]
           },
           {
+            "name": "HarvestPerformanceFee",
+            "fields": [
+              {
+                "defined": {
+                  "name": "HarvestPerformanceFeeCommand"
+                }
+              }
+            ]
+          },
+          {
             "name": "HarvestRestakingYield",
             "fields": [
               {
@@ -14961,6 +15060,16 @@
               {
                 "defined": {
                   "name": "UndelegateVSTCommandResult"
+                }
+              }
+            ]
+          },
+          {
+            "name": "HarvestPerformanceFee",
+            "fields": [
+              {
+                "defined": {
+                  "name": "HarvestPerformanceFeeCommandResult"
                 }
               }
             ]
