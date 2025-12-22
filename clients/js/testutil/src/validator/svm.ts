@@ -40,8 +40,6 @@ export class SVMValidator extends TestValidator<'svm'> {
     );
   }
 
-  private static localWalletInitialization: null | Promise<void> = null;
-
   private static async createInstance(
     instanceNo: number,
     options: TestValidatorOptions<'svm'> & { warpSlot?: bigint }
@@ -51,23 +49,6 @@ export class SVMValidator extends TestValidator<'svm'> {
     rpcURL: string;
     rpcSubscriptionsURL: string;
   }> {
-    // create a local wallet if does not exits
-    if (!SVMValidator.localWalletInitialization) {
-      SVMValidator.localWalletInitialization = new Promise(
-        (resolve, reject) => {
-          try {
-            child_process.execSync(
-              `solana-keygen pubkey ~/.config/solana/id.json || (mkdir -p ~/.config/solana && solana-keygen new --no-bip39-passphrase -o ~/.config/solana/id.json)`
-            );
-            resolve();
-          } catch (e) {
-            reject(e);
-          }
-        }
-      );
-    }
-    await SVMValidator.localWalletInitialization;
-
     const logger = SVMValidator.createLogger(options);
     const instance = await new Promise<{
       process: child_process.ChildProcess;

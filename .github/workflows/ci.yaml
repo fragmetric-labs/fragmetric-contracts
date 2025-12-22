@@ -71,6 +71,9 @@ jobs:
       - run: cargo test-sbf
       - run: anchor build
       - run: pnpm build
+      - name: Create local keypair
+        run: | 
+          solana-keygen pubkey ~/.config/solana/id.json || (mkdir -p ~/.config/solana && solana-keygen new --no-bip39-passphrase -o ~/.config/solana/id.json)
       - name: Run integration tests
         shell: bash
         run: |
