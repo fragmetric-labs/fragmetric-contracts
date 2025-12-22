@@ -35,6 +35,7 @@ export * from './fundManagerRemoveTokenSwapStrategy';
 export * from './fundManagerRemoveWrappedTokenHolder';
 export * from './fundManagerResetFundWrapAccountRewardAccountDelegate';
 export * from './fundManagerResetWrappedTokenHolderRewardAccountDelegate';
+export * from './fundManagerRevokeFundRewardTokenMintAuthority';
 export * from './fundManagerSettleReward';
 export * from './fundManagerUpdateFundStrategy';
 export * from './fundManagerUpdateRestakingVaultDelegationStrategy';

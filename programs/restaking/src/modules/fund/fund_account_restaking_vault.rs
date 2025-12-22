@@ -497,13 +497,13 @@ impl RewardToken {
         Ok(())
     }
 
-    pub fn get_available_amount_to_harvest(&self, amount: u64, current_timestamp: i64) -> u64 {
-        let available = current_timestamp
+    pub fn get_available_amount_to_harvest(&self, amount: u64) -> Result<u64> {
+        let available = Clock::get()?.unix_timestamp
             >= self.last_harvested_at + self.harvest_threshold_interval_seconds
             && amount >= self.harvest_threshold_min_amount;
 
-        available
+        Ok(available
             .then(|| amount.min(self.harvest_threshold_max_amount))
-            .unwrap_or_default()
+            .unwrap_or_default())
     }
 }
