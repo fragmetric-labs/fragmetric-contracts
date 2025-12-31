@@ -90,7 +90,9 @@ export function createTokenTool(program: RestakingProgram) {
               args.newAuthority
             ).resolveAccount(true);
             if (!newAuthority) {
-              throw new Error('invalid context');
+              throw new Error(
+                'Failed to resolve new authority account: ' + args.newAuthority
+              );
             }
 
             if (newAuthority.programAddress != parent.program.address) {
