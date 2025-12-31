@@ -177,7 +177,7 @@ export class JitoVaultAccountContext extends AccountContext<
 
       return (await Promise.all(
         new Array(5).fill(null).map(async (_, i) => {
-          const index = i + 1;
+          const index = i;
           return parent.parent.__getUnrestakingAuthorityAddress(
             vaultAddress,
             index
