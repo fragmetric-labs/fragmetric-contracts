@@ -2,6 +2,7 @@ import * as token from '@solana-program/token';
 import { Address, createNoopSigner, isSome } from '@solana/kit';
 import * as v from 'valibot';
 import {
+  BaseAccountContext,
   TransactionTemplateContext,
   transformAddressResolverVariant,
 } from '../../../context';
@@ -70,7 +71,8 @@ export function createTokenTool(program: RestakingProgram) {
         newAuthority: v.string(),
       }),
       {
-        description: 'transfer mint authority to new authority',
+        description:
+          'transfer mint authority to new authority (PDA owned by the current program)',
         instructions: [
           async (parent, args, overrides) => {
             const [mint, payer] = await Promise.all([
@@ -82,6 +84,22 @@ export function createTokenTool(program: RestakingProgram) {
               )(program),
             ]);
             if (!(mint && payer)) throw new Error('invalid context');
+
+            const newAuthority = await new BaseAccountContext(
+              parent,
+              args.newAuthority
+            ).resolveAccount(true);
+            if (!newAuthority) {
+              throw new Error(
+                'Failed to resolve new authority account: ' + args.newAuthority
+              );
+            }
+
+            if (newAuthority.programAddress != parent.program.address) {
+              throw new Error(
+                'newAuthority must be a PDA owned by the current program'
+              );
+            }
 
             const ix = token.getSetAuthorityInstruction({
               owned: mint.address,
