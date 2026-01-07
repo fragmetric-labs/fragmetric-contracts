@@ -114,10 +114,10 @@ impl UserRewardSettlement {
     ) -> u128 {
         let user_block_settled_contribution = user_reward_pool_last_contribution
             .saturating_sub(self.total_settled_contribution)
-            + (ending_slot
-                - self
-                    .last_settled_slot
-                    .max(user_reward_pool_last_updated_slot)) as u128
+            + (ending_slot.saturating_sub(
+                self.last_settled_slot
+                    .max(user_reward_pool_last_updated_slot),
+            ) as u128)
                 * total_contribution_accrual_rate;
 
         self.total_settled_contribution += user_block_settled_contribution;
