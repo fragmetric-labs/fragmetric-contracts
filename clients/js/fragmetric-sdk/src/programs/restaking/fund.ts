@@ -1979,19 +1979,28 @@ export class RestakingFundAccountContext extends AccountContext<
   readonly updateRestakingVaultRewardHarvestThreshold =
     new TransactionTemplateContext(
       this,
-      v.intersect([
-        v.object({
-          vault: v.string(),
-          rewardTokenMint: v.string(),
-        }),
-        v.partial(
+      v.pipe(
+        v.intersect([
           v.object({
-            harvestThresholdMinAmount: v.bigint(),
-            harvestThresholdMaxAmount: v.bigint(),
-            harvestThresholdIntervalSeconds: v.bigint(),
-          })
-        ),
-      ]),
+            vault: v.string(),
+            rewardTokenMint: v.string(),
+          }),
+          v.partial(
+            v.object({
+              harvestThresholdMinAmount: v.bigint(),
+              harvestThresholdMaxAmount: v.bigint(),
+              harvestThresholdIntervalSeconds: v.bigint(),
+            })
+          ),
+        ]),
+        v.check((input) => {
+          return (
+            input.harvestThresholdMinAmount !== undefined ||
+            input.harvestThresholdMaxAmount !== undefined ||
+            input.harvestThresholdIntervalSeconds !== undefined
+          );
+        }, 'At least one threshold parameter (harvestThresholdMinAmount, harvestThresholdMaxAmount, or harvestThresholdIntervalSeconds) must be provided')
+      ),
       {
         description: 'update reward token threshold',
         anchorEventDecoders: getRestakingAnchorEventDecoders(
@@ -2016,7 +2025,8 @@ export class RestakingFundAccountContext extends AccountContext<
             const vaultStrategy = vaultStrategies.find(
               (item) => item.vault == args.vault
             );
-            if (!vaultStrategy) throw new Error('invalid context: vault not found');
+            if (!vaultStrategy)
+              throw new Error('invalid context: vault not found');
 
             const rewardToken =
               vaultStrategy.compoundingRewardTokens.find(
