@@ -1979,13 +1979,19 @@ export class RestakingFundAccountContext extends AccountContext<
   readonly updateRestakingVaultRewardHarvestThreshold =
     new TransactionTemplateContext(
       this,
-      v.object({
-        vault: v.string(),
-        rewardTokenMint: v.string(),
-        harvestThresholdMinAmount: v.bigint(),
-        harvestThresholdMaxAmount: v.bigint(),
-        harvestThresholdIntervalSeconds: v.bigint(),
-      }),
+      v.intersect([
+        v.object({
+          vault: v.string(),
+          rewardTokenMint: v.string(),
+        }),
+        v.partial(
+          v.object({
+            harvestThresholdMinAmount: v.bigint(),
+            harvestThresholdMaxAmount: v.bigint(),
+            harvestThresholdIntervalSeconds: v.bigint(),
+          })
+        ),
+      ]),
       {
         description: 'update reward token threshold',
         anchorEventDecoders: getRestakingAnchorEventDecoders(
@@ -1994,27 +2000,52 @@ export class RestakingFundAccountContext extends AccountContext<
         addressLookupTables: [this.__resolveAddressLookupTable],
         instructions: [
           async (parent, args, overrides) => {
-            const [data, payer] = await Promise.all([
+            const [data, vaultStrategies, payer] = await Promise.all([
               parent.parent.resolve(true),
+              parent.resolveRestakingVaultStrategies(true),
               transformAddressResolverVariant(
                 overrides.feePayer ??
                   this.runtime.options.transaction.feePayer ??
                   (() => Promise.resolve(null))
               )(parent),
             ]);
-            if (!data) throw new Error('invalid context');
+            if (!(data && vaultStrategies)) throw new Error('invalid context');
             const fundManager = (this.program as RestakingProgram)
               .knownAddresses.fundManager;
+
+            const vaultStrategy = vaultStrategies.find(
+              (item) => item.vault == args.vault
+            );
+            if (!vaultStrategy) throw new Error('invalid context: vault not found');
+
+            const rewardToken =
+              vaultStrategy.compoundingRewardTokens.find(
+                (rt) => rt.mint == args.rewardTokenMint
+              ) ||
+              vaultStrategy.distributingRewardTokens.find(
+                (rt) => rt.mint == args.rewardTokenMint
+              );
+            if (!rewardToken) {
+              throw new Error('invalid context: reward token not found');
+            }
+
+            const current = {
+              harvestThresholdMinAmount: rewardToken.harvestThresholdMinAmount,
+              harvestThresholdMaxAmount: rewardToken.harvestThresholdMaxAmount,
+              harvestThresholdIntervalSeconds:
+                rewardToken.harvestThresholdIntervalSeconds,
+            };
+            const newArgs = {
+              ...current,
+              ...args,
+            };
 
             return Promise.all([
               restaking.getFundManagerUpdateRestakingVaultRewardTokenHarvestThresholdInstructionAsync(
                 {
+                  ...newArgs,
                   vault: args.vault as Address,
                   rewardTokenMint: args.rewardTokenMint as Address,
-                  harvestThresholdMinAmount: args.harvestThresholdMinAmount,
-                  harvestThresholdMaxAmount: args.harvestThresholdMaxAmount,
-                  harvestThresholdIntervalSeconds:
-                    args.harvestThresholdIntervalSeconds,
                   fundManager: createNoopSigner(fundManager),
                   program: this.program.address,
                   receiptTokenMint: data.receiptTokenMint,
